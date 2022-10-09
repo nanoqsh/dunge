@@ -8,6 +8,7 @@ use {
         texture::TextureData,
         vertex::Vertex,
     },
+    std::num::NonZeroU32,
     winit::window::Window,
 };
 
@@ -26,6 +27,12 @@ impl Context {
     /// Returns the canvas size.
     pub fn size(&self) -> Size {
         self.render.size()
+    }
+
+    pub fn set_pixel_size(&mut self, pixel_size: u32) {
+        let mut size = self.render.size();
+        size.pixel_size = NonZeroU32::new(pixel_size.max(1)).expect("non zero");
+        self.render.resize(size);
     }
 
     /// Creates a new texture.

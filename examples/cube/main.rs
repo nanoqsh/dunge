@@ -26,6 +26,9 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
+        // Set pixel size
+        context.set_pixel_size(2);
+
         // Create a texture
         let texture = {
             let image = read_png(include_bytes!("grass.png")).to_rgba8();

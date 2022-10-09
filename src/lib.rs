@@ -6,16 +6,12 @@ mod frame;
 mod r#loop;
 mod mesh;
 mod render;
+mod size;
 mod texture;
 mod vertex;
 
 pub mod input {
     pub use crate::r#loop::{Input, Mouse};
-}
-
-mod size {
-    use std::num::NonZeroU32;
-    pub type Size = (NonZeroU32, NonZeroU32);
 }
 
 pub use crate::{

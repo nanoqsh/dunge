@@ -1,10 +1,9 @@
-use crate::r#loop::Mouse;
-
 use {
     crate::{
         context::Context,
-        r#loop::{Input, Loop},
+        r#loop::{Input, Loop, Mouse},
         render::{Render, RenderResult},
+        size::Size,
     },
     std::{num::NonZeroU32, time::Instant},
     winit::{
@@ -32,10 +31,11 @@ impl Canvas {
         // Initial resize
         render.resize({
             let (width, height): (u32, u32) = window.inner_size().into();
-            (
-                NonZeroU32::new(width.max(1)).expect("non zero"),
-                NonZeroU32::new(height.max(1)).expect("non zero"),
-            )
+            Size {
+                width: NonZeroU32::new(width.max(1)).expect("non zero"),
+                height: NonZeroU32::new(height.max(1)).expect("non zero"),
+                pixel_size: NonZeroU32::new(1).expect("non zero"),
+            }
         });
 
         // Create the context
@@ -80,10 +80,12 @@ impl Canvas {
                             ..
                         } => context.render.resize({
                             let (width, height): (u32, u32) = size.into();
-                            (
-                                NonZeroU32::new(width.max(1)).expect("non zero"),
-                                NonZeroU32::new(height.max(1)).expect("non zero"),
-                            )
+                            let size = context.size();
+                            Size {
+                                width: NonZeroU32::new(width.max(1)).expect("non zero"),
+                                height: NonZeroU32::new(height.max(1)).expect("non zero"),
+                                ..size
+                            }
                         }),
                         WindowEvent::CursorMoved { position, .. } => {
                             cursor_position = Some(position.into());

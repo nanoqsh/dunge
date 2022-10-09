@@ -1,5 +1,4 @@
 use {
-    crate::size::Size,
     glam::{Mat4, Vec3},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -54,10 +53,10 @@ impl Camera {
         self.view = view;
     }
 
-    pub(crate) fn resize(&mut self, (width, height): Size, queue: &Queue) {
+    pub(crate) fn resize(&mut self, (width, height): (f32, f32), queue: &Queue) {
         use std::{mem, slice};
 
-        let aspect = width.get() as f32 / height.get() as f32;
+        let aspect = width / height;
         self.uniform.mat = *self.view.build_mat(aspect).as_ref();
 
         let data = unsafe {

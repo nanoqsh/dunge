@@ -6,10 +6,9 @@ use {
         mesh::{Mesh, MeshData},
         r#loop::Loop,
         size::Size,
-        texture::{Depth, RenderFrame, Texture, TextureData},
+        texture::{DepthFrame, RenderFrame, Texture, TextureData},
         vertex::{layout, TextureVertex, Vertex},
     },
-    std::num::NonZeroU32,
     wgpu::{
         BindGroupLayout, Color, Device, LoadOp, Queue, RenderPipeline, Surface,
         SurfaceConfiguration, SurfaceError,
@@ -27,10 +26,10 @@ pub(crate) struct Render {
     size: Size,
     texture_layout: BindGroupLayout,
     load: LoadOp<Color>,
-    depth: Depth,
     camera: Camera,
     resources: Resources,
     render_frame: RenderFrame,
+    depth_frame: DepthFrame,
 }
 
 impl Render {
@@ -152,7 +151,7 @@ impl Render {
                 conservative: false,
             },
             depth_stencil: Some(DepthStencilState {
-                format: Depth::DEPTH_FORMAT,
+                format: DepthFrame::DEPTH_FORMAT,
                 depth_write_enabled: true,
                 depth_compare: CompareFunction::Less,
                 stencil: StencilState::default(),
@@ -208,11 +207,10 @@ impl Render {
             multiview: None,
         });
 
-        let depth = Depth::new(&device, (1, 1));
-
         let camera = Camera::new(&device, &camera_layout);
 
         let render_frame = RenderFrame::new((1, 1), &device, &texture_layout);
+        let depth_frame = DepthFrame::new((1, 1), &device);
 
         Self {
             device,
@@ -221,16 +219,13 @@ impl Render {
             post_pipeline,
             surface,
             config,
-            size: {
-                let n = NonZeroU32::new(1).expect("1 is non zero");
-                (n, n)
-            },
+            size: Size::default(),
             texture_layout,
             load: LoadOp::Load,
-            depth,
             camera,
             resources: Resources::default(),
             render_frame,
+            depth_frame,
         }
     }
 
@@ -263,27 +258,24 @@ impl Render {
 
     pub(crate) fn set_view(&mut self, view: View<Projection>) {
         self.camera.set_view(view);
-        self.camera.resize(self.size(), &self.queue);
+        self.camera.resize(self.size.as_f32(), &self.queue);
     }
 
     pub(crate) fn size(&self) -> Size {
         self.size
     }
 
-    pub(crate) fn resize(&mut self, size @ (width, height): Size) {
+    pub(crate) fn resize(&mut self, size: Size) {
         self.size = size;
-        self.config.width = width.get();
-        self.config.height = height.get();
+        self.config.width = size.width.get();
+        self.config.height = size.height.get();
         self.surface.configure(&self.device, &self.config);
-        self.depth = Depth::new(&self.device, (width.get() / 2, height.get() / 2));
 
-        self.camera.resize(size, &self.queue);
+        self.camera.resize(self.size.as_f32(), &self.queue);
 
-        self.render_frame = RenderFrame::new(
-            (width.get() / 2, height.get() / 2),
-            &self.device,
-            &self.texture_layout,
-        );
+        let pixeled = self.size.pixeled();
+        self.render_frame = RenderFrame::new(pixeled, &self.device, &self.texture_layout);
+        self.depth_frame = DepthFrame::new(pixeled, &self.device);
     }
 
     pub(crate) fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
@@ -291,15 +283,6 @@ impl Render {
         L: Loop,
     {
         use wgpu::*;
-
-        let output = match self.surface.get_current_texture() {
-            Ok(output) => output,
-            Err(err) => return RenderResult::SurfaceError(err),
-        };
-
-        let view = output
-            .texture
-            .create_view(&TextureViewDescriptor::default());
 
         let mut encoder = self
             .device
@@ -320,7 +303,7 @@ impl Render {
                     },
                 })],
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: self.depth.view(),
+                    view: self.depth_frame.view(),
                     depth_ops: Some(Operations {
                         load: LoadOp::Clear(1.),
                         store: true,
@@ -342,6 +325,15 @@ impl Render {
             }
         }
 
+        let output = match self.surface.get_current_texture() {
+            Ok(output) => output,
+            Err(err) => return RenderResult::SurfaceError(err),
+        };
+
+        let view = output
+            .texture
+            .create_view(&TextureViewDescriptor::default());
+
         // Post render pass
         {
             let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
@@ -359,7 +351,7 @@ impl Render {
 
             pass.set_pipeline(&self.post_pipeline);
             pass.set_bind_group(
-                Render::TEXTURE_BIND_GROUP,
+                Self::TEXTURE_BIND_GROUP,
                 self.render_frame.bind_group(),
                 &[],
             );

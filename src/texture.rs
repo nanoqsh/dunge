@@ -104,15 +104,15 @@ impl Texture {
     }
 }
 
-pub(crate) struct Depth {
+pub(crate) struct DepthFrame {
     view: TextureView,
     _sampler: Sampler,
 }
 
-impl Depth {
+impl DepthFrame {
     pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
 
-    pub(crate) fn new(device: &Device, (width, height): (u32, u32)) -> Self {
+    pub(crate) fn new((width, height): (u32, u32), device: &Device) -> Self {
         use wgpu::*;
 
         let desc = TextureDescriptor {
@@ -161,10 +161,13 @@ pub(crate) struct RenderFrame {
 }
 
 impl RenderFrame {
-    pub(crate) fn new(size: (u32, u32), device: &Device, layout: &BindGroupLayout) -> Self {
+    pub(crate) fn new(
+        (width, height): (u32, u32),
+        device: &Device,
+        layout: &BindGroupLayout,
+    ) -> Self {
         use wgpu::*;
 
-        let (width, height) = size;
         let texture = device.create_texture(&TextureDescriptor {
             size: Extent3d {
                 width,
@@ -191,7 +194,7 @@ impl RenderFrame {
         });
 
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
-            layout: &layout,
+            layout,
             entries: &[
                 BindGroupEntry {
                     binding: Render::TEXTURE_BIND_GROUP,
