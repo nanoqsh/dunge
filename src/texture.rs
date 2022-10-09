@@ -1,9 +1,7 @@
 use {
+    crate::render::Render,
     std::num::NonZeroU32,
-    wgpu::{
-        BindGroup, BindGroupLayout, Device, Queue, Sampler, SurfaceConfiguration, TextureFormat,
-        TextureView,
-    },
+    wgpu::{BindGroup, BindGroupLayout, Device, Queue, Sampler, TextureFormat, TextureView},
 };
 
 /// A data struct for a texture creation.
@@ -87,11 +85,11 @@ impl Texture {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: 0,
+                    binding: Render::TEXTURE_BIND_GROUP,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: 1,
+                    binding: Render::TEXTURE_SAMPLER_BIND_GROUP,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
@@ -114,18 +112,16 @@ pub(crate) struct Depth {
 impl Depth {
     pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
 
-    pub(crate) fn new(device: &Device, config: &SurfaceConfiguration) -> Self {
+    pub(crate) fn new(device: &Device, (width, height): (u32, u32)) -> Self {
         use wgpu::*;
-
-        let size = Extent3d {
-            width: config.width,
-            height: config.height,
-            depth_or_array_layers: 1,
-        };
 
         let desc = TextureDescriptor {
             label: Some("depth texture"),
-            size,
+            size: Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
@@ -156,5 +152,67 @@ impl Depth {
 
     pub(crate) fn view(&self) -> &TextureView {
         &self.view
+    }
+}
+
+pub(crate) struct RenderFrame {
+    view: TextureView,
+    bind_group: BindGroup,
+}
+
+impl RenderFrame {
+    pub(crate) fn new(size: (u32, u32), device: &Device, layout: &BindGroupLayout) -> Self {
+        use wgpu::*;
+
+        let (width, height) = size;
+        let texture = device.create_texture(&TextureDescriptor {
+            size: Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Rgba8UnormSrgb,
+            usage: TextureUsages::RENDER_ATTACHMENT
+                | TextureUsages::COPY_DST
+                | TextureUsages::TEXTURE_BINDING,
+            label: Some("texture"),
+        });
+
+        let view = texture.create_view(&TextureViewDescriptor::default());
+        let sampler = device.create_sampler(&SamplerDescriptor {
+            address_mode_u: AddressMode::ClampToEdge,
+            address_mode_v: AddressMode::ClampToEdge,
+            mag_filter: FilterMode::Nearest,
+            min_filter: FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let bind_group = device.create_bind_group(&BindGroupDescriptor {
+            layout: &layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: Render::TEXTURE_BIND_GROUP,
+                    resource: BindingResource::TextureView(&view),
+                },
+                BindGroupEntry {
+                    binding: Render::TEXTURE_SAMPLER_BIND_GROUP,
+                    resource: BindingResource::Sampler(&sampler),
+                },
+            ],
+            label: Some("texture bind group"),
+        });
+
+        Self { view, bind_group }
+    }
+
+    pub(crate) fn view(&self) -> &TextureView {
+        &self.view
+    }
+
+    pub(crate) fn bind_group(&self) -> &BindGroup {
+        &self.bind_group
     }
 }

@@ -6,7 +6,7 @@ use {
         mesh::{Mesh, MeshData},
         r#loop::Loop,
         size::Size,
-        texture::{Depth, Texture, TextureData},
+        texture::{Depth, RenderFrame, Texture, TextureData},
         vertex::{layout, TextureVertex, Vertex},
     },
     std::num::NonZeroU32,
@@ -20,7 +20,8 @@ use {
 pub(crate) struct Render {
     device: Device,
     queue: Queue,
-    pipeline: RenderPipeline,
+    main_pipeline: RenderPipeline,
+    post_pipeline: RenderPipeline,
     surface: Surface,
     config: SurfaceConfiguration,
     size: Size,
@@ -29,6 +30,7 @@ pub(crate) struct Render {
     depth: Depth,
     camera: Camera,
     resources: Resources,
+    render_frame: RenderFrame,
 }
 
 impl Render {
@@ -73,7 +75,7 @@ impl Render {
 
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_supported_formats(&adapter)[0],
+            format: TextureFormat::Rgba8UnormSrgb,
             width: 1,
             height: 1,
             present_mode: PresentMode::Fifo,
@@ -118,13 +120,13 @@ impl Render {
         });
 
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("render pipeline layout"),
+            label: Some("main render pipeline layout"),
             bind_group_layouts: &[&texture_layout, &camera_layout],
             push_constant_ranges: &[],
         });
 
-        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("render pipeline"),
+        let main_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("main render pipeline"),
             layout: Some(&pipeline_layout),
             vertex: VertexState {
                 module: &shader,
@@ -164,14 +166,59 @@ impl Render {
             multiview: None,
         });
 
+        let shader = device.create_shader_module(include_wgsl!("shaders/post.wgsl"));
+        let post_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("post render pipeline layout"),
+            bind_group_layouts: &[&texture_layout],
+            push_constant_ranges: &[],
+        });
+
+        let post_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("post render pipeline"),
+            layout: Some(&post_pipeline_layout),
+            vertex: VertexState {
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &[],
+            },
+            fragment: Some(FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                targets: &[Some(ColorTargetState {
+                    format: config.format,
+                    blend: Some(BlendState::REPLACE),
+                    write_mask: ColorWrites::ALL,
+                })],
+            }),
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleStrip,
+                strip_index_format: None,
+                front_face: FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        });
+
+        let depth = Depth::new(&device, (1, 1));
+
         let camera = Camera::new(&device, &camera_layout);
 
-        let depth = Depth::new(&device, &config);
+        let render_frame = RenderFrame::new((1, 1), &device, &texture_layout);
 
         Self {
             device,
             queue,
-            pipeline,
+            main_pipeline,
+            post_pipeline,
             surface,
             config,
             size: {
@@ -183,6 +230,7 @@ impl Render {
             depth,
             camera,
             resources: Resources::default(),
+            render_frame,
         }
     }
 
@@ -227,9 +275,15 @@ impl Render {
         self.config.width = width.get();
         self.config.height = height.get();
         self.surface.configure(&self.device, &self.config);
-        self.depth = Depth::new(&self.device, &self.config);
+        self.depth = Depth::new(&self.device, (width.get() / 2, height.get() / 2));
 
         self.camera.resize(size, &self.queue);
+
+        self.render_frame = RenderFrame::new(
+            (width.get() / 2, height.get() / 2),
+            &self.device,
+            &self.texture_layout,
+        );
     }
 
     pub(crate) fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
@@ -253,11 +307,12 @@ impl Render {
                 label: Some("render encoder"),
             });
 
+        // Main render pass
         {
             let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("render pass"),
+                label: Some("main render pass"),
                 color_attachments: &[Some(RenderPassColorAttachment {
-                    view: &view,
+                    view: self.render_frame.view(),
                     resolve_target: None,
                     ops: Operations {
                         load: self.load,
@@ -274,7 +329,7 @@ impl Render {
                 }),
             });
 
-            pass.set_pipeline(&self.pipeline);
+            pass.set_pipeline(&self.main_pipeline);
             pass.set_bind_group(Self::CAMERA_BIND_GROUP, self.camera.bind_group(), &[]);
 
             let mut frame = Frame {
@@ -285,6 +340,30 @@ impl Render {
             if let Err(err) = lp.render(&mut frame) {
                 return RenderResult::Error(err);
             }
+        }
+
+        // Post render pass
+        {
+            let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
+                label: Some("post render pass"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: Operations {
+                        load: LoadOp::Load,
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: None,
+            });
+
+            pass.set_pipeline(&self.post_pipeline);
+            pass.set_bind_group(
+                Render::TEXTURE_BIND_GROUP,
+                self.render_frame.bind_group(),
+                &[],
+            );
+            pass.draw(0..4, 0..1);
         }
 
         self.queue.submit([encoder.finish()]);
