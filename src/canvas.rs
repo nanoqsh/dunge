@@ -2,8 +2,9 @@ use crate::r#loop::Mouse;
 
 use {
     crate::{
-        context::{Context, RenderResult},
+        context::Context,
         r#loop::{Input, Loop},
+        render::{Render, RenderResult},
     },
     std::{num::NonZeroU32, time::Instant},
     winit::{
@@ -25,11 +26,11 @@ impl Canvas {
     {
         let Self { event_loop, window } = self;
 
-        // Create the context
-        let mut context = pollster::block_on(Context::new(&window));
+        // Create the render
+        let mut render = pollster::block_on(Render::new(&window));
 
         // Initial resize
-        context.resize({
+        render.resize({
             let (width, height): (u32, u32) = window.inner_size().into();
             (
                 NonZeroU32::new(width.max(1)).expect("non zero"),
@@ -37,14 +38,15 @@ impl Canvas {
             )
         });
 
+        // Create the context
+        let mut context = Context { window, render };
+
         // Create the loop object
         let mut lp = make_loop(&mut context);
 
-        let mut cursor_position = None;
-
-        // Initialize timer
+        // Set an initial state
         let mut time = Time::new();
-
+        let mut cursor_position = None;
         let mut mouse = Mouse::default();
 
         event_loop.run(move |ev, _, flow| {
@@ -60,7 +62,7 @@ impl Canvas {
             };
 
             match ev {
-                Event::WindowEvent { event, window_id } if window_id == window.id() => {
+                Event::WindowEvent { event, window_id } if window_id == context.window.id() => {
                     match event {
                         WindowEvent::CloseRequested
                         | WindowEvent::KeyboardInput {
@@ -76,7 +78,7 @@ impl Canvas {
                         | WindowEvent::ScaleFactorChanged {
                             new_inner_size: &mut size,
                             ..
-                        } => context.resize({
+                        } => context.render.resize({
                             let (width, height): (u32, u32) = size.into();
                             (
                                 NonZeroU32::new(width.max(1)).expect("non zero"),
@@ -99,7 +101,7 @@ impl Canvas {
                         _ => {}
                     }
                 }
-                Event::RedrawRequested(window_id) if window_id == window.id() => {
+                Event::RedrawRequested(window_id) if window_id == context.window.id() => {
                     // Measure a delta time
                     let delta_time = time.delta();
 
@@ -114,10 +116,10 @@ impl Canvas {
                     mouse = Mouse::default();
 
                     if let Err(err) = lp.update(&mut context, &input) {
-                        log::error!("error: {err:?}");
+                        lp.error_occurred(err);
                     }
 
-                    match context.render(&lp) {
+                    match context.render.draw_frame(&lp) {
                         RenderResult::Ok => {}
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
                             log::error!("suface error: timeout")
@@ -126,13 +128,13 @@ impl Canvas {
                             log::error!("suface error: outdated")
                         }
                         RenderResult::SurfaceError(SurfaceError::Lost) => {
-                            context.resize(context.size())
+                            context.render.resize(context.size())
                         }
                         RenderResult::SurfaceError(SurfaceError::OutOfMemory) => {
                             log::error!("suface error: out of memory");
                             *flow = ControlFlow::Exit;
                         }
-                        RenderResult::Error(err) => log::error!("error: {err:?}"),
+                        RenderResult::Error(err) => lp.error_occurred(err),
                     }
                 }
                 Event::DeviceEvent {
@@ -142,7 +144,7 @@ impl Canvas {
                     mouse.motion_delta.0 += x as f32;
                     mouse.motion_delta.1 += y as f32;
                 }
-                Event::MainEventsCleared => window.request_redraw(),
+                Event::MainEventsCleared => context.window.request_redraw(),
                 Event::NewEvents(StartCause::Init) => {
                     // Reset the timer before start the loop
                     _ = time.delta();

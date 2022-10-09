@@ -1,8 +1,9 @@
 use {
     crate::{
-        context::{Context, Error, MeshHandle, TextureHandle},
         mesh::Mesh,
+        render::{MeshHandle, Render, TextureHandle},
         texture::Texture,
+        Error,
     },
     ahash::AHashMap as Map,
     wgpu::RenderPass,
@@ -19,7 +20,7 @@ impl Frame<'_> {
     pub fn bind_texture(&mut self, TextureHandle(id): TextureHandle) -> Result<(), Error> {
         let texture = self.resources.textures.get(id)?;
         self.pass
-            .set_bind_group(Context::TEXTURE_BIND_GROUP, texture.bind_group(), &[]);
+            .set_bind_group(Render::TEXTURE_BIND_GROUP, texture.bind_group(), &[]);
 
         Ok(())
     }
@@ -29,7 +30,7 @@ impl Frame<'_> {
 
         let mesh = self.resources.meshes.get(id)?;
         self.pass
-            .set_vertex_buffer(Context::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
+            .set_vertex_buffer(Render::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
         self.pass
             .set_index_buffer(mesh.index_buffer().slice(..), IndexFormat::Uint16);
         self.pass.draw_indexed(0..mesh.n_indices(), 0, 0..1);

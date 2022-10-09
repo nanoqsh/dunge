@@ -1,5 +1,5 @@
 use {
-    crate::Size,
+    crate::size::Size,
     glam::{Mat4, Vec3},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -74,10 +74,17 @@ impl Camera {
     }
 }
 
+/// The camera view.
 #[derive(Clone, Copy)]
 pub struct View<P> {
+    /// Eye 3d point.
     pub eye: [f32; 3],
+
+    /// Look at 3d point.
     pub look: [f32; 3],
+
+    /// Camera projection.
+    /// Can be a [`Perspective`] or [`Orthographic`].
     pub proj: P,
 }
 
@@ -135,6 +142,7 @@ pub enum Projection {
     Orthographic(Orthographic),
 }
 
+/// Perspective projection.
 #[derive(Clone, Copy)]
 pub struct Perspective {
     pub fovy: f32,
@@ -148,6 +156,7 @@ impl From<Perspective> for Projection {
     }
 }
 
+/// Orthographic projection.
 #[derive(Clone, Copy)]
 pub struct Orthographic {
     pub left: f32,

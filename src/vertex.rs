@@ -1,6 +1,18 @@
-use wgpu::{VertexAttribute, VertexBufferLayout};
+use {
+    plain::Plain,
+    wgpu::{VertexAttribute, VertexBufferLayout},
+};
 
-pub trait Vertex: Sized {
+mod plain {
+    /// A trait for plain structs which can be safely casted to bytes.
+    ///
+    /// # Safety
+    /// An implementation of this trait assumes all bits of struct can be safely read.
+    pub unsafe trait Plain: Sized {}
+}
+
+/// The trait describes a vertex.
+pub trait Vertex: Plain {
     const ATTRIBS: &'static [VertexAttribute];
 }
 
@@ -20,12 +32,15 @@ where
     }
 }
 
+/// Don't use this vertex.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ColorVertex {
     pub pos: [f32; 3],
     pub col: [f32; 3],
 }
+
+unsafe impl Plain for ColorVertex {}
 
 impl Vertex for ColorVertex {
     const ATTRIBS: &'static [VertexAttribute] =
@@ -38,6 +53,8 @@ pub struct TextureVertex {
     pub pos: [f32; 3],
     pub map: [f32; 2],
 }
+
+unsafe impl Plain for TextureVertex {}
 
 impl Vertex for TextureVertex {
     const ATTRIBS: &'static [VertexAttribute] =
