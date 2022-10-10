@@ -1,19 +1,21 @@
 use {
     crate::{
+        layout::InstanceModel,
         mesh::Mesh,
         render::{MeshHandle, Render, TextureHandle},
+        storage::Storage,
         texture::Texture,
         Error,
     },
-    ahash::AHashMap as Map,
+    glam::{Mat4, Quat, Vec3},
     wgpu::RenderPass,
 };
 
 /// A struct represented a current frame
 /// and exists during a frame render.
 pub struct Frame<'d> {
-    pub(crate) pass: RenderPass<'d>,
     pub(crate) resources: &'d Resources,
+    pub(crate) pass: RenderPass<'d>,
 }
 
 impl Frame<'_> {
@@ -31,9 +33,14 @@ impl Frame<'_> {
         let mesh = self.resources.meshes.get(id)?;
         self.pass
             .set_vertex_buffer(Render::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
+        self.pass.set_vertex_buffer(
+            Render::INSTANCE_BUFFER_SLOT,
+            mesh.instance_buffer().slice(..),
+        );
         self.pass
             .set_index_buffer(mesh.index_buffer().slice(..), IndexFormat::Uint16);
-        self.pass.draw_indexed(0..mesh.n_indices(), 0, 0..1);
+        self.pass
+            .draw_indexed(0..mesh.n_indices(), 0, 0..mesh.n_instances());
 
         Ok(())
     }
@@ -46,33 +53,16 @@ pub(crate) struct Resources {
     pub(crate) textures: Storage<Texture>,
 }
 
-pub(crate) struct Storage<T> {
-    map: Map<u32, T>,
-    counter: u32,
+pub(crate) struct Instance {
+    pub(crate) pos: Vec3,
+    pub(crate) rot: Quat,
+    pub(crate) scl: Vec3,
 }
 
-impl<T> Storage<T> {
-    pub(crate) fn insert(&mut self, value: T) -> u32 {
-        let index = self.counter;
-        self.counter = self.counter.wrapping_add(1);
-        self.map.insert(index, value);
-        index
-    }
-
-    pub(crate) fn get(&self, index: u32) -> Result<&T, Error> {
-        self.map.get(&index).ok_or(Error::ResourceNotFound)
-    }
-
-    pub(crate) fn remove(&mut self, index: u32) {
-        self.map.remove(&index);
-    }
-}
-
-impl<T> Default for Storage<T> {
-    fn default() -> Self {
-        Self {
-            map: Map::default(),
-            counter: 0,
+impl Instance {
+    pub(crate) fn to_model(&self) -> InstanceModel {
+        InstanceModel {
+            mat: *Mat4::from_scale_rotation_translation(self.scl, self.rot, self.pos).as_ref(),
         }
     }
 }

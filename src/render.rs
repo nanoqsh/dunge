@@ -3,11 +3,11 @@ use {
         camera::{Camera, Projection, View},
         color::Linear,
         frame::{Frame, Resources},
+        layout::{layout, InstanceModel, Layout, TextureVertex},
         mesh::{Mesh, MeshData},
         r#loop::Loop,
         size::Size,
         texture::{DepthFrame, RenderFrame, Texture, TextureData},
-        vertex::{layout, TextureVertex, Vertex},
     },
     wgpu::{
         BindGroupLayout, Color, Device, LoadOp, Queue, RenderPipeline, Surface,
@@ -36,7 +36,9 @@ impl Render {
     pub(crate) const TEXTURE_BIND_GROUP: u32 = 0;
     pub(crate) const TEXTURE_SAMPLER_BIND_GROUP: u32 = 1;
     pub(crate) const CAMERA_BIND_GROUP: u32 = 1;
+
     pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
+    pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;
 
     pub(crate) async fn new(window: &Window) -> Self {
         use wgpu::*;
@@ -118,7 +120,7 @@ impl Render {
             label: Some("camera bind group layout"),
         });
 
-        let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+        let main_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("main render pipeline layout"),
             bind_group_layouts: &[&texture_layout, &camera_layout],
             push_constant_ranges: &[],
@@ -126,11 +128,11 @@ impl Render {
 
         let main_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("main render pipeline"),
-            layout: Some(&pipeline_layout),
+            layout: Some(&main_pipeline_layout),
             vertex: VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[layout::<TextureVertex>()],
+                buffers: &[layout::<TextureVertex>(), layout::<InstanceModel>()],
             },
             fragment: Some(FragmentState {
                 module: &shader,
@@ -241,7 +243,7 @@ impl Render {
 
     pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
     where
-        V: Vertex,
+        V: Layout,
     {
         let mesh = Mesh::new(data, &self.device);
         let id = self.resources.meshes.insert(mesh);
@@ -316,8 +318,8 @@ impl Render {
             pass.set_bind_group(Self::CAMERA_BIND_GROUP, self.camera.bind_group(), &[]);
 
             let mut frame = Frame {
-                pass,
                 resources: &self.resources,
+                pass,
             };
 
             if let Err(err) = lp.render(&mut frame) {

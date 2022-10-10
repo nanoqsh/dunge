@@ -2,11 +2,11 @@ use {
     crate::{
         camera::{Projection, View},
         color::IntoLinear,
+        layout::Layout,
         mesh::MeshData,
         render::{MeshHandle, Render, TextureHandle},
         size::Size,
         texture::TextureData,
-        vertex::Vertex,
     },
     std::num::NonZeroU32,
     winit::window::Window,
@@ -48,7 +48,7 @@ impl Context {
     /// Creates a new mesh.
     pub fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
     where
-        V: Vertex,
+        V: Layout,
     {
         self.render.create_mesh(data)
     }

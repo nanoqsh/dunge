@@ -1,4 +1,5 @@
 use {
+    crate::layout::Plain,
     glam::{Mat4, Vec3},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -54,17 +55,10 @@ impl Camera {
     }
 
     pub(crate) fn resize(&mut self, (width, height): (f32, f32), queue: &Queue) {
-        use std::{mem, slice};
-
         let aspect = width / height;
         self.uniform.mat = *self.view.build_mat(aspect).as_ref();
 
-        let data = unsafe {
-            slice::from_raw_parts(
-                self.uniform.as_ptr().cast(),
-                mem::size_of::<CameraUniform>(),
-            )
-        };
+        let data = self.uniform.as_bytes();
         queue.write_buffer(&self.buffer, 0, data);
     }
 
@@ -183,3 +177,5 @@ impl CameraUniform {
         self as *const Self
     }
 }
+
+unsafe impl Plain for CameraUniform {}

@@ -1,5 +1,9 @@
 use {
-    crate::vertex::Vertex,
+    crate::{
+        frame::Instance,
+        layout::{Layout, Plain},
+    },
+    glam::{Quat, Vec3},
     wgpu::{Buffer, Device},
 };
 
@@ -34,43 +38,69 @@ pub(crate) struct Mesh {
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     n_indices: u32,
+    instances: Vec<Instance>,
+    instance_buffer: Buffer,
 }
 
 impl Mesh {
     pub(crate) fn new<V>(data: MeshData<V>, device: &Device) -> Self
     where
-        V: Vertex,
+        V: Layout,
     {
-        use {
-            std::{mem, slice},
-            wgpu::{
-                util::{BufferInitDescriptor, DeviceExt},
-                BufferUsages,
-            },
+        use wgpu::{
+            util::{BufferInitDescriptor, DeviceExt},
+            BufferUsages,
         };
 
+        const NUM_INSTANCES: usize = 10;
+
+        let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("vertex buffer"),
+            contents: data.verts.as_bytes(),
+            usage: BufferUsages::VERTEX,
+        });
+        let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("index buffer"),
+            contents: data.indxs.as_bytes(),
+            usage: BufferUsages::INDEX,
+        });
+
+        let n_indices = u32::try_from(data.indxs.len() * 3).expect("too many indexes");
+
+        let instances: Vec<_> = (0..NUM_INSTANCES)
+            .map(|n| {
+                use std::f32::consts::TAU;
+
+                let seg = TAU / NUM_INSTANCES as f32;
+                let rad = 4.;
+                let pos = Vec3 {
+                    x: (n as f32 * seg).sin() * rad,
+                    y: 0.,
+                    z: (n as f32 * seg).cos() * rad,
+                };
+                let rot = Quat::from_axis_angle(Vec3::Z, n as f32 * seg);
+
+                Instance {
+                    pos,
+                    rot,
+                    scl: Vec3::ONE,
+                }
+            })
+            .collect();
+
+        let instance_data: Vec<_> = instances.iter().map(Instance::to_model).collect();
+        let instance_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("instance buffer"),
+            contents: instance_data.as_slice().as_bytes(),
+            usage: BufferUsages::VERTEX,
+        });
+
         Self {
-            vertex_buffer: device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("vertex buffer"),
-                contents: unsafe {
-                    slice::from_raw_parts(
-                        data.verts.as_ptr().cast(),
-                        data.verts.len() * mem::size_of::<V>(),
-                    )
-                },
-                usage: BufferUsages::VERTEX,
-            }),
-            index_buffer: device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("index buffer"),
-                contents: unsafe {
-                    slice::from_raw_parts(
-                        data.indxs.as_ptr().cast(),
-                        data.indxs.len() * mem::size_of::<[u16; 3]>(),
-                    )
-                },
-                usage: BufferUsages::INDEX,
-            }),
-            n_indices: u32::try_from(data.indxs.len() * 3).expect("too many indexes"),
+            vertex_buffer,
+            index_buffer,
+            n_indices,
+            instances,
+            instance_buffer,
         }
     }
 
@@ -84,5 +114,13 @@ impl Mesh {
 
     pub(crate) fn n_indices(&self) -> u32 {
         self.n_indices
+    }
+
+    pub(crate) fn instance_buffer(&self) -> &Buffer {
+        &self.instance_buffer
+    }
+
+    pub(crate) fn n_instances(&self) -> u32 {
+        u32::try_from(self.instances.len()).expect("convert len")
     }
 }
