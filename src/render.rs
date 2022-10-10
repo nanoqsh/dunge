@@ -3,6 +3,7 @@ use {
         camera::{Camera, Projection, View},
         color::Linear,
         frame::{Frame, Resources},
+        instance::{Instance, InstanceData},
         layout::{layout, InstanceModel, Layout, TextureVertex},
         mesh::{Mesh, MeshData},
         r#loop::Loop,
@@ -241,6 +242,16 @@ impl Render {
         self.resources.textures.remove(id);
     }
 
+    pub(crate) fn create_instances(&mut self, data: Vec<InstanceData>) -> InstanceHandle {
+        let instance = Instance::new(data, &self.device);
+        let id = self.resources.instances.insert(instance);
+        InstanceHandle(id)
+    }
+
+    pub(crate) fn delete_instance(&mut self, InstanceHandle(id): InstanceHandle) {
+        self.resources.instances.remove(id);
+    }
+
     pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
     where
         V: Layout,
@@ -317,11 +328,7 @@ impl Render {
             pass.set_pipeline(&self.main_pipeline);
             pass.set_bind_group(Self::CAMERA_BIND_GROUP, self.camera.bind_group(), &[]);
 
-            let mut frame = Frame {
-                resources: &self.resources,
-                pass,
-            };
-
+            let mut frame = Frame::new(&self.resources, pass);
             if let Err(err) = lp.render(&mut frame) {
                 return RenderResult::Error(err);
             }
@@ -378,3 +385,6 @@ pub struct TextureHandle(pub(crate) u32);
 
 #[derive(Clone, Copy)]
 pub struct MeshHandle(pub(crate) u32);
+
+#[derive(Clone, Copy)]
+pub struct InstanceHandle(pub(crate) u32);

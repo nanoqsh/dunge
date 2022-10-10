@@ -3,6 +3,7 @@ mod canvas;
 pub mod color;
 mod context;
 mod frame;
+mod instance;
 mod layout;
 mod r#loop;
 mod mesh;
@@ -20,10 +21,11 @@ pub use crate::{
     canvas::{from_canvas, make_window, Canvas, InitialState, WindowMode},
     context::Context,
     frame::Frame,
+    instance::{InstanceData, IntoInstances},
     layout::{ColorVertex, Layout, TextureVertex},
     mesh::MeshData,
     r#loop::Loop,
-    render::{MeshHandle, TextureHandle},
+    render::{InstanceHandle, MeshHandle, TextureHandle},
     size::Size,
     texture::TextureData,
 };
@@ -32,4 +34,7 @@ pub use crate::{
 pub enum Error {
     /// Returns when a rendered resourse not found.
     ResourceNotFound,
+
+    /// Returns when an instance is not set.
+    InstanceNotSet,
 }

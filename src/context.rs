@@ -2,9 +2,10 @@ use {
     crate::{
         camera::{Projection, View},
         color::IntoLinear,
+        instance::IntoInstances,
         layout::Layout,
         mesh::MeshData,
-        render::{MeshHandle, Render, TextureHandle},
+        render::{InstanceHandle, MeshHandle, Render, TextureHandle},
         size::Size,
         texture::TextureData,
     },
@@ -43,6 +44,19 @@ impl Context {
     /// Deletes the texture.
     pub fn delete_texture(&mut self, handle: TextureHandle) {
         self.render.delete_texture(handle);
+    }
+
+    /// Creates a new instance.
+    pub fn create_instances<I>(&mut self, data: I) -> InstanceHandle
+    where
+        I: IntoInstances,
+    {
+        self.render.create_instances(data.into_instances())
+    }
+
+    /// Deletes the instance.
+    pub fn delete_instance(&mut self, handle: InstanceHandle) {
+        self.render.delete_instance(handle);
     }
 
     /// Creates a new mesh.

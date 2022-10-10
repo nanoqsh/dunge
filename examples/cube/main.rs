@@ -1,7 +1,8 @@
 use {
     dunge::{
-        color::Srgba, input::Input, Context, Error, Frame, InitialState, Loop, MeshData,
-        MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex, View, WindowMode,
+        color::Srgba, input::Input, Context, Error, Frame, InitialState, InstanceData,
+        InstanceHandle, Loop, MeshData, MeshHandle, Perspective, TextureData, TextureHandle,
+        TextureVertex, View, WindowMode,
     },
     image::DynamicImage as Image,
 };
@@ -20,6 +21,7 @@ fn main() {
 
 struct App {
     texture: TextureHandle,
+    instance: InstanceHandle,
     mesh: MeshHandle,
     camera: Camera,
 }
@@ -27,7 +29,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         // Set pixel size
-        context.set_pixel_size(2);
+        context.set_pixel_size(1);
 
         // Create a texture
         let texture = {
@@ -35,6 +37,19 @@ impl App {
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
             context.create_texture(data)
         };
+
+        // Create a model instances
+        let positions = [
+            [0., 0., 0.],
+            [2., 0., 0.],
+            [0., 0., 2.],
+            [-2., 0., 0.],
+            [0., 0., -2.],
+        ];
+        let instance = context.create_instances(positions.map(|pos| InstanceData {
+            pos,
+            ..Default::default()
+        }));
 
         // Create a mesh
         let data = MeshData::new(&VERTICES, &INDICES).expect("create mesh");
@@ -53,6 +68,7 @@ impl App {
 
         Self {
             texture,
+            instance,
             mesh,
             camera,
         }
@@ -78,6 +94,7 @@ impl Loop for App {
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         frame.bind_texture(self.texture)?;
+        frame.set_instance(self.instance)?;
         frame.draw_mesh(self.mesh)?;
 
         Ok(())
@@ -107,7 +124,7 @@ impl Camera {
 
         self.angle -= x % TAU;
         self.pitch = (self.pitch + z).clamp(-1., 1.);
-        self.distance = (self.distance - y).clamp(3., 8.);
+        self.distance = (self.distance - y).clamp(3., 10.);
     }
 
     fn view(&self) -> View<Perspective> {
