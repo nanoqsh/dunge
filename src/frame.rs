@@ -2,10 +2,10 @@ use {
     crate::{
         instance::Instance,
         mesh::Mesh,
+        r#loop::Error,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle},
         storage::Storage,
         texture::Texture,
-        Error,
     },
     wgpu::RenderPass,
 };

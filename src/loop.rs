@@ -1,6 +1,8 @@
+pub use winit::event::VirtualKeyCode as Key;
+
 use {
-    crate::{context::Context, frame::Frame, Error},
-    std::fmt,
+    crate::{context::Context, frame::Frame},
+    std::{fmt, iter, slice},
 };
 
 /// The main application loop.
@@ -23,13 +25,31 @@ pub trait Loop {
     fn error_occurred(&mut self, err: Self::Error) {
         log::error!("{err:?}");
     }
+
+    /// Calls when a close is requested.
+    ///
+    /// Returns a flag whether to terminate the main loop or not.
+    fn close_requested(&mut self) -> bool {
+        true
+    }
+}
+
+/// The main loop error.
+#[derive(Debug)]
+pub enum Error {
+    /// Returns when a rendered resourse not found.
+    ResourceNotFound,
+
+    /// Returns when an instance of rendered resourse is not set.
+    InstanceNotSet,
 }
 
 /// The user input data.
-pub struct Input {
+pub struct Input<'a> {
     pub delta_time: f32,
     pub cursor_position: Option<(f32, f32)>,
     pub mouse: Mouse,
+    pub pressed_keys: PressedKeys<'a>,
 }
 
 /// The mouse input data.
@@ -37,4 +57,42 @@ pub struct Input {
 pub struct Mouse {
     pub motion_delta: (f32, f32),
     pub wheel_delta: (f32, f32),
+    pub pressed_left: bool,
+    pub pressed_middle: bool,
+    pub pressed_right: bool,
 }
+
+/// Pressed keys input data.
+#[derive(Clone, Copy)]
+pub struct PressedKeys<'a> {
+    pub(crate) keys: &'a [Key],
+}
+
+impl<'a> IntoIterator for PressedKeys<'a> {
+    type Item = Key;
+    type IntoIter = PressedKeysIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        PressedKeysIterator {
+            iter: self.keys.iter().copied(),
+        }
+    }
+}
+
+pub struct PressedKeysIterator<'a> {
+    iter: iter::Copied<slice::Iter<'a, Key>>,
+}
+
+impl Iterator for PressedKeysIterator<'_> {
+    type Item = Key;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+
+impl ExactSizeIterator for PressedKeysIterator<'_> {}

@@ -1,4 +1,4 @@
-use {crate::Error, ahash::AHashMap as Map};
+use {crate::r#loop::Error, ahash::AHashMap as Map};
 
 pub(crate) struct Storage<T> {
     map: Map<u32, T>,

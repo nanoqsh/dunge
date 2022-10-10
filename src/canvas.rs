@@ -1,7 +1,7 @@
 use {
     crate::{
         context::Context,
-        r#loop::{Input, Loop, Mouse},
+        r#loop::{Input, Loop, Mouse, PressedKeys},
         render::{Render, RenderResult},
         size::Size,
     },
@@ -13,7 +13,7 @@ use {
 };
 
 pub struct Canvas {
-    event_loop: EventLoop<()>,
+    event_loop: EventLoop<CanvasEvent>,
     window: Window,
 }
 
@@ -32,14 +32,18 @@ impl Canvas {
         render.resize({
             let (width, height): (u32, u32) = window.inner_size().into();
             Size {
-                width: NonZeroU32::new(width.max(1)).expect("non zero"),
-                height: NonZeroU32::new(height.max(1)).expect("non zero"),
-                pixel_size: NonZeroU32::new(1).expect("non zero"),
+                width: width.max(1).try_into().expect("non zero"),
+                height: height.max(1).try_into().expect("non zero"),
+                ..Default::default()
             }
         });
 
         // Create the context
-        let mut context = Context { window, render };
+        let mut context = Context {
+            window,
+            proxy: event_loop.create_proxy(),
+            render,
+        };
 
         // Create the loop object
         let mut lp = make_loop(&mut context);
@@ -48,14 +52,15 @@ impl Canvas {
         let mut time = Time::new();
         let mut cursor_position = None;
         let mut mouse = Mouse::default();
+        let mut pressed_keys = vec![];
 
         event_loop.run(move |ev, _, flow| {
             use {
                 wgpu::SurfaceError,
                 winit::{
                     event::{
-                        DeviceEvent, ElementState, Event, KeyboardInput, MouseScrollDelta,
-                        StartCause, VirtualKeyCode, WindowEvent,
+                        DeviceEvent, ElementState, Event, KeyboardInput, MouseButton,
+                        MouseScrollDelta, StartCause, WindowEvent,
                     },
                     event_loop::ControlFlow,
                 },
@@ -64,16 +69,6 @@ impl Canvas {
             match ev {
                 Event::WindowEvent { event, window_id } if window_id == context.window.id() => {
                     match event {
-                        WindowEvent::CloseRequested
-                        | WindowEvent::KeyboardInput {
-                            input:
-                                KeyboardInput {
-                                    state: ElementState::Pressed,
-                                    virtual_keycode: Some(VirtualKeyCode::Escape),
-                                    ..
-                                },
-                            ..
-                        } => *flow = ControlFlow::Exit,
                         WindowEvent::Resized(size)
                         | WindowEvent::ScaleFactorChanged {
                             new_inner_size: &mut size,
@@ -87,6 +82,28 @@ impl Canvas {
                                 ..size
                             }
                         }),
+                        WindowEvent::CloseRequested if lp.close_requested() => {
+                            *flow = ControlFlow::Exit
+                        }
+                        WindowEvent::KeyboardInput {
+                            input:
+                                KeyboardInput {
+                                    state,
+                                    virtual_keycode: Some(key),
+                                    ..
+                                },
+                            ..
+                        } => match state {
+                            ElementState::Pressed if !pressed_keys.contains(&key) => {
+                                pressed_keys.push(key)
+                            }
+                            ElementState::Released => {
+                                if let Some(i) = pressed_keys.iter().position(|&k| k == key) {
+                                    pressed_keys.remove(i);
+                                }
+                            }
+                            _ => {}
+                        },
                         WindowEvent::CursorMoved { position, .. } => {
                             cursor_position = Some(position.into());
                         }
@@ -100,6 +117,18 @@ impl Canvas {
                             mouse.wheel_delta.0 += x;
                             mouse.wheel_delta.1 += y;
                         }
+                        WindowEvent::MouseInput { state, button, .. } => match button {
+                            MouseButton::Left => {
+                                mouse.pressed_left = state == ElementState::Pressed;
+                            }
+                            MouseButton::Right => {
+                                mouse.pressed_right = state == ElementState::Pressed;
+                            }
+                            MouseButton::Middle => {
+                                mouse.pressed_middle = state == ElementState::Pressed;
+                            }
+                            MouseButton::Other(_) => {}
+                        },
                         _ => {}
                     }
                 }
@@ -112,6 +141,9 @@ impl Canvas {
                         delta_time,
                         cursor_position,
                         mouse,
+                        pressed_keys: PressedKeys {
+                            keys: &pressed_keys[..],
+                        },
                     };
 
                     // Reset mouse delta
@@ -146,6 +178,11 @@ impl Canvas {
                     mouse.motion_delta.0 += x as f32;
                     mouse.motion_delta.1 += y as f32;
                 }
+                Event::UserEvent(CanvasEvent::Close) => {
+                    if lp.close_requested() {
+                        *flow = ControlFlow::Exit;
+                    }
+                }
                 Event::MainEventsCleared => context.window.request_redraw(),
                 Event::NewEvents(StartCause::Init) => {
                     // Reset the timer before start the loop
@@ -157,8 +194,12 @@ impl Canvas {
     }
 }
 
+pub(crate) enum CanvasEvent {
+    Close,
+}
+
 pub fn make_window(state: InitialState) -> Canvas {
-    use winit::{dpi::PhysicalSize, window::Fullscreen};
+    use winit::{dpi::PhysicalSize, event_loop::EventLoopBuilder, window::Fullscreen};
 
     let builder = WindowBuilder::new().with_title(state.title);
     let builder = match state.mode {
@@ -168,7 +209,7 @@ pub fn make_window(state: InitialState) -> Canvas {
         }
     };
 
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoopBuilder::with_user_event().build();
     let window = builder.build(&event_loop).expect("build window");
     window.set_cursor_visible(state.show_cursor);
 

@@ -1,8 +1,9 @@
 use {
     dunge::{
-        color::Srgba, input::Input, Context, Error, Frame, InitialState, InstanceData,
-        InstanceHandle, Loop, MeshData, MeshHandle, Perspective, TextureData, TextureHandle,
-        TextureVertex, View, WindowMode,
+        color::Srgba,
+        input::{Input, Key},
+        Context, Error, Frame, InitialState, InstanceData, InstanceHandle, Loop, MeshData,
+        MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex, View, WindowMode,
     },
     image::DynamicImage as Image,
 };
@@ -80,6 +81,14 @@ impl Loop for App {
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
         const SENSITIVITY: f32 = 0.01;
+
+        // Handle pressed keys
+        for key in input.pressed_keys {
+            if let Key::Escape = key {
+                context.plan_to_close();
+                return Ok(());
+            }
+        }
 
         let (x, z) = input.mouse.motion_delta;
         let (_, y) = input.mouse.wheel_delta;

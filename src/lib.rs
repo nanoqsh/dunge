@@ -13,7 +13,7 @@ mod storage;
 mod texture;
 
 pub mod input {
-    pub use crate::r#loop::{Input, Mouse};
+    pub use crate::r#loop::{Input, Key, Mouse, PressedKeys, PressedKeysIterator};
 }
 
 pub use crate::{
@@ -24,17 +24,8 @@ pub use crate::{
     instance::{InstanceData, IntoInstances},
     layout::{ColorVertex, Layout, TextureVertex},
     mesh::MeshData,
-    r#loop::Loop,
+    r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle},
     size::Size,
     texture::TextureData,
 };
-
-#[derive(Debug)]
-pub enum Error {
-    /// Returns when a rendered resourse not found.
-    ResourceNotFound,
-
-    /// Returns when an instance is not set.
-    InstanceNotSet,
-}

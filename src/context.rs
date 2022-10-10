@@ -1,6 +1,7 @@
 use {
     crate::{
         camera::{Projection, View},
+        canvas::CanvasEvent,
         color::IntoLinear,
         instance::IntoInstances,
         layout::Layout,
@@ -9,13 +10,13 @@ use {
         size::Size,
         texture::TextureData,
     },
-    std::num::NonZeroU32,
-    winit::window::Window,
+    winit::{event_loop::EventLoopProxy, window::Window},
 };
 
 /// The application context.
 pub struct Context {
     pub(crate) window: Window,
+    pub(crate) proxy: EventLoopProxy<CanvasEvent>,
     pub(crate) render: Render,
 }
 
@@ -25,15 +26,35 @@ impl Context {
         &self.window
     }
 
+    /// Plans the main loop to close.
+    ///
+    /// Calling this function dosn't guarantee closing.
+    /// It triggers the [`close_requested`] function in the [`Loop`],
+    /// which can handle the closing event.
+    ///
+    /// [`Loop`]: crate::Loop
+    /// [`close_requested`]: crate::Loop::close_requested
+    pub fn plan_to_close(&self) {
+        _ = self.proxy.send_event(CanvasEvent::Close);
+    }
+
     /// Returns the canvas size.
     pub fn size(&self) -> Size {
         self.render.size()
     }
 
-    pub fn set_pixel_size(&mut self, pixel_size: u32) {
-        let mut size = self.render.size();
-        size.pixel_size = NonZeroU32::new(pixel_size.max(1)).expect("non zero");
-        self.render.resize(size);
+    /// Sets a virtual pixel size in physical pixels.
+    ///
+    /// No effect if 0 is passed.
+    pub fn set_pixel_size(&mut self, pixel_size: u8) {
+        if pixel_size == 0 {
+            return;
+        }
+
+        self.render.resize(Size {
+            pixel_size: pixel_size.try_into().expect("non zero"),
+            ..self.render.size()
+        });
     }
 
     /// Creates a new texture.
