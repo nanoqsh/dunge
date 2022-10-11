@@ -163,6 +163,7 @@ pub(crate) struct RenderFrame {
 impl RenderFrame {
     pub(crate) fn new(
         (width, height): (u32, u32),
+        filter: FrameFilter,
         device: &Device,
         layout: &BindGroupLayout,
     ) -> Self {
@@ -185,11 +186,17 @@ impl RenderFrame {
         });
 
         let view = texture.create_view(&TextureViewDescriptor::default());
+
+        let filter_mode = match filter {
+            FrameFilter::Nearest => FilterMode::Nearest,
+            FrameFilter::Linear => FilterMode::Linear,
+        };
+
         let sampler = device.create_sampler(&SamplerDescriptor {
             address_mode_u: AddressMode::ClampToEdge,
             address_mode_v: AddressMode::ClampToEdge,
-            mag_filter: FilterMode::Nearest,
-            min_filter: FilterMode::Nearest,
+            mag_filter: filter_mode,
+            min_filter: filter_mode,
             ..Default::default()
         });
 
@@ -218,4 +225,10 @@ impl RenderFrame {
     pub(crate) fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
+}
+
+#[derive(Clone, Copy)]
+pub enum FrameFilter {
+    Nearest,
+    Linear,
 }

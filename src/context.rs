@@ -1,14 +1,14 @@
 use {
     crate::{
-        camera::{Projection, View},
+        camera::{IntoProjection, View},
         canvas::CanvasEvent,
         color::IntoLinear,
-        instance::IntoInstances,
+        instance::{InstanceData, Rotation},
         layout::Layout,
         mesh::MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle},
         size::Size,
-        texture::TextureData,
+        texture::{FrameFilter, TextureData},
     },
     winit::{event_loop::EventLoopProxy, window::Window},
 };
@@ -43,16 +43,20 @@ impl Context {
         self.render.size()
     }
 
-    /// Sets a virtual pixel size in physical pixels.
+    /// Sets frame parameters.
     ///
-    /// No effect if 0 is passed.
-    pub fn set_pixel_size(&mut self, pixel_size: u8) {
+    /// A `pixel_size` sets virtual pixels size in physical pixels.
+    /// A `filter` sets the frame filter mode.
+    ///
+    /// No effect if `pixel_size` is 0.
+    pub fn set_frame_parameters(&mut self, pixel_size: u8, filter: FrameFilter) {
         if pixel_size == 0 {
             return;
         }
 
         self.render.resize(Size {
             pixel_size: pixel_size.try_into().expect("non zero"),
+            filter,
             ..self.render.size()
         });
     }
@@ -68,11 +72,13 @@ impl Context {
     }
 
     /// Creates a new instance.
-    pub fn create_instances<I>(&mut self, data: I) -> InstanceHandle
+    pub fn create_instances<I, R>(&mut self, data: I) -> InstanceHandle
     where
-        I: IntoInstances,
+        I: IntoIterator<Item = InstanceData<R>>,
+        R: Rotation,
     {
-        self.render.create_instances(data.into_instances())
+        let models = data.into_iter().map(InstanceData::into_model).collect();
+        self.render.create_instances(models)
     }
 
     /// Deletes the instance.
@@ -106,8 +112,8 @@ impl Context {
     /// Sets the view.
     pub fn set_view<P>(&mut self, view: View<P>)
     where
-        P: Into<Projection>,
+        P: IntoProjection,
     {
-        self.render.set_view(view.into_projection());
+        self.render.set_view(view.into_projection_view());
     }
 }

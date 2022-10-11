@@ -1,10 +1,14 @@
-use std::num::{NonZeroU32, NonZeroU8};
+use {
+    crate::texture::FrameFilter,
+    std::num::{NonZeroU32, NonZeroU8},
+};
 
 #[derive(Clone, Copy)]
 pub struct Size {
     pub width: NonZeroU32,
     pub height: NonZeroU32,
     pub pixel_size: NonZeroU8,
+    pub filter: FrameFilter,
 }
 
 impl Size {
@@ -28,6 +32,7 @@ impl Default for Size {
             width: n,
             height: n,
             pixel_size: 1.try_into().expect("1 is non zero"),
+            filter: FrameFilter::Nearest,
         }
     }
 }

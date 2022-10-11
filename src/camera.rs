@@ -1,8 +1,24 @@
+pub(crate) use self::proj::{IntoProjection, Projection};
+
 use {
     crate::layout::Plain,
     glam::{Mat4, Vec3},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
+
+mod proj {
+    use super::{Orthographic, Perspective};
+
+    #[derive(Clone, Copy)]
+    pub enum Projection {
+        Perspective(Perspective),
+        Orthographic(Orthographic),
+    }
+
+    pub trait IntoProjection {
+        fn into_projection(self) -> Projection;
+    }
+}
 
 pub(crate) struct Camera {
     view: View<Projection>,
@@ -43,7 +59,7 @@ impl Camera {
         });
 
         Self {
-            view: View::default().into_projection(),
+            view: View::default().into_projection_view(),
             uniform,
             buffer,
             bind_group,
@@ -82,14 +98,14 @@ pub struct View<P> {
 }
 
 impl<P> View<P> {
-    pub(crate) fn into_projection(self) -> View<Projection>
+    pub(crate) fn into_projection_view(self) -> View<Projection>
     where
-        P: Into<Projection>,
+        P: IntoProjection,
     {
         View {
             eye: self.eye,
             look: self.look,
-            proj: self.proj.into(),
+            proj: self.proj.into_projection(),
         }
     }
 }
@@ -129,12 +145,6 @@ impl Default for View<Perspective> {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum Projection {
-    Perspective(Perspective),
-    Orthographic(Orthographic),
-}
-
 /// Perspective projection.
 #[derive(Clone, Copy)]
 pub struct Perspective {
@@ -143,9 +153,9 @@ pub struct Perspective {
     pub zfar: f32,
 }
 
-impl From<Perspective> for Projection {
-    fn from(v: Perspective) -> Self {
-        Self::Perspective(v)
+impl IntoProjection for Perspective {
+    fn into_projection(self) -> Projection {
+        Projection::Perspective(self)
     }
 }
 
@@ -160,9 +170,9 @@ pub struct Orthographic {
     pub far: f32,
 }
 
-impl From<Orthographic> for Projection {
-    fn from(v: Orthographic) -> Self {
-        Self::Orthographic(v)
+impl IntoProjection for Orthographic {
+    fn into_projection(self) -> Projection {
+        Projection::Orthographic(self)
     }
 }
 

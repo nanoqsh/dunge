@@ -3,12 +3,12 @@ use {
         camera::{Camera, Projection, View},
         color::Linear,
         frame::{Frame, Resources},
-        instance::{Instance, InstanceData},
+        instance::Instance,
         layout::{layout, InstanceModel, Layout, TextureVertex},
         mesh::{Mesh, MeshData},
         r#loop::Loop,
         size::Size,
-        texture::{DepthFrame, RenderFrame, Texture, TextureData},
+        texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
     },
     wgpu::{
         BindGroupLayout, Color, Device, LoadOp, Queue, RenderPipeline, Surface,
@@ -212,7 +212,7 @@ impl Render {
 
         let camera = Camera::new(&device, &camera_layout);
 
-        let render_frame = RenderFrame::new((1, 1), &device, &texture_layout);
+        let render_frame = RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &texture_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
         Self {
@@ -242,8 +242,8 @@ impl Render {
         self.resources.textures.remove(id);
     }
 
-    pub(crate) fn create_instances(&mut self, data: Vec<InstanceData>) -> InstanceHandle {
-        let instance = Instance::new(data, &self.device);
+    pub(crate) fn create_instances(&mut self, models: Vec<InstanceModel>) -> InstanceHandle {
+        let instance = Instance::new(models, &self.device);
         let id = self.resources.instances.insert(instance);
         InstanceHandle(id)
     }
@@ -287,7 +287,8 @@ impl Render {
         self.camera.resize(self.size.as_f32(), &self.queue);
 
         let pixeled = self.size.pixeled();
-        self.render_frame = RenderFrame::new(pixeled, &self.device, &self.texture_layout);
+        self.render_frame =
+            RenderFrame::new(pixeled, size.filter, &self.device, &self.texture_layout);
         self.depth_frame = DepthFrame::new(pixeled, &self.device);
     }
 

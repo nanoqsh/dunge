@@ -94,7 +94,7 @@ impl Layout for TextureVertex {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub(crate) struct InstanceModel {
-    pub(crate) mat: [f32; 16],
+    pub(crate) mat: [[f32; 4]; 4],
 }
 
 unsafe impl Plain for InstanceModel {}

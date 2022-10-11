@@ -21,11 +21,11 @@ pub use crate::{
     canvas::{from_canvas, make_window, Canvas, InitialState, WindowMode},
     context::Context,
     frame::Frame,
-    instance::{InstanceData, IntoInstances},
+    instance::{AxisAngle, InstanceData, Quat, Rotation},
     layout::{ColorVertex, Layout, TextureVertex},
     mesh::MeshData,
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle},
     size::Size,
-    texture::TextureData,
+    texture::{FrameFilter, TextureData},
 };

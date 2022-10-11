@@ -2,8 +2,9 @@ use {
     dunge::{
         color::Srgba,
         input::{Input, Key},
-        Context, Error, Frame, InitialState, InstanceData, InstanceHandle, Loop, MeshData,
-        MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex, View, WindowMode,
+        Context, Error, Frame, FrameFilter, InitialState, InstanceData, InstanceHandle, Loop,
+        MeshData, MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex, View,
+        WindowMode,
     },
     image::DynamicImage as Image,
 };
@@ -29,8 +30,8 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Set pixel size
-        context.set_pixel_size(1);
+        // Set pixel size and frame filter.
+        context.set_frame_parameters(2, FrameFilter::Nearest);
 
         // Create a texture
         let texture = {
