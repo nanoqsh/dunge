@@ -2,6 +2,7 @@ use {
     dunge::{
         color::Srgba,
         input::{Input, Key},
+        rotation::Identity,
         Context, Error, Frame, FrameFilter, InitialState, InstanceData, InstanceHandle, Loop,
         MeshData, MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex, View,
         WindowMode,
@@ -40,6 +41,8 @@ impl App {
             context.create_texture(data)
         };
 
+        type Data = InstanceData<Identity>;
+
         // Create a model instances
         let positions = [
             [0., 0., 0.],
@@ -48,7 +51,7 @@ impl App {
             [-2., 0., 0.],
             [0., 0., -2.],
         ];
-        let instance = context.create_instances(positions.map(|pos| InstanceData {
+        let instance = context.create_instances(positions.map(|pos| Data {
             pos,
             ..Default::default()
         }));
@@ -97,7 +100,8 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        context.set_view(self.camera.view());
+        let view = self.camera.view();
+        context.set_view(view);
 
         Ok(())
     }

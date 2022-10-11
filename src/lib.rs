@@ -16,12 +16,16 @@ pub mod input {
     pub use crate::r#loop::{Input, Key, Mouse, PressedKeys, PressedKeysIterator};
 }
 
+pub mod rotation {
+    pub use crate::instance::{AxisAngle, Identity, Inversed, Quat, Rotation};
+}
+
 pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{from_canvas, make_window, Canvas, InitialState, WindowMode},
     context::Context,
     frame::Frame,
-    instance::{AxisAngle, InstanceData, Quat, Rotation},
+    instance::InstanceData,
     layout::{ColorVertex, Layout, TextureVertex},
     mesh::MeshData,
     r#loop::{Error, Loop},

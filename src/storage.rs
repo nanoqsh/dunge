@@ -17,8 +17,15 @@ impl<T> Storage<T> {
         self.map.get(&index).ok_or(Error::ResourceNotFound)
     }
 
-    pub(crate) fn remove(&mut self, index: u32) {
-        self.map.remove(&index);
+    pub(crate) fn get_mut(&mut self, index: u32) -> Result<&mut T, Error> {
+        self.map.get_mut(&index).ok_or(Error::ResourceNotFound)
+    }
+
+    pub(crate) fn remove(&mut self, index: u32) -> Result<(), Error> {
+        self.map
+            .remove(&index)
+            .map(drop)
+            .ok_or(Error::ResourceNotFound)
     }
 }
 

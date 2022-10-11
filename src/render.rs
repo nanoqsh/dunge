@@ -9,6 +9,7 @@ use {
         r#loop::Loop,
         size::Size,
         texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
+        Error,
     },
     wgpu::{
         BindGroupLayout, Color, Device, LoadOp, Queue, RenderPipeline, Surface,
@@ -238,18 +239,32 @@ impl Render {
         TextureHandle(id)
     }
 
-    pub(crate) fn delete_texture(&mut self, TextureHandle(id): TextureHandle) {
-        self.resources.textures.remove(id);
+    pub(crate) fn delete_texture(&mut self, TextureHandle(id): TextureHandle) -> Result<(), Error> {
+        self.resources.textures.remove(id)
     }
 
-    pub(crate) fn create_instances(&mut self, models: Vec<InstanceModel>) -> InstanceHandle {
+    pub(crate) fn create_instances(&mut self, models: &[InstanceModel]) -> InstanceHandle {
         let instance = Instance::new(models, &self.device);
         let id = self.resources.instances.insert(instance);
         InstanceHandle(id)
     }
 
-    pub(crate) fn delete_instance(&mut self, InstanceHandle(id): InstanceHandle) {
-        self.resources.instances.remove(id);
+    pub(crate) fn update_instances(
+        &mut self,
+        InstanceHandle(id): InstanceHandle,
+        models: &[InstanceModel],
+    ) -> Result<(), Error> {
+        self.resources
+            .instances
+            .get_mut(id)
+            .map(|instances| instances.update_models(models, &self.queue))
+    }
+
+    pub(crate) fn delete_instances(
+        &mut self,
+        InstanceHandle(id): InstanceHandle,
+    ) -> Result<(), Error> {
+        self.resources.instances.remove(id)
     }
 
     pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
@@ -261,8 +276,8 @@ impl Render {
         MeshHandle(id)
     }
 
-    pub(crate) fn delete_mesh(&mut self, MeshHandle(id): MeshHandle) {
-        self.resources.meshes.remove(id);
+    pub(crate) fn delete_mesh(&mut self, MeshHandle(id): MeshHandle) -> Result<(), Error> {
+        self.resources.meshes.remove(id)
     }
 
     pub(crate) fn set_clear_color(&mut self, Linear([r, g, b, a]): Linear<f64>) {

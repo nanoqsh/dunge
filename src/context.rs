@@ -9,6 +9,7 @@ use {
         render::{InstanceHandle, MeshHandle, Render, TextureHandle},
         size::Size,
         texture::{FrameFilter, TextureData},
+        Error,
     },
     winit::{event_loop::EventLoopProxy, window::Window},
 };
@@ -67,23 +68,33 @@ impl Context {
     }
 
     /// Deletes the texture.
-    pub fn delete_texture(&mut self, handle: TextureHandle) {
-        self.render.delete_texture(handle);
+    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
+        self.render.delete_texture(handle)
     }
 
-    /// Creates a new instance.
+    /// Creates new instances.
     pub fn create_instances<I, R>(&mut self, data: I) -> InstanceHandle
     where
         I: IntoIterator<Item = InstanceData<R>>,
         R: Rotation,
     {
-        let models = data.into_iter().map(InstanceData::into_model).collect();
-        self.render.create_instances(models)
+        let models: Vec<_> = data.into_iter().map(InstanceData::into_model).collect();
+        self.render.create_instances(&models)
     }
 
-    /// Deletes the instance.
-    pub fn delete_instance(&mut self, handle: InstanceHandle) {
-        self.render.delete_instance(handle);
+    /// Updates instances.
+    pub fn update_instances<I, R>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = InstanceData<R>>,
+        R: Rotation,
+    {
+        let models: Vec<_> = data.into_iter().map(InstanceData::into_model).collect();
+        self.render.update_instances(handle, &models)
+    }
+
+    /// Deletes instances.
+    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), Error> {
+        self.render.delete_instances(handle)
     }
 
     /// Creates a new mesh.
@@ -95,8 +106,8 @@ impl Context {
     }
 
     /// Deletes the mesh.
-    pub fn delete_mesh(&mut self, handle: MeshHandle) {
-        self.render.delete_mesh(handle);
+    pub fn delete_mesh(&mut self, handle: MeshHandle) -> Result<(), Error> {
+        self.render.delete_mesh(handle)
     }
 
     /// Sets the clear color.
