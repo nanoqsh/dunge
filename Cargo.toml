@@ -2,18 +2,18 @@
 name = "dunge"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.60"
 
 [dependencies]
 ahash = "0.7"
 glam = "0.21"
 log = "0.4"
-pollster = "0.2"
 wgpu = "0.14"
 winit = "0.27"
 
-[dev-dependencies]
-env_logger = "0.9"
-image = { version = "0.24", default-features = false, features = ["png"] }
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wgpu = { version = "0.14", features = ["webgl"] }
+web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
 
-[[example]]
-name = "cube"
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+pollster = "0.2"

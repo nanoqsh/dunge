@@ -20,9 +20,15 @@ pub mod rotation {
     pub use crate::instance::{AxisAngle, Identity, Inversed, Quat, Rotation};
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub use crate::canvas::make_window;
+
+#[cfg(target_arch = "wasm32")]
+pub use crate::canvas::from_element;
+
 pub use crate::{
     camera::{Orthographic, Perspective, View},
-    canvas::{from_canvas, make_window, Canvas, InitialState, WindowMode},
+    canvas::{Canvas, InitialState, WindowMode},
     context::{Context, FrameParameters},
     frame::Frame,
     instance::InstanceData,

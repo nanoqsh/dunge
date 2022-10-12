@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "cube",
+    "cube_wasm",
+]
+resolver = "2"

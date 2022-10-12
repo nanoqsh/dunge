@@ -198,6 +198,7 @@ pub(crate) enum CanvasEvent {
     Close,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn make_window(state: InitialState) -> Canvas {
     use winit::{dpi::PhysicalSize, event_loop::EventLoopBuilder, window::Fullscreen};
 
@@ -237,8 +238,32 @@ pub enum WindowMode {
     Windowed { width: u32, height: u32 },
 }
 
-pub fn from_canvas(_tag: &str) -> Canvas {
-    todo!()
+#[cfg(target_arch = "wasm32")]
+pub fn from_element(id: &str) -> Canvas {
+    use {
+        web_sys::{Element, Window},
+        winit::{event_loop::EventLoopBuilder, platform::web::WindowExtWebSys},
+    };
+
+    let event_loop = EventLoopBuilder::with_user_event().build();
+    let window = WindowBuilder::new()
+        .build(&event_loop)
+        .expect("build window");
+
+    let document = web_sys::window()
+        .as_ref()
+        .and_then(Window::document)
+        .expect("get document");
+
+    let el = match document.get_element_by_id(id) {
+        Some(el) => el,
+        None => panic!("an element with id {id:?} not found"),
+    };
+
+    let canvas = Element::from(window.canvas());
+    el.append_child(&canvas).expect("append child");
+
+    Canvas { event_loop, window }
 }
 
 struct Time {
