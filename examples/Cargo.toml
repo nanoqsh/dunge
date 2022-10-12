@@ -2,5 +2,6 @@
 members = [
     "cube",
     "cube_wasm",
+    "serve",
 ]
 resolver = "2"

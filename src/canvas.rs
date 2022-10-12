@@ -4,8 +4,9 @@ use {
         r#loop::{Input, Loop, Mouse, PressedKeys},
         render::{Render, RenderResult},
         size::Size,
+        time::Time,
     },
-    std::{num::NonZeroU32, time::Instant},
+    std::num::NonZeroU32,
     winit::{
         event_loop::EventLoop,
         window::{Window, WindowBuilder},
@@ -18,7 +19,16 @@ pub struct Canvas {
 }
 
 impl Canvas {
-    pub fn run<M, L>(self, make_loop: M) -> !
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn run_blocking<M, L>(self, make_loop: M) -> !
+    where
+        M: FnOnce(&mut Context) -> L,
+        L: Loop + 'static,
+    {
+        pollster::block_on(self.run(make_loop))
+    }
+
+    pub async fn run<M, L>(self, make_loop: M) -> !
     where
         M: FnOnce(&mut Context) -> L,
         L: Loop + 'static,
@@ -26,7 +36,7 @@ impl Canvas {
         let Self { event_loop, window } = self;
 
         // Create the render
-        let mut render = pollster::block_on(Render::new(&window));
+        let mut render = Render::new(&window).await;
 
         // Initial resize
         render.resize({
@@ -242,11 +252,12 @@ pub enum WindowMode {
 pub fn from_element(id: &str) -> Canvas {
     use {
         web_sys::{Element, Window},
-        winit::{event_loop::EventLoopBuilder, platform::web::WindowExtWebSys},
+        winit::{event_loop::EventLoopBuilder, platform::web::WindowExtWebSys, window::Fullscreen},
     };
 
     let event_loop = EventLoopBuilder::with_user_event().build();
     let window = WindowBuilder::new()
+        .with_fullscreen(Some(Fullscreen::Borderless(None)))
         .build(&event_loop)
         .expect("build window");
 
@@ -264,23 +275,4 @@ pub fn from_element(id: &str) -> Canvas {
     el.append_child(&canvas).expect("append child");
 
     Canvas { event_loop, window }
-}
-
-struct Time {
-    last: Instant,
-}
-
-impl Time {
-    fn new() -> Self {
-        Self {
-            last: Instant::now(),
-        }
-    }
-
-    fn delta(&mut self) -> f32 {
-        let now = Instant::now();
-        let delta = now.duration_since(self.last);
-        self.last = now;
-        delta.as_secs_f32()
-    }
 }

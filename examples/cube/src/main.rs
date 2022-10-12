@@ -14,7 +14,7 @@ fn main() {
         },
         ..InitialState::default()
     })
-    .run(App::new);
+    .run_blocking(App::new);
 }
 
 struct App {

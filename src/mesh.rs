@@ -17,11 +17,10 @@ impl<'a, V> MeshData<'a, V> {
     /// otherwise returns `None`.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Option<Self> {
         if verts.len() <= usize::from(u16::MAX)
-            && indxs.iter().all(|&[a, b, c]| {
-                usize::from(a) <= verts.len()
-                    && usize::from(b) <= verts.len()
-                    && usize::from(c) <= verts.len()
-            })
+            && indxs
+                .iter()
+                .flatten()
+                .all(|&i| usize::from(i) < verts.len())
         {
             Some(Self { verts, indxs })
         } else {

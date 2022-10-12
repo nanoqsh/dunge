@@ -11,6 +11,7 @@ mod render;
 mod size;
 mod storage;
 mod texture;
+mod time;
 
 pub mod input {
     pub use crate::r#loop::{Input, Key, Mouse, PressedKeys, PressedKeysIterator};

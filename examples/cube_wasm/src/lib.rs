@@ -12,9 +12,9 @@ use {
 };
 
 #[wasm_bindgen(start)]
-pub fn run() {
+pub async fn run() {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    dunge::from_element("root").run(App::new);
+    dunge::from_element("root").run(App::new).await;
 }
 
 struct App {
