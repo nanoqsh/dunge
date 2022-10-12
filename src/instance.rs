@@ -18,7 +18,7 @@ where
     R: Rotation,
 {
     pub(crate) fn into_model(self) -> InstanceModel {
-        fn rotation([x, y, z, w]: [f32; 4]) -> [[f32; 3]; 3] {
+        fn rotation(Quat([x, y, z, w]): Quat) -> [[f32; 3]; 3] {
             let x2 = x + x;
             let y2 = y + y;
             let z2 = z + z;
@@ -58,14 +58,11 @@ where
     }
 }
 
-impl<R> Default for InstanceData<R>
-where
-    R: Default,
-{
+impl Default for InstanceData<Identity> {
     fn default() -> Self {
         Self {
             pos: [0., 0., 0.],
-            rot: R::default(),
+            rot: Identity,
             scl: [1., 1., 1.],
         }
     }
@@ -98,8 +95,8 @@ impl Instance {
     }
 
     pub(crate) fn update_models(&mut self, models: &[InstanceModel], queue: &Queue) {
-        self.n_instances = models.len().try_into().expect("convert instances len");
         queue.write_buffer(&self.buffer, 0, models.as_bytes());
+        self.n_instances = models.len().try_into().expect("convert instances len");
     }
 
     pub(crate) fn buffer(&self) -> &Buffer {
@@ -112,15 +109,15 @@ impl Instance {
 }
 
 pub trait Rotation {
-    fn into_quat(self) -> [f32; 4];
+    fn into_quat(self) -> Quat;
 }
 
 #[derive(Default)]
 pub struct Identity;
 
 impl Rotation for Identity {
-    fn into_quat(self) -> [f32; 4] {
-        Quat::default().0
+    fn into_quat(self) -> Quat {
+        Quat::default()
     }
 }
 
@@ -133,21 +130,21 @@ impl Default for Quat {
 }
 
 impl Rotation for Quat {
-    fn into_quat(self) -> [f32; 4] {
-        self.0
+    fn into_quat(self) -> Self {
+        self
     }
 }
 
 pub struct AxisAngle(pub [f32; 3], pub f32);
 
 impl Rotation for AxisAngle {
-    fn into_quat(self) -> [f32; 4] {
+    fn into_quat(self) -> Quat {
         let Self(axis, angle) = self;
 
         let (sin, cos) = (angle * 0.5).sin_cos();
         let [x, y, z] = axis.map(|v| v * sin);
 
-        [x, y, z, cos]
+        Quat([x, y, z, cos])
     }
 }
 
@@ -158,8 +155,8 @@ impl<R> Rotation for Inversed<R>
 where
     R: Rotation,
 {
-    fn into_quat(self) -> [f32; 4] {
-        let [x, y, z, w] = self.0.into_quat();
-        [-x, -y, -z, w]
+    fn into_quat(self) -> Quat {
+        let Quat([x, y, z, w]) = self.0.into_quat();
+        Quat([-x, -y, -z, w])
     }
 }

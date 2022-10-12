@@ -1,13 +1,11 @@
-use {
-    dunge::{
-        color::Srgba,
-        input::{Input, Key},
-        rotation::Identity,
-        Context, Error, Frame, FrameFilter, InitialState, InstanceData, InstanceHandle, Loop,
-        MeshData, MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex, View,
-        WindowMode,
-    },
-    image::DynamicImage as Image,
+#[path = "../util.rs"]
+mod util;
+
+use dunge::{
+    color::Srgba,
+    input::{Input, Key},
+    Context, Error, Frame, InitialState, InstanceData, InstanceHandle, Loop, MeshData, MeshHandle,
+    Perspective, TextureData, TextureHandle, TextureVertex, View, WindowMode,
 };
 
 fn main() {
@@ -31,30 +29,16 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Set pixel size and frame filter.
-        context.set_frame_parameters(2, FrameFilter::Nearest);
-
         // Create a texture
         let texture = {
-            let image = read_png(include_bytes!("grass.png")).to_rgba8();
+            let image = util::read_png(include_bytes!("grass.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
             context.create_texture(data)
         };
 
-        type Data = InstanceData<Identity>;
-
-        // Create a model instances
-        let positions = [
-            [0., 0., 0.],
-            [2., 0., 0.],
-            [0., 0., 2.],
-            [-2., 0., 0.],
-            [0., 0., -2.],
-        ];
-        let instance = context.create_instances(positions.map(|pos| Data {
-            pos,
-            ..Default::default()
-        }));
+        // Create a model instance
+        let data = InstanceData::default();
+        let instance = context.create_instances([data]);
 
         // Create a mesh
         let data = MeshData::new(&VERTICES, &INDICES).expect("create mesh");
@@ -113,17 +97,6 @@ impl Loop for App {
 
         Ok(())
     }
-}
-
-fn read_png(bytes: &[u8]) -> Image {
-    use {
-        image::{io::Reader, ImageFormat},
-        std::io::Cursor,
-    };
-
-    Reader::with_format(Cursor::new(bytes), ImageFormat::Png)
-        .decode()
-        .expect("decode png")
 }
 
 struct Camera {

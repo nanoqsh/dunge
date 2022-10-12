@@ -40,31 +40,37 @@ impl Context {
     }
 
     /// Returns the canvas size.
-    pub fn size(&self) -> Size {
-        self.render.size()
+    pub fn size(&self) -> (u32, u32) {
+        self.render.size().as_virtual()
     }
 
-    /// Sets frame parameters.
+    /// Sets context's frame parameters via [`FrameParameters`] struct.
     ///
-    /// A `pixel_size` sets virtual pixels size in physical pixels.
-    /// A `filter` sets the frame filter mode.
-    ///
-    /// No effect if `pixel_size` is 0.
-    pub fn set_frame_parameters(&mut self, pixel_size: u8, filter: FrameFilter) {
-        if pixel_size == 0 {
+    /// No effect if `pixel_size` in [`FrameParameters`] is 0.
+    pub fn set_frame_parameters(&mut self, params: FrameParameters) {
+        if params.pixel_size == 0 {
             return;
         }
 
-        self.render.resize(Size {
-            pixel_size: pixel_size.try_into().expect("non zero"),
-            filter,
+        self.render.resize(Some(Size {
+            pixel_size: params.pixel_size.try_into().expect("non zero"),
+            filter: params.filter,
             ..self.render.size()
-        });
+        }));
     }
 
     /// Creates a new texture.
     pub fn create_texture(&mut self, data: TextureData) -> TextureHandle {
         self.render.create_texture(data)
+    }
+
+    /// Updates a texture.
+    pub fn update_texture(
+        &mut self,
+        handle: TextureHandle,
+        data: TextureData,
+    ) -> Result<(), Error> {
+        self.render.update_texture(handle, data)
     }
 
     /// Deletes the texture.
@@ -105,6 +111,14 @@ impl Context {
         self.render.create_mesh(data)
     }
 
+    /// Updates a mesh.
+    pub fn update_mesh<V>(&mut self, handle: MeshHandle, data: MeshData<V>) -> Result<(), Error>
+    where
+        V: Layout,
+    {
+        self.render.update_mesh(handle, data)
+    }
+
     /// Deletes the mesh.
     pub fn delete_mesh(&mut self, handle: MeshHandle) -> Result<(), Error> {
         self.render.delete_mesh(handle)
@@ -126,5 +140,24 @@ impl Context {
         P: IntoProjection,
     {
         self.render.set_view(view.into_projection_view());
+    }
+}
+
+/// Describes frame parameters.
+#[derive(Clone, Copy)]
+pub struct FrameParameters {
+    // Virtual pixels size in physical pixels.
+    pub pixel_size: u8,
+
+    // The frame filter mode.
+    pub filter: FrameFilter,
+}
+
+impl Default for FrameParameters {
+    fn default() -> Self {
+        Self {
+            pixel_size: 1,
+            filter: FrameFilter::Nearest,
+        }
     }
 }

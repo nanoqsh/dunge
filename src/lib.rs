@@ -23,13 +23,12 @@ pub mod rotation {
 pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{from_canvas, make_window, Canvas, InitialState, WindowMode},
-    context::Context,
+    context::{Context, FrameParameters},
     frame::Frame,
     instance::InstanceData,
     layout::{ColorVertex, Layout, TextureVertex},
     mesh::MeshData,
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle},
-    size::Size,
     texture::{FrameFilter, TextureData},
 };

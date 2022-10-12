@@ -4,19 +4,19 @@ use {
 };
 
 #[derive(Clone, Copy)]
-pub struct Size {
-    pub width: NonZeroU32,
-    pub height: NonZeroU32,
-    pub pixel_size: NonZeroU8,
-    pub filter: FrameFilter,
+pub(crate) struct Size {
+    pub(crate) width: NonZeroU32,
+    pub(crate) height: NonZeroU32,
+    pub(crate) pixel_size: NonZeroU8,
+    pub(crate) filter: FrameFilter,
 }
 
 impl Size {
-    pub fn as_f32(&self) -> (f32, f32) {
-        (self.width.get() as f32, self.height.get() as f32)
+    pub fn as_physical(&self) -> (f32, f32) {
+        (self.width.get() as _, self.height.get() as _)
     }
 
-    pub fn pixeled(&self) -> (u32, u32) {
+    pub fn as_virtual(&self) -> (u32, u32) {
         let pixel_size = NonZeroU32::from(self.pixel_size);
         (
             self.width.get() / pixel_size,

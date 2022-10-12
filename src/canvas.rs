@@ -31,11 +31,11 @@ impl Canvas {
         // Initial resize
         render.resize({
             let (width, height): (u32, u32) = window.inner_size().into();
-            Size {
+            Some(Size {
                 width: width.max(1).try_into().expect("non zero"),
                 height: height.max(1).try_into().expect("non zero"),
                 ..Default::default()
-            }
+            })
         });
 
         // Create the context
@@ -75,12 +75,12 @@ impl Canvas {
                             ..
                         } => context.render.resize({
                             let (width, height): (u32, u32) = size.into();
-                            let size = context.size();
-                            Size {
+                            let size = context.render.size();
+                            Some(Size {
                                 width: NonZeroU32::new(width.max(1)).expect("non zero"),
                                 height: NonZeroU32::new(height.max(1)).expect("non zero"),
                                 ..size
-                            }
+                            })
                         }),
                         WindowEvent::CloseRequested if lp.close_requested() => {
                             *flow = ControlFlow::Exit
@@ -156,13 +156,13 @@ impl Canvas {
                     match context.render.draw_frame(&lp) {
                         RenderResult::Ok => {}
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
-                            log::error!("suface error: timeout")
+                            log::error!("suface error: timeout");
                         }
                         RenderResult::SurfaceError(SurfaceError::Outdated) => {
-                            log::error!("suface error: outdated")
+                            log::error!("suface error: outdated");
                         }
                         RenderResult::SurfaceError(SurfaceError::Lost) => {
-                            context.render.resize(context.size())
+                            context.render.resize(None);
                         }
                         RenderResult::SurfaceError(SurfaceError::OutOfMemory) => {
                             log::error!("suface error: out of memory");

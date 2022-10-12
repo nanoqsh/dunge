@@ -239,8 +239,19 @@ impl Render {
         TextureHandle(id)
     }
 
-    pub(crate) fn delete_texture(&mut self, TextureHandle(id): TextureHandle) -> Result<(), Error> {
-        self.resources.textures.remove(id)
+    pub(crate) fn update_texture(
+        &mut self,
+        handle: TextureHandle,
+        data: TextureData,
+    ) -> Result<(), Error> {
+        self.resources
+            .textures
+            .get_mut(handle.0)
+            .map(|texture| texture.update_data(data, &self.queue))
+    }
+
+    pub(crate) fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
+        self.resources.textures.remove(handle.0)
     }
 
     pub(crate) fn create_instances(&mut self, models: &[InstanceModel]) -> InstanceHandle {
@@ -251,20 +262,17 @@ impl Render {
 
     pub(crate) fn update_instances(
         &mut self,
-        InstanceHandle(id): InstanceHandle,
+        handle: InstanceHandle,
         models: &[InstanceModel],
     ) -> Result<(), Error> {
         self.resources
             .instances
-            .get_mut(id)
+            .get_mut(handle.0)
             .map(|instances| instances.update_models(models, &self.queue))
     }
 
-    pub(crate) fn delete_instances(
-        &mut self,
-        InstanceHandle(id): InstanceHandle,
-    ) -> Result<(), Error> {
-        self.resources.instances.remove(id)
+    pub(crate) fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), Error> {
+        self.resources.instances.remove(handle.0)
     }
 
     pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
@@ -276,8 +284,22 @@ impl Render {
         MeshHandle(id)
     }
 
-    pub(crate) fn delete_mesh(&mut self, MeshHandle(id): MeshHandle) -> Result<(), Error> {
-        self.resources.meshes.remove(id)
+    pub(crate) fn update_mesh<V>(
+        &mut self,
+        handle: MeshHandle,
+        data: MeshData<V>,
+    ) -> Result<(), Error>
+    where
+        V: Layout,
+    {
+        self.resources
+            .meshes
+            .get_mut(handle.0)
+            .map(|meshe| meshe.update_data(data, &self.queue))
+    }
+
+    pub(crate) fn delete_mesh(&mut self, handle: MeshHandle) -> Result<(), Error> {
+        self.resources.meshes.remove(handle.0)
     }
 
     pub(crate) fn set_clear_color(&mut self, Linear([r, g, b, a]): Linear<f64>) {
@@ -286,25 +308,28 @@ impl Render {
 
     pub(crate) fn set_view(&mut self, view: View<Projection>) {
         self.camera.set_view(view);
-        self.camera.resize(self.size.as_f32(), &self.queue);
+        self.camera.resize(self.size.as_physical(), &self.queue);
     }
 
     pub(crate) fn size(&self) -> Size {
         self.size
     }
 
-    pub(crate) fn resize(&mut self, size: Size) {
-        self.size = size;
-        self.config.width = size.width.get();
-        self.config.height = size.height.get();
+    pub(crate) fn resize(&mut self, size: Option<Size>) {
+        if let Some(size) = size {
+            self.size = size;
+        }
+
+        self.config.width = self.size.width.get();
+        self.config.height = self.size.height.get();
         self.surface.configure(&self.device, &self.config);
 
-        self.camera.resize(self.size.as_f32(), &self.queue);
+        self.camera.resize(self.size.as_physical(), &self.queue);
 
-        let pixeled = self.size.pixeled();
+        let virt = self.size.as_virtual();
         self.render_frame =
-            RenderFrame::new(pixeled, size.filter, &self.device, &self.texture_layout);
-        self.depth_frame = DepthFrame::new(pixeled, &self.device);
+            RenderFrame::new(virt, self.size.filter, &self.device, &self.texture_layout);
+        self.depth_frame = DepthFrame::new(virt, &self.device);
     }
 
     pub(crate) fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>

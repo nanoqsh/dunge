@@ -1,6 +1,6 @@
 use {
     crate::layout::{Layout, Plain},
-    wgpu::{Buffer, Device},
+    wgpu::{Buffer, Device, Queue},
 };
 
 /// A data struct for a mesh creation.
@@ -51,19 +51,29 @@ impl Mesh {
             contents: data.verts.as_bytes(),
             usage: BufferUsages::VERTEX,
         });
+
         let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("index buffer"),
             contents: data.indxs.as_bytes(),
             usage: BufferUsages::INDEX,
         });
 
-        let n_indices = u32::try_from(data.indxs.len() * 3).expect("too many indexes");
+        let n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
 
         Self {
             vertex_buffer,
             index_buffer,
             n_indices,
         }
+    }
+
+    pub(crate) fn update_data<V>(&mut self, data: MeshData<V>, queue: &Queue)
+    where
+        V: Layout,
+    {
+        queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
+        queue.write_buffer(&self.index_buffer, 0, data.indxs.as_bytes());
+        self.n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
     }
 
     pub(crate) fn vertex_buffer(&self) -> &Buffer {

@@ -1,7 +1,10 @@
 use {
     crate::render::Render,
     std::num::NonZeroU32,
-    wgpu::{BindGroup, BindGroupLayout, Device, Queue, Sampler, TextureFormat, TextureView},
+    wgpu::{
+        BindGroup, BindGroupLayout, Device, Queue, Sampler, Texture as WgpuTexture, TextureFormat,
+        TextureView,
+    },
 };
 
 /// A data struct for a texture creation.
@@ -26,6 +29,7 @@ impl<'a> TextureData<'a> {
 }
 
 pub(crate) struct Texture {
+    texture: WgpuTexture,
     bind_group: BindGroup,
 }
 
@@ -96,7 +100,37 @@ impl Texture {
             label: Some("texture bind group"),
         });
 
-        Self { bind_group }
+        Self {
+            texture,
+            bind_group,
+        }
+    }
+
+    pub(crate) fn update_data(&mut self, data: TextureData, queue: &Queue) {
+        use wgpu::*;
+
+        let (width, height) = data.size;
+        let size = Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+
+        queue.write_texture(
+            ImageCopyTexture {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: Origin3d::ZERO,
+                aspect: TextureAspect::All,
+            },
+            data.data,
+            ImageDataLayout {
+                offset: 0,
+                bytes_per_row: NonZeroU32::new(4 * width),
+                rows_per_image: NonZeroU32::new(height),
+            },
+            size,
+        );
     }
 
     pub(crate) fn bind_group(&self) -> &BindGroup {

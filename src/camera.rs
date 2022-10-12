@@ -1,7 +1,10 @@
 pub(crate) use self::proj::{IntoProjection, Projection};
 
 use {
-    crate::{instance::Rotation, layout::Plain},
+    crate::{
+        instance::{Quat, Rotation},
+        layout::Plain,
+    },
     glam::{Mat4, Vec3},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -104,7 +107,7 @@ impl<P> View<P> {
         }
     }
 
-    pub(crate) fn rotation_quat(&self) -> [f32; 4] {
+    pub(crate) fn rotation_quat(&self) -> Quat {
         let [xe, ye, ze] = self.eye;
         let [xl, yl, zl] = self.look;
         let [sx, sy, sz] = [xe - xl, ye - yl, ze - zl];
@@ -121,7 +124,7 @@ impl<P> View<P> {
         let (asin, acos) = (pitch * 0.5).sin_cos();
         let (bsin, bcos) = (-angle * 0.5).sin_cos();
 
-        [asin * bcos, acos * bsin, asin * bsin, acos * bcos]
+        Quat([asin * bcos, acos * bsin, asin * bsin, acos * bcos])
     }
 }
 
@@ -162,7 +165,7 @@ impl Default for View<Perspective> {
 }
 
 impl<P> Rotation for View<P> {
-    fn into_quat(self) -> [f32; 4] {
+    fn into_quat(self) -> Quat {
         self.rotation_quat()
     }
 }
