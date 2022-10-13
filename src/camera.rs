@@ -83,7 +83,7 @@ impl Camera {
 
 /// The camera view.
 #[derive(Clone, Copy)]
-pub struct View<P> {
+pub struct View<P = Perspective> {
     /// Eye 3d point.
     pub eye: [f32; 3],
 
@@ -150,7 +150,7 @@ impl View<Projection> {
     }
 }
 
-impl Default for View<Perspective> {
+impl Default for View {
     fn default() -> Self {
         Self {
             eye: [0.; 3],

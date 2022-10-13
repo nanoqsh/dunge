@@ -1,16 +1,19 @@
-use dunge::{
-    color::Srgba,
-    input::{Input, Key},
-    Context, Error, Frame, InitialState, InstanceData, InstanceHandle, Loop, MeshData, MeshHandle,
-    Perspective, TextureData, TextureHandle, TextureVertex, View, WindowMode,
+use {
+    dunge::{
+        color::Srgba,
+        input::{Input, Key},
+        Context, Error, Frame, InitialState, InstanceData, InstanceHandle, Loop, MeshData,
+        MeshHandle, TextureData, TextureHandle, TextureVertex, WindowMode,
+    },
+    utils::Camera,
 };
 
 fn main() {
     env_logger::init();
     dunge::make_window(InitialState {
         mode: WindowMode::Windowed {
-            width: 300,
-            height: 300,
+            width: 500,
+            height: 500,
         },
         ..InitialState::default()
     })
@@ -28,7 +31,7 @@ impl App {
     fn new(context: &mut Context) -> Self {
         // Create a texture
         let texture = {
-            let image = utils::read_png(include_bytes!("grass.png"));
+            let image = utils::read_png(include_bytes!("../../assets/grass.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
             context.create_texture(data)
         };
@@ -46,11 +49,7 @@ impl App {
         context.set_clear_color(color);
 
         // Create the camera
-        let camera = Camera {
-            angle: 0.,
-            pitch: 0.,
-            distance: 3.,
-        };
+        let camera = Camera::default();
 
         Self {
             texture,
@@ -93,33 +92,6 @@ impl Loop for App {
         frame.draw_mesh(self.mesh)?;
 
         Ok(())
-    }
-}
-
-struct Camera {
-    angle: f32,
-    pitch: f32,
-    distance: f32,
-}
-
-impl Camera {
-    fn update(&mut self, (x, y, z): (f32, f32, f32)) {
-        use std::f32::consts::TAU;
-
-        self.angle -= x % TAU;
-        self.pitch = (self.pitch + z).clamp(-1., 1.);
-        self.distance = (self.distance - y).clamp(3., 10.);
-    }
-
-    fn view(&self) -> View<Perspective> {
-        let x = self.angle.sin() * self.pitch.cos() * self.distance;
-        let y = self.pitch.sin() * self.distance;
-        let z = self.angle.cos() * self.pitch.cos() * self.distance;
-
-        View {
-            eye: [x, y, z],
-            ..Default::default()
-        }
     }
 }
 
