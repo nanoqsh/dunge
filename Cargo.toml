@@ -13,7 +13,7 @@ winit = "0.27"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wgpu = { version = "0.14", features = ["webgl"] }
-web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
+web-sys = { version = "0.3", features = ["Document", "Window", "Element", "Performance"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 pollster = "0.2"

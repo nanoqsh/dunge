@@ -68,6 +68,7 @@ impl Canvas {
             use {
                 wgpu::SurfaceError,
                 winit::{
+                    dpi::PhysicalPosition,
                     event::{
                         DeviceEvent, ElementState, Event, KeyboardInput, MouseButton,
                         MouseScrollDelta, StartCause, WindowEvent,
@@ -120,13 +121,16 @@ impl Canvas {
                         WindowEvent::CursorLeft { .. } => {
                             cursor_position = None;
                         }
-                        WindowEvent::MouseWheel {
-                            delta: MouseScrollDelta::LineDelta(x, y),
-                            ..
-                        } => {
-                            mouse.wheel_delta.0 += x;
-                            mouse.wheel_delta.1 += y;
-                        }
+                        WindowEvent::MouseWheel { delta, .. } => match delta {
+                            MouseScrollDelta::LineDelta(x, y) => {
+                                mouse.wheel_delta.0 += x;
+                                mouse.wheel_delta.1 += y;
+                            }
+                            MouseScrollDelta::PixelDelta(PhysicalPosition { x, y }) => {
+                                mouse.wheel_delta.0 += x as f32;
+                                mouse.wheel_delta.1 += y as f32;
+                            }
+                        },
                         WindowEvent::MouseInput { state, button, .. } => match button {
                             MouseButton::Left => {
                                 mouse.pressed_left = state == ElementState::Pressed;
@@ -251,13 +255,12 @@ pub enum WindowMode {
 #[cfg(target_arch = "wasm32")]
 pub fn from_element(id: &str) -> Canvas {
     use {
-        web_sys::{Element, Window},
-        winit::{event_loop::EventLoopBuilder, platform::web::WindowExtWebSys, window::Fullscreen},
+        web_sys::Window,
+        winit::{dpi::PhysicalSize, event_loop::EventLoopBuilder, platform::web::WindowExtWebSys},
     };
 
     let event_loop = EventLoopBuilder::with_user_event().build();
     let window = WindowBuilder::new()
-        .with_fullscreen(Some(Fullscreen::Borderless(None)))
         .build(&event_loop)
         .expect("build window");
 
@@ -271,7 +274,14 @@ pub fn from_element(id: &str) -> Canvas {
         None => panic!("an element with id {id:?} not found"),
     };
 
-    let canvas = Element::from(window.canvas());
+    window.set_inner_size({
+        let width = el.client_width().max(1) as u32;
+        let height = el.client_height().max(1) as u32;
+        PhysicalSize { width, height }
+    });
+
+    let canvas = window.canvas();
+    canvas.remove_attribute("style").expect("remove attribute");
     el.append_child(&canvas).expect("append child");
 
     Canvas { event_loop, window }

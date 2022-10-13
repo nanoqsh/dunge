@@ -10,15 +10,15 @@ fn main() {
 
     let mut debug = false;
 
-    for arg in env::args().skip(1) {
-        match arg.as_str() {
-            "--dev" => debug = true,
-            _ => {}
+    let mut args = env::args().skip(1);
+    let crate_name = args.next().expect("select a wasm crate");
+    for arg in args {
+        if arg == "--dev" {
+            debug = true
         }
     }
 
     let out_dir = format!("../{PATH}/pkg");
-    let crate_path = "cube_wasm";
     let status = Command::new("wasm-pack")
         .args([
             "build",
@@ -30,8 +30,8 @@ fn main() {
             "example",
             "--no-typescript",
         ])
-        .args(debug.then(|| "--dev"))
-        .arg(crate_path)
+        .args(debug.then_some("--dev"))
+        .arg(crate_name)
         .status()
         .expect("build wasm");
 
