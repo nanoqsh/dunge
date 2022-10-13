@@ -1,9 +1,0 @@
-[workspace]
-members = [
-    "cube",
-    "serve",
-]
-exclude = [
-    "cube_wasm",
-]
-resolver = "2"

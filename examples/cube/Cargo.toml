@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dunge = { path = "../../" }
+dunge = { path = "../../dunge" }
 utils = { path = "../utils" }
 env_logger = "0.9"
