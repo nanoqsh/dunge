@@ -10,13 +10,15 @@ fn main() {
 
     let mut args = env::args().skip(1);
     let mut crate_name = args.next().expect("select a wasm crate");
-
     if !crate_name.ends_with("_wasm") {
         crate_name.push_str("_wasm");
     }
 
+    let crate_path = fs::canonicalize(format!("./{crate_name}")).expect("crate path");
     let out_dir = format!("../{PATH}/pkg");
+
     let status = Command::new("wasm-pack")
+        .current_dir(crate_path)
         .args([
             "--log-level",
             "warn",
@@ -32,8 +34,6 @@ fn main() {
             "--no-typescript",
             "--dev",
         ])
-        .arg(crate_name)
-        .args(["--target-dir", "target"])
         .status()
         .expect("build wasm");
 

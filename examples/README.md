@@ -6,7 +6,7 @@ cd examples
 cargo r -p <example>
 ```
 
-To run an wasm example do:
+To run a wasm example do:
 ```
 cd examples
 cargo r -p serve -- <wasm_example>

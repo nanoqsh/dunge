@@ -1,7 +1,9 @@
 [workspace]
 members = [
     "cube",
-    "cube_wasm",
     "serve",
+]
+exclude = [
+    "cube_wasm",
 ]
 resolver = "2"

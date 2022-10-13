@@ -34,6 +34,36 @@ pub trait Loop {
     }
 }
 
+impl<L> Loop for &mut L
+where
+    L: Loop,
+{
+    type Error = L::Error;
+
+    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+        (**self).update(context, input)
+    }
+
+    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+        (**self).render(frame)
+    }
+}
+
+impl<L> Loop for Box<L>
+where
+    L: Loop,
+{
+    type Error = L::Error;
+
+    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+        self.as_mut().update(context, input)
+    }
+
+    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+        self.as_ref().render(frame)
+    }
+}
+
 /// The main loop error.
 #[derive(Debug)]
 pub enum Error {
@@ -62,7 +92,7 @@ pub struct Mouse {
     pub pressed_right: bool,
 }
 
-/// Pressed keys input data.
+/// The pressed keys input data.
 #[derive(Clone, Copy)]
 pub struct PressedKeys<'a> {
     pub(crate) keys: &'a [Key],
@@ -79,6 +109,7 @@ impl<'a> IntoIterator for PressedKeys<'a> {
     }
 }
 
+/// The pressed keys iterator.
 pub struct PressedKeysIterator<'a> {
     iter: iter::Copied<slice::Iter<'a, Key>>,
 }

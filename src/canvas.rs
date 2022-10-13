@@ -13,12 +13,16 @@ use {
     },
 };
 
+/// The render canvas.
 pub struct Canvas {
     event_loop: EventLoop<CanvasEvent>,
     window: Window,
 }
 
 impl Canvas {
+    /// Calls [`run`] but blocking instead of async.
+    ///
+    /// [`run`]: crate::Canvas::run
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_blocking<M, L>(self, make_loop: M) -> !
     where
@@ -28,6 +32,12 @@ impl Canvas {
         pollster::block_on(self.run(make_loop))
     }
 
+    /// Runs the main loop.
+    ///
+    /// This function construct a [`Context`] instance and
+    /// calls a `make_loop` by passing the context in it.
+    /// The `make_loop` needs to return an object which
+    /// implements the [`Loop`] trait.
     pub async fn run<M, L>(self, make_loop: M) -> !
     where
         M: FnOnce(&mut Context) -> L,
@@ -127,8 +137,9 @@ impl Canvas {
                                 mouse.wheel_delta.1 += y;
                             }
                             MouseScrollDelta::PixelDelta(PhysicalPosition { x, y }) => {
-                                mouse.wheel_delta.0 += x as f32;
-                                mouse.wheel_delta.1 += y as f32;
+                                let (width, height) = context.render.size().as_physical();
+                                mouse.wheel_delta.0 += x as f32 / width;
+                                mouse.wheel_delta.1 += y as f32 / height;
                             }
                         },
                         WindowEvent::MouseInput { state, button, .. } => match button {
