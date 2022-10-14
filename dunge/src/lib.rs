@@ -7,6 +7,7 @@ mod instance;
 mod layout;
 mod r#loop;
 mod mesh;
+mod pipline;
 mod render;
 mod size;
 mod storage;
@@ -30,7 +31,7 @@ pub use crate::canvas::from_element;
 pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{Canvas, InitialState, WindowMode},
-    context::{Context, FrameParameters},
+    context::{Context, FrameParameters, Limits},
     frame::Frame,
     instance::InstanceData,
     layout::{ColorVertex, Layout, TextureVertex},

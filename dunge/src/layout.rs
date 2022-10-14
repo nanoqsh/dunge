@@ -101,7 +101,7 @@ unsafe impl Plain for InstanceModel {}
 
 impl Layout for InstanceModel {
     const ATTRIBS: &'static [VertexAttribute] =
-        &wgpu::vertex_attr_array![5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4];
+        &wgpu::vertex_attr_array![2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4];
 
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Instance;
 }

@@ -1,6 +1,6 @@
 use {
     crate::{
-        context::Context,
+        context::{Context, Limits},
         r#loop::{Input, Loop, Mouse, PressedKeys},
         render::{Render, RenderResult},
         size::Size,
@@ -63,6 +63,7 @@ impl Canvas {
             window,
             proxy: event_loop.create_proxy(),
             render,
+            limits: Limits::default(),
         };
 
         // Create the loop object
@@ -160,6 +161,11 @@ impl Canvas {
                 Event::RedrawRequested(window_id) if window_id == context.window.id() => {
                     // Measure a delta time
                     let delta_time = time.delta();
+                    if let Some(min_delta_time) = context.limits.min_frame_delta_time {
+                        if delta_time < min_delta_time {
+                            return;
+                        }
+                    }
 
                     // Create an input
                     let input = Input {
@@ -170,6 +176,9 @@ impl Canvas {
                             keys: &pressed_keys[..],
                         },
                     };
+
+                    // Reset delta time
+                    time.reset();
 
                     // Reset mouse delta
                     mouse = Mouse::default();

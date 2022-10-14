@@ -6,12 +6,14 @@ use self::instant::Instant;
 
 pub(crate) struct Time {
     last: Instant,
+    delta_time: f64,
 }
 
 impl Time {
     pub(crate) fn new() -> Self {
         Self {
             last: Instant::now(),
+            delta_time: 0.,
         }
     }
 
@@ -19,7 +21,12 @@ impl Time {
         let now = Instant::now();
         let delta = now.duration_since(self.last);
         self.last = now;
-        delta.as_secs_f32()
+        self.delta_time = delta.as_secs_f64();
+        self.delta_time as _
+    }
+
+    pub(crate) fn reset(&mut self) {
+        self.delta_time = 0.;
     }
 }
 
@@ -48,8 +55,8 @@ mod instant {
     pub(crate) struct Duration(f64);
 
     impl Duration {
-        pub(crate) fn as_secs_f32(&self) -> f32 {
-            (self.0 / 1000.) as _
+        pub(crate) fn as_secs_f64(&self) -> f64 {
+            self.0 / 1000.
         }
     }
 }

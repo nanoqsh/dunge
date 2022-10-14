@@ -4,16 +4,16 @@ use {
         color::Linear,
         frame::{Frame, Resources},
         instance::Instance,
-        layout::{layout, InstanceModel, Layout, TextureVertex},
+        layout::{layout, ColorVertex, InstanceModel, Layout, TextureVertex},
         mesh::{Mesh, MeshData},
+        pipline::{Pipeline, PipelineData},
         r#loop::Loop,
         size::Size,
         texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
         Error,
     },
     wgpu::{
-        BindGroupLayout, Color, Device, LoadOp, Queue, RenderPipeline, Surface,
-        SurfaceConfiguration, SurfaceError,
+        BindGroupLayout, Color, Device, LoadOp, Queue, Surface, SurfaceConfiguration, SurfaceError,
     },
     winit::window::Window,
 };
@@ -21,8 +21,9 @@ use {
 pub(crate) struct Render {
     device: Device,
     queue: Queue,
-    main_pipeline: RenderPipeline,
-    post_pipeline: RenderPipeline,
+    textured_pipeline: Pipeline,
+    _color_pipeline: Pipeline,
+    post_pipeline: Pipeline,
     surface: Surface,
     config: SurfaceConfiguration,
     size: Size,
@@ -35,9 +36,12 @@ pub(crate) struct Render {
 }
 
 impl Render {
-    pub(crate) const TEXTURE_BIND_GROUP: u32 = 0;
-    pub(crate) const TEXTURE_SAMPLER_BIND_GROUP: u32 = 1;
-    pub(crate) const CAMERA_BIND_GROUP: u32 = 1;
+    pub(crate) const CAMERA_GROUP: u32 = 0;
+    pub(crate) const TEXTURE_GROUP: u32 = 1;
+    pub(crate) const TEXTURE_GROUP_IN_POST: u32 = 0;
+
+    pub(crate) const TEXTURE_BINDING: u32 = 0;
+    pub(crate) const TEXTURE_SAMPLER_BINDING: u32 = 1;
 
     pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
     pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;
@@ -85,11 +89,10 @@ impl Render {
             alpha_mode: CompositeAlphaMode::Auto,
         };
 
-        let shader = device.create_shader_module(include_wgsl!("shaders/textured.wgsl"));
         let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[
                 BindGroupLayoutEntry {
-                    binding: Self::TEXTURE_BIND_GROUP,
+                    binding: Self::TEXTURE_BINDING,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
                         multisampled: false,
@@ -99,7 +102,7 @@ impl Render {
                     count: None,
                 },
                 BindGroupLayoutEntry {
-                    binding: Self::TEXTURE_SAMPLER_BIND_GROUP,
+                    binding: Self::TEXTURE_SAMPLER_BINDING,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
                     count: None,
@@ -122,94 +125,52 @@ impl Render {
             label: Some("camera bind group layout"),
         });
 
-        let main_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("main render pipeline layout"),
-            bind_group_layouts: &[&texture_layout, &camera_layout],
-            push_constant_ranges: &[],
-        });
+        let depth_stencil = DepthStencilState {
+            format: DepthFrame::DEPTH_FORMAT,
+            depth_write_enabled: true,
+            depth_compare: CompareFunction::Less,
+            stencil: StencilState::default(),
+            bias: DepthBiasState::default(),
+        };
 
-        let main_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("main render pipeline"),
-            layout: Some(&main_pipeline_layout),
-            vertex: VertexState {
-                module: &shader,
-                entry_point: "vs_main",
-                buffers: &[layout::<TextureVertex>(), layout::<InstanceModel>()],
-            },
-            fragment: Some(FragmentState {
-                module: &shader,
-                entry_point: "fs_main",
-                targets: &[Some(ColorTargetState {
-                    format: config.format,
-                    blend: Some(BlendState::REPLACE),
-                    write_mask: ColorWrites::ALL,
-                })],
-            }),
-            primitive: PrimitiveState {
+        let textured_pipeline = {
+            let data = PipelineData {
+                shader_src: include_str!("shaders/textured.wgsl"),
+                bind_group_layouts: &[&camera_layout, &texture_layout],
+                vertex_buffers: &[layout::<TextureVertex>(), layout::<InstanceModel>()],
+                fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: FrontFace::Ccw,
                 cull_mode: Some(Face::Back),
-                polygon_mode: PolygonMode::Fill,
-                unclipped_depth: false,
-                conservative: false,
-            },
-            depth_stencil: Some(DepthStencilState {
-                format: DepthFrame::DEPTH_FORMAT,
-                depth_write_enabled: true,
-                depth_compare: CompareFunction::Less,
-                stencil: StencilState::default(),
-                bias: DepthBiasState::default(),
-            }),
-            multisample: MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            multiview: None,
-        });
+                depth_stencil: Some(depth_stencil.clone()),
+            };
+            Pipeline::new(&device, data)
+        };
 
-        let shader = device.create_shader_module(include_wgsl!("shaders/post.wgsl"));
-        let post_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("post render pipeline layout"),
-            bind_group_layouts: &[&texture_layout],
-            push_constant_ranges: &[],
-        });
+        let color_pipeline = {
+            let data = PipelineData {
+                shader_src: include_str!("shaders/color.wgsl"),
+                bind_group_layouts: &[&camera_layout],
+                vertex_buffers: &[layout::<ColorVertex>(), layout::<InstanceModel>()],
+                fragment_texture_format: config.format,
+                topology: PrimitiveTopology::TriangleList,
+                cull_mode: Some(Face::Back),
+                depth_stencil: Some(depth_stencil),
+            };
+            Pipeline::new(&device, data)
+        };
 
-        let post_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("post render pipeline"),
-            layout: Some(&post_pipeline_layout),
-            vertex: VertexState {
-                module: &shader,
-                entry_point: "vs_main",
-                buffers: &[],
-            },
-            fragment: Some(FragmentState {
-                module: &shader,
-                entry_point: "fs_main",
-                targets: &[Some(ColorTargetState {
-                    format: config.format,
-                    blend: Some(BlendState::REPLACE),
-                    write_mask: ColorWrites::ALL,
-                })],
-            }),
-            primitive: PrimitiveState {
+        let post_pipeline = {
+            let data = PipelineData {
+                shader_src: include_str!("shaders/post.wgsl"),
+                bind_group_layouts: &[&texture_layout],
+                vertex_buffers: &[],
+                fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleStrip,
-                strip_index_format: None,
-                front_face: FrontFace::Ccw,
                 cull_mode: None,
-                polygon_mode: PolygonMode::Fill,
-                unclipped_depth: false,
-                conservative: false,
-            },
-            depth_stencil: None,
-            multisample: MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            multiview: None,
-        });
+                depth_stencil: None,
+            };
+            Pipeline::new(&device, data)
+        };
 
         let camera = Camera::new(&device, &camera_layout);
 
@@ -219,7 +180,8 @@ impl Render {
         Self {
             device,
             queue,
-            main_pipeline,
+            textured_pipeline,
+            _color_pipeline: color_pipeline,
             post_pipeline,
             surface,
             config,
@@ -347,7 +309,7 @@ impl Render {
         // Main render pass
         {
             let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("main render pass"),
+                label: Some("textured render pass"),
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: self.render_frame.view(),
                     resolve_target: None,
@@ -366,8 +328,8 @@ impl Render {
                 }),
             });
 
-            pass.set_pipeline(&self.main_pipeline);
-            pass.set_bind_group(Self::CAMERA_BIND_GROUP, self.camera.bind_group(), &[]);
+            pass.set_pipeline(self.textured_pipeline.as_ref());
+            pass.set_bind_group(Self::CAMERA_GROUP, self.camera.bind_group(), &[]);
 
             let mut frame = Frame::new(&self.resources, pass);
             if let Err(err) = lp.render(&mut frame) {
@@ -399,9 +361,9 @@ impl Render {
                 depth_stencil_attachment: None,
             });
 
-            pass.set_pipeline(&self.post_pipeline);
+            pass.set_pipeline(self.post_pipeline.as_ref());
             pass.set_bind_group(
-                Self::TEXTURE_BIND_GROUP,
+                Self::TEXTURE_GROUP_IN_POST,
                 self.render_frame.bind_group(),
                 &[],
             );

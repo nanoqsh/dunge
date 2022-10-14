@@ -89,11 +89,11 @@ impl Texture {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: Render::TEXTURE_BIND_GROUP,
+                    binding: Render::TEXTURE_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: Render::TEXTURE_SAMPLER_BIND_GROUP,
+                    binding: Render::TEXTURE_SAMPLER_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
@@ -238,11 +238,11 @@ impl RenderFrame {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: Render::TEXTURE_BIND_GROUP,
+                    binding: Render::TEXTURE_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: Render::TEXTURE_SAMPLER_BIND_GROUP,
+                    binding: Render::TEXTURE_SAMPLER_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

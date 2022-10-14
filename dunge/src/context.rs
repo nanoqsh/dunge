@@ -19,6 +19,7 @@ pub struct Context {
     pub(crate) window: Window,
     pub(crate) proxy: EventLoopProxy<CanvasEvent>,
     pub(crate) render: Render,
+    pub(crate) limits: Limits,
 }
 
 impl Context {
@@ -42,6 +43,11 @@ impl Context {
     /// Returns the canvas size.
     pub fn size(&self) -> (u32, u32) {
         self.render.size().as_virtual()
+    }
+
+    /// Sets context's [`Limits`].
+    pub fn set_limits(&mut self, limits: Limits) {
+        self.limits = limits;
     }
 
     /// Sets context's frame parameters via [`FrameParameters`] struct.
@@ -141,6 +147,12 @@ impl Context {
     {
         self.render.set_view(view.into_projection_view());
     }
+}
+
+/// The context's limits.
+#[derive(Clone, Copy, Default)]
+pub struct Limits {
+    pub min_frame_delta_time: Option<f32>,
 }
 
 /// Describes frame parameters.

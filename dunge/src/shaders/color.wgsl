@@ -7,7 +7,7 @@ var<uniform> camera: CameraUniform;
 
 struct VertexInput {
     @location(0) pos: vec3<f32>,
-    @location(1) map: vec2<f32>,
+    @location(1) col: vec3<f32>,
 }
 
 struct InstanceInput {
@@ -19,7 +19,7 @@ struct InstanceInput {
 
 struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
-    @location(0) map: vec2<f32>,
+    @location(0) col: vec3<f32>,
 }
 
 @vertex
@@ -33,16 +33,11 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
 
     var out: VertexOutput;
     out.pos = camera.view_proj * model * vec4<f32>(vert.pos, 1.0);
-    out.map = vert.map;
+    out.col = vert.col;
     return out;
 }
 
-@group(1) @binding(0)
-var t_diffuse: texture_2d<f32>;
-@group(1) @binding(1)
-var s_diffuse: sampler;
-
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.map);
+    return vec4<f32>(in.col, 1.0);
 }
