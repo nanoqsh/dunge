@@ -1,5 +1,8 @@
 use {
-    crate::layout::{Layout, Plain},
+    crate::{
+        frame::PipelineType,
+        layout::{Plain, Vertex},
+    },
     wgpu::{Buffer, Device, Queue},
 };
 
@@ -33,12 +36,13 @@ pub(crate) struct Mesh {
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     n_indices: u32,
+    pipeline: PipelineType,
 }
 
 impl Mesh {
     pub(crate) fn new<V>(data: MeshData<V>, device: &Device) -> Self
     where
-        V: Layout,
+        V: Vertex,
     {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -63,16 +67,18 @@ impl Mesh {
             vertex_buffer,
             index_buffer,
             n_indices,
+            pipeline: V::PIPELINE_TYPE,
         }
     }
 
     pub(crate) fn update_data<V>(&mut self, data: MeshData<V>, queue: &Queue)
     where
-        V: Layout,
+        V: Vertex,
     {
         queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
         queue.write_buffer(&self.index_buffer, 0, data.indxs.as_bytes());
         self.n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
+        self.pipeline = V::PIPELINE_TYPE;
     }
 
     pub(crate) fn vertex_buffer(&self) -> &Buffer {
@@ -85,5 +91,9 @@ impl Mesh {
 
     pub(crate) fn n_indices(&self) -> u32 {
         self.n_indices
+    }
+
+    pub(crate) fn pipeline(&self) -> PipelineType {
+        self.pipeline
     }
 }

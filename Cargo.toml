@@ -2,6 +2,7 @@
 members = [
     "dunge",
     "examples/cube",
+    "examples/cube_color",
     "examples/cube_wasm",
 ]
 resolver = "2"

@@ -9,6 +9,7 @@ mod r#loop;
 mod mesh;
 mod pipline;
 mod render;
+mod shader_consts;
 mod size;
 mod storage;
 mod texture;
@@ -34,7 +35,7 @@ pub use crate::{
     context::{Context, FrameParameters, Limits},
     frame::Frame,
     instance::InstanceData,
-    layout::{ColorVertex, Layout, TextureVertex},
+    layout::{ColorVertex, TextureVertex, Vertex},
     mesh::MeshData,
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle},

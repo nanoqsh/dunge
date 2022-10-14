@@ -34,12 +34,17 @@ impl App {
         };
 
         // Create a model instance
-        let data = InstanceData::default();
-        let instance = context.create_instances([data]);
+        let instance = {
+            let data = InstanceData::default();
+            context.create_instances([data])
+        };
 
         // Create a mesh
-        let data = MeshData::new(&VERTICES, &INDICES).expect("create mesh");
-        let mesh = context.create_mesh(data);
+        let mesh = {
+            let verts = VERTICES.map(|(pos, map)| TextureVertex { pos, map });
+            let data = MeshData::new(&verts, &INDICES).expect("create mesh");
+            context.create_mesh(data)
+        };
 
         // Set the clear color
         let color = Srgba([29, 39, 34, 255]);
@@ -84,95 +89,29 @@ impl Loop for App {
     }
 }
 
-const VERTICES: [TextureVertex; 22] = [
-    TextureVertex {
-        pos: [1.0, 1.0, -1.0],
-        map: [1.0, 0.0],
-    },
-    TextureVertex {
-        pos: [1.0, -1.0, 1.0],
-        map: [0.5, 0.5],
-    },
-    TextureVertex {
-        pos: [1.0, -1.0, -1.0],
-        map: [1.0, 0.5],
-    },
-    TextureVertex {
-        pos: [1.0, 1.0, 1.0],
-        map: [1.0, 0.0],
-    },
-    TextureVertex {
-        pos: [-1.0, -1.0, 1.0],
-        map: [0.5, 0.5],
-    },
-    TextureVertex {
-        pos: [1.0, -1.0, 1.0],
-        map: [1.0, 0.5],
-    },
-    TextureVertex {
-        pos: [-1.0, 1.0, 1.0],
-        map: [1.0, 0.0],
-    },
-    TextureVertex {
-        pos: [-1.0, -1.0, -1.0],
-        map: [0.5, 0.5],
-    },
-    TextureVertex {
-        pos: [-1.0, -1.0, 1.0],
-        map: [1.0, 0.5],
-    },
-    TextureVertex {
-        pos: [-1.0, 1.0, -1.0],
-        map: [1.0, 0.0],
-    },
-    TextureVertex {
-        pos: [1.0, -1.0, -1.0],
-        map: [0.5, 0.5],
-    },
-    TextureVertex {
-        pos: [-1.0, -1.0, -1.0],
-        map: [1.0, 0.5],
-    },
-    TextureVertex {
-        pos: [-1.0, -1.0, 1.0],
-        map: [0.5, 1.0],
-    },
-    TextureVertex {
-        pos: [1.0, -1.0, -1.0],
-        map: [0.0, 0.5],
-    },
-    TextureVertex {
-        pos: [1.0, -1.0, 1.0],
-        map: [0.0, 1.0],
-    },
-    TextureVertex {
-        pos: [1.0, 1.0, 1.0],
-        map: [0.5, 0.5],
-    },
-    TextureVertex {
-        pos: [-1.0, 1.0, -1.0],
-        map: [0.0, 0.0],
-    },
-    TextureVertex {
-        pos: [-1.0, 1.0, 1.0],
-        map: [0.0, 0.5],
-    },
-    TextureVertex {
-        pos: [1.0, 1.0, 1.0],
-        map: [0.5, 0.0],
-    },
-    TextureVertex {
-        pos: [-1.0, 1.0, 1.0],
-        map: [0.5, 0.0],
-    },
-    TextureVertex {
-        pos: [-1.0, 1.0, -1.0],
-        map: [0.5, 0.0],
-    },
-    TextureVertex {
-        pos: [1.0, 1.0, -1.0],
-        map: [0.5, 0.0],
-    },
+const VERTICES: [([f32; 3], [f32; 2]); 22] = [
+    ([1.0, 1.0, -1.0], [1.0, 0.0]),
+    ([1.0, -1.0, 1.0], [0.5, 0.5]),
+    ([1.0, -1.0, -1.0], [1.0, 0.5]),
+    ([1.0, 1.0, 1.0], [1.0, 0.0]),
+    ([-1.0, -1.0, 1.0], [0.5, 0.5]),
+    ([1.0, -1.0, 1.0], [1.0, 0.5]),
+    ([-1.0, 1.0, 1.0], [1.0, 0.0]),
+    ([-1.0, -1.0, -1.0], [0.5, 0.5]),
+    ([-1.0, -1.0, 1.0], [1.0, 0.5]),
+    ([-1.0, 1.0, -1.0], [1.0, 0.0]),
+    ([1.0, -1.0, -1.0], [0.5, 0.5]),
+    ([-1.0, -1.0, -1.0], [1.0, 0.5]),
+    ([-1.0, -1.0, 1.0], [0.5, 1.0]),
+    ([1.0, -1.0, -1.0], [0.0, 0.5]),
+    ([1.0, -1.0, 1.0], [0.0, 1.0]),
+    ([1.0, 1.0, 1.0], [0.5, 0.5]),
+    ([-1.0, 1.0, -1.0], [0.0, 0.0]),
+    ([-1.0, 1.0, 1.0], [0.0, 0.5]),
+    ([1.0, 1.0, 1.0], [0.5, 0.0]),
+    ([-1.0, 1.0, 1.0], [0.5, 0.0]),
+    ([-1.0, 1.0, -1.0], [0.5, 0.0]),
+    ([1.0, 1.0, -1.0], [0.5, 0.0]),
 ];
 
 const INDICES: [[u16; 3]; 12] = [

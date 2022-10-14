@@ -4,7 +4,7 @@ use {
         canvas::CanvasEvent,
         color::IntoLinear,
         instance::{InstanceData, Rotation},
-        layout::Layout,
+        layout::Vertex,
         mesh::MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle},
         size::Size,
@@ -112,7 +112,7 @@ impl Context {
     /// Creates a new mesh.
     pub fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
     where
-        V: Layout,
+        V: Vertex,
     {
         self.render.create_mesh(data)
     }
@@ -120,7 +120,7 @@ impl Context {
     /// Updates a mesh.
     pub fn update_mesh<V>(&mut self, handle: MeshHandle, data: MeshData<V>) -> Result<(), Error>
     where
-        V: Layout,
+        V: Vertex,
     {
         self.render.update_mesh(handle, data)
     }

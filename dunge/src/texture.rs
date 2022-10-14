@@ -1,5 +1,5 @@
 use {
-    crate::render::Render,
+    crate::shader_consts,
     std::num::NonZeroU32,
     wgpu::{
         BindGroup, BindGroupLayout, Device, Queue, Sampler, Texture as WgpuTexture, TextureFormat,
@@ -89,11 +89,11 @@ impl Texture {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: Render::TEXTURE_BINDING,
+                    binding: shader_consts::textured::T_DIFFUSE.binding,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: Render::TEXTURE_SAMPLER_BINDING,
+                    binding: shader_consts::textured::S_DIFFUSE.binding,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
@@ -238,11 +238,11 @@ impl RenderFrame {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: Render::TEXTURE_BINDING,
+                    binding: shader_consts::post::T_DIFFUSE.binding,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: Render::TEXTURE_SAMPLER_BINDING,
+                    binding: shader_consts::post::S_DIFFUSE.binding,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

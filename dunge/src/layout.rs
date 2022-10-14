@@ -1,6 +1,9 @@
 pub(crate) use self::plain::Plain;
 
-use wgpu::{VertexAttribute, VertexBufferLayout, VertexStepMode};
+use {
+    crate::frame::PipelineType,
+    wgpu::{VertexAttribute, VertexBufferLayout, VertexStepMode},
+};
 
 mod plain {
     /// A trait for plain structs which can be safely casted to bytes.
@@ -58,7 +61,10 @@ where
     }
 }
 
-/// Don't use this vertex.
+pub trait Vertex: Layout {
+    const PIPELINE_TYPE: PipelineType;
+}
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ColorVertex {
@@ -75,6 +81,10 @@ impl Layout for ColorVertex {
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
 }
 
+impl Vertex for ColorVertex {
+    const PIPELINE_TYPE: PipelineType = PipelineType::Color;
+}
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TextureVertex {
@@ -89,6 +99,10 @@ impl Layout for TextureVertex {
         &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2];
 
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
+}
+
+impl Vertex for TextureVertex {
+    const PIPELINE_TYPE: PipelineType = PipelineType::Textured;
 }
 
 #[repr(C)]

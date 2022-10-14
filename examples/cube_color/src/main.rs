@@ -2,8 +2,8 @@ use {
     dunge::{
         color::Srgba,
         input::{Input, Key},
-        Context, Error, Frame, InitialState, InstanceData, InstanceHandle, Loop, MeshData,
-        MeshHandle, TextureData, TextureHandle, TextureVertex, WindowMode,
+        ColorVertex, Context, Error, Frame, InitialState, InstanceData, InstanceHandle, Loop,
+        MeshData, MeshHandle, WindowMode,
     },
     utils::Camera,
 };
@@ -21,7 +21,6 @@ fn main() {
 }
 
 struct App {
-    texture: TextureHandle,
     instance: InstanceHandle,
     mesh: MeshHandle,
     camera: Camera,
@@ -29,13 +28,6 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Create a texture
-        let texture = {
-            let image = utils::read_png(include_bytes!("../../assets/grass.png"));
-            let data = TextureData::new(&image, image.dimensions()).expect("create texture");
-            context.create_texture(data)
-        };
-
         // Create a model instance
         let instance = {
             let data = InstanceData::default();
@@ -44,7 +36,10 @@ impl App {
 
         // Create a mesh
         let mesh = {
-            let verts = VERTICES.map(|(pos, map)| TextureVertex { pos, map });
+            let verts = VERTICES.map(|(pos, [a, b])| ColorVertex {
+                pos,
+                col: [a, b, 1.],
+            });
             let data = MeshData::new(&verts, &INDICES).expect("create mesh");
             context.create_mesh(data)
         };
@@ -57,7 +52,6 @@ impl App {
         let camera = Camera::default();
 
         Self {
-            texture,
             instance,
             mesh,
             camera,
@@ -93,7 +87,6 @@ impl Loop for App {
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         frame.set_instance(self.instance)?;
-        frame.bind_texture(self.texture)?;
         frame.draw_mesh(self.mesh)?;
 
         Ok(())

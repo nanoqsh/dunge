@@ -72,6 +72,9 @@ pub enum Error {
 
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
+
+    /// Returns when an operation is unsupported.
+    Unsupported,
 }
 
 /// The user input data.

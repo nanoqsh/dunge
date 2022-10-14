@@ -2,12 +2,13 @@ use {
     crate::{
         camera::{Camera, Projection, View},
         color::Linear,
-        frame::{Frame, Resources},
+        frame::{Frame, MainPipeline, Resources},
         instance::Instance,
-        layout::{layout, ColorVertex, InstanceModel, Layout, TextureVertex},
+        layout::{layout, ColorVertex, InstanceModel, TextureVertex, Vertex},
         mesh::{Mesh, MeshData},
         pipline::{Pipeline, PipelineData},
         r#loop::Loop,
+        shader_consts,
         size::Size,
         texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
         Error,
@@ -21,8 +22,7 @@ use {
 pub(crate) struct Render {
     device: Device,
     queue: Queue,
-    textured_pipeline: Pipeline,
-    _color_pipeline: Pipeline,
+    main_pipeline: MainPipeline,
     post_pipeline: Pipeline,
     surface: Surface,
     config: SurfaceConfiguration,
@@ -36,16 +36,6 @@ pub(crate) struct Render {
 }
 
 impl Render {
-    pub(crate) const CAMERA_GROUP: u32 = 0;
-    pub(crate) const TEXTURE_GROUP: u32 = 1;
-    pub(crate) const TEXTURE_GROUP_IN_POST: u32 = 0;
-
-    pub(crate) const TEXTURE_BINDING: u32 = 0;
-    pub(crate) const TEXTURE_SAMPLER_BINDING: u32 = 1;
-
-    pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
-    pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;
-
     pub(crate) async fn new(window: &Window) -> Self {
         use wgpu::*;
 
@@ -92,7 +82,7 @@ impl Render {
         let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[
                 BindGroupLayoutEntry {
-                    binding: Self::TEXTURE_BINDING,
+                    binding: shader_consts::textured::T_DIFFUSE.binding,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
                         multisampled: false,
@@ -102,7 +92,7 @@ impl Render {
                     count: None,
                 },
                 BindGroupLayoutEntry {
-                    binding: Self::TEXTURE_SAMPLER_BINDING,
+                    binding: shader_consts::textured::S_DIFFUSE.binding,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
                     count: None,
@@ -180,8 +170,10 @@ impl Render {
         Self {
             device,
             queue,
-            textured_pipeline,
-            _color_pipeline: color_pipeline,
+            main_pipeline: MainPipeline {
+                textured: textured_pipeline,
+                color: color_pipeline,
+            },
             post_pipeline,
             surface,
             config,
@@ -239,7 +231,7 @@ impl Render {
 
     pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
     where
-        V: Layout,
+        V: Vertex,
     {
         let mesh = Mesh::new(data, &self.device);
         let id = self.resources.meshes.insert(mesh);
@@ -252,7 +244,7 @@ impl Render {
         data: MeshData<V>,
     ) -> Result<(), Error>
     where
-        V: Layout,
+        V: Vertex,
     {
         self.resources
             .meshes
@@ -308,7 +300,7 @@ impl Render {
 
         // Main render pass
         {
-            let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
+            let pass = encoder.begin_render_pass(&RenderPassDescriptor {
                 label: Some("textured render pass"),
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: self.render_frame.view(),
@@ -328,10 +320,13 @@ impl Render {
                 }),
             });
 
-            pass.set_pipeline(self.textured_pipeline.as_ref());
-            pass.set_bind_group(Self::CAMERA_GROUP, self.camera.bind_group(), &[]);
+            let mut frame = Frame::new(
+                &self.main_pipeline,
+                self.camera.bind_group(),
+                &self.resources,
+                pass,
+            );
 
-            let mut frame = Frame::new(&self.resources, pass);
             if let Err(err) = lp.render(&mut frame) {
                 return RenderResult::Error(err);
             }
@@ -363,7 +358,7 @@ impl Render {
 
             pass.set_pipeline(self.post_pipeline.as_ref());
             pass.set_bind_group(
-                Self::TEXTURE_GROUP_IN_POST,
+                shader_consts::post::T_DIFFUSE.group,
                 self.render_frame.bind_group(),
                 &[],
             );
