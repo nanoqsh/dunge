@@ -2,7 +2,8 @@ use {
     dunge::{
         color::Srgba,
         input::Input,
-        Context, Error, Frame, InstanceData, InstanceHandle, Loop, MeshData, MeshHandle,
+        transform::Position,
+        Context, Error, Frame, InstanceHandle, Loop, MeshData, MeshHandle,
         TextureData, TextureHandle, TextureVertex,
     },
     utils::Camera,
@@ -35,7 +36,7 @@ impl App {
 
         // Create a model instance
         let instance = {
-            let data = InstanceData::default();
+            let data = Position::default();
             context.create_instances([data])
         };
 

@@ -14,13 +14,10 @@ mod size;
 mod storage;
 mod texture;
 mod time;
+pub mod transform;
 
 pub mod input {
     pub use crate::r#loop::{Input, Key, Mouse, PressedKeys, PressedKeysIterator};
-}
-
-pub mod rotation {
-    pub use crate::instance::{AxisAngle, Identity, Inversed, Quat, Rotation};
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -34,7 +31,6 @@ pub use crate::{
     canvas::{Canvas, InitialState, WindowMode},
     context::{Context, FrameParameters, Limits},
     frame::Frame,
-    instance::InstanceData,
     layout::{ColorVertex, TextureVertex, Vertex},
     mesh::MeshData,
     r#loop::{Error, Loop},

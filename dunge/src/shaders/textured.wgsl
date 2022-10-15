@@ -44,5 +44,10 @@ var s_diffuse: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.map);
+    let out = textureSample(t_diffuse, s_diffuse, in.map);
+    if out.w < 0.9 {
+        discard;
+    }
+    
+    return out;
 }

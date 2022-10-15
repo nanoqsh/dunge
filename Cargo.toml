@@ -4,5 +4,6 @@ members = [
     "examples/cube",
     "examples/cube_color",
     "examples/cube_wasm",
+    "examples/scene",
 ]
 resolver = "2"

@@ -2,8 +2,8 @@ pub(crate) use self::proj::{IntoProjection, Projection};
 
 use {
     crate::{
-        instance::{Quat, Rotation},
         layout::Plain,
+        transform::{IntoQuat, Quat},
     },
     glam::{Mat4, Vec3},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
@@ -164,7 +164,7 @@ impl Default for View {
     }
 }
 
-impl<P> Rotation for View<P> {
+impl<P> IntoQuat for View<P> {
     fn into_quat(self) -> Quat {
         self.rotation_quat()
     }

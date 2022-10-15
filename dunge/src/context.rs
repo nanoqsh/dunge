@@ -3,12 +3,12 @@ use {
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
         color::IntoLinear,
-        instance::{InstanceData, Rotation},
         layout::Vertex,
         mesh::MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle},
         size::Size,
         texture::{FrameFilter, TextureData},
+        transform::{IntoQuat, IntoTransform},
         Error,
     },
     winit::{event_loop::EventLoopProxy, window::Window},
@@ -85,22 +85,32 @@ impl Context {
     }
 
     /// Creates new instances.
-    pub fn create_instances<I, R>(&mut self, data: I) -> InstanceHandle
+    pub fn create_instances<I>(&mut self, data: I) -> InstanceHandle
     where
-        I: IntoIterator<Item = InstanceData<R>>,
-        R: Rotation,
+        I: IntoIterator,
+        I::Item: IntoTransform,
+        <I::Item as IntoTransform>::IntoQuat: IntoQuat,
     {
-        let models: Vec<_> = data.into_iter().map(InstanceData::into_model).collect();
+        let models: Vec<_> = data
+            .into_iter()
+            .map(|transform| transform.into_transform().into_model())
+            .collect();
+
         self.render.create_instances(&models)
     }
 
     /// Updates instances.
-    pub fn update_instances<I, R>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
+    pub fn update_instances<I>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
     where
-        I: IntoIterator<Item = InstanceData<R>>,
-        R: Rotation,
+        I: IntoIterator,
+        I::Item: IntoTransform,
+        <I::Item as IntoTransform>::IntoQuat: IntoQuat,
     {
-        let models: Vec<_> = data.into_iter().map(InstanceData::into_model).collect();
+        let models: Vec<_> = data
+            .into_iter()
+            .map(|transform| transform.into_transform().into_model())
+            .collect();
+
         self.render.update_instances(handle, &models)
     }
 
