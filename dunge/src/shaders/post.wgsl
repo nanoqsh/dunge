@@ -42,5 +42,12 @@ var s_diffuse: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.map);
+    // This fixes the annoying effect of a sprite stretching
+    // caused by f32 rounding up or down depending on its sign.
+    var map = in.map;
+    if map.x < 0.5 {
+        map.x -= 0.5 / screen.size.x;
+    }
+
+    return textureSample(t_diffuse, s_diffuse, map);
 }

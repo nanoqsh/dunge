@@ -38,11 +38,9 @@ struct App {
 }
 
 impl App {
-    const PIXEL_SIZE: u8 = 2;
-
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: Self::PIXEL_SIZE,
+            pixel_size: 2,
             ..Default::default()
         });
 
@@ -65,11 +63,11 @@ impl App {
 
             const N: usize = 9;
             const SCENE: [[u8; N]; N] = [
-                [0, 0, 0, 0, W, W, W, 0, 0],
-                [0, 0, W, W, W, L, W, 0, 0],
-                [V, W, W, F, L, F, W, W, V],
-                [F, L, L, F, F, F, L, L, V],
-                [V, W, L, F, L, F, F, V, V],
+                [0, 0, W, V, W, V, V, 0, 0],
+                [0, 0, W, L, F, L, V, 0, 0],
+                [V, W, W, F, L, F, W, W, W],
+                [F, L, L, F, F, F, L, L, W],
+                [V, W, L, F, L, F, F, W, W],
                 [0, W, L, W, L, L, L, W, 0],
                 [0, V, L, L, L, F, L, W, 0],
                 [0, V, W, W, F, W, W, V, 0],
@@ -183,8 +181,8 @@ impl Loop for App {
         let sprite_scale = 16.;
         let view = View {
             proj: Orthographic {
-                width_factor: 1. / (sprite_scale * Self::PIXEL_SIZE as f32),
-                height_factor: 1. / (sprite_scale * Self::PIXEL_SIZE as f32),
+                width_factor: 1. / sprite_scale,
+                height_factor: 1. / sprite_scale,
                 ..Default::default()
             },
             ..self.camera.view()

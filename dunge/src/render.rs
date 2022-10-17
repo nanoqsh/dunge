@@ -193,7 +193,7 @@ impl Render {
         let render_frame = RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &texture_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
-        let screen = Screen::new((1., 1.), &device, &screen_layout);
+        let screen = Screen::new(&device, &screen_layout);
 
         Self {
             device,
@@ -293,7 +293,7 @@ impl Render {
 
     pub(crate) fn set_view(&mut self, view: View<Projection>) {
         self.camera.set_view(view);
-        self.camera.resize(self.size.as_physical(), &self.queue);
+        self.camera.resize(self.size.as_virtual(), &self.queue);
     }
 
     pub(crate) fn size(&self) -> Size {
@@ -309,11 +309,9 @@ impl Render {
         self.config.height = self.size.height.get();
         self.surface.configure(&self.device, &self.config);
 
-        self.camera.resize(self.size.as_physical(), &self.queue);
-
         let virt = self.size.as_virtual();
-        self.screen
-            .resize((virt.0 as f32, virt.1 as f32), &self.queue);
+        self.camera.resize(virt, &self.queue);
+        self.screen.resize(virt, &self.queue);
 
         self.render_frame =
             RenderFrame::new(virt, self.size.filter, &self.device, &self.texture_layout);

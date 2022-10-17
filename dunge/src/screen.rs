@@ -9,15 +9,13 @@ pub(crate) struct Screen {
 }
 
 impl Screen {
-    pub(crate) fn new(size: (f32, f32), device: &Device, layout: &BindGroupLayout) -> Self {
+    pub(crate) fn new(device: &Device, layout: &BindGroupLayout) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             *,
         };
 
-        let uniform = ScreenUniform {
-            size: [size.0, size.1],
-        };
+        let uniform = ScreenUniform { size: [1., 1.] };
 
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("screen buffer"),
@@ -37,9 +35,9 @@ impl Screen {
         Self { buffer, bind_group }
     }
 
-    pub(crate) fn resize(&self, size: (f32, f32), queue: &Queue) {
+    pub(crate) fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
         let data = ScreenUniform {
-            size: [size.0, size.1],
+            size: [width as f32, height as f32],
         };
 
         queue.write_buffer(&self.buffer, 0, data.as_bytes());

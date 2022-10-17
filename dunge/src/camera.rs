@@ -66,8 +66,8 @@ impl Camera {
         self.view = view;
     }
 
-    pub(crate) fn resize(&self, size: (f32, f32), queue: &Queue) {
-        let view_proj = self.view.build_mat(size);
+    pub(crate) fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
+        let view_proj = self.view.build_mat((width as f32, height as f32));
         queue.write_buffer(&self.buffer, 0, view_proj.as_ref().as_bytes());
     }
 

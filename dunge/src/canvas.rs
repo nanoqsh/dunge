@@ -137,10 +137,8 @@ impl Canvas {
                                 mouse.wheel_delta.0 += x;
                                 mouse.wheel_delta.1 += y;
                             }
-                            MouseScrollDelta::PixelDelta(PhysicalPosition { x, y }) => {
-                                let (width, height) = context.render.size().as_physical();
-                                mouse.wheel_delta.0 += x as f32 / width;
-                                mouse.wheel_delta.1 += y as f32 / height;
+                            MouseScrollDelta::PixelDelta(PhysicalPosition { .. }) => {
+                                // TODO
                             }
                         },
                         WindowEvent::MouseInput { state, button, .. } => match button {

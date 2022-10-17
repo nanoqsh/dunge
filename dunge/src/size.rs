@@ -12,10 +12,6 @@ pub(crate) struct Size {
 }
 
 impl Size {
-    pub fn as_physical(&self) -> (f32, f32) {
-        (self.width.get() as _, self.height.get() as _)
-    }
-
     pub fn as_virtual(&self) -> (u32, u32) {
         let pixel_size = NonZeroU32::from(self.pixel_size);
         (
