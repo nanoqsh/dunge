@@ -8,6 +8,7 @@ use {
         mesh::{Mesh, MeshData},
         pipline::{Pipeline, PipelineData},
         r#loop::Loop,
+        screen::Screen,
         shader_consts,
         size::Size,
         texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
@@ -31,6 +32,7 @@ pub(crate) struct Render {
     texture_layout: BindGroupLayout,
     load: LoadOp<Color>,
     camera: Camera,
+    screen: Screen,
     resources: Resources,
     render_frame: RenderFrame,
     depth_frame: DepthFrame,
@@ -159,10 +161,24 @@ impl Render {
             Pipeline::new(&device, data)
         };
 
+        let screen_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[BindGroupLayoutEntry {
+                binding: shader_consts::post::SCREEN.binding,
+                visibility: ShaderStages::FRAGMENT,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("screen bind group layout"),
+        });
+
         let post_pipeline = {
             let data = PipelineData {
                 shader_src: include_str!("shaders/post.wgsl"),
-                bind_group_layouts: &[&texture_layout],
+                bind_group_layouts: &[&screen_layout, &texture_layout],
                 vertex_buffers: &[],
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleStrip,
@@ -176,6 +192,8 @@ impl Render {
 
         let render_frame = RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &texture_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
+
+        let screen = Screen::new((1., 1.), &device, &screen_layout);
 
         Self {
             device,
@@ -194,6 +212,7 @@ impl Render {
             resources: Resources::default(),
             render_frame,
             depth_frame,
+            screen,
         }
     }
 
@@ -293,6 +312,9 @@ impl Render {
         self.camera.resize(self.size.as_physical(), &self.queue);
 
         let virt = self.size.as_virtual();
+        self.screen
+            .resize((virt.0 as f32, virt.1 as f32), &self.queue);
+
         self.render_frame =
             RenderFrame::new(virt, self.size.filter, &self.device, &self.texture_layout);
         self.depth_frame = DepthFrame::new(virt, &self.device);
@@ -374,6 +396,12 @@ impl Render {
                 self.render_frame.bind_group(),
                 &[],
             );
+            pass.set_bind_group(
+                shader_consts::post::SCREEN.group,
+                self.screen.bind_group(),
+                &[],
+            );
+
             pass.draw(0..4, 0..1);
         }
 

@@ -15,13 +15,18 @@ pub(crate) mod color {
 pub(crate) mod post {
     use super::*;
 
-    pub(crate) const T_DIFFUSE: Location = Location {
+    pub(crate) const SCREEN: Location = Location {
         group: 0,
         binding: 0,
     };
 
+    pub(crate) const T_DIFFUSE: Location = Location {
+        group: 1,
+        binding: 0,
+    };
+
     pub(crate) const S_DIFFUSE: Location = Location {
-        group: 0,
+        group: 1,
         binding: 1,
     };
 }

@@ -25,6 +25,9 @@ mod plain {
     unsafe impl Plain for i32 {}
     unsafe impl Plain for i64 {}
 
+    unsafe impl Plain for f32 {}
+    unsafe impl Plain for f64 {}
+
     unsafe impl<T, const N: usize> Plain for [T; N] where T: Plain {}
 
     unsafe impl<T> Plain for &[T]

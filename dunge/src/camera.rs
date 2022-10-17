@@ -25,7 +25,6 @@ mod proj {
 
 pub(crate) struct Camera {
     view: View<Projection>,
-    uniform: CameraUniform,
     buffer: Buffer,
     bind_group: BindGroup,
 }
@@ -58,7 +57,6 @@ impl Camera {
 
         Self {
             view: View::<Orthographic>::default().into_projection_view(),
-            uniform,
             buffer,
             bind_group,
         }
@@ -68,11 +66,9 @@ impl Camera {
         self.view = view;
     }
 
-    pub(crate) fn resize(&mut self, size: (f32, f32), queue: &Queue) {
+    pub(crate) fn resize(&self, size: (f32, f32), queue: &Queue) {
         let view_proj = self.view.build_mat(size);
-        self.uniform.view_proj = *view_proj.as_ref();
-
-        queue.write_buffer(&self.buffer, 0, self.uniform.as_bytes());
+        queue.write_buffer(&self.buffer, 0, view_proj.as_ref().as_bytes());
     }
 
     pub(crate) fn bind_group(&self) -> &BindGroup {
@@ -227,7 +223,7 @@ impl IntoProjection for Orthographic {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub(crate) struct CameraUniform {
     view_proj: [f32; 16],
 }

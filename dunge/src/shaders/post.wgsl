@@ -28,9 +28,16 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
     return out;
 }
 
+struct Screen {
+    size: vec2<f32>,
+};
+
 @group(0) @binding(0)
+var<uniform> screen: Screen;
+
+@group(1) @binding(0)
 var t_diffuse: texture_2d<f32>;
-@group(0) @binding(1)
+@group(1) @binding(1)
 var s_diffuse: sampler;
 
 @fragment
