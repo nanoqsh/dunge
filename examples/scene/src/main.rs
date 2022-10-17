@@ -5,8 +5,8 @@ use {
         color::Srgba,
         input::{Input, Key},
         transform::{Position, ReverseRotation, Transform},
-        Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData, MeshHandle,
-        TextureData, TextureHandle, TextureVertex, WindowMode,
+        Context, Error, Frame, FrameParameters, InitialState, InstanceHandle, Loop, MeshData,
+        MeshHandle, Orthographic, TextureData, TextureHandle, TextureVertex, View, WindowMode,
     },
     utils::Camera,
 };
@@ -38,7 +38,14 @@ struct App {
 }
 
 impl App {
+    const PIXEL_SIZE: u8 = 2;
+
     fn new(context: &mut Context) -> Self {
+        context.set_frame_parameters(FrameParameters {
+            pixel_size: Self::PIXEL_SIZE,
+            ..Default::default()
+        });
+
         // Create the sprite texture
         let sprites = {
             let image = utils::read_png(include_bytes!("sprites.png"));
@@ -173,7 +180,15 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let view = self.camera.view();
+        let sprite_scale = 16.;
+        let view = View {
+            proj: Orthographic {
+                width_factor: 1. / (sprite_scale * Self::PIXEL_SIZE as f32),
+                height_factor: 1. / (sprite_scale * Self::PIXEL_SIZE as f32),
+                ..Default::default()
+            },
+            ..self.camera.view()
+        };
         context.set_view(view);
 
         self.models

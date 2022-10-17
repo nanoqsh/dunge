@@ -1,10 +1,7 @@
 use {
     dunge::{
-        color::Srgba,
-        input::Input,
-        transform::Position,
-        Context, Error, Frame, InstanceHandle, Loop, MeshData, MeshHandle,
-        TextureData, TextureHandle, TextureVertex,
+        color::Srgba, input::Input, transform::Position, Context, Error, Frame, InstanceHandle,
+        Loop, MeshData, MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex,
     },
     utils::Camera,
     wasm_bindgen::prelude::*,
@@ -75,7 +72,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let view = self.camera.view();
+        let view = self.camera.view::<Perspective>();
         context.set_view(view);
 
         Ok(())

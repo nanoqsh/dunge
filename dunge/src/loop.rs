@@ -73,8 +73,8 @@ pub enum Error {
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
 
-    /// Returns when an operation is unsupported.
-    Unsupported,
+    /// Returns when a texture binding is unavailable.
+    TextureBindingUnavailable,
 }
 
 /// The user input data.

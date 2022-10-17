@@ -21,7 +21,7 @@ pub struct Frame<'d> {
     pub(crate) resources: &'d Resources,
     pub(crate) pass: RenderPass<'d>,
     instance: Option<&'d Instance>,
-    current_pipline: VertexType,
+    current_vertex_type: VertexType,
 }
 
 impl<'d> Frame<'d> {
@@ -39,16 +39,16 @@ impl<'d> Frame<'d> {
             resources,
             pass,
             instance: None,
-            current_pipline: DEFAULT_PIPELINE,
+            current_vertex_type: DEFAULT_PIPELINE,
         };
 
-        frame.set_pipeline(DEFAULT_PIPELINE);
+        frame.set_vertex_type(DEFAULT_PIPELINE);
         frame
     }
 
     pub fn bind_texture(&mut self, TextureHandle(id): TextureHandle) -> Result<(), Error> {
-        if self.current_pipline != VertexType::Texture {
-            return Err(Error::Unsupported);
+        if self.current_vertex_type != VertexType::Texture {
+            return Err(Error::TextureBindingUnavailable);
         }
 
         let texture = self.resources.textures.get(id)?;
@@ -73,8 +73,8 @@ impl<'d> Frame<'d> {
 
         let mesh = self.resources.meshes.get(id)?;
 
-        if mesh.pipeline() != self.current_pipline {
-            self.set_pipeline(mesh.pipeline());
+        if mesh.vertex_type() != self.current_vertex_type {
+            self.set_vertex_type(mesh.vertex_type());
         }
 
         let n_instances = match self.instance {
@@ -103,8 +103,8 @@ impl<'d> Frame<'d> {
         Ok(())
     }
 
-    fn set_pipeline(&mut self, pipline: VertexType) {
-        match pipline {
+    fn set_vertex_type(&mut self, ty: VertexType) {
+        match ty {
             VertexType::Texture => {
                 self.pass.set_pipeline(self.main_pipeline.textured.as_ref());
                 self.pass.set_bind_group(
@@ -123,7 +123,7 @@ impl<'d> Frame<'d> {
             }
         }
 
-        self.current_pipline = pipline;
+        self.current_vertex_type = ty;
     }
 }
 

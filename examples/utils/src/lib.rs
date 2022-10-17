@@ -24,12 +24,15 @@ impl Camera {
     pub fn update(&mut self, (x, y, z): (f32, f32, f32)) {
         use std::f32::consts::TAU;
 
-        self.angle -= x % TAU;
-        self.pitch = (self.pitch + z).clamp(-1., 1.);
+        self.angle = (self.angle + x) % TAU;
+        self.pitch = (self.pitch + z).clamp(-1.5, 1.5);
         self.distance = (self.distance - y).clamp(3., 10.);
     }
 
-    pub fn view(&self) -> View {
+    pub fn view<P>(&self) -> View<P>
+    where
+        P: Default,
+    {
         let x = self.distance * self.angle.sin() * self.pitch.cos();
         let y = self.distance * self.pitch.sin();
         let z = self.distance * self.angle.cos() * self.pitch.cos();

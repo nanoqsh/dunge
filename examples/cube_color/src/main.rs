@@ -4,7 +4,7 @@ use {
         input::{Input, Key},
         transform::Position,
         ColorVertex, Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData,
-        MeshHandle, WindowMode,
+        MeshHandle, Perspective, WindowMode,
     },
     utils::Camera,
 };
@@ -80,7 +80,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let view = self.camera.view();
+        let view = self.camera.view::<Perspective>();
         context.set_view(view);
 
         Ok(())

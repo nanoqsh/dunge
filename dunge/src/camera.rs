@@ -57,7 +57,7 @@ impl Camera {
         });
 
         Self {
-            view: View::default().into_projection_view(),
+            view: View::<Orthographic>::default().into_projection_view(),
             uniform,
             buffer,
             bind_group,
@@ -68,9 +68,8 @@ impl Camera {
         self.view = view;
     }
 
-    pub(crate) fn resize(&mut self, (width, height): (f32, f32), queue: &Queue) {
-        let aspect = width / height;
-        let view_proj = self.view.build_mat(aspect);
+    pub(crate) fn resize(&mut self, size: (f32, f32), queue: &Queue) {
+        let view_proj = self.view.build_mat(size);
         self.uniform.view_proj = *view_proj.as_ref();
 
         queue.write_buffer(&self.buffer, 0, self.uniform.as_bytes());
@@ -129,19 +128,27 @@ impl<P> View<P> {
 }
 
 impl View<Projection> {
-    fn build_mat(&self, aspect: f32) -> Mat4 {
+    fn build_mat(&self, (width, height): (f32, f32)) -> Mat4 {
         let proj = match self.proj {
             Projection::Perspective(Perspective { fovy, znear, zfar }) => {
-                Mat4::perspective_rh(fovy, aspect, znear, zfar)
+                Mat4::perspective_rh(fovy, width / height, znear, zfar)
             }
             Projection::Orthographic(Orthographic {
-                left,
-                right,
-                bottom,
-                top,
+                width_factor,
+                height_factor,
                 near,
                 far,
-            }) => Mat4::orthographic_rh(left, right, bottom, top, near, far),
+            }) => {
+                let half_width = width * width_factor * 0.5;
+                let half_height = height * height_factor * 0.5;
+
+                let left = -half_width;
+                let right = half_width;
+                let bottom = -half_height;
+                let top = half_height;
+
+                Mat4::orthographic_rh(left, right, bottom, top, near, far)
+            }
         };
 
         let view = Mat4::look_at_rh(self.eye.into(), self.look.into(), Vec3::Y);
@@ -150,16 +157,15 @@ impl View<Projection> {
     }
 }
 
-impl Default for View {
+impl<P> Default for View<P>
+where
+    P: Default,
+{
     fn default() -> Self {
         Self {
             eye: [0., 0., 1.],
             look: [0.; 3],
-            proj: Perspective {
-                fovy: 1.58,
-                znear: 0.1,
-                zfar: 100.,
-            },
+            proj: P::default(),
         }
     }
 }
@@ -178,6 +184,16 @@ pub struct Perspective {
     pub zfar: f32,
 }
 
+impl Default for Perspective {
+    fn default() -> Self {
+        Self {
+            fovy: 1.6,
+            znear: 0.1,
+            zfar: 100.,
+        }
+    }
+}
+
 impl IntoProjection for Perspective {
     fn into_projection(self) -> Projection {
         Projection::Perspective(self)
@@ -187,12 +203,21 @@ impl IntoProjection for Perspective {
 /// Orthographic projection.
 #[derive(Clone, Copy)]
 pub struct Orthographic {
-    pub left: f32,
-    pub right: f32,
-    pub bottom: f32,
-    pub top: f32,
+    pub width_factor: f32,
+    pub height_factor: f32,
     pub near: f32,
     pub far: f32,
+}
+
+impl Default for Orthographic {
+    fn default() -> Self {
+        Self {
+            width_factor: 1.,
+            height_factor: 1.,
+            near: -100.,
+            far: 100.,
+        }
+    }
 }
 
 impl IntoProjection for Orthographic {

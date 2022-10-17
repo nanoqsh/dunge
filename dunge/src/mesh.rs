@@ -36,7 +36,7 @@ pub(crate) struct Mesh {
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     n_indices: u32,
-    pipeline: VertexType,
+    vertex_type: VertexType,
 }
 
 impl Mesh {
@@ -67,7 +67,7 @@ impl Mesh {
             vertex_buffer,
             index_buffer,
             n_indices,
-            pipeline: V::TYPE,
+            vertex_type: V::TYPE,
         }
     }
 
@@ -78,7 +78,7 @@ impl Mesh {
         queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
         queue.write_buffer(&self.index_buffer, 0, data.indxs.as_bytes());
         self.n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
-        self.pipeline = V::TYPE;
+        self.vertex_type = V::TYPE;
     }
 
     pub(crate) fn vertex_buffer(&self) -> &Buffer {
@@ -93,7 +93,7 @@ impl Mesh {
         self.n_indices
     }
 
-    pub(crate) fn pipeline(&self) -> VertexType {
-        self.pipeline
+    pub(crate) fn vertex_type(&self) -> VertexType {
+        self.vertex_type
     }
 }
