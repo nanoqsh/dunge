@@ -39,7 +39,12 @@ impl Render {
     pub(crate) async fn new(window: &Window) -> Self {
         use wgpu::*;
 
-        let instance = Instance::new(Backends::all());
+        #[cfg(target_os = "android")]
+        {
+            wait_for_native_screen();
+        }
+
+        let instance = Instance::new(Backends::GL);
         let surface = unsafe { instance.create_surface(window) };
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
@@ -58,10 +63,14 @@ impl Render {
             .request_device(
                 &DeviceDescriptor {
                     features: Features::empty(),
-                    limits: if cfg!(target_arch = "wasm32") {
-                        Limits::downlevel_webgl2_defaults()
-                    } else {
-                        Limits::default()
+                    limits: Limits {
+                        max_storage_buffers_per_shader_stage: 1,
+                        max_storage_textures_per_shader_stage: 1,
+                        ..if cfg!(target_arch = "wasm32") {
+                            Limits::downlevel_webgl2_defaults()
+                        } else {
+                            Limits::default()
+                        }
                     },
                     label: None,
                 },
@@ -386,3 +395,14 @@ pub struct MeshHandle(pub(crate) u32);
 
 #[derive(Clone, Copy)]
 pub struct InstanceHandle(pub(crate) u32);
+
+#[cfg(target_os = "android")]
+fn wait_for_native_screen() {
+    log::info!("waiting for native screen");
+    loop {
+        if let Some(window) = ndk_glue::native_window().as_ref() {
+            log::info!("native screen found:{:?}", window);
+            break;
+        }
+    }
+}

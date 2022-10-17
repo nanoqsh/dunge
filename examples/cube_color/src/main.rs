@@ -16,7 +16,7 @@ fn main() {
             width: 500,
             height: 500,
         },
-        ..InitialState::default()
+        ..Default::default()
     })
     .run_blocking(App::new);
 }

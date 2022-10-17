@@ -16,7 +16,7 @@ fn main() {
             width: 500,
             height: 500,
         },
-        ..InitialState::default()
+        ..Default::default()
     })
     .run_blocking(App::new);
 }
@@ -32,7 +32,7 @@ impl App {
     fn new(context: &mut Context) -> Self {
         // Create a texture
         let texture = {
-            let image = utils::read_png(include_bytes!("../../assets/grass.png"));
+            let image = utils::read_png(include_bytes!("grass.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
             context.create_texture(data)
         };

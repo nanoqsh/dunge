@@ -19,7 +19,7 @@ fn main() {
             height: 500,
         },
         show_cursor: false,
-        ..InitialState::default()
+        ..Default::default()
     })
     .run_blocking(App::new);
 }
