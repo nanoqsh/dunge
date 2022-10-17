@@ -261,6 +261,7 @@ impl RenderFrame {
     }
 }
 
+/// Describes a frame render filter mode.
 #[derive(Clone, Copy)]
 pub enum FrameFilter {
     Nearest,

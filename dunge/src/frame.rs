@@ -8,6 +8,7 @@ use {
         shader_consts,
         storage::Storage,
         texture::Texture,
+        vertex::VertexType,
     },
     wgpu::{BindGroup, RenderPass},
 };
@@ -20,7 +21,7 @@ pub struct Frame<'d> {
     pub(crate) resources: &'d Resources,
     pub(crate) pass: RenderPass<'d>,
     instance: Option<&'d Instance>,
-    current_pipline: PipelineType,
+    current_pipline: VertexType,
 }
 
 impl<'d> Frame<'d> {
@@ -30,7 +31,7 @@ impl<'d> Frame<'d> {
         resources: &'d Resources,
         pass: RenderPass<'d>,
     ) -> Self {
-        const DEFAULT_PIPELINE: PipelineType = PipelineType::Textured;
+        const DEFAULT_PIPELINE: VertexType = VertexType::Texture;
 
         let mut frame = Self {
             main_pipeline,
@@ -46,7 +47,7 @@ impl<'d> Frame<'d> {
     }
 
     pub fn bind_texture(&mut self, TextureHandle(id): TextureHandle) -> Result<(), Error> {
-        if self.current_pipline != PipelineType::Textured {
+        if self.current_pipline != VertexType::Texture {
             return Err(Error::Unsupported);
         }
 
@@ -102,9 +103,9 @@ impl<'d> Frame<'d> {
         Ok(())
     }
 
-    fn set_pipeline(&mut self, pipline: PipelineType) {
+    fn set_pipeline(&mut self, pipline: VertexType) {
         match pipline {
-            PipelineType::Textured => {
+            VertexType::Texture => {
                 self.pass.set_pipeline(self.main_pipeline.textured.as_ref());
                 self.pass.set_bind_group(
                     shader_consts::textured::CAMERA.group,
@@ -112,7 +113,7 @@ impl<'d> Frame<'d> {
                     &[],
                 );
             }
-            PipelineType::Color => {
+            VertexType::Color => {
                 self.pass.set_pipeline(self.main_pipeline.color.as_ref());
                 self.pass.set_bind_group(
                     shader_consts::color::CAMERA.group,
@@ -137,10 +138,4 @@ pub(crate) struct Resources {
 pub(crate) struct MainPipeline {
     pub(crate) textured: Pipeline,
     pub(crate) color: Pipeline,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum PipelineType {
-    Textured,
-    Color,
 }

@@ -15,8 +15,10 @@ mod storage;
 mod texture;
 mod time;
 pub mod transform;
+mod vertex;
 
 pub mod input {
+    //! User's input types.
     pub use crate::r#loop::{Input, Key, Mouse, PressedKeys, PressedKeysIterator};
 }
 
@@ -31,9 +33,9 @@ pub use crate::{
     canvas::{Canvas, InitialState, WindowMode},
     context::{Context, FrameParameters, Limits},
     frame::Frame,
-    layout::{ColorVertex, TextureVertex, Vertex},
     mesh::MeshData,
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle},
     texture::{FrameFilter, TextureData},
+    vertex::{ColorVertex, TextureVertex, Vertex, VertexType},
 };

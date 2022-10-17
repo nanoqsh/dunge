@@ -153,7 +153,7 @@ impl View<Projection> {
 impl Default for View {
     fn default() -> Self {
         Self {
-            eye: [0.; 3],
+            eye: [0., 0., 1.],
             look: [0.; 3],
             proj: Perspective {
                 fovy: 1.58,

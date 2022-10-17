@@ -232,6 +232,7 @@ pub(crate) enum CanvasEvent {
     Close,
 }
 
+/// Creates a canvas in a window with given initial state.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn make_window(state: InitialState) -> Canvas {
     use winit::{dpi::PhysicalSize, event_loop::EventLoopBuilder, window::Fullscreen};
@@ -251,6 +252,7 @@ pub fn make_window(state: InitialState) -> Canvas {
     Canvas { event_loop, window }
 }
 
+/// The initial window state.
 pub struct InitialState<'a> {
     pub title: &'a str,
     pub mode: WindowMode,
@@ -267,11 +269,13 @@ impl Default for InitialState<'static> {
     }
 }
 
+/// The window mode.
 pub enum WindowMode {
     Fullscreen,
     Windowed { width: u32, height: u32 },
 }
 
+/// Creates a canvas in the HTML element by its id.
 #[cfg(target_arch = "wasm32")]
 pub fn from_element(id: &str) -> Canvas {
     use {

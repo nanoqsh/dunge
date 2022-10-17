@@ -4,7 +4,7 @@ use {
     dunge::{
         color::Srgba,
         input::{Input, Key},
-        transform::{Inversed, Position, Transform},
+        transform::{Position, ReverseRotation, Transform},
         Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData, MeshHandle,
         TextureData, TextureHandle, TextureVertex, WindowMode,
     },
@@ -184,7 +184,7 @@ impl Loop for App {
                     model.instance,
                     [Transform {
                         pos: model.pos,
-                        rot: Inversed(view),
+                        rot: ReverseRotation(view),
                         scl: [1.; 3],
                     }],
                 )

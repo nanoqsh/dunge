@@ -1,3 +1,5 @@
+//! Color types and traits.
+
 #[derive(Clone, Copy)]
 pub struct Linear<C>(pub [C; 4]);
 

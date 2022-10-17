@@ -4,13 +4,14 @@ use {
         color::Linear,
         frame::{Frame, MainPipeline, Resources},
         instance::Instance,
-        layout::{layout, ColorVertex, InstanceModel, TextureVertex, Vertex},
+        layout::{layout, InstanceModel},
         mesh::{Mesh, MeshData},
         pipline::{Pipeline, PipelineData},
         r#loop::Loop,
         shader_consts,
         size::Size,
         texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
+        vertex::{ColorVertex, TextureVertex, Vertex},
         Error,
     },
     wgpu::{
@@ -44,7 +45,7 @@ impl Render {
             wait_for_native_screen();
         }
 
-        let instance = Instance::new(Backends::GL);
+        let instance = Instance::new(Backends::all());
         let surface = unsafe { instance.create_surface(window) };
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
@@ -265,8 +266,10 @@ impl Render {
         self.resources.meshes.remove(handle.0)
     }
 
-    pub(crate) fn set_clear_color(&mut self, Linear([r, g, b, a]): Linear<f64>) {
-        self.load = LoadOp::Clear(Color { r, g, b, a });
+    pub(crate) fn set_clear_color(&mut self, col: Option<Linear<f64>>) {
+        self.load = col
+            .map(|Linear([r, g, b, a])| LoadOp::Clear(Color { r, g, b, a }))
+            .unwrap_or(LoadOp::Load);
     }
 
     pub(crate) fn set_view(&mut self, view: View<Projection>) {
@@ -381,21 +384,6 @@ impl Render {
     }
 }
 
-pub(crate) enum RenderResult<E> {
-    Ok,
-    SurfaceError(SurfaceError),
-    Error(E),
-}
-
-#[derive(Clone, Copy)]
-pub struct TextureHandle(pub(crate) u32);
-
-#[derive(Clone, Copy)]
-pub struct MeshHandle(pub(crate) u32);
-
-#[derive(Clone, Copy)]
-pub struct InstanceHandle(pub(crate) u32);
-
 #[cfg(target_os = "android")]
 fn wait_for_native_screen() {
     log::info!("waiting for native screen");
@@ -406,3 +394,21 @@ fn wait_for_native_screen() {
         }
     }
 }
+
+pub(crate) enum RenderResult<E> {
+    Ok,
+    SurfaceError(SurfaceError),
+    Error(E),
+}
+
+/// A texture handle.
+#[derive(Clone, Copy)]
+pub struct TextureHandle(pub(crate) u32);
+
+/// A mesh handle.
+#[derive(Clone, Copy)]
+pub struct MeshHandle(pub(crate) u32);
+
+/// An instance handle.
+#[derive(Clone, Copy)]
+pub struct InstanceHandle(pub(crate) u32);

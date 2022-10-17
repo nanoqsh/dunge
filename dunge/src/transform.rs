@@ -1,3 +1,5 @@
+//! Model transformation types and traits.
+
 use crate::layout::InstanceModel;
 
 /// An instance position.
@@ -159,10 +161,19 @@ impl IntoQuat for AxisAngle {
     }
 }
 
+/// A type that represents the reversed rotation of the given one.
+///
+/// ## Example
+/// ```
+/// // The rotation along Y by `n` radians.
+/// let axis = AxisAngle([0., 1., 0.], n);
+/// // Now it's reversed. The rotation along Y by `-n` radians.
+/// let back = ReverseRotation(axis);
+/// ```
 #[derive(Default)]
-pub struct Inversed<Q>(pub Q);
+pub struct ReverseRotation<Q>(pub Q);
 
-impl<Q> IntoQuat for Inversed<Q>
+impl<Q> IntoQuat for ReverseRotation<Q>
 where
     Q: IntoQuat,
 {

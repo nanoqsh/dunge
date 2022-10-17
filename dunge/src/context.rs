@@ -3,12 +3,12 @@ use {
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
         color::IntoLinear,
-        layout::Vertex,
         mesh::MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle},
         size::Size,
         texture::{FrameFilter, TextureData},
         transform::{IntoQuat, IntoTransform},
+        vertex::Vertex,
         Error,
     },
     winit::{event_loop::EventLoopProxy, window::Window},
@@ -147,7 +147,12 @@ impl Context {
     where
         C: IntoLinear,
     {
-        self.render.set_clear_color(color.into_linear());
+        self.render.set_clear_color(Some(color.into_linear()));
+    }
+
+    /// Unsets the clear color.
+    pub fn unset_clear_color(&mut self) {
+        self.render.set_clear_color(None);
     }
 
     /// Sets the view.

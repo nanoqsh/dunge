@@ -1,9 +1,6 @@
 pub(crate) use self::plain::Plain;
 
-use {
-    crate::frame::PipelineType,
-    wgpu::{VertexAttribute, VertexBufferLayout, VertexStepMode},
-};
+use wgpu::{VertexAttribute, VertexBufferLayout, VertexStepMode};
 
 mod plain {
     /// A trait for plain structs which can be safely casted to bytes.
@@ -59,50 +56,6 @@ where
         step_mode: V::VERTEX_STEP_MODE,
         attributes: V::ATTRIBS,
     }
-}
-
-pub trait Vertex: Layout {
-    const PIPELINE_TYPE: PipelineType;
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct ColorVertex {
-    pub pos: [f32; 3],
-    pub col: [f32; 3],
-}
-
-unsafe impl Plain for ColorVertex {}
-
-impl Layout for ColorVertex {
-    const ATTRIBS: &'static [VertexAttribute] =
-        &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3];
-
-    const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
-}
-
-impl Vertex for ColorVertex {
-    const PIPELINE_TYPE: PipelineType = PipelineType::Color;
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct TextureVertex {
-    pub pos: [f32; 3],
-    pub map: [f32; 2],
-}
-
-unsafe impl Plain for TextureVertex {}
-
-impl Layout for TextureVertex {
-    const ATTRIBS: &'static [VertexAttribute] =
-        &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2];
-
-    const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
-}
-
-impl Vertex for TextureVertex {
-    const PIPELINE_TYPE: PipelineType = PipelineType::Textured;
 }
 
 #[repr(C)]
