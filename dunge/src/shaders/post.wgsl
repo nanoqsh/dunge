@@ -30,6 +30,7 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
 
 struct Screen {
     size: vec2<f32>,
+    _pad: vec2<f32>,
 };
 
 @group(0) @binding(0)

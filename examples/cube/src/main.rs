@@ -4,7 +4,7 @@ use {
         input::{Input, Key},
         transform::Position,
         Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData, MeshHandle,
-        Perspective, TextureData, TextureHandle, TextureVertex, WindowMode,
+        Perspective, TextureData, TextureHandle, TextureVertex, ViewHandle, WindowMode,
     },
     utils::Camera,
 };
@@ -25,6 +25,7 @@ struct App {
     texture: TextureHandle,
     instance: InstanceHandle,
     mesh: MeshHandle,
+    view: ViewHandle,
     camera: Camera,
 }
 
@@ -54,13 +55,15 @@ impl App {
         let color = Srgba([29, 39, 34, 255]);
         context.set_clear_color(color);
 
-        // Create the camera
+        // Create the view
         let camera = Camera::default();
+        let view = context.create_view(camera.view::<Perspective>());
 
         Self {
             texture,
             instance,
             mesh,
+            view,
             camera,
         }
     }
@@ -87,12 +90,13 @@ impl Loop for App {
 
         // Set the view
         let view = self.camera.view::<Perspective>();
-        context.set_view(view);
+        context.update_view(self.view, view)?;
 
         Ok(())
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+        frame.set_view(self.view)?;
         frame.set_instance(self.instance)?;
         frame.bind_texture(self.texture)?;
         frame.draw_mesh(self.mesh)?;

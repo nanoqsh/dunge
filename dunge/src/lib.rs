@@ -36,7 +36,7 @@ pub use crate::{
     frame::Frame,
     mesh::MeshData,
     r#loop::{Error, Loop},
-    render::{InstanceHandle, MeshHandle, TextureHandle},
+    render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
     texture::{FrameFilter, TextureData},
     vertex::{ColorVertex, TextureVertex, Vertex, VertexType},
 };

@@ -30,8 +30,8 @@ pub(crate) struct Render {
     config: SurfaceConfiguration,
     size: Size,
     texture_layout: BindGroupLayout,
+    camera_layout: BindGroupLayout,
     load: LoadOp<Color>,
-    camera: Camera,
     screen: Screen,
     resources: Resources,
     render_frame: RenderFrame,
@@ -67,8 +67,8 @@ impl Render {
                 &DeviceDescriptor {
                     features: Features::empty(),
                     limits: Limits {
-                        max_storage_buffers_per_shader_stage: 1,
-                        max_storage_textures_per_shader_stage: 1,
+                        //max_storage_buffers_per_shader_stage: 1,
+                        //max_storage_textures_per_shader_stage: 1,
                         ..if cfg!(target_arch = "wasm32") {
                             Limits::downlevel_webgl2_defaults()
                         } else {
@@ -115,7 +115,7 @@ impl Render {
 
         let camera_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {
-                binding: 0,
+                binding: shader_consts::textured::CAMERA.binding,
                 visibility: ShaderStages::VERTEX,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
@@ -188,8 +188,6 @@ impl Render {
             Pipeline::new(&device, data)
         };
 
-        let camera = Camera::new(&device, &camera_layout);
-
         let render_frame = RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &texture_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
@@ -207,8 +205,8 @@ impl Render {
             config,
             size: Size::default(),
             texture_layout,
+            camera_layout,
             load: LoadOp::Load,
-            camera,
             resources: Resources::default(),
             render_frame,
             depth_frame,
@@ -278,22 +276,39 @@ impl Render {
         self.resources
             .meshes
             .get_mut(handle.0)
-            .map(|meshe| meshe.update_data(data, &self.queue))
+            .map(|mesh| mesh.update_data(data, &self.queue))
     }
 
     pub(crate) fn delete_mesh(&mut self, handle: MeshHandle) -> Result<(), Error> {
         self.resources.meshes.remove(handle.0)
     }
 
+    pub(crate) fn create_view(&mut self, view: View<Projection>) -> ViewHandle {
+        let mut camera = Camera::new(&self.device, &self.camera_layout);
+        camera.set_view(view);
+        let id = self.resources.views.insert(camera);
+        ViewHandle(id)
+    }
+
+    pub(crate) fn update_view(
+        &mut self,
+        handle: ViewHandle,
+        view: View<Projection>,
+    ) -> Result<(), Error> {
+        self.resources
+            .views
+            .get_mut(handle.0)
+            .map(|camera| camera.set_view(view))
+    }
+
+    pub(crate) fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+        self.resources.views.remove(handle.0)
+    }
+
     pub(crate) fn set_clear_color(&mut self, col: Option<Linear<f64>>) {
         self.load = col
             .map(|Linear([r, g, b, a])| LoadOp::Clear(Color { r, g, b, a }))
             .unwrap_or(LoadOp::Load);
-    }
-
-    pub(crate) fn set_view(&mut self, view: View<Projection>) {
-        self.camera.set_view(view);
-        self.camera.resize(self.size.as_virtual(), &self.queue);
     }
 
     pub(crate) fn size(&self) -> Size {
@@ -310,7 +325,6 @@ impl Render {
         self.surface.configure(&self.device, &self.config);
 
         let virt = self.size.as_virtual();
-        self.camera.resize(virt, &self.queue);
         self.screen.resize(virt, &self.queue);
 
         self.render_frame =
@@ -353,8 +367,9 @@ impl Render {
             });
 
             let mut frame = Frame::new(
+                self.size.as_virtual(),
+                &self.queue,
                 &self.main_pipeline,
-                self.camera.bind_group(),
                 &self.resources,
                 pass,
             );
@@ -438,3 +453,7 @@ pub struct MeshHandle(pub(crate) u32);
 /// An instance handle.
 #[derive(Clone, Copy)]
 pub struct InstanceHandle(pub(crate) u32);
+
+/// A view handle.
+#[derive(Clone, Copy)]
+pub struct ViewHandle(pub(crate) u32);

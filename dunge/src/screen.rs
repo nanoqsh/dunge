@@ -15,7 +15,7 @@ impl Screen {
             *,
         };
 
-        let uniform = ScreenUniform { size: [1., 1.] };
+        let uniform = ScreenUniform::new(1., 1.);
 
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("screen buffer"),
@@ -36,10 +36,7 @@ impl Screen {
     }
 
     pub(crate) fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
-        let data = ScreenUniform {
-            size: [width as f32, height as f32],
-        };
-
+        let data = ScreenUniform::new(width as f32, height as f32);
         queue.write_buffer(&self.buffer, 0, data.as_bytes());
     }
 
@@ -52,6 +49,16 @@ impl Screen {
 #[derive(Copy, Clone)]
 pub(crate) struct ScreenUniform {
     size: [f32; 2],
+    _pad: [f32; 2],
+}
+
+impl ScreenUniform {
+    fn new(width: f32, height: f32) -> Self {
+        Self {
+            size: [width, height],
+            _pad: [0.; 2],
+        }
+    }
 }
 
 unsafe impl Plain for ScreenUniform {}

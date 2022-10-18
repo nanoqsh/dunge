@@ -3,9 +3,11 @@ pub(crate) use self::proj::{IntoProjection, Projection};
 use {
     crate::{
         layout::Plain,
+        shader_consts,
         transform::{IntoQuat, Quat},
     },
     glam::{Mat4, Vec3},
+    std::cell::Cell,
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
@@ -25,6 +27,7 @@ mod proj {
 
 pub(crate) struct Camera {
     view: View<Projection>,
+    size: Cell<Option<(u32, u32)>>,
     buffer: Buffer,
     bind_group: BindGroup,
 }
@@ -35,6 +38,10 @@ impl Camera {
             util::{BufferInitDescriptor, DeviceExt},
             *,
         };
+
+        const _: () = assert!(
+            shader_consts::textured::CAMERA.binding == shader_consts::color::CAMERA.binding
+        );
 
         let uniform = CameraUniform {
             view_proj: *Mat4::IDENTITY.as_ref(),
@@ -49,7 +56,7 @@ impl Camera {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: 0,
+                binding: shader_consts::textured::CAMERA.binding,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("camera bind group"),
@@ -57,6 +64,7 @@ impl Camera {
 
         Self {
             view: View::<Orthographic>::default().into_projection_view(),
+            size: Cell::new(None),
             buffer,
             bind_group,
         }
@@ -64,9 +72,20 @@ impl Camera {
 
     pub(crate) fn set_view(&mut self, view: View<Projection>) {
         self.view = view;
+        self.size.set(None);
     }
 
-    pub(crate) fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
+    pub(crate) fn resize(&self, size @ (width, height): (u32, u32), queue: &Queue) {
+        if self
+            .size
+            .get()
+            .map(|(w, h)| width == w && height == h)
+            .unwrap_or_default()
+        {
+            return;
+        }
+
+        self.size.set(Some(size));
         let view_proj = self.view.build_mat((width as f32, height as f32));
         queue.write_buffer(&self.buffer, 0, view_proj.as_ref().as_bytes());
     }

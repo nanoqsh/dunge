@@ -3,7 +3,7 @@ use dunge::{
     input::{Input, Key},
     transform::Position,
     ColorVertex, Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData, MeshHandle,
-    WindowMode,
+    Perspective, View, ViewHandle, WindowMode,
 };
 
 fn main() {
@@ -22,6 +22,7 @@ fn main() {
 struct App {
     instance: InstanceHandle,
     mesh: MeshHandle,
+    view: ViewHandle,
 }
 
 impl App {
@@ -59,7 +60,14 @@ impl App {
         let color = Srgba([0, 0, 0, 255]);
         context.set_clear_color(color);
 
-        Self { instance, mesh }
+        // Create the view
+        let view = context.create_view::<Perspective>(View::default());
+
+        Self {
+            instance,
+            mesh,
+            view,
+        }
     }
 }
 
@@ -79,6 +87,7 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+        frame.set_view(self.view)?;
         frame.set_instance(self.instance)?;
         frame.draw_mesh(self.mesh)?;
 

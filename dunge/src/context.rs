@@ -4,7 +4,7 @@ use {
         canvas::CanvasEvent,
         color::IntoLinear,
         mesh::MeshData,
-        render::{InstanceHandle, MeshHandle, Render, TextureHandle},
+        render::{InstanceHandle, MeshHandle, Render, TextureHandle, ViewHandle},
         size::Size,
         texture::{FrameFilter, TextureData},
         transform::{IntoQuat, IntoTransform},
@@ -70,7 +70,7 @@ impl Context {
         self.render.create_texture(data)
     }
 
-    /// Updates a texture.
+    /// Updates the texture.
     pub fn update_texture(
         &mut self,
         handle: TextureHandle,
@@ -127,7 +127,7 @@ impl Context {
         self.render.create_mesh(data)
     }
 
-    /// Updates a mesh.
+    /// Updates the mesh.
     pub fn update_mesh<V>(&mut self, handle: MeshHandle, data: MeshData<V>) -> Result<(), Error>
     where
         V: Vertex,
@@ -138,6 +138,27 @@ impl Context {
     /// Deletes the mesh.
     pub fn delete_mesh(&mut self, handle: MeshHandle) -> Result<(), Error> {
         self.render.delete_mesh(handle)
+    }
+
+    /// Creates a new view.
+    pub fn create_view<P>(&mut self, view: View<P>) -> ViewHandle
+    where
+        P: IntoProjection,
+    {
+        self.render.create_view(view.into_projection_view())
+    }
+
+    /// Updates the view.
+    pub fn update_view<P>(&mut self, handle: ViewHandle, view: View<P>) -> Result<(), Error>
+    where
+        P: IntoProjection,
+    {
+        self.render.update_view(handle, view.into_projection_view())
+    }
+
+    /// Deletes the view.
+    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+        self.render.delete_view(handle)
     }
 
     /// Sets the clear color.
@@ -153,14 +174,6 @@ impl Context {
     /// Unsets the clear color.
     pub fn unset_clear_color(&mut self) {
         self.render.set_clear_color(None);
-    }
-
-    /// Sets the view.
-    pub fn set_view<P>(&mut self, view: View<P>)
-    where
-        P: IntoProjection,
-    {
-        self.render.set_view(view.into_projection_view());
     }
 }
 

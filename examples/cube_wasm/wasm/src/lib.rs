@@ -2,6 +2,7 @@ use {
     dunge::{
         color::Srgba, input::Input, transform::Position, Context, Error, Frame, InstanceHandle,
         Loop, MeshData, MeshHandle, Perspective, TextureData, TextureHandle, TextureVertex,
+        ViewHandle,
     },
     utils::Camera,
     wasm_bindgen::prelude::*,
@@ -19,6 +20,7 @@ struct App {
     texture: TextureHandle,
     instance: InstanceHandle,
     mesh: MeshHandle,
+    view: ViewHandle,
     camera: Camera,
 }
 
@@ -48,13 +50,15 @@ impl App {
         let color = Srgba([29, 39, 34, 255]);
         context.set_clear_color(color);
 
-        // Create the camera
+        // Create the view
         let camera = Camera::default();
+        let view = context.create_view(camera.view::<Perspective>());
 
         Self {
             texture,
             instance,
             mesh,
+            view,
             camera,
         }
     }
@@ -73,12 +77,13 @@ impl Loop for App {
 
         // Set the view
         let view = self.camera.view::<Perspective>();
-        context.set_view(view);
+        context.update_view(self.view, view)?;
 
         Ok(())
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+        frame.set_view(self.view)?;
         frame.bind_texture(self.texture)?;
         frame.set_instance(self.instance)?;
         frame.draw_mesh(self.mesh)?;

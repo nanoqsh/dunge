@@ -6,7 +6,8 @@ use {
         input::{Input, Key},
         transform::{Position, ReverseRotation, Transform},
         Context, Error, Frame, FrameParameters, InitialState, InstanceHandle, Loop, MeshData,
-        MeshHandle, Orthographic, TextureData, TextureHandle, TextureVertex, View, WindowMode,
+        MeshHandle, Orthographic, TextureData, TextureHandle, TextureVertex, View, ViewHandle,
+        WindowMode,
     },
     utils::Camera,
 };
@@ -34,6 +35,7 @@ struct Model {
 struct App {
     sprites: TextureHandle,
     models: Vec<Model>,
+    view: ViewHandle,
     camera: Camera,
 }
 
@@ -147,12 +149,14 @@ impl App {
         let color = Srgba([46, 34, 47, 255]);
         context.set_clear_color(color);
 
-        // Create the camera
+        // Create the view
         let camera = Camera::default();
+        let view = context.create_view(camera.view::<Orthographic>());
 
         Self {
             sprites,
             models,
+            view,
             camera,
         }
     }
@@ -187,7 +191,7 @@ impl Loop for App {
             },
             ..self.camera.view()
         };
-        context.set_view(view);
+        context.update_view(self.view, view)?;
 
         self.models
             .iter()
@@ -207,6 +211,7 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+        frame.set_view(self.view)?;
         frame.bind_texture(self.sprites)?;
         for model in &self.models {
             frame.set_instance(model.instance)?;
