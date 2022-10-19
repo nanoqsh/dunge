@@ -1,156 +1,142 @@
 use {
     crate::{
-        camera::Camera,
-        instance::Instance,
-        mesh::Mesh,
-        pipline::Pipeline,
-        r#loop::Error,
-        render::ViewHandle,
-        render::{InstanceHandle, MeshHandle, TextureHandle},
+        color::{IntoLinear, Linear},
+        layer::Layer,
+        render::{GetPipeline, Render},
         shader_consts,
-        storage::Storage,
-        texture::Texture,
-        vertex::VertexType,
+        vertex::{ColorVertex, TextureVertex},
     },
-    wgpu::{Queue, RenderPass},
+    wgpu::{CommandEncoder, TextureView},
 };
 
 /// A struct represented a current frame
 /// and exists during a frame render.
 pub struct Frame<'d> {
-    pub(crate) size: (u32, u32),
-    pub(crate) queue: &'d Queue,
-    pub(crate) main_pipeline: &'d MainPipeline,
-    pub(crate) resources: &'d Resources,
-    pub(crate) pass: RenderPass<'d>,
-    instance: Option<&'d Instance>,
-    camera: Option<&'d Camera>,
-    current_vertex_type: Option<VertexType>,
+    render: &'d Render,
+    encoder: CommandEncoder,
+    frame_view: TextureView,
 }
 
 impl<'d> Frame<'d> {
-    pub(crate) fn new(
-        size: (u32, u32),
-        queue: &'d Queue,
-        main_pipeline: &'d MainPipeline,
-        resources: &'d Resources,
-        pass: RenderPass<'d>,
-    ) -> Self {
+    pub(crate) fn new(render: &'d Render, frame_view: TextureView) -> Self {
+        use wgpu::*;
+
+        let encoder = render
+            .device()
+            .create_command_encoder(&CommandEncoderDescriptor {
+                label: Some("render encoder"),
+            });
+
         Self {
-            size,
-            queue,
-            main_pipeline,
-            resources,
-            pass,
-            instance: None,
-            camera: None,
-            current_vertex_type: None,
+            render,
+            encoder,
+            frame_view,
         }
     }
 
-    pub fn bind_texture(&mut self, TextureHandle(id): TextureHandle) -> Result<(), Error> {
-        self.set_vertex_type(VertexType::Texture)?;
+    /// Draws the frame in the screen buffer.
+    pub(crate) fn draw_frame(&mut self) {
+        use wgpu::*;
 
-        let texture = self.resources.textures.get(id)?;
-        self.pass.set_bind_group(
-            shader_consts::textured::S_DIFFUSE.group,
-            texture.bind_group(),
+        let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
+            label: Some("post render pass"),
+            color_attachments: &[Some(RenderPassColorAttachment {
+                view: &self.frame_view,
+                resolve_target: None,
+                ops: Operations {
+                    load: LoadOp::Load,
+                    store: true,
+                },
+            })],
+            depth_stencil_attachment: None,
+        });
+
+        pass.set_pipeline(self.render.post_pipeline().as_ref());
+        pass.set_bind_group(
+            shader_consts::post::T_DIFFUSE.group,
+            self.render.render_frame().bind_group(),
+            &[],
+        );
+        pass.set_bind_group(
+            shader_consts::post::SCREEN.group,
+            self.render.screen().bind_group(),
             &[],
         );
 
-        Ok(())
+        pass.draw(0..4, 0..1);
     }
 
-    pub fn set_instance(&mut self, InstanceHandle(id): InstanceHandle) -> Result<(), Error> {
-        let instance = self.resources.instances.get(id)?;
-        self.instance = Some(instance);
-
-        Ok(())
+    pub(crate) fn submit(self) {
+        self.render.queue().submit([self.encoder.finish()]);
     }
 
-    pub fn set_view(&mut self, ViewHandle(id): ViewHandle) -> Result<(), Error> {
-        let camera = self.resources.views.get(id)?;
-        camera.resize(self.size, self.queue);
-        self.camera = Some(camera);
-
-        Ok(())
+    pub fn start_texture_layer<C>(&mut self, col: C) -> Layer<TextureVertex>
+    where
+        C: IntoLayerColor,
+    {
+        Self::start_layer(self, col.into_layer_color())
     }
 
-    pub fn draw_mesh(&mut self, MeshHandle(id): MeshHandle) -> Result<(), Error> {
-        use wgpu::IndexFormat;
-
-        let mesh = self.resources.meshes.get(id)?;
-        if self
-            .current_vertex_type
-            .map(|ty| ty != mesh.vertex_type())
-            .unwrap_or(true)
-        {
-            self.set_vertex_type(mesh.vertex_type())?;
-        }
-
-        let n_instances = match self.instance {
-            Some(instance) => {
-                self.pass.set_vertex_buffer(
-                    shader_consts::INSTANCE_BUFFER_SLOT,
-                    instance.buffer().slice(..),
-                );
-
-                instance.n_instances()
-            }
-            None => return Err(Error::InstanceNotSet),
-        };
-
-        self.pass.set_vertex_buffer(
-            shader_consts::VERTEX_BUFFER_SLOT,
-            mesh.vertex_buffer().slice(..),
-        );
-
-        self.pass
-            .set_index_buffer(mesh.index_buffer().slice(..), IndexFormat::Uint16);
-
-        self.pass
-            .draw_indexed(0..mesh.n_indices(), 0, 0..n_instances);
-
-        Ok(())
+    pub fn start_color_layer<C>(&mut self, col: C) -> Layer<ColorVertex>
+    where
+        C: IntoLayerColor,
+    {
+        Self::start_layer(self, col.into_layer_color())
     }
 
-    fn set_vertex_type(&mut self, ty: VertexType) -> Result<(), Error> {
-        let camera = self.camera.ok_or(Error::ViewNotSet)?;
+    fn start_layer<V>(&mut self, col: Option<Linear<f64>>) -> Layer<V>
+    where
+        Render: GetPipeline<V>,
+    {
+        use wgpu::*;
 
-        match ty {
-            VertexType::Texture => {
-                self.pass.set_pipeline(self.main_pipeline.textured.as_ref());
-                self.pass.set_bind_group(
-                    shader_consts::textured::CAMERA.group,
-                    camera.bind_group(),
-                    &[],
-                );
-            }
-            VertexType::Color => {
-                self.pass.set_pipeline(self.main_pipeline.color.as_ref());
-                self.pass.set_bind_group(
-                    shader_consts::color::CAMERA.group,
-                    camera.bind_group(),
-                    &[],
-                );
-            }
-        }
+        let load = col.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
+            LoadOp::Clear(Color { r, g, b, a })
+        });
 
-        self.current_vertex_type = Some(ty);
-        Ok(())
+        let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
+            label: Some("main render pass"),
+            color_attachments: &[Some(RenderPassColorAttachment {
+                view: self.render.render_frame().view(),
+                resolve_target: None,
+                ops: Operations { load, store: true },
+            })],
+            depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                view: self.render.depth_frame().view(),
+                depth_ops: Some(Operations {
+                    load: LoadOp::Clear(1.),
+                    store: true,
+                }),
+                stencil_ops: None,
+            }),
+        });
+
+        pass.set_pipeline(self.render.get_pipeline().as_ref());
+
+        Layer::new(
+            pass,
+            self.render.size().as_virtual(),
+            self.render.queue(),
+            self.render.resources(),
+        )
     }
 }
 
-/// A container of drawable resources.
-#[derive(Default)]
-pub(crate) struct Resources {
-    pub(crate) textures: Storage<Texture>,
-    pub(crate) instances: Storage<Instance>,
-    pub(crate) meshes: Storage<Mesh>,
-    pub(crate) views: Storage<Camera>,
+pub trait IntoLayerColor {
+    fn into_layer_color(self) -> Option<Linear<f64>>;
 }
 
-pub(crate) struct MainPipeline {
-    pub(crate) textured: Pipeline,
-    pub(crate) color: Pipeline,
+impl IntoLayerColor for () {
+    fn into_layer_color(self) -> Option<Linear<f64>> {
+        None
+    }
+}
+
+impl<L> IntoLayerColor for L
+where
+    L: IntoLinear,
+{
+    fn into_layer_color(self) -> Option<Linear<f64>> {
+        Some(self.into_linear())
+    }
 }

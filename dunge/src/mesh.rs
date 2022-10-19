@@ -1,13 +1,9 @@
 use {
-    crate::{
-        layout::Plain,
-        vertex::{Vertex, VertexType},
-    },
+    crate::{layout::Plain, vertex::Vertex},
     wgpu::{Buffer, Device, Queue},
 };
 
 /// A data struct for a mesh creation.
-#[derive(Clone, Copy)]
 pub struct MeshData<'a, V> {
     verts: &'a [V],
     indxs: &'a [[u16; 3]],
@@ -19,7 +15,7 @@ impl<'a, V> MeshData<'a, V> {
     /// Returns `Some` if a data length fits in `u16` and all indices point to the data,
     /// otherwise returns `None`.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Option<Self> {
-        if verts.len() <= usize::from(u16::MAX)
+        if u16::try_from(verts.len()).is_ok()
             && indxs
                 .iter()
                 .flatten()
@@ -32,11 +28,18 @@ impl<'a, V> MeshData<'a, V> {
     }
 }
 
+impl<'a, V> Clone for MeshData<'a, V> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<'a, V> Copy for MeshData<'a, V> {}
+
 pub(crate) struct Mesh {
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     n_indices: u32,
-    vertex_type: VertexType,
 }
 
 impl Mesh {
@@ -67,7 +70,6 @@ impl Mesh {
             vertex_buffer,
             index_buffer,
             n_indices,
-            vertex_type: V::TYPE,
         }
     }
 
@@ -78,7 +80,6 @@ impl Mesh {
         queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
         queue.write_buffer(&self.index_buffer, 0, data.indxs.as_bytes());
         self.n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
-        self.vertex_type = V::TYPE;
     }
 
     pub(crate) fn vertex_buffer(&self) -> &Buffer {
@@ -91,9 +92,5 @@ impl Mesh {
 
     pub(crate) fn n_indices(&self) -> u32 {
         self.n_indices
-    }
-
-    pub(crate) fn vertex_type(&self) -> VertexType {
-        self.vertex_type
     }
 }

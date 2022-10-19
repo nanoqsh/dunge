@@ -23,7 +23,7 @@ fn main() {
 
 struct App {
     instance: InstanceHandle,
-    mesh: MeshHandle,
+    mesh: MeshHandle<ColorVertex>,
     view: ViewHandle,
     camera: Camera,
 }
@@ -45,10 +45,6 @@ impl App {
             let data = MeshData::new(&verts, &INDICES).expect("create mesh");
             context.create_mesh(data)
         };
-
-        // Set the clear color
-        let color = Srgba([10, 20, 30, 255]);
-        context.set_clear_color(color);
 
         // Create the view
         let camera = Camera::default();
@@ -90,9 +86,11 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        frame.set_view(self.view)?;
-        frame.set_instance(self.instance)?;
-        frame.draw_mesh(self.mesh)?;
+        let mut layer = frame.start_color_layer(Srgba([10, 20, 30, 255]));
+
+        layer.bind_view(self.view)?;
+        layer.bind_instance(self.instance)?;
+        layer.draw(self.mesh)?;
 
         Ok(())
     }

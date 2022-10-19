@@ -4,6 +4,7 @@ pub mod color;
 mod context;
 mod frame;
 mod instance;
+mod layer;
 mod layout;
 mod r#loop;
 mod mesh;
@@ -33,10 +34,11 @@ pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{Canvas, InitialState, WindowMode},
     context::{Context, FrameParameters, Limits},
-    frame::Frame,
+    frame::{Frame, IntoLayerColor},
+    layer::Layer,
     mesh::MeshData,
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
     texture::{FrameFilter, TextureData},
-    vertex::{ColorVertex, TextureVertex, Vertex, VertexType},
+    vertex::{ColorVertex, TextureVertex, Vertex},
 };

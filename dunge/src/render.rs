@@ -1,9 +1,9 @@
 use {
     crate::{
         camera::{Camera, Projection, View},
-        color::Linear,
-        frame::{Frame, MainPipeline, Resources},
+        frame::Frame,
         instance::Instance,
+        layer::Resources,
         layout::{layout, InstanceModel},
         mesh::{Mesh, MeshData},
         pipline::{Pipeline, PipelineData},
@@ -15,23 +15,22 @@ use {
         vertex::{ColorVertex, TextureVertex, Vertex},
         Error,
     },
-    wgpu::{
-        BindGroupLayout, Color, Device, LoadOp, Queue, Surface, SurfaceConfiguration, SurfaceError,
-    },
+    std::marker::PhantomData,
+    wgpu::{BindGroupLayout, Device, Queue, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
 
 pub(crate) struct Render {
     device: Device,
     queue: Queue,
-    main_pipeline: MainPipeline,
+    texture_pipeline: Pipeline,
+    color_pipeline: Pipeline,
     post_pipeline: Pipeline,
     surface: Surface,
     config: SurfaceConfiguration,
     size: Size,
     texture_layout: BindGroupLayout,
     camera_layout: BindGroupLayout,
-    load: LoadOp<Color>,
     screen: Screen,
     resources: Resources,
     render_frame: RenderFrame,
@@ -44,7 +43,7 @@ impl Render {
 
         #[cfg(target_os = "android")]
         {
-            wait_for_native_screen();
+            Self::wait_for_native_screen();
         }
 
         let instance = Instance::new(Backends::all());
@@ -135,7 +134,7 @@ impl Render {
             bias: DepthBiasState::default(),
         };
 
-        let textured_pipeline = {
+        let texture_pipeline = {
             let data = PipelineData {
                 shader_src: include_str!("shaders/textured.wgsl"),
                 bind_group_layouts: &[&camera_layout, &texture_layout],
@@ -196,17 +195,14 @@ impl Render {
         Self {
             device,
             queue,
-            main_pipeline: MainPipeline {
-                textured: textured_pipeline,
-                color: color_pipeline,
-            },
+            texture_pipeline,
+            color_pipeline,
             post_pipeline,
             surface,
             config,
             size: Size::default(),
             texture_layout,
             camera_layout,
-            load: LoadOp::Load,
             resources: Resources::default(),
             render_frame,
             depth_frame,
@@ -256,18 +252,18 @@ impl Render {
         self.resources.instances.remove(handle.0)
     }
 
-    pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
+    pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle<V>
     where
         V: Vertex,
     {
         let mesh = Mesh::new(data, &self.device);
         let id = self.resources.meshes.insert(mesh);
-        MeshHandle(id)
+        MeshHandle::new(id)
     }
 
     pub(crate) fn update_mesh<V>(
         &mut self,
-        handle: MeshHandle,
+        handle: MeshHandle<V>,
         data: MeshData<V>,
     ) -> Result<(), Error>
     where
@@ -275,12 +271,12 @@ impl Render {
     {
         self.resources
             .meshes
-            .get_mut(handle.0)
+            .get_mut(handle.id())
             .map(|mesh| mesh.update_data(data, &self.queue))
     }
 
-    pub(crate) fn delete_mesh(&mut self, handle: MeshHandle) -> Result<(), Error> {
-        self.resources.meshes.remove(handle.0)
+    pub(crate) fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
+        self.resources.meshes.remove(handle.id())
     }
 
     pub(crate) fn create_view(&mut self, view: View<Projection>) -> ViewHandle {
@@ -305,12 +301,6 @@ impl Render {
         self.resources.views.remove(handle.0)
     }
 
-    pub(crate) fn set_clear_color(&mut self, col: Option<Linear<f64>>) {
-        self.load = col
-            .map(|Linear([r, g, b, a])| LoadOp::Clear(Color { r, g, b, a }))
-            .unwrap_or(LoadOp::Load);
-    }
-
     pub(crate) fn size(&self) -> Size {
         self.size
     }
@@ -332,107 +322,86 @@ impl Render {
         self.depth_frame = DepthFrame::new(virt, &self.device);
     }
 
-    pub(crate) fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
+    pub(crate) fn start_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
     where
         L: Loop,
     {
         use wgpu::*;
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&CommandEncoderDescriptor {
-                label: Some("render encoder"),
-            });
-
-        // Main render pass
-        {
-            let pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("textured render pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: self.render_frame.view(),
-                    resolve_target: None,
-                    ops: Operations {
-                        load: self.load,
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: self.depth_frame.view(),
-                    depth_ops: Some(Operations {
-                        load: LoadOp::Clear(1.),
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
-
-            let mut frame = Frame::new(
-                self.size.as_virtual(),
-                &self.queue,
-                &self.main_pipeline,
-                &self.resources,
-                pass,
-            );
-
-            if let Err(err) = lp.render(&mut frame) {
-                return RenderResult::Error(err);
-            }
-        }
 
         let output = match self.surface.get_current_texture() {
             Ok(output) => output,
             Err(err) => return RenderResult::SurfaceError(err),
         };
 
-        let view = output
+        let frame_view = output
             .texture
             .create_view(&TextureViewDescriptor::default());
 
-        // Post render pass
-        {
-            let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("post render pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: Operations {
-                        load: LoadOp::Load,
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: None,
-            });
-
-            pass.set_pipeline(self.post_pipeline.as_ref());
-            pass.set_bind_group(
-                shader_consts::post::T_DIFFUSE.group,
-                self.render_frame.bind_group(),
-                &[],
-            );
-            pass.set_bind_group(
-                shader_consts::post::SCREEN.group,
-                self.screen.bind_group(),
-                &[],
-            );
-
-            pass.draw(0..4, 0..1);
+        let mut frame = Frame::new(self, frame_view);
+        if let Err(err) = lp.render(&mut frame) {
+            return RenderResult::Error(err);
         }
 
-        self.queue.submit([encoder.finish()]);
+        frame.draw_frame();
+        frame.submit();
         output.present();
 
         RenderResult::Ok
     }
+
+    pub(crate) fn device(&self) -> &Device {
+        &self.device
+    }
+
+    pub(crate) fn queue(&self) -> &Queue {
+        &self.queue
+    }
+
+    pub(crate) fn post_pipeline(&self) -> &Pipeline {
+        &self.post_pipeline
+    }
+
+    pub(crate) fn screen(&self) -> &Screen {
+        &self.screen
+    }
+
+    pub(crate) fn resources(&self) -> &Resources {
+        &self.resources
+    }
+
+    pub(crate) fn render_frame(&self) -> &RenderFrame {
+        &self.render_frame
+    }
+
+    pub(crate) fn depth_frame(&self) -> &DepthFrame {
+        &self.depth_frame
+    }
+
+    #[cfg(target_os = "android")]
+    fn wait_for_native_screen() {
+        loop {
+            log::info!("waiting for native screen");
+            if let Some(window) = ndk_glue::native_window().as_ref() {
+                log::info!("native screen found:{:?}", window);
+                break;
+            }
+        }
+    }
 }
 
-#[cfg(target_os = "android")]
-fn wait_for_native_screen() {
-    log::info!("waiting for native screen");
-    loop {
-        if let Some(window) = ndk_glue::native_window().as_ref() {
-            log::info!("native screen found:{:?}", window);
-            break;
-        }
+pub(crate) trait GetPipeline<V> {
+    fn get_pipeline(&self) -> &Pipeline;
+}
+
+impl GetPipeline<TextureVertex> for Render {
+    fn get_pipeline(&self) -> &Pipeline {
+        &self.texture_pipeline
+    }
+}
+
+impl GetPipeline<ColorVertex> for Render {
+    fn get_pipeline(&self) -> &Pipeline {
+        &self.color_pipeline
     }
 }
 
@@ -448,7 +417,17 @@ pub struct TextureHandle(pub(crate) u32);
 
 /// A mesh handle.
 #[derive(Clone, Copy)]
-pub struct MeshHandle(pub(crate) u32);
+pub struct MeshHandle<V>(u32, PhantomData<V>);
+
+impl<V> MeshHandle<V> {
+    pub(crate) fn new(id: u32) -> Self {
+        Self(id, PhantomData)
+    }
+
+    pub(crate) fn id(self) -> u32 {
+        self.0
+    }
+}
 
 /// An instance handle.
 #[derive(Clone, Copy)]

@@ -105,7 +105,7 @@ impl Canvas {
                             })
                         }),
                         WindowEvent::CloseRequested if lp.close_requested() => {
-                            *flow = ControlFlow::Exit
+                            *flow = ControlFlow::Exit;
                         }
                         WindowEvent::KeyboardInput {
                             input:
@@ -185,7 +185,7 @@ impl Canvas {
                         lp.error_occurred(err);
                     }
 
-                    match context.render.draw_frame(&lp) {
+                    match context.render.start_frame(&lp) {
                         RenderResult::Ok => {}
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
                             log::error!("suface error: timeout");

@@ -21,7 +21,7 @@ fn main() {
 
 struct App {
     instance: InstanceHandle,
-    mesh: MeshHandle,
+    mesh: MeshHandle<ColorVertex>,
     view: ViewHandle,
 }
 
@@ -56,10 +56,6 @@ impl App {
             context.create_mesh(data)
         };
 
-        // Fill black before draw a frame
-        let color = Srgba([0, 0, 0, 255]);
-        context.set_clear_color(color);
-
         // Create the view
         let view = context.create_view::<Perspective>(View::default());
 
@@ -87,9 +83,11 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        frame.set_view(self.view)?;
-        frame.set_instance(self.instance)?;
-        frame.draw_mesh(self.mesh)?;
+        let mut layer = frame.start_color_layer(Srgba([0, 0, 0, 255]));
+
+        layer.bind_view(self.view)?;
+        layer.bind_instance(self.instance)?;
+        layer.draw(self.mesh)?;
 
         Ok(())
     }
