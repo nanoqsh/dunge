@@ -145,10 +145,6 @@ impl App {
                 .collect()
         };
 
-        // Set the clear color
-        let color = Srgba([46, 34, 47, 255]);
-        context.set_clear_color(color);
-
         // Create the view
         let camera = Camera::default();
         let view = context.create_view(camera.view::<Orthographic>());
@@ -211,11 +207,13 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        frame.set_view(self.view)?;
-        frame.bind_texture(self.sprites)?;
+        let mut layer = frame.start_texture_layer(Srgba([46, 34, 47, 255]));
+
+        layer.bind_view(self.view)?;
+        layer.bind_texture(self.sprites)?;
         for model in &self.models {
-            frame.set_instance(model.instance)?;
-            frame.draw_mesh(model.mesh)?;
+            layer.bind_instance(model.instance)?;
+            layer.draw(model.mesh)?;
         }
 
         Ok(())

@@ -51,10 +51,6 @@ impl App {
             context.create_mesh(data)
         };
 
-        // Set the clear color
-        let color = Srgba([29, 39, 34, 255]);
-        context.set_clear_color(color);
-
         // Create the view
         let camera = Camera::default();
         let view = context.create_view(camera.view::<Perspective>());
@@ -96,10 +92,12 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        frame.set_view(self.view)?;
-        frame.set_instance(self.instance)?;
-        frame.bind_texture(self.texture)?;
-        frame.draw_mesh(self.mesh)?;
+        let mut layer = frame.start_texture_layer(Srgba([29, 39, 34, 255]));
+
+        layer.bind_view(self.view)?;
+        layer.bind_instance(self.instance)?;
+        layer.bind_texture(self.texture)?;
+        layer.draw(self.mesh)?;
 
         Ok(())
     }

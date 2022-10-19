@@ -87,9 +87,11 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        frame.set_view(self.view)?;
-        frame.set_instance(self.instance)?;
-        frame.draw_mesh(self.mesh)?;
+        let mut layer = frame.start_color_layer(Srgba([0, 0, 0, 255]));
+
+        layer.bind_view(self.view)?;
+        layer.bind_instance(self.instance)?;
+        layer.draw(self.mesh)?;
 
         Ok(())
     }
