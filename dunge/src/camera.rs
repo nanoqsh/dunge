@@ -6,7 +6,7 @@ use {
         shader_consts,
         transform::{IntoQuat, Quat},
     },
-    glam::{Mat4, Vec3},
+    glam::Mat4,
     std::cell::Cell,
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -124,14 +124,7 @@ impl<P> View<P> {
     pub(crate) fn rotation_quat(&self) -> Quat {
         let [xe, ye, ze] = self.eye;
         let [xl, yl, zl] = self.look;
-        let [sx, sy, sz] = [xe - xl, ye - yl, ze - zl];
-        let len = (sx * sx + sy * sy + sz * sz).sqrt();
-
-        let [sx, sy, sz] = if len == 0. {
-            [0., 1., 0.]
-        } else {
-            [sx / len, sy / len, sz / len]
-        };
+        let [sx, sy, sz] = normalize([xe - xl, ye - yl, ze - zl]);
 
         let pitch = sy.asin();
         let angle = sx.atan2(sz);
@@ -146,7 +139,17 @@ impl View<Projection> {
     fn build_mat(&self, (width, height): (f32, f32)) -> Mat4 {
         let proj = match self.proj {
             Projection::Perspective(Perspective { fovy, znear, zfar }) => {
-                Mat4::perspective_rh(fovy, width / height, znear, zfar)
+                let (sin_fov, cos_fov) = (0.5 * fovy).sin_cos();
+                let h = cos_fov / sin_fov;
+                let w = (h * height) / width;
+                let r = zfar / (znear - zfar);
+
+                Mat4::from_cols_array_2d(&[
+                    [w, 0., 0., 0.],
+                    [0., h, 0., 0.],
+                    [0., 0., r, -1.],
+                    [0., 0., r * znear, 0.],
+                ])
             }
             Projection::Orthographic(Orthographic {
                 width_factor,
@@ -154,19 +157,37 @@ impl View<Projection> {
                 near,
                 far,
             }) => {
-                let half_width = width * width_factor * 0.5;
-                let half_height = height * height_factor * 0.5;
+                let fwidth = 1. / (width * width_factor);
+                let fheight = 1. / (height * height_factor);
+                let r = 1. / (near - far);
 
-                let left = -half_width;
-                let right = half_width;
-                let bottom = -half_height;
-                let top = half_height;
-
-                Mat4::orthographic_rh(left, right, bottom, top, near, far)
+                Mat4::from_cols_array_2d(&[
+                    [fwidth + fwidth, 0., 0., 0.],
+                    [0., fheight + fheight, 0., 0.],
+                    [0., 0., r, 0.],
+                    [fwidth, fheight, r * near, 1.],
+                ])
             }
         };
 
-        let view = Mat4::look_at_rh(self.eye.into(), self.look.into(), Vec3::Y);
+        let view = {
+            let [xe, ye, ze] = self.eye;
+            let [xl, yl, zl] = self.look;
+            let [xf, yf, zf] = normalize([xe - xl, ye - yl, ze - zl]);
+            let [xr, yr, zr] = normalize(cross([0., 1., 0.], [xf, yf, zf]));
+            let [xu, yu, zu] = cross([xf, yf, zf], [xr, yr, zr]);
+
+            let tx = -xr * xe - yr * ye - zr * ze;
+            let ty = -xu * xe - yu * ye - zu * ze;
+            let tz = -xf * xe - yf * ye - zf * ze;
+
+            Mat4::from_cols_array_2d(&[
+                [xr, xu, xf, 0.],
+                [yr, yu, yf, 0.],
+                [zr, zu, zf, 0.],
+                [tx, ty, tz, 1.],
+            ])
+        };
 
         proj * view
     }
@@ -248,3 +269,16 @@ pub(crate) struct CameraUniform {
 }
 
 unsafe impl Plain for CameraUniform {}
+
+fn normalize([x, y, z]: [f32; 3]) -> [f32; 3] {
+    let len = (x * x + y * y + z * z).sqrt();
+    if len == 0. {
+        [0., 1., 0.]
+    } else {
+        [x / len, y / len, z / len]
+    }
+}
+
+fn cross([xa, ya, za]: [f32; 3], [xb, yb, zb]: [f32; 3]) -> [f32; 3] {
+    [ya * zb - yb * za, za * xb - zb * xa, xa * yb - xb * ya]
+}

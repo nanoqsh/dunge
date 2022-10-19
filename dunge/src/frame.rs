@@ -1,7 +1,7 @@
 use {
     crate::{
-        color::{IntoLinear, Linear},
-        layer::Layer,
+        color::Linear,
+        layer::{Layer, LayerBuilder},
         render::{GetPipeline, Render},
         shader_consts,
         vertex::{ColorVertex, TextureVertex},
@@ -9,8 +9,8 @@ use {
     wgpu::{CommandEncoder, TextureView},
 };
 
-/// A struct represented a current frame
-/// and exists during a frame render.
+/// The type that represented a current frame
+/// and creates new [layers](crate::Layer).
 pub struct Frame<'d> {
     render: &'d Render,
     encoder: CommandEncoder,
@@ -70,41 +70,45 @@ impl<'d> Frame<'d> {
         self.render.queue().submit([self.encoder.finish()]);
     }
 
-    pub fn start_texture_layer<C>(&mut self, col: C) -> Layer<TextureVertex>
-    where
-        C: IntoLayerColor,
-    {
-        Self::start_layer(self, col.into_layer_color())
+    pub fn texture_layer<'l>(&'l mut self) -> LayerBuilder<'l, 'd, TextureVertex> {
+        LayerBuilder::new(self)
     }
 
-    pub fn start_color_layer<C>(&mut self, col: C) -> Layer<ColorVertex>
-    where
-        C: IntoLayerColor,
-    {
-        Self::start_layer(self, col.into_layer_color())
+    pub fn color_layer<'l>(&'l mut self) -> LayerBuilder<'l, 'd, ColorVertex> {
+        LayerBuilder::new(self)
     }
 
-    fn start_layer<V>(&mut self, col: Option<Linear<f64>>) -> Layer<V>
+    /// Creates a new [layer](crate::Layer).
+    pub(crate) fn start_layer<V>(
+        &mut self,
+        clear_color: Option<Linear<f64>>,
+        clear_depth: bool,
+    ) -> Layer<V>
     where
         Render: GetPipeline<V>,
     {
         use wgpu::*;
-
-        let load = col.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
-            LoadOp::Clear(Color { r, g, b, a })
-        });
 
         let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
             label: Some("main render pass"),
             color_attachments: &[Some(RenderPassColorAttachment {
                 view: self.render.render_frame().view(),
                 resolve_target: None,
-                ops: Operations { load, store: true },
+                ops: Operations {
+                    load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
+                        LoadOp::Clear(Color { r, g, b, a })
+                    }),
+                    store: true,
+                },
             })],
             depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
                 view: self.render.depth_frame().view(),
                 depth_ops: Some(Operations {
-                    load: LoadOp::Clear(1.),
+                    load: if clear_depth {
+                        LoadOp::Clear(1.)
+                    } else {
+                        LoadOp::Load
+                    },
                     store: true,
                 }),
                 stencil_ops: None,
@@ -119,24 +123,5 @@ impl<'d> Frame<'d> {
             self.render.queue(),
             self.render.resources(),
         )
-    }
-}
-
-pub trait IntoLayerColor {
-    fn into_layer_color(self) -> Option<Linear<f64>>;
-}
-
-impl IntoLayerColor for () {
-    fn into_layer_color(self) -> Option<Linear<f64>> {
-        None
-    }
-}
-
-impl<L> IntoLayerColor for L
-where
-    L: IntoLinear,
-{
-    fn into_layer_color(self) -> Option<Linear<f64>> {
-        Some(self.into_linear())
     }
 }

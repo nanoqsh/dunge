@@ -7,10 +7,17 @@ pub(crate) struct Storage<T> {
 
 impl<T> Storage<T> {
     pub(crate) fn insert(&mut self, value: T) -> u32 {
-        let index = self.counter;
-        self.counter = self.counter.wrapping_add(1);
-        self.map.insert(index, value);
-        index
+        use std::collections::hash_map::Entry;
+
+        loop {
+            let index = self.counter;
+            self.counter = self.counter.wrapping_add(1);
+
+            if let Entry::Vacant(en) = self.map.entry(index) {
+                en.insert(value);
+                break index;
+            }
+        }
     }
 
     pub(crate) fn get(&self, index: u32) -> Result<&T, Error> {

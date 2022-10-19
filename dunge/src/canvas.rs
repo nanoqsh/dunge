@@ -20,9 +20,7 @@ pub struct Canvas {
 }
 
 impl Canvas {
-    /// Calls [`run`] but blocking instead of async.
-    ///
-    /// [`run`]: crate::Canvas::run
+    /// Calls [`run`](crate::Canvas::run) but blocking instead of async.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_blocking<M, L>(self, make_loop: M) -> !
     where

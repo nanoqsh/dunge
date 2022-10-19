@@ -1,20 +1,69 @@
 use {
     crate::{
         camera::Camera,
+        color::{IntoLinear, Linear},
+        frame::Frame,
         instance::Instance,
         mesh::Mesh,
         r#loop::Error,
-        render::ViewHandle,
-        render::{InstanceHandle, MeshHandle, TextureHandle},
+        render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
         shader_consts,
         storage::Storage,
         texture::Texture,
-        vertex::TextureVertex,
+        vertex::{ColorVertex, TextureVertex},
     },
     std::marker::PhantomData,
     wgpu::{Queue, RenderPass},
 };
 
+pub struct LayerBuilder<'l, 'd, V> {
+    frame: &'l mut Frame<'d>,
+    clear_color: Option<Linear<f64>>,
+    clear_depth: bool,
+    vertex_type: PhantomData<V>,
+}
+
+impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
+    pub(crate) fn new(frame: &'l mut Frame<'d>) -> Self {
+        Self {
+            frame,
+            clear_color: None,
+            clear_depth: false,
+            vertex_type: PhantomData,
+        }
+    }
+
+    pub fn with_clear_color<C>(self, color: C) -> Self
+    where
+        C: IntoLinear,
+    {
+        Self {
+            clear_color: Some(color.into_linear()),
+            ..self
+        }
+    }
+
+    pub fn with_clear_depth(self) -> Self {
+        Self {
+            clear_depth: true,
+            ..self
+        }
+    }
+}
+
+impl<'l, 'd> LayerBuilder<'l, 'd, TextureVertex> {
+    pub fn start(self) -> Layer<'l, TextureVertex> {
+        self.frame.start_layer(self.clear_color, self.clear_depth)
+    }
+}
+
+impl<'l, 'd> LayerBuilder<'l, 'd, ColorVertex> {
+    pub fn start(self) -> Layer<'l, ColorVertex> {
+        self.frame.start_layer(self.clear_color, self.clear_depth)
+    }
+}
+
+/// The frame layer. Can be created from a [`Frame`] instance.
 pub struct Layer<'l, V> {
     pass: RenderPass<'l>,
     size: (u32, u32),
@@ -41,6 +90,10 @@ impl<'l, V> Layer<'l, V> {
         }
     }
 
+    /// Binds a [instance](crate::InstanceHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given instance handler was deleted.
     pub fn bind_instance(&mut self, handle: InstanceHandle) -> Result<(), Error> {
         let instance = self.resources.instances.get(handle.0)?;
         self.instance = Some(instance);
@@ -48,6 +101,10 @@ impl<'l, V> Layer<'l, V> {
         Ok(())
     }
 
+    /// Binds a [view](crate::ViewHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         const CAMERA_GROUP: u32 = {
             assert!(shader_consts::textured::CAMERA.group == shader_consts::color::CAMERA.group);
@@ -63,6 +120,12 @@ impl<'l, V> Layer<'l, V> {
         Ok(())
     }
 
+    /// Draws a [mesh](crate::MeshHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given mesh handler was deleted.
+    /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
+    /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
     pub fn draw(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
         use wgpu::IndexFormat;
 
@@ -96,6 +159,10 @@ impl<'l, V> Layer<'l, V> {
 }
 
 impl Layer<'_, TextureVertex> {
+    /// Binds a [texture](crate::TextureHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
         let texture = self.resources.textures.get(handle.0)?;
         self.pass.set_bind_group(

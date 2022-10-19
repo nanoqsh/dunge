@@ -92,7 +92,11 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        let mut layer = frame.start_texture_layer(Srgba([29, 39, 34, 255]));
+        let mut layer = frame
+            .texture_layer()
+            .with_clear_color(Srgba([29, 39, 34, 255]))
+            .with_clear_depth()
+            .start();
 
         layer.bind_view(self.view)?;
         layer.bind_instance(self.instance)?;

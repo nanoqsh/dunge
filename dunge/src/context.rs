@@ -30,11 +30,8 @@ impl Context {
     /// Plans the main loop to close.
     ///
     /// Calling this function dosn't guarantee closing.
-    /// It triggers the [`close_requested`] function in the [`Loop`],
-    /// which can handle the closing event.
-    ///
-    /// [`Loop`]: crate::Loop
-    /// [`close_requested`]: crate::Loop::close_requested
+    /// It triggers the [`close_requested`](crate::Loop::close_requested)
+    /// function in the [`Loop`](crate::Loop), which can handle the closing event.
     pub fn plan_to_close(&self) {
         _ = self.proxy.send_event(CanvasEvent::Close);
     }
