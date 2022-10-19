@@ -4,7 +4,6 @@ use {
 };
 
 /// A data struct for a mesh creation.
-#[derive(Clone, Copy)]
 pub struct MeshData<'a, V> {
     verts: &'a [V],
     indxs: &'a [[u16; 3]],
@@ -16,7 +15,7 @@ impl<'a, V> MeshData<'a, V> {
     /// Returns `Some` if a data length fits in `u16` and all indices point to the data,
     /// otherwise returns `None`.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Option<Self> {
-        if verts.len() <= usize::from(u16::MAX)
+        if u16::try_from(verts.len()).is_ok()
             && indxs
                 .iter()
                 .flatten()
@@ -28,6 +27,14 @@ impl<'a, V> MeshData<'a, V> {
         }
     }
 }
+
+impl<'a, V> Clone for MeshData<'a, V> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<'a, V> Copy for MeshData<'a, V> {}
 
 pub(crate) struct Mesh {
     vertex_buffer: Buffer,

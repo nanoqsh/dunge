@@ -105,7 +105,7 @@ impl Canvas {
                             })
                         }),
                         WindowEvent::CloseRequested if lp.close_requested() => {
-                            *flow = ControlFlow::Exit
+                            *flow = ControlFlow::Exit;
                         }
                         WindowEvent::KeyboardInput {
                             input:

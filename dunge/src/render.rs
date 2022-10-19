@@ -343,6 +343,7 @@ impl Render {
         }
 
         frame.draw_frame();
+        frame.submit();
         output.present();
 
         RenderResult::Ok

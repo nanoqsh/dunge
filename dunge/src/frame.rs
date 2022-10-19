@@ -34,38 +34,39 @@ impl<'d> Frame<'d> {
         }
     }
 
-    pub(crate) fn draw_frame(mut self) {
+    /// Draws the frame in the screen buffer.
+    pub(crate) fn draw_frame(&mut self) {
         use wgpu::*;
 
-        {
-            let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("post render pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: &self.frame_view,
-                    resolve_target: None,
-                    ops: Operations {
-                        load: LoadOp::Load,
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: None,
-            });
+        let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
+            label: Some("post render pass"),
+            color_attachments: &[Some(RenderPassColorAttachment {
+                view: &self.frame_view,
+                resolve_target: None,
+                ops: Operations {
+                    load: LoadOp::Load,
+                    store: true,
+                },
+            })],
+            depth_stencil_attachment: None,
+        });
 
-            pass.set_pipeline(self.render.post_pipeline().as_ref());
-            pass.set_bind_group(
-                shader_consts::post::T_DIFFUSE.group,
-                self.render.render_frame().bind_group(),
-                &[],
-            );
-            pass.set_bind_group(
-                shader_consts::post::SCREEN.group,
-                self.render.screen().bind_group(),
-                &[],
-            );
+        pass.set_pipeline(self.render.post_pipeline().as_ref());
+        pass.set_bind_group(
+            shader_consts::post::T_DIFFUSE.group,
+            self.render.render_frame().bind_group(),
+            &[],
+        );
+        pass.set_bind_group(
+            shader_consts::post::SCREEN.group,
+            self.render.screen().bind_group(),
+            &[],
+        );
 
-            pass.draw(0..4, 0..1);
-        }
+        pass.draw(0..4, 0..1);
+    }
 
+    pub(crate) fn submit(self) {
         self.render.queue().submit([self.encoder.finish()]);
     }
 
@@ -89,9 +90,9 @@ impl<'d> Frame<'d> {
     {
         use wgpu::*;
 
-        let load = col
-            .map(|Linear([r, g, b, a])| LoadOp::Clear(Color { r, g, b, a }))
-            .unwrap_or(LoadOp::Load);
+        let load = col.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
+            LoadOp::Clear(Color { r, g, b, a })
+        });
 
         let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
             label: Some("main render pass"),

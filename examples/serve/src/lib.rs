@@ -10,5 +10,5 @@ pub fn run(path: String) {
         .enable_all()
         .build()
         .expect("build tokio runtime")
-        .block_on(serve)
+        .block_on(serve);
 }
