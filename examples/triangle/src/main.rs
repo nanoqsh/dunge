@@ -21,7 +21,7 @@ fn main() {
 
 struct App {
     instance: InstanceHandle,
-    mesh: MeshHandle,
+    mesh: MeshHandle<ColorVertex>,
     view: ViewHandle,
 }
 
@@ -55,10 +55,6 @@ impl App {
             let data = MeshData::new(&VERTICES, &[INDICES]).expect("create mesh");
             context.create_mesh(data)
         };
-
-        // Fill black before draw a frame
-        let color = Srgba([0, 0, 0, 255]);
-        context.set_clear_color(color);
 
         // Create the view
         let view = context.create_view::<Perspective>(View::default());

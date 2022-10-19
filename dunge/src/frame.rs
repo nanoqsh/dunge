@@ -115,7 +115,7 @@ impl<'d> Frame<'d> {
         Layer::new(
             pass,
             self.render.size().as_virtual(),
-            &self.render.queue(),
+            self.render.queue(),
             self.render.resources(),
         )
     }

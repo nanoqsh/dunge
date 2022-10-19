@@ -23,7 +23,7 @@ fn main() {
 
 struct App {
     instance: InstanceHandle,
-    mesh: MeshHandle,
+    mesh: MeshHandle<ColorVertex>,
     view: ViewHandle,
     camera: Camera,
 }

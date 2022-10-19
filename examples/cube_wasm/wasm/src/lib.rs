@@ -19,7 +19,7 @@ pub async fn run() {
 struct App {
     texture: TextureHandle,
     instance: InstanceHandle,
-    mesh: MeshHandle,
+    mesh: MeshHandle<TextureVertex>,
     view: ViewHandle,
     camera: Camera,
 }

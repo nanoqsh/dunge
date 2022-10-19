@@ -27,7 +27,7 @@ fn main() {
 
 struct Model {
     instance: InstanceHandle,
-    mesh: MeshHandle,
+    mesh: MeshHandle<TextureVertex>,
     update_view: bool,
     pos: [f32; 3],
 }

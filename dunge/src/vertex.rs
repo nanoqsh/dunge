@@ -3,20 +3,8 @@ use {
     wgpu::{VertexAttribute, VertexStepMode},
 };
 
-/// The vertex type.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum VertexType {
-    /// Use the [`TextureVertex`] for drawing.
-    Texture,
-
-    /// Use the [`ColorVertex`] for drawing.
-    Color,
-}
-
 /// A trait that describes a vertex.
-pub trait Vertex: Layout {
-    const TYPE: VertexType;
-}
+pub trait Vertex: Layout {}
 
 /// Vertex for drawing colored triangles.
 #[repr(C)]
@@ -35,9 +23,7 @@ impl Layout for ColorVertex {
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
 }
 
-impl Vertex for ColorVertex {
-    const TYPE: VertexType = VertexType::Color;
-}
+impl Vertex for ColorVertex {}
 
 /// Vertex for drawing textured triangles.
 #[repr(C)]
@@ -56,6 +42,4 @@ impl Layout for TextureVertex {
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
 }
 
-impl Vertex for TextureVertex {
-    const TYPE: VertexType = VertexType::Texture;
-}
+impl Vertex for TextureVertex {}

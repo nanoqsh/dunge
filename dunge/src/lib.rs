@@ -40,5 +40,5 @@ pub use crate::{
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
     texture::{FrameFilter, TextureData},
-    vertex::{ColorVertex, TextureVertex, Vertex, VertexType},
+    vertex::{ColorVertex, TextureVertex, Vertex},
 };

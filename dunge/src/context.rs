@@ -2,7 +2,6 @@ use {
     crate::{
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
-        color::IntoLinear,
         mesh::MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle, ViewHandle},
         size::Size,
@@ -120,7 +119,7 @@ impl Context {
     }
 
     /// Creates a new mesh.
-    pub fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle
+    pub fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle<V>
     where
         V: Vertex,
     {
@@ -128,7 +127,7 @@ impl Context {
     }
 
     /// Updates the mesh.
-    pub fn update_mesh<V>(&mut self, handle: MeshHandle, data: MeshData<V>) -> Result<(), Error>
+    pub fn update_mesh<V>(&mut self, handle: MeshHandle<V>, data: MeshData<V>) -> Result<(), Error>
     where
         V: Vertex,
     {
@@ -136,7 +135,7 @@ impl Context {
     }
 
     /// Deletes the mesh.
-    pub fn delete_mesh(&mut self, handle: MeshHandle) -> Result<(), Error> {
+    pub fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
         self.render.delete_mesh(handle)
     }
 
@@ -159,21 +158,6 @@ impl Context {
     /// Deletes the view.
     pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.render.delete_view(handle)
-    }
-
-    /// Sets the clear color.
-    ///
-    /// A new frame will be filled by this color.
-    pub fn set_clear_color<C>(&mut self, color: C)
-    where
-        C: IntoLinear,
-    {
-        self.render.set_clear_color(Some(color.into_linear()));
-    }
-
-    /// Unsets the clear color.
-    pub fn unset_clear_color(&mut self) {
-        self.render.set_clear_color(None);
     }
 }
 
