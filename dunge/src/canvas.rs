@@ -118,9 +118,7 @@ impl Canvas {
                                 pressed_keys.push(key)
                             }
                             ElementState::Released => {
-                                if let Some(i) = pressed_keys.iter().position(|&k| k == key) {
-                                    pressed_keys.remove(i);
-                                }
+                                // TODO
                             }
                             _ => {}
                         },
@@ -176,12 +174,15 @@ impl Canvas {
                     // Reset delta time
                     time.reset();
 
-                    // Reset mouse delta
-                    mouse = Mouse::default();
-
                     if let Err(err) = lp.update(&mut context, &input) {
                         lp.error_occurred(err);
                     }
+
+                    // Reset mouse delta
+                    mouse = Mouse::default();
+
+                    // Reset keys
+                    pressed_keys.clear();
 
                     match context.render.start_frame(&lp) {
                         RenderResult::Ok => {}

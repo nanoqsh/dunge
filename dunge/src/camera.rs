@@ -6,7 +6,6 @@ use {
         shader_consts,
         transform::{IntoQuat, Quat},
     },
-    glam::Mat4,
     std::cell::Cell,
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -44,7 +43,7 @@ impl Camera {
         );
 
         let uniform = CameraUniform {
-            view_proj: *Mat4::IDENTITY.as_ref(),
+            view_proj: IDENTITY,
         };
 
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -86,8 +85,10 @@ impl Camera {
         }
 
         self.size.set(Some(size));
-        let view_proj = self.view.build_mat((width as f32, height as f32));
-        queue.write_buffer(&self.buffer, 0, view_proj.as_ref().as_bytes());
+        let uniform = CameraUniform {
+            view_proj: self.view.build_mat((width as f32, height as f32)),
+        };
+        queue.write_buffer(&self.buffer, 0, uniform.as_bytes());
     }
 
     pub(crate) fn bind_group(&self) -> &BindGroup {
@@ -136,7 +137,7 @@ impl<P> View<P> {
 }
 
 impl View<Projection> {
-    fn build_mat(&self, (width, height): (f32, f32)) -> Mat4 {
+    fn build_mat(&self, (width, height): (f32, f32)) -> [[f32; 4]; 4] {
         let proj = match self.proj {
             Projection::Perspective(Perspective { fovy, znear, zfar }) => {
                 let (sin_fov, cos_fov) = (0.5 * fovy).sin_cos();
@@ -144,12 +145,12 @@ impl View<Projection> {
                 let w = (h * height) / width;
                 let r = zfar / (znear - zfar);
 
-                Mat4::from_cols_array_2d(&[
+                [
                     [w, 0., 0., 0.],
                     [0., h, 0., 0.],
                     [0., 0., r, -1.],
                     [0., 0., r * znear, 0.],
-                ])
+                ]
             }
             Projection::Orthographic(Orthographic {
                 width_factor,
@@ -161,12 +162,12 @@ impl View<Projection> {
                 let fheight = 1. / (height * height_factor);
                 let r = 1. / (near - far);
 
-                Mat4::from_cols_array_2d(&[
+                [
                     [fwidth + fwidth, 0., 0., 0.],
                     [0., fheight + fheight, 0., 0.],
                     [0., 0., r, 0.],
                     [fwidth, fheight, r * near, 1.],
-                ])
+                ]
             }
         };
 
@@ -177,19 +178,19 @@ impl View<Projection> {
             let [xr, yr, zr] = normalize(cross([0., 1., 0.], [xf, yf, zf]));
             let [xu, yu, zu] = cross([xf, yf, zf], [xr, yr, zr]);
 
-            let tx = -xr * xe - yr * ye - zr * ze;
-            let ty = -xu * xe - yu * ye - zu * ze;
-            let tz = -xf * xe - yf * ye - zf * ze;
+            let tx = xr * xe + yr * ye + zr * ze;
+            let ty = xu * xe + yu * ye + zu * ze;
+            let tz = xf * xe + yf * ye + zf * ze;
 
-            Mat4::from_cols_array_2d(&[
+            [
                 [xr, xu, xf, 0.],
                 [yr, yu, yf, 0.],
                 [zr, zu, zf, 0.],
-                [tx, ty, tz, 1.],
-            ])
+                [-tx, -ty, -tz, 1.],
+            ]
         };
 
-        proj * view
+        mul_mat4(proj, view)
     }
 }
 
@@ -265,10 +266,17 @@ impl IntoProjection for Orthographic {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub(crate) struct CameraUniform {
-    view_proj: [f32; 16],
+    view_proj: [[f32; 4]; 4],
 }
 
 unsafe impl Plain for CameraUniform {}
+
+const IDENTITY: [[f32; 4]; 4] = [
+    [1., 0., 0., 0.],
+    [0., 1., 0., 0.],
+    [0., 0., 1., 0.],
+    [0., 0., 0., 1.],
+];
 
 fn normalize([x, y, z]: [f32; 3]) -> [f32; 3] {
     let len = (x * x + y * y + z * z).sqrt();
@@ -281,4 +289,19 @@ fn normalize([x, y, z]: [f32; 3]) -> [f32; 3] {
 
 fn cross([xa, ya, za]: [f32; 3], [xb, yb, zb]: [f32; 3]) -> [f32; 3] {
     [ya * zb - yb * za, za * xb - zb * xa, xa * yb - xb * ya]
+}
+
+fn mul_vector(m: [[f32; 4]; 4], [x, y, z, w]: [f32; 4]) -> [f32; 4] {
+    let [[xa, ya, za, wa], [xb, yb, zb, wb], [xc, yc, zc, wc], [xd, yd, zd, wd]] = m;
+
+    [
+        x * xa + y * xb + z * xc + w * xd,
+        x * ya + y * yb + z * yc + w * yd,
+        x * za + y * zb + z * zc + w * zd,
+        x * wa + y * wb + z * wc + w * wd,
+    ]
+}
+
+fn mul_mat4(a: [[f32; 4]; 4], b: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
+    b.map(|v| mul_vector(a, v))
 }

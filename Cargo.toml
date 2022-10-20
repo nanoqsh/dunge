@@ -2,7 +2,6 @@
 members = [
     "dunge",
     "examples/cube",
-    "examples/cube_color",
     "examples/cube_wasm",
     "examples/scene",
     "examples/triangle",

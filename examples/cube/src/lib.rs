@@ -3,41 +3,50 @@ use {
         color::Srgba,
         input::{Input, Key},
         transform::Position,
-        ColorVertex, Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData,
-        MeshHandle, Perspective, ViewHandle, WindowMode,
+        ColorVertex, Context, Error, Frame, InstanceHandle, Loop, MeshData, MeshHandle,
+        Perspective, TextureData, TextureHandle, TextureVertex, ViewHandle,
     },
     utils::Camera,
 };
 
-fn main() {
-    env_logger::init();
-    dunge::make_window(InitialState {
-        mode: WindowMode::Windowed {
-            width: 500,
-            height: 500,
-        },
-        ..Default::default()
-    })
-    .run_blocking(App::new);
+enum State {
+    Texture,
+    Color,
 }
 
-struct App {
+pub struct App {
+    texture: TextureHandle,
     instance: InstanceHandle,
-    mesh: MeshHandle<ColorVertex>,
+    texture_mesh: MeshHandle<TextureVertex>,
+    color_mesh: MeshHandle<ColorVertex>,
     view: ViewHandle,
     camera: Camera,
+    state: State,
 }
 
 impl App {
-    fn new(context: &mut Context) -> Self {
+    pub fn new(context: &mut Context) -> Self {
+        // Create a texture
+        let texture = {
+            let image = utils::read_png(include_bytes!("grass.png"));
+            let data = TextureData::new(&image, image.dimensions()).expect("create texture");
+            context.create_texture(data)
+        };
+
         // Create a model instance
         let instance = {
             let data = Position::default();
             context.create_instances([data])
         };
 
-        // Create a mesh
-        let mesh = {
+        // Create meshes
+        let texture_mesh = {
+            let verts = VERTICES.map(|(pos, map)| TextureVertex { pos, map });
+            let data = MeshData::new(&verts, &INDICES).expect("create mesh");
+            context.create_mesh(data)
+        };
+
+        let color_mesh = {
             let verts = VERTICES.map(|(pos, [a, b])| ColorVertex {
                 pos,
                 col: [a, b, 1.],
@@ -51,10 +60,13 @@ impl App {
         let view = context.create_view(camera.view::<Perspective>());
 
         Self {
+            texture,
             instance,
-            mesh,
+            texture_mesh,
+            color_mesh,
             view,
             camera,
+            state: State::Texture,
         }
     }
 }
@@ -67,9 +79,16 @@ impl Loop for App {
 
         // Handle pressed keys
         for key in input.pressed_keys {
-            if key == Key::Escape {
-                context.plan_to_close();
-                return Ok(());
+            match key {
+                Key::Escape => {
+                    context.plan_to_close();
+                    return Ok(());
+                }
+                Key::Space => match self.state {
+                    State::Texture => self.state = State::Color,
+                    State::Color => self.state = State::Texture,
+                },
+                _ => {}
             }
         }
 
@@ -86,15 +105,33 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        let mut layer = frame
-            .color_layer()
-            .with_clear_color(Srgba([10, 20, 30, 255]))
-            .with_clear_depth()
-            .start();
+        let color = Srgba([46, 34, 47, 255]);
 
-        layer.bind_view(self.view)?;
-        layer.bind_instance(self.instance)?;
-        layer.draw(self.mesh)?;
+        match self.state {
+            State::Texture => {
+                let mut layer = frame
+                    .texture_layer()
+                    .with_clear_color(color)
+                    .with_clear_depth()
+                    .start();
+
+                layer.bind_view(self.view)?;
+                layer.bind_instance(self.instance)?;
+                layer.bind_texture(self.texture)?;
+                layer.draw(self.texture_mesh)?;
+            }
+            State::Color => {
+                let mut layer = frame
+                    .color_layer()
+                    .with_clear_color(color)
+                    .with_clear_depth()
+                    .start();
+
+                layer.bind_view(self.view)?;
+                layer.bind_instance(self.instance)?;
+                layer.draw(self.color_mesh)?;
+            }
+        }
 
         Ok(())
     }
