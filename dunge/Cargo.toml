@@ -6,7 +6,7 @@ description = "Simple and portable 3d render library"
 license = "MIT"
 keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
-readme = "README.md"
+readme = "../README.md"
 repository = "https://github.com/nanoqsh/dunge"
 rust-version = "1.60"
 
