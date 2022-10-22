@@ -21,7 +21,7 @@ mod vertex;
 
 pub mod input {
     //! User's input types.
-    pub use crate::r#loop::{Input, Key, Mouse, PressedKeys, PressedKeysIterator};
+    pub use crate::r#loop::{Input, Key, Keys, KeysIterator, Mouse};
 }
 
 #[cfg(not(target_arch = "wasm32"))]

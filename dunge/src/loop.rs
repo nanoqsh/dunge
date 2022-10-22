@@ -76,10 +76,21 @@ pub enum Error {
 
 /// The user input data.
 pub struct Input<'a> {
+    /// Seconds since previous [update](crate::Loop::update) was called.
     pub delta_time: f32,
+
+    /// The cursor XY position on the screen.
+    /// `None` if the cursor out of screen.
     pub cursor_position: Option<(f32, f32)>,
+
+    /// The mouse input data.
     pub mouse: Mouse,
-    pub pressed_keys: PressedKeys<'a>,
+
+    /// The pressed keys.
+    pub pressed_keys: Keys<'a>,
+
+    /// The released keys.
+    pub released_keys: Keys<'a>,
 }
 
 /// The mouse input data.
@@ -92,29 +103,29 @@ pub struct Mouse {
     pub pressed_right: bool,
 }
 
-/// The pressed keys input data.
+/// Keys input data.
 #[derive(Clone, Copy)]
-pub struct PressedKeys<'a> {
+pub struct Keys<'a> {
     pub(crate) keys: &'a [Key],
 }
 
-impl<'a> IntoIterator for PressedKeys<'a> {
+impl<'a> IntoIterator for Keys<'a> {
     type Item = Key;
-    type IntoIter = PressedKeysIterator<'a>;
+    type IntoIter = KeysIterator<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        PressedKeysIterator {
+        KeysIterator {
             iter: self.keys.iter().copied(),
         }
     }
 }
 
-/// The pressed keys iterator.
-pub struct PressedKeysIterator<'a> {
+/// Keys iterator.
+pub struct KeysIterator<'a> {
     iter: iter::Copied<slice::Iter<'a, Key>>,
 }
 
-impl Iterator for PressedKeysIterator<'_> {
+impl Iterator for KeysIterator<'_> {
     type Item = Key;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -126,4 +137,4 @@ impl Iterator for PressedKeysIterator<'_> {
     }
 }
 
-impl ExactSizeIterator for PressedKeysIterator<'_> {}
+impl ExactSizeIterator for KeysIterator<'_> {}

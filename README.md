@@ -1,12 +1,14 @@
 # Dunge
 
-<p style="text-align: center;">
-    Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">WGPU</a>.
-</p>
-<p style="text-align: center;">
-    <a href="https://crates.io/crates/dunge"><img src="https://img.shields.io/crates/v/dunge.svg"></img></a>
-    <a href="https://docs.rs/dunge"><img src="https://docs.rs/dunge/badge.svg"></img></a>
-</p>
+<div align="center">
+    <p>
+        Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">WGPU</a>.
+    </p>
+    <p>
+        <a href="https://crates.io/crates/dunge"><img src="https://img.shields.io/crates/v/dunge.svg"></img></a>
+        <a href="https://docs.rs/dunge"><img src="https://docs.rs/dunge/badge.svg"></img></a>
+    </p>
+</div>
 
 ## Features
 * Simple but flexible API

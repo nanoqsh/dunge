@@ -1,7 +1,7 @@
 use {
     crate::{
         context::{Context, Limits},
-        r#loop::{Input, Loop, Mouse, PressedKeys},
+        r#loop::{Input, Keys, Loop, Mouse},
         render::{Render, RenderResult},
         size::Size,
         time::Time,
@@ -72,6 +72,7 @@ impl Canvas {
         let mut cursor_position = None;
         let mut mouse = Mouse::default();
         let mut pressed_keys = vec![];
+        let mut released_keys = vec![];
 
         event_loop.run(move |ev, _, flow| {
             use {
@@ -114,13 +115,8 @@ impl Canvas {
                                 },
                             ..
                         } => match state {
-                            ElementState::Pressed if !pressed_keys.contains(&key) => {
-                                pressed_keys.push(key)
-                            }
-                            ElementState::Released => {
-                                // TODO
-                            }
-                            _ => {}
+                            ElementState::Pressed => pressed_keys.push(key),
+                            ElementState::Released => released_keys.push(key),
                         },
                         WindowEvent::CursorMoved { position, .. } => {
                             cursor_position = Some(position.into());
@@ -161,13 +157,16 @@ impl Canvas {
                         }
                     }
 
-                    // Create an input
+                    // Create an user's input data
                     let input = Input {
                         delta_time,
                         cursor_position,
                         mouse,
-                        pressed_keys: PressedKeys {
+                        pressed_keys: Keys {
                             keys: &pressed_keys[..],
+                        },
+                        released_keys: Keys {
+                            keys: &released_keys[..],
                         },
                     };
 
@@ -183,6 +182,7 @@ impl Canvas {
 
                     // Reset keys
                     pressed_keys.clear();
+                    released_keys.clear();
 
                     match context.render.start_frame(&lp) {
                         RenderResult::Ok => {}
