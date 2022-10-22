@@ -32,12 +32,12 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     );
 
     var out: VertexOutput;
-    out.pos = camera.view_proj * model * vec4<f32>(vert.pos, 1.0);
+    out.pos = camera.view_proj * model * vec4<f32>(vert.pos, 1.);
     out.col = vert.col;
     return out;
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(in.col, 1.0);
+    return vec4<f32>(in.col, 1.);
 }

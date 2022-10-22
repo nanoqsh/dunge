@@ -32,7 +32,7 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     );
 
     var out: VertexOutput;
-    out.pos = camera.view_proj * model * vec4<f32>(vert.pos, 1.0);
+    out.pos = camera.view_proj * model * vec4<f32>(vert.pos, 1.);
     out.map = vert.map;
     return out;
 }

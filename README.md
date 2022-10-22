@@ -92,7 +92,7 @@ Now you should see something like this:
 ![the triangle](./examples/triangle/screen.png)
 
 ## Examples
-See [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory for examples.
+See [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory for more examples.
 To build and run an example do:
 ```
 cargo r -p <example_name>

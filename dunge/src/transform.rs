@@ -165,6 +165,8 @@ impl IntoQuat for AxisAngle {
 ///
 /// ## Example
 /// ```
+/// # use dunge::transform::{AxisAngle, ReverseRotation};
+/// # let n = 1.;
 /// // The rotation along Y by `n` radians.
 /// let axis = AxisAngle([0., 1., 0.], n);
 /// // Now it's reversed. The rotation along Y by `-n` radians.
