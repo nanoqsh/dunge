@@ -16,6 +16,7 @@ use {
     wgpu::{Queue, RenderPass},
 };
 
+/// The layer builder. It creates a configured [`Layer`].
 pub struct LayerBuilder<'l, 'd, V> {
     frame: &'l mut Frame<'d>,
     clear_color: Option<Linear<f64>>,
@@ -33,6 +34,29 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
         }
     }
 
+    /// Sets clear color for the layer.
+    ///
+    /// It takes a color parameter, which must implement the [`IntoLinear`] trait.
+    ///
+    /// Don't set this setting if you don't want to fill
+    /// the previous layer (or frame) with some color.
+    ///
+    /// ## Example
+    /// ```
+    /// # use dunge::color::Srgba;
+    /// # struct Frame;
+    /// # impl Frame {
+    /// #     fn texture_layer(self) -> Self { self }
+    /// #     fn with_clear_color(self, _: Srgba<u8>) -> Self { self }
+    /// #     fn start(self) {}
+    /// # }
+    /// # let frame = Frame;
+    /// let color = Srgba([20, 30, 40, 255]);
+    /// let mut layer = frame
+    ///     .texture_layer()
+    ///     .with_clear_color(color)
+    ///     .start();
+    /// ```
     pub fn with_clear_color<C>(self, color: C) -> Self
     where
         C: IntoLinear,
@@ -43,6 +67,7 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
         }
     }
 
+    /// Sets the flag to clear the depth buffer or not for the layer.
     pub fn with_clear_depth(self) -> Self {
         Self {
             clear_depth: true,

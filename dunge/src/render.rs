@@ -66,8 +66,6 @@ impl Render {
                 &DeviceDescriptor {
                     features: Features::empty(),
                     limits: Limits {
-                        //max_storage_buffers_per_shader_stage: 1,
-                        //max_storage_textures_per_shader_stage: 1,
                         ..if cfg!(target_arch = "wasm32") {
                             Limits::downlevel_webgl2_defaults()
                         } else {

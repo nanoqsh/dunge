@@ -1,5 +1,20 @@
 # Dunge
-Simple and portable 3d render based on [WGPU](https://github.com/gfx-rs/wgpu).
+
+<p style="text-align: center;">
+    Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">WGPU</a>.
+</p>
+<p style="text-align: center;">
+    <a href="https://crates.io/crates/dunge"><img src="https://img.shields.io/crates/v/dunge.svg"></img></a>
+    <a href="https://docs.rs/dunge"><img src="https://docs.rs/dunge/badge.svg"></img></a>
+</p>
+
+## Features
+* Simple but flexible API
+* Desktop, WASM and Android (WIP) support
+* Pixel perfect render
+* Texture and color vertex modes
+* Primitives for object positioning and camera view out of the box
+* Anti-aliasing for pixel art graphics
 
 ## Getting Started
 Let's render a colorful triangle for example. First, we need to add the dependency of dunge in the `Cargo.toml`:
@@ -37,8 +52,8 @@ impl App {
             // Vertex data describes a position in XYZ coordinates and color in RGB per vertex:
             const VERTICES: [ColorVertex; 3] = [
                 ColorVertex { pos: [-0.5, -0.5, 0.], col: [1., 0., 0.] },
-                ColorVertex { pos: [0.5,  -0.5, 0.], col: [0., 1., 0.] },
-                ColorVertex { pos: [0.,    0.5, 0.], col: [0., 0., 1.] },
+                ColorVertex { pos: [ 0.5, -0.5, 0.], col: [0., 1., 0.] },
+                ColorVertex { pos: [ 0.,   0.5, 0.], col: [0., 0., 1.] },
             ];
             // Indices of triangle vetrices:
             const INDICES: [u16; 3] = [0, 1, 2];

@@ -161,6 +161,10 @@ impl Context {
 /// The context's limits.
 #[derive(Clone, Copy, Default)]
 pub struct Limits {
+    /// Sets a minimal time between two frames in seconds.
+    ///
+    /// If the value is set, then the [context](crate::Context) will draw
+    /// a next frame no earlier than the specified time.
     pub min_frame_delta_time: Option<f32>,
 }
 

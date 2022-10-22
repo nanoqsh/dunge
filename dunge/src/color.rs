@@ -1,11 +1,14 @@
 //! Color types and traits.
 
+/// A linear RGBA color.
 #[derive(Clone, Copy)]
 pub struct Linear<C>(pub [C; 4]);
 
+/// A sRGBA color.
 #[derive(Clone, Copy)]
 pub struct Srgba<C>(pub [C; 4]);
 
+/// The trait for color conversion.
 pub trait IntoLinear {
     fn into_linear(self) -> Linear<f64>;
 }
@@ -31,7 +34,7 @@ impl IntoLinear for Srgba<f32> {
 }
 
 impl IntoLinear for Linear<f64> {
-    fn into_linear(self) -> Linear<f64> {
+    fn into_linear(self) -> Self {
         self
     }
 }
