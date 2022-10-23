@@ -2,8 +2,9 @@ use dunge::{
     color::Srgba,
     input::{Input, Key},
     transform::Position,
-    ColorVertex, Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData, MeshHandle,
-    Perspective, View, ViewHandle, WindowMode,
+    vertex::ColorVertex,
+    Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData, MeshHandle, Perspective,
+    View, ViewHandle, WindowMode,
 };
 
 fn main() {

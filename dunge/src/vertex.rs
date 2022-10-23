@@ -43,3 +43,22 @@ impl Layout for TextureVertex {
 }
 
 impl Vertex for TextureVertex {}
+
+/// Vertex for drawing flat sprites.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct FlatVertex {
+    pub pos: [f32; 2],
+    pub map: [f32; 2],
+}
+
+unsafe impl Plain for FlatVertex {}
+
+impl Layout for FlatVertex {
+    const ATTRIBS: &'static [VertexAttribute] =
+        &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2];
+
+    const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
+}
+
+impl Vertex for FlatVertex {}

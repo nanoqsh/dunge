@@ -17,7 +17,7 @@ mod storage;
 mod texture;
 mod time;
 pub mod transform;
-mod vertex;
+pub mod vertex;
 
 pub mod input {
     //! User's input types.
@@ -40,5 +40,4 @@ pub use crate::{
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
     texture::{FrameFilter, TextureData},
-    vertex::{ColorVertex, TextureVertex, Vertex},
 };

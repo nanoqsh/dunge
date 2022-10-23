@@ -3,8 +3,9 @@ use {
         color::Srgba,
         input::{Input, Key},
         transform::Position,
-        ColorVertex, Context, Error, Frame, InstanceHandle, Loop, MeshData, MeshHandle,
-        Perspective, TextureData, TextureHandle, TextureVertex, ViewHandle,
+        vertex::{ColorVertex, TextureVertex},
+        Context, Error, Frame, InstanceHandle, Loop, MeshData, MeshHandle, Perspective,
+        TextureData, TextureHandle, ViewHandle,
     },
     utils::Camera,
 };

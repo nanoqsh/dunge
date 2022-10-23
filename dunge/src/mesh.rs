@@ -1,40 +1,71 @@
 use {
     crate::{layout::Plain, vertex::Vertex},
+    std::borrow::Cow,
     wgpu::{Buffer, Device, Queue},
 };
 
 /// A data struct for a mesh creation.
 pub struct MeshData<'a, V> {
     verts: &'a [V],
-    indxs: &'a [[u16; 3]],
+    indxs: Cow<'a, [[u16; 3]]>,
 }
 
 impl<'a, V> MeshData<'a, V> {
-    /// Creates a new `MeshData`.
+    /// Creates a new `MeshData` from given vertices and indices.
     ///
     /// Returns `Some` if a data length fits in `u16` and all indices point to the data,
     /// otherwise returns `None`.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Option<Self> {
-        if u16::try_from(verts.len()).is_ok()
+        (u16::try_from(verts.len()).is_ok()
             && indxs
                 .iter()
                 .flatten()
-                .all(|&i| usize::from(i) < verts.len())
-        {
-            Some(Self { verts, indxs })
-        } else {
-            None
-        }
+                .all(|&i| usize::from(i) < verts.len()))
+        .then(|| Self {
+            verts,
+            indxs: indxs.into(),
+        })
+    }
+
+    /// Creates a new `MeshData` from given triangles.
+    ///
+    /// Returns `Some` if a data length fits in `u16` and is multiple by 3,
+    /// otherwise returns `None`.
+    pub fn from_triangles(verts: &'a [V]) -> Option<Self> {
+        (u16::try_from(verts.len()).is_ok() && verts.len() % 3 == 0).then(|| {
+            let indxs = (0..verts.len() as u16)
+                .step_by(3)
+                .map(|i| [i, i + 1, i + 2])
+                .collect();
+
+            Self { verts, indxs }
+        })
+    }
+
+    /// Creates a new `MeshData` from given quadrangles.
+    ///
+    /// Returns `Some` if a data length fits in `u16` and is multiple by 4,
+    /// otherwise returns `None`.
+    pub fn from_quads(verts: &'a [V]) -> Option<Self> {
+        (u16::try_from(verts.len()).is_ok() && verts.len() % 4 == 0).then(|| {
+            let indxs = (0..verts.len() as u16)
+                .step_by(4)
+                .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
+                .collect();
+
+            Self { verts, indxs }
+        })
     }
 }
 
 impl<'a, V> Clone for MeshData<'a, V> {
     fn clone(&self) -> Self {
-        *self
+        Self {
+            verts: self.verts,
+            indxs: self.indxs.clone(),
+        }
     }
 }
-
-impl<'a, V> Copy for MeshData<'a, V> {}
 
 pub(crate) struct Mesh {
     vertex_buffer: Buffer,
@@ -60,7 +91,7 @@ impl Mesh {
 
         let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("index buffer"),
-            contents: data.indxs.as_bytes(),
+            contents: data.indxs.as_ref().as_bytes(),
             usage: BufferUsages::INDEX,
         });
 
@@ -78,7 +109,7 @@ impl Mesh {
         V: Vertex,
     {
         queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
-        queue.write_buffer(&self.index_buffer, 0, data.indxs.as_bytes());
+        queue.write_buffer(&self.index_buffer, 0, data.indxs.as_ref().as_bytes());
         self.n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
     }
 

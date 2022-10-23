@@ -10,7 +10,7 @@ use {
         shader_consts,
         storage::Storage,
         texture::Texture,
-        vertex::{ColorVertex, TextureVertex},
+        vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     std::marker::PhantomData,
     wgpu::{Queue, RenderPass},
@@ -41,7 +41,7 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
     /// Don't set this setting if you don't want to fill
     /// the previous layer (or frame) with some color.
     ///
-    /// ## Example
+    /// # Example
     /// ```
     /// # use dunge::color::Srgba;
     /// # struct Frame;
@@ -88,6 +88,12 @@ impl<'l, 'd> LayerBuilder<'l, 'd, ColorVertex> {
     }
 }
 
+impl<'l, 'd> LayerBuilder<'l, 'd, FlatVertex> {
+    pub fn start(self) -> Layer<'l, FlatVertex> {
+        self.frame.start_layer(self.clear_color, self.clear_depth)
+    }
+}
+
 /// The frame layer. Can be created from a [`Frame`] instance.
 pub struct Layer<'l, V> {
     pass: RenderPass<'l>,
@@ -96,6 +102,7 @@ pub struct Layer<'l, V> {
     resources: &'l Resources,
     instance: Option<&'l Instance>,
     vertex_type: PhantomData<V>,
+    drawn_in_frame: &'l mut bool,
 }
 
 impl<'l, V> Layer<'l, V> {
@@ -104,6 +111,7 @@ impl<'l, V> Layer<'l, V> {
         size: (u32, u32),
         queue: &'l Queue,
         resources: &'l Resources,
+        need_to_commit_in_frame: &'l mut bool,
     ) -> Self {
         Self {
             pass,
@@ -112,6 +120,7 @@ impl<'l, V> Layer<'l, V> {
             resources,
             instance: None,
             vertex_type: PhantomData,
+            drawn_in_frame: need_to_commit_in_frame,
         }
     }
 
@@ -126,25 +135,6 @@ impl<'l, V> Layer<'l, V> {
         Ok(())
     }
 
-    /// Binds a [view](crate::ViewHandle).
-    ///
-    /// # Errors
-    /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
-    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
-        const CAMERA_GROUP: u32 = {
-            assert!(shader_consts::textured::CAMERA.group == shader_consts::color::CAMERA.group);
-            shader_consts::textured::CAMERA.group
-        };
-
-        let camera = self.resources.views.get(handle.0)?;
-        camera.resize(self.size, self.queue);
-
-        self.pass
-            .set_bind_group(CAMERA_GROUP, camera.bind_group(), &[]);
-
-        Ok(())
-    }
-
     /// Draws a [mesh](crate::MeshHandle).
     ///
     /// # Errors
@@ -155,31 +145,59 @@ impl<'l, V> Layer<'l, V> {
         use wgpu::IndexFormat;
 
         let mesh = self.resources.meshes.get(handle.id())?;
+        let instance = self.instance.ok_or(Error::InstanceNotSet)?;
 
-        let n_instances = match self.instance {
-            Some(instance) => {
-                self.pass.set_vertex_buffer(
-                    shader_consts::INSTANCE_BUFFER_SLOT,
-                    instance.buffer().slice(..),
-                );
-
-                instance.n_instances()
-            }
-            None => return Err(Error::InstanceNotSet),
-        };
-
+        self.pass.set_vertex_buffer(
+            shader_consts::INSTANCE_BUFFER_SLOT,
+            instance.buffer().slice(..),
+        );
         self.pass.set_vertex_buffer(
             shader_consts::VERTEX_BUFFER_SLOT,
             mesh.vertex_buffer().slice(..),
         );
-
         self.pass
             .set_index_buffer(mesh.index_buffer().slice(..), IndexFormat::Uint16);
-
         self.pass
-            .draw_indexed(0..mesh.n_indices(), 0, 0..n_instances);
+            .draw_indexed(0..mesh.n_indices(), 0, 0..instance.n_instances());
+
+        *self.drawn_in_frame = true;
 
         Ok(())
+    }
+
+    fn bind_view_handle(&mut self, handle: ViewHandle, group: u32) -> Result<(), Error> {
+        let camera = self.resources.views.get(handle.0)?;
+        camera.resize(self.size, self.queue);
+        self.pass.set_bind_group(group, camera.bind_group(), &[]);
+
+        Ok(())
+    }
+
+    fn bind_texture_handle(&mut self, handle: TextureHandle, group: u32) -> Result<(), Error> {
+        let texture = self.resources.textures.get(handle.0)?;
+        self.pass.set_bind_group(group, texture.bind_group(), &[]);
+
+        Ok(())
+    }
+}
+
+impl Layer<'_, TextureVertex> {
+    /// Binds a [view](crate::ViewHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
+    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+        self.bind_view_handle(handle, shader_consts::textured::CAMERA.group)
+    }
+}
+
+impl Layer<'_, ColorVertex> {
+    /// Binds a [view](crate::ViewHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
+    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+        self.bind_view_handle(handle, shader_consts::color::CAMERA.group)
     }
 }
 
@@ -189,14 +207,17 @@ impl Layer<'_, TextureVertex> {
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
-        let texture = self.resources.textures.get(handle.0)?;
-        self.pass.set_bind_group(
-            shader_consts::textured::S_DIFFUSE.group,
-            texture.bind_group(),
-            &[],
-        );
+        self.bind_texture_handle(handle, shader_consts::textured::S_DIFFUSE.group)
+    }
+}
 
-        Ok(())
+impl Layer<'_, FlatVertex> {
+    /// Binds a [texture](crate::TextureHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
+    pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
+        self.bind_texture_handle(handle, shader_consts::flat::S_DIFFUSE.group)
     }
 }
 

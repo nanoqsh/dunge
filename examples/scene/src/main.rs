@@ -5,9 +5,9 @@ use {
         color::Srgba,
         input::{Input, Key},
         transform::{Position, ReverseRotation, Transform},
+        vertex::TextureVertex,
         Context, Error, Frame, FrameParameters, InitialState, InstanceHandle, Loop, MeshData,
-        MeshHandle, Orthographic, TextureData, TextureHandle, TextureVertex, View, ViewHandle,
-        WindowMode,
+        MeshHandle, Orthographic, TextureData, TextureHandle, View, ViewHandle, WindowMode,
     },
     utils::Camera,
 };
@@ -219,6 +219,10 @@ impl Loop for App {
             layer.bind_instance(model.instance)?;
             layer.draw(model.mesh)?;
         }
+
+        drop(layer);
+
+        frame.commit_in_frame();
 
         Ok(())
     }

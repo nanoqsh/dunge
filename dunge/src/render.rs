@@ -12,7 +12,7 @@ use {
         shader_consts,
         size::Size,
         texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
-        vertex::{ColorVertex, TextureVertex, Vertex},
+        vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
         Error,
     },
     std::marker::PhantomData,
@@ -25,6 +25,7 @@ pub(crate) struct Render {
     queue: Queue,
     texture_pipeline: Pipeline,
     color_pipeline: Pipeline,
+    flat_pipeline: Pipeline,
     post_pipeline: Pipeline,
     surface: Surface,
     config: SurfaceConfiguration,
@@ -40,6 +41,18 @@ pub(crate) struct Render {
 impl Render {
     pub(crate) async fn new(window: &Window) -> Self {
         use wgpu::*;
+
+        const _: () = {
+            assert!(
+                shader_consts::textured::T_DIFFUSE.binding
+                    == shader_consts::flat::T_DIFFUSE.binding
+            );
+
+            assert!(
+                shader_consts::textured::S_DIFFUSE.binding
+                    == shader_consts::flat::S_DIFFUSE.binding
+            );
+        };
 
         #[cfg(target_os = "android")]
         {
@@ -158,6 +171,19 @@ impl Render {
             Pipeline::new(&device, data)
         };
 
+        let flat_pipeline = {
+            let data = PipelineData {
+                shader_src: include_str!("shaders/flat.wgsl"),
+                bind_group_layouts: &[&texture_layout],
+                vertex_buffers: &[layout::<FlatVertex>(), layout::<InstanceModel>()],
+                fragment_texture_format: config.format,
+                topology: PrimitiveTopology::TriangleList,
+                cull_mode: None,
+                depth_stencil: None,
+            };
+            Pipeline::new(&device, data)
+        };
+
         let screen_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {
                 binding: shader_consts::post::SCREEN.binding,
@@ -195,6 +221,7 @@ impl Render {
             queue,
             texture_pipeline,
             color_pipeline,
+            flat_pipeline,
             post_pipeline,
             surface,
             config,
@@ -320,7 +347,7 @@ impl Render {
         self.depth_frame = DepthFrame::new(virt, &self.device);
     }
 
-    pub(crate) fn start_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
+    pub(crate) fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
     where
         L: Loop,
     {
@@ -340,7 +367,7 @@ impl Render {
             return RenderResult::Error(err);
         }
 
-        frame.draw_frame();
+        frame.commit_in_frame();
         frame.submit();
         output.present();
 
@@ -400,6 +427,12 @@ impl GetPipeline<TextureVertex> for Render {
 impl GetPipeline<ColorVertex> for Render {
     fn get_pipeline(&self) -> &Pipeline {
         &self.color_pipeline
+    }
+}
+
+impl GetPipeline<FlatVertex> for Render {
+    fn get_pipeline(&self) -> &Pipeline {
+        &self.flat_pipeline
     }
 }
 

@@ -163,7 +163,7 @@ impl IntoQuat for AxisAngle {
 
 /// A type that represents the reversed rotation of the given one.
 ///
-/// ## Example
+/// # Example
 /// ```
 /// # use dunge::transform::{AxisAngle, ReverseRotation};
 /// # let n = 1.;

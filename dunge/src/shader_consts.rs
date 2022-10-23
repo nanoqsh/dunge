@@ -12,6 +12,21 @@ pub(crate) mod color {
     };
 }
 
+pub(crate) mod flat {
+    use super::*;
+
+    #[allow(dead_code)]
+    pub(crate) const T_DIFFUSE: Location = Location {
+        group: 0,
+        binding: 0,
+    };
+
+    pub(crate) const S_DIFFUSE: Location = Location {
+        group: 0,
+        binding: 1,
+    };
+}
+
 pub(crate) mod post {
     use super::*;
 

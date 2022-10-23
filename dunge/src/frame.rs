@@ -4,7 +4,7 @@ use {
         layer::{Layer, LayerBuilder},
         render::{GetPipeline, Render},
         shader_consts,
-        vertex::{ColorVertex, TextureVertex},
+        vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -15,6 +15,7 @@ pub struct Frame<'d> {
     render: &'d Render,
     encoder: CommandEncoder,
     frame_view: TextureView,
+    drawn_in_frame: bool,
 }
 
 impl<'d> Frame<'d> {
@@ -31,12 +32,46 @@ impl<'d> Frame<'d> {
             render,
             encoder,
             frame_view,
+            drawn_in_frame: false,
         }
     }
 
     /// Draws the frame in the screen buffer.
-    pub(crate) fn draw_frame(&mut self) {
+    ///
+    /// You usually don't need to call this method manually.
+    /// It is called automatically at the end of the [`Frame`] lifetime.
+    ///
+    /// # Example
+    /// ```
+    /// # #[derive(Clone, Copy)]
+    /// # struct Frame;
+    /// # impl Frame {
+    /// #     fn texture_layer(self) -> Self { self }
+    /// #     fn start(self) -> Self { self }
+    /// #     fn commit_in_frame(self) {}
+    /// # }
+    /// # let frame = Frame;
+    /// // Create a new layer
+    /// let mut layer = frame
+    ///     .texture_layer()
+    ///     .start();
+    ///
+    /// // Draw something in the layer
+    ///
+    /// // Drop the layer to release a frame
+    /// drop(layer);
+    ///
+    /// // Commit the layer in frame
+    /// frame.commit_in_frame();
+    /// ```
+    pub fn commit_in_frame(&mut self) {
         use wgpu::*;
+
+        if !self.drawn_in_frame {
+            return;
+        }
+
+        self.drawn_in_frame = false;
 
         let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
             label: Some("post render pass"),
@@ -75,6 +110,10 @@ impl<'d> Frame<'d> {
     }
 
     pub fn color_layer<'l>(&'l mut self) -> LayerBuilder<'l, 'd, ColorVertex> {
+        LayerBuilder::new(self)
+    }
+
+    pub fn flat_layer<'l>(&'l mut self) -> LayerBuilder<'l, 'd, FlatVertex> {
         LayerBuilder::new(self)
     }
 
@@ -122,6 +161,7 @@ impl<'d> Frame<'d> {
             self.render.size().as_virtual(),
             self.render.queue(),
             self.render.resources(),
+            &mut self.drawn_in_frame,
         )
     }
 }
