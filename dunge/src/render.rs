@@ -8,8 +8,8 @@ use {
         mesh::{Mesh, MeshData},
         pipline::{Pipeline, PipelineData},
         r#loop::Loop,
-        screen::Screen,
         shader_consts,
+        shader_data::PostShaderData,
         size::Size,
         texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
         vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
@@ -27,12 +27,13 @@ pub(crate) struct Render {
     color_pipeline: Pipeline,
     flat_pipeline: Pipeline,
     post_pipeline: Pipeline,
+    post_antialiasing_pipeline: Pipeline,
     surface: Surface,
     config: SurfaceConfiguration,
     size: Size,
     texture_layout: BindGroupLayout,
     camera_layout: BindGroupLayout,
-    screen: Screen,
+    post_shader_data: PostShaderData,
     resources: Resources,
     render_frame: RenderFrame,
     depth_frame: DepthFrame,
@@ -184,9 +185,9 @@ impl Render {
             Pipeline::new(&device, data)
         };
 
-        let screen_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+        let post_shader_data_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {
-                binding: shader_consts::post::SCREEN.binding,
+                binding: shader_consts::post::DATA.binding,
                 visibility: ShaderStages::FRAGMENT,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
@@ -195,13 +196,26 @@ impl Render {
                 },
                 count: None,
             }],
-            label: Some("screen bind group layout"),
+            label: Some("post shader data bind group layout"),
         });
 
         let post_pipeline = {
             let data = PipelineData {
                 shader_src: include_str!("shaders/post.wgsl"),
-                bind_group_layouts: &[&screen_layout, &texture_layout],
+                bind_group_layouts: &[&post_shader_data_layout, &texture_layout],
+                vertex_buffers: &[],
+                fragment_texture_format: config.format,
+                topology: PrimitiveTopology::TriangleStrip,
+                cull_mode: None,
+                depth_stencil: None,
+            };
+            Pipeline::new(&device, data)
+        };
+
+        let post_antialiasing_pipeline = {
+            let data = PipelineData {
+                shader_src: include_str!("shaders/post_antialiasing.wgsl"),
+                bind_group_layouts: &[&post_shader_data_layout, &texture_layout],
                 vertex_buffers: &[],
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleStrip,
@@ -214,7 +228,7 @@ impl Render {
         let render_frame = RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &texture_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
-        let screen = Screen::new(&device, &screen_layout);
+        let post_shader_data = PostShaderData::new(&device, &post_shader_data_layout);
 
         Self {
             device,
@@ -223,6 +237,7 @@ impl Render {
             color_pipeline,
             flat_pipeline,
             post_pipeline,
+            post_antialiasing_pipeline,
             surface,
             config,
             size: Size::default(),
@@ -231,7 +246,7 @@ impl Render {
             resources: Resources::default(),
             render_frame,
             depth_frame,
-            screen,
+            post_shader_data,
         }
     }
 
@@ -340,7 +355,7 @@ impl Render {
         self.surface.configure(&self.device, &self.config);
 
         let virt = self.size.as_virtual();
-        self.screen.resize(virt, &self.queue);
+        self.post_shader_data.resize(virt, &self.queue);
 
         self.render_frame =
             RenderFrame::new(virt, self.size.filter, &self.device, &self.texture_layout);
@@ -382,12 +397,16 @@ impl Render {
         &self.queue
     }
 
-    pub(crate) fn post_pipeline(&self) -> &Pipeline {
-        &self.post_pipeline
+    pub(crate) fn post_pipeline(&self, with_antialiasing: bool) -> &Pipeline {
+        if with_antialiasing {
+            &self.post_antialiasing_pipeline
+        } else {
+            &self.post_pipeline
+        }
     }
 
-    pub(crate) fn screen(&self) -> &Screen {
-        &self.screen
+    pub(crate) fn post_shader_data(&self) -> &PostShaderData {
+        &self.post_shader_data
     }
 
     pub(crate) fn resources(&self) -> &Resources {

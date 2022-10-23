@@ -37,6 +37,7 @@ struct App {
     models: Vec<Model>,
     view: ViewHandle,
     camera: Camera,
+    antialiasing: bool,
 }
 
 impl App {
@@ -154,6 +155,7 @@ impl App {
             models,
             view,
             camera,
+            antialiasing: false,
         }
     }
 }
@@ -166,9 +168,13 @@ impl Loop for App {
 
         // Handle pressed keys
         for key in input.pressed_keys {
-            if key == Key::Escape {
-                context.plan_to_close();
-                return Ok(());
+            match key {
+                Key::Escape => {
+                    context.plan_to_close();
+                    return Ok(());
+                }
+                Key::Space => self.antialiasing = !self.antialiasing,
+                _ => {}
             }
         }
 
@@ -207,6 +213,8 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+        frame.set_antialiasing(self.antialiasing);
+
         let mut layer = frame
             .texture_layer()
             .with_clear_color(Srgba([46, 34, 47, 255]))
@@ -219,10 +227,6 @@ impl Loop for App {
             layer.bind_instance(model.instance)?;
             layer.draw(model.mesh)?;
         }
-
-        drop(layer);
-
-        frame.commit_in_frame();
 
         Ok(())
     }

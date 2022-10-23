@@ -30,7 +30,7 @@ pub(crate) mod flat {
 pub(crate) mod post {
     use super::*;
 
-    pub(crate) const SCREEN: Location = Location {
+    pub(crate) const DATA: Location = Location {
         group: 0,
         binding: 0,
     };

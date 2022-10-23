@@ -3,22 +3,22 @@ use {
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
-pub(crate) struct Screen {
+pub(crate) struct PostShaderData {
     buffer: Buffer,
     bind_group: BindGroup,
 }
 
-impl Screen {
+impl PostShaderData {
     pub(crate) fn new(device: &Device, layout: &BindGroupLayout) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             *,
         };
 
-        let uniform = ScreenUniform::new(1., 1.);
+        let uniform = PostShaderDataUniform::new(1., 1.);
 
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("screen buffer"),
+            label: Some("post data buffer"),
             contents: uniform.as_bytes(),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
@@ -26,17 +26,17 @@ impl Screen {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: shader_consts::post::SCREEN.binding,
+                binding: shader_consts::post::DATA.binding,
                 resource: buffer.as_entire_binding(),
             }],
-            label: Some("screen bind group"),
+            label: Some("post data bind group"),
         });
 
         Self { buffer, bind_group }
     }
 
     pub(crate) fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
-        let data = ScreenUniform::new(width as f32, height as f32);
+        let data = PostShaderDataUniform::new(width as f32, height as f32);
         queue.write_buffer(&self.buffer, 0, data.as_bytes());
     }
 
@@ -47,12 +47,12 @@ impl Screen {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub(crate) struct ScreenUniform {
+pub(crate) struct PostShaderDataUniform {
     size: [f32; 2],
     _pad: [f32; 2],
 }
 
-impl ScreenUniform {
+impl PostShaderDataUniform {
     fn new(width: f32, height: f32) -> Self {
         Self {
             size: [width, height],
@@ -61,4 +61,4 @@ impl ScreenUniform {
     }
 }
 
-unsafe impl Plain for ScreenUniform {}
+unsafe impl Plain for PostShaderDataUniform {}
