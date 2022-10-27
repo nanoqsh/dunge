@@ -57,6 +57,13 @@ impl IntoLinear for Linear<u8> {
     }
 }
 
+/// All color channels are zero.
+impl IntoLinear for () {
+    fn into_linear(self) -> Linear<f64> {
+        Linear([0., 0., 0., 0.])
+    }
+}
+
 fn to_f64_color(c: u8) -> f64 {
     f64::from(c) / 255.
 }

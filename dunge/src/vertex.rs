@@ -1,3 +1,5 @@
+//! Vertex types.
+
 use {
     crate::layout::{Layout, Plain},
     wgpu::{VertexAttribute, VertexStepMode},

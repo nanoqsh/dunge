@@ -40,6 +40,8 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
     ///
     /// Don't set this setting if you don't want to fill
     /// the previous layer (or frame) with some color.
+    /// Or set to clear the current buffer if a layer is already drawn
+    /// into the frame by calling [`commit_in_frame`](crate::Frame::commit_in_frame).
     ///
     /// # Example
     /// ```
@@ -55,6 +57,23 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
     /// let mut layer = frame
     ///     .texture_layer()
     ///     .with_clear_color(color)
+    ///     .start();
+    /// ```
+    ///
+    /// To clear a layer with a transparent color, it is enough to pass `()` as a parameter.
+    ///
+    /// # Example
+    /// ```
+    /// # struct Frame;
+    /// # impl Frame {
+    /// #     fn texture_layer(self) -> Self { self }
+    /// #     fn with_clear_color(self, _: ()) -> Self { self }
+    /// #     fn start(self) {}
+    /// # }
+    /// # let frame = Frame;
+    /// let mut layer = frame
+    ///     .texture_layer()
+    ///     .with_clear_color(())
     ///     .start();
     /// ```
     pub fn with_clear_color<C>(self, color: C) -> Self
