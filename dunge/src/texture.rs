@@ -1,3 +1,5 @@
+#![allow(clippy::wildcard_imports)]
+
 use {
     crate::shader_consts,
     std::num::NonZeroU32,
@@ -9,16 +11,17 @@ use {
 
 /// A data struct for a texture creation.
 #[derive(Clone, Copy)]
-pub struct TextureData<'a> {
+pub struct Data<'a> {
     data: &'a [u8],
     size: (u32, u32),
 }
 
-impl<'a> TextureData<'a> {
-    /// Creates a new `TextureData`.
+impl<'a> Data<'a> {
+    /// Creates a new [`TextureData`](crate::TextureData).
     ///
     /// Returns `Some` if a data matches with a size * 4 bytes,
     /// otherwise returns `None`.
+    #[must_use]
     pub fn new(data: &'a [u8], size @ (width, height): (u32, u32)) -> Option<Self> {
         if data.len() == width as usize * height as usize * 4 {
             Some(Self { data, size })
@@ -35,7 +38,7 @@ pub(crate) struct Texture {
 
 impl Texture {
     pub(crate) fn new(
-        data: TextureData,
+        data: Data,
         device: &Device,
         queue: &Queue,
         layout: &BindGroupLayout,
@@ -106,7 +109,7 @@ impl Texture {
         }
     }
 
-    pub(crate) fn update_data(&mut self, data: TextureData, queue: &Queue) {
+    pub(crate) fn update_data(&mut self, data: Data, queue: &Queue) {
         use wgpu::*;
 
         let (width, height) = data.size;

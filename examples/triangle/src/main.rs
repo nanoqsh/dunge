@@ -54,7 +54,7 @@ impl App {
             const INDICES: [u16; 3] = [0, 1, 2];
 
             let data = MeshData::new(&VERTICES, &[INDICES]).expect("create mesh");
-            context.create_mesh(data)
+            context.create_mesh(&data)
         };
 
         // Create the view

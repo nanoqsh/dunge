@@ -87,6 +87,7 @@ impl Canvas {
                 },
             };
 
+            #[allow(clippy::cast_possible_truncation)]
             match ev {
                 Event::WindowEvent { event, window_id } if window_id == context.window.id() => {
                     match event {
@@ -231,6 +232,7 @@ pub(crate) enum CanvasEvent {
 
 /// Creates a canvas in a window with given initial state.
 #[cfg(not(target_arch = "wasm32"))]
+#[must_use]
 pub fn make_window(state: InitialState) -> Canvas {
     use winit::{dpi::PhysicalSize, event_loop::EventLoopBuilder, window::Fullscreen};
 
@@ -250,6 +252,7 @@ pub fn make_window(state: InitialState) -> Canvas {
 }
 
 /// The initial window state.
+#[derive(Clone, Copy)]
 pub struct InitialState<'a> {
     pub title: &'a str,
     pub mode: WindowMode,
@@ -267,6 +270,7 @@ impl Default for InitialState<'static> {
 }
 
 /// The window mode.
+#[derive(Clone, Copy)]
 pub enum WindowMode {
     Fullscreen,
     Windowed { width: u32, height: u32 },
@@ -274,6 +278,7 @@ pub enum WindowMode {
 
 /// Creates a canvas in the HTML element by its id.
 #[cfg(target_arch = "wasm32")]
+#[must_use]
 pub fn from_element(id: &str) -> Canvas {
     use {
         web_sys::Window,

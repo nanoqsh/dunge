@@ -1,3 +1,5 @@
+#![allow(clippy::wildcard_imports)]
+
 use wgpu::{
     BindGroupLayout, DepthStencilState, Device, Face, PrimitiveTopology, RenderPipeline,
     TextureFormat, VertexBufferLayout,

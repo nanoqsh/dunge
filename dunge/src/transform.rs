@@ -97,6 +97,7 @@ impl Default for Transform<Identity> {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub trait IntoTransform {
     type IntoQuat;
     fn into_transform(self) -> Transform<Self::IntoQuat>;

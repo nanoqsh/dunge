@@ -97,7 +97,7 @@ impl App {
                     let indxs = indxs.to_vec();
 
                     let data = MeshData::new(&verts, &indxs).expect("create mesh");
-                    context.create_mesh(data)
+                    context.create_mesh(&data)
                 })
                 .collect();
 
@@ -112,7 +112,7 @@ impl App {
 
                     let x = x as f32 - N as f32 * 0.5 + 0.5;
                     let z = z as f32 - N as f32 * 0.5 + 0.5;
-                    let y = (obj == F || obj == L) as u8 as f32 * -0.5;
+                    let y = u8::from(obj == F || obj == L) as f32 * -0.5;
 
                     if obj == V {
                         model_data.push((obj, [x, y + 1., z]));

@@ -4,7 +4,7 @@ pub(crate) struct Location {
 }
 
 pub(crate) mod color {
-    use super::*;
+    use super::Location;
 
     pub(crate) const CAMERA: Location = Location {
         group: 0,
@@ -13,7 +13,7 @@ pub(crate) mod color {
 }
 
 pub(crate) mod flat {
-    use super::*;
+    use super::Location;
 
     #[allow(dead_code)]
     pub(crate) const T_DIFFUSE: Location = Location {
@@ -28,7 +28,7 @@ pub(crate) mod flat {
 }
 
 pub(crate) mod post {
-    use super::*;
+    use super::Location;
 
     pub(crate) const DATA: Location = Location {
         group: 0,
@@ -47,7 +47,7 @@ pub(crate) mod post {
 }
 
 pub(crate) mod textured {
-    use super::*;
+    use super::Location;
 
     pub(crate) const CAMERA: Location = Location {
         group: 0,

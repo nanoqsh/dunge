@@ -9,6 +9,7 @@ use {
 pub trait Vertex: Layout {}
 
 /// Vertex for drawing colored triangles.
+#[allow(clippy::module_name_repetitions)]
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ColorVertex {
@@ -28,6 +29,7 @@ impl Layout for ColorVertex {
 impl Vertex for ColorVertex {}
 
 /// Vertex for drawing textured triangles.
+#[allow(clippy::module_name_repetitions)]
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct TextureVertex {
@@ -47,6 +49,7 @@ impl Layout for TextureVertex {
 impl Vertex for TextureVertex {}
 
 /// Vertex for drawing flat sprites.
+#[allow(clippy::module_name_repetitions)]
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct FlatVertex {

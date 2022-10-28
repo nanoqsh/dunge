@@ -1,10 +1,10 @@
 //! Color types and traits.
 
-/// A linear RGBA color.
+/// A linear rgb color with an alpha channel.
 #[derive(Clone, Copy)]
 pub struct Linear<C>(pub [C; 4]);
 
-/// A sRGBA color.
+/// A srgb color with an alpha channel.
 #[derive(Clone, Copy)]
 pub struct Srgba<C>(pub [C; 4]);
 

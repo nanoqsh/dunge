@@ -7,6 +7,7 @@ use {
 #[allow(dead_code)]
 fn main() {}
 
+#[must_use]
 pub fn read_png(bytes: &[u8]) -> RgbaImage {
     Reader::with_format(Cursor::new(bytes), ImageFormat::Png)
         .decode()
@@ -29,6 +30,7 @@ impl Camera {
         self.distance = (self.distance - y).clamp(3., 10.);
     }
 
+    #[must_use]
     pub fn view<P>(&self) -> View<P>
     where
         P: Default,

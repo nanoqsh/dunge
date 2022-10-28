@@ -17,6 +17,7 @@ impl Time {
         }
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     pub(crate) fn delta(&mut self) -> f32 {
         let now = Instant::now();
         let delta = now.duration_since(self.last);

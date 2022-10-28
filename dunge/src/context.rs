@@ -2,10 +2,10 @@ use {
     crate::{
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
-        mesh::MeshData,
+        mesh::Data as MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle, ViewHandle},
         size::Size,
-        texture::{FrameFilter, TextureData},
+        texture::{Data as TextureData, FrameFilter},
         transform::{IntoQuat, IntoTransform},
         vertex::Vertex,
         Error,
@@ -67,6 +67,9 @@ impl Context {
     }
 
     /// Updates the texture.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn update_texture(
         &mut self,
         handle: TextureHandle,
@@ -76,6 +79,9 @@ impl Context {
     }
 
     /// Deletes the texture.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
         self.render.delete_texture(handle)
     }
@@ -96,6 +102,9 @@ impl Context {
     }
 
     /// Updates instances.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn update_instances<I>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
     where
         I: IntoIterator,
@@ -111,12 +120,15 @@ impl Context {
     }
 
     /// Deletes instances.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), Error> {
         self.render.delete_instances(handle)
     }
 
     /// Creates a new mesh.
-    pub fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle<V>
+    pub fn create_mesh<V>(&mut self, data: &MeshData<V>) -> MeshHandle<V>
     where
         V: Vertex,
     {
@@ -124,7 +136,10 @@ impl Context {
     }
 
     /// Updates the mesh.
-    pub fn update_mesh<V>(&mut self, handle: MeshHandle<V>, data: MeshData<V>) -> Result<(), Error>
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_mesh<V>(&mut self, handle: MeshHandle<V>, data: &MeshData<V>) -> Result<(), Error>
     where
         V: Vertex,
     {
@@ -132,6 +147,9 @@ impl Context {
     }
 
     /// Deletes the mesh.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
         self.render.delete_mesh(handle)
     }
@@ -145,6 +163,9 @@ impl Context {
     }
 
     /// Updates the view.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn update_view<P>(&mut self, handle: ViewHandle, view: View<P>) -> Result<(), Error>
     where
         P: IntoProjection,
@@ -153,6 +174,9 @@ impl Context {
     }
 
     /// Deletes the view.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.render.delete_view(handle)
     }

@@ -14,11 +14,17 @@ pub trait Loop {
     /// It accepts the [`Context`] and an [`Input`].
     /// The context uses to update the application state, create or delete any resources.
     /// The input contains an inputed data like a mouse position and etc.
+    ///
+    /// # Errors
+    /// Return [`Error`](crate::Loop::Error) if this fails.
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error>;
 
     /// Calls on render a frame.
     ///
     /// It accepts a [`Frame`] to draw something on the canvas.
+    ///
+    /// # Errors
+    /// Return [`Error`](crate::Loop::Error) if this fails.
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error>;
 
     /// Calls when an error has occurred.

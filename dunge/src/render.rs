@@ -1,3 +1,5 @@
+#![allow(clippy::wildcard_imports)]
+
 use {
     crate::{
         camera::{Camera, Projection, View},
@@ -5,13 +7,13 @@ use {
         instance::Instance,
         layer::Resources,
         layout::{layout, InstanceModel},
-        mesh::{Mesh, MeshData},
+        mesh::{Data as MeshData, Mesh},
         pipline::{Pipeline, PipelineData},
         r#loop::Loop,
         shader_consts,
         shader_data::PostShaderData,
         size::Size,
-        texture::{DepthFrame, FrameFilter, RenderFrame, Texture, TextureData},
+        texture::{Data as TextureData, DepthFrame, FrameFilter, RenderFrame, Texture},
         vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
         Error,
     },
@@ -292,7 +294,7 @@ impl Render {
         self.resources.instances.remove(handle.0)
     }
 
-    pub(crate) fn create_mesh<V>(&mut self, data: MeshData<V>) -> MeshHandle<V>
+    pub(crate) fn create_mesh<V>(&mut self, data: &MeshData<V>) -> MeshHandle<V>
     where
         V: Vertex,
     {
@@ -304,7 +306,7 @@ impl Render {
     pub(crate) fn update_mesh<V>(
         &mut self,
         handle: MeshHandle<V>,
-        data: MeshData<V>,
+        data: &MeshData<V>,
     ) -> Result<(), Error>
     where
         V: Vertex,

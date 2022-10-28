@@ -1,3 +1,5 @@
+#![allow(clippy::wildcard_imports)]
+
 pub(crate) use self::proj::{IntoProjection, Projection};
 
 use {
@@ -129,10 +131,15 @@ impl<P> View<P> {
 
         let pitch = sy.asin();
         let angle = sx.atan2(sz);
-        let (asin, acos) = (pitch * 0.5).sin_cos();
-        let (bsin, bcos) = (-angle * 0.5).sin_cos();
+        let (pitch_sin, pitch_cos) = (pitch * 0.5).sin_cos();
+        let (angle_sin, angle_cos) = (-angle * 0.5).sin_cos();
 
-        Quat([asin * bcos, acos * bsin, asin * bsin, acos * bcos])
+        Quat([
+            pitch_sin * angle_cos,
+            pitch_cos * angle_sin,
+            pitch_sin * angle_sin,
+            pitch_cos * angle_cos,
+        ])
     }
 }
 
@@ -158,15 +165,15 @@ impl View<Projection> {
                 near,
                 far,
             }) => {
-                let fwidth = 1. / (width * width_factor);
-                let fheight = 1. / (height * height_factor);
+                let factor_width = 1. / (width * width_factor);
+                let factor_height = 1. / (height * height_factor);
                 let r = 1. / (near - far);
 
                 [
-                    [fwidth + fwidth, 0., 0., 0.],
-                    [0., fheight + fheight, 0., 0.],
+                    [factor_width + factor_width, 0., 0., 0.],
+                    [0., factor_height + factor_height, 0., 0.],
                     [0., 0., r, 0.],
-                    [fwidth, fheight, r * near, 1.],
+                    [factor_width, factor_height, r * near, 1.],
                 ]
             }
         };
@@ -291,8 +298,8 @@ fn cross([xa, ya, za]: [f32; 3], [xb, yb, zb]: [f32; 3]) -> [f32; 3] {
     [ya * zb - yb * za, za * xb - zb * xa, xa * yb - xb * ya]
 }
 
-fn mul_vector(m: [[f32; 4]; 4], [x, y, z, w]: [f32; 4]) -> [f32; 4] {
-    let [[xa, ya, za, wa], [xb, yb, zb, wb], [xc, yc, zc, wc], [xd, yd, zd, wd]] = m;
+fn mul_vector(mat: [[f32; 4]; 4], [x, y, z, w]: [f32; 4]) -> [f32; 4] {
+    let [[xa, ya, za, wa], [xb, yb, zb, wb], [xc, yc, zc, wc], [xd, yd, zd, wd]] = mat;
 
     [
         x * xa + y * xb + z * xc + w * xd,

@@ -12,7 +12,7 @@ impl PostShaderData {
     pub(crate) fn new(device: &Device, layout: &BindGroupLayout) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
-            *,
+            BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
         let uniform = PostShaderDataUniform::new(1., 1.);

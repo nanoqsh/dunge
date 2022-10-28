@@ -1,7 +1,9 @@
+#![allow(clippy::wildcard_imports)]
+
 use {
     crate::{
         color::Linear,
-        layer::{Layer, LayerBuilder},
+        layer::{Builder, Layer},
         render::{GetPipeline, Render},
         shader_consts,
         vertex::{ColorVertex, FlatVertex, TextureVertex},
@@ -112,16 +114,16 @@ impl<'d> Frame<'d> {
         self.render.queue().submit([self.encoder.finish()]);
     }
 
-    pub fn texture_layer<'l>(&'l mut self) -> LayerBuilder<'l, 'd, TextureVertex> {
-        LayerBuilder::new(self)
+    pub fn texture_layer<'l>(&'l mut self) -> Builder<'l, 'd, TextureVertex> {
+        Builder::new(self)
     }
 
-    pub fn color_layer<'l>(&'l mut self) -> LayerBuilder<'l, 'd, ColorVertex> {
-        LayerBuilder::new(self)
+    pub fn color_layer<'l>(&'l mut self) -> Builder<'l, 'd, ColorVertex> {
+        Builder::new(self)
     }
 
-    pub fn flat_layer<'l>(&'l mut self) -> LayerBuilder<'l, 'd, FlatVertex> {
-        LayerBuilder::new(self)
+    pub fn flat_layer<'l>(&'l mut self) -> Builder<'l, 'd, FlatVertex> {
+        Builder::new(self)
     }
 
     /// Creates a new [layer](crate::Layer).

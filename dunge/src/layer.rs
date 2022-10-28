@@ -17,14 +17,14 @@ use {
 };
 
 /// The layer builder. It creates a configured [`Layer`].
-pub struct LayerBuilder<'l, 'd, V> {
+pub struct Builder<'l, 'd, V> {
     frame: &'l mut Frame<'d>,
     clear_color: Option<Linear<f64>>,
     clear_depth: bool,
     vertex_type: PhantomData<V>,
 }
 
-impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
+impl<'l, 'd, V> Builder<'l, 'd, V> {
     pub(crate) fn new(frame: &'l mut Frame<'d>) -> Self {
         Self {
             frame,
@@ -76,6 +76,7 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
     ///     .with_clear_color(())
     ///     .start();
     /// ```
+    #[must_use]
     pub fn with_clear_color<C>(self, color: C) -> Self
     where
         C: IntoLinear,
@@ -87,6 +88,7 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
     }
 
     /// Sets the flag to clear the depth buffer or not for the layer.
+    #[must_use]
     pub fn with_clear_depth(self) -> Self {
         Self {
             clear_depth: true,
@@ -95,19 +97,22 @@ impl<'l, 'd, V> LayerBuilder<'l, 'd, V> {
     }
 }
 
-impl<'l, 'd> LayerBuilder<'l, 'd, TextureVertex> {
+impl<'l, 'd> Builder<'l, 'd, TextureVertex> {
+    #[must_use]
     pub fn start(self) -> Layer<'l, TextureVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }
 }
 
-impl<'l, 'd> LayerBuilder<'l, 'd, ColorVertex> {
+impl<'l, 'd> Builder<'l, 'd, ColorVertex> {
+    #[must_use]
     pub fn start(self) -> Layer<'l, ColorVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }
 }
 
-impl<'l, 'd> LayerBuilder<'l, 'd, FlatVertex> {
+impl<'l, 'd> Builder<'l, 'd, FlatVertex> {
+    #[must_use]
     pub fn start(self) -> Layer<'l, FlatVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }

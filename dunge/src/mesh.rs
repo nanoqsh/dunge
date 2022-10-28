@@ -5,60 +5,67 @@ use {
 };
 
 /// A data struct for a mesh creation.
-pub struct MeshData<'a, V> {
+pub struct Data<'a, V> {
     verts: &'a [V],
     indxs: Cow<'a, [[u16; 3]]>,
 }
 
-impl<'a, V> MeshData<'a, V> {
-    /// Creates a new `MeshData` from given vertices and indices.
+impl<'a, V> Data<'a, V> {
+    /// Creates a new [`MeshData`](crate::MeshData) from given vertices and indices.
     ///
     /// Returns `Some` if a data length fits in `u16` and all indices point to the data,
     /// otherwise returns `None`.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Option<Self> {
-        (u16::try_from(verts.len()).is_ok()
-            && indxs
-                .iter()
-                .flatten()
-                .all(|&i| usize::from(i) < verts.len()))
-        .then(|| Self {
-            verts,
-            indxs: indxs.into(),
-        })
+        verts
+            .len()
+            .try_into()
+            .ok()
+            .filter(|len| indxs.iter().flatten().all(|i| i < len))
+            .map(|_| Self {
+                verts,
+                indxs: indxs.into(),
+            })
     }
 
-    /// Creates a new `MeshData` from given triangles.
+    /// Creates a new [`MeshData`](crate::MeshData) from given triangles.
     ///
     /// Returns `Some` if a data length fits in `u16` and is multiple by 3,
     /// otherwise returns `None`.
     pub fn from_triangles(verts: &'a [V]) -> Option<Self> {
-        (u16::try_from(verts.len()).is_ok() && verts.len() % 3 == 0).then(|| {
-            let indxs = (0..verts.len() as u16)
-                .step_by(3)
-                .map(|i| [i, i + 1, i + 2])
-                .collect();
+        verts
+            .len()
+            .try_into()
+            .ok()
+            .filter(|len| len % 3 == 0)
+            .map(|len| {
+                let indxs = (0..len).step_by(3).map(|i| [i, i + 1, i + 2]).collect();
 
-            Self { verts, indxs }
-        })
+                Self { verts, indxs }
+            })
     }
 
-    /// Creates a new `MeshData` from given quadrangles.
+    /// Creates a new [`MeshData`](crate::MeshData) from given quadrangles.
     ///
     /// Returns `Some` if a data length fits in `u16` and is multiple by 4,
     /// otherwise returns `None`.
     pub fn from_quads(verts: &'a [V]) -> Option<Self> {
-        (u16::try_from(verts.len()).is_ok() && verts.len() % 4 == 0).then(|| {
-            let indxs = (0..verts.len() as u16)
-                .step_by(4)
-                .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
-                .collect();
+        verts
+            .len()
+            .try_into()
+            .ok()
+            .filter(|len| len % 4 == 0)
+            .map(|len| {
+                let indxs = (0..len)
+                    .step_by(4)
+                    .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
+                    .collect();
 
-            Self { verts, indxs }
-        })
+                Self { verts, indxs }
+            })
     }
 }
 
-impl<'a, V> Clone for MeshData<'a, V> {
+impl<'a, V> Clone for Data<'a, V> {
     fn clone(&self) -> Self {
         Self {
             verts: self.verts,
@@ -74,7 +81,7 @@ pub(crate) struct Mesh {
 }
 
 impl Mesh {
-    pub(crate) fn new<V>(data: MeshData<V>, device: &Device) -> Self
+    pub(crate) fn new<V>(data: &Data<V>, device: &Device) -> Self
     where
         V: Vertex,
     {
@@ -104,7 +111,7 @@ impl Mesh {
         }
     }
 
-    pub(crate) fn update_data<V>(&mut self, data: MeshData<V>, queue: &Queue)
+    pub(crate) fn update_data<V>(&mut self, data: &Data<V>, queue: &Queue)
     where
         V: Vertex,
     {

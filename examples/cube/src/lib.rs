@@ -44,7 +44,7 @@ impl App {
         let texture_mesh = {
             let verts = VERTICES.map(|(pos, map)| TextureVertex { pos, map });
             let data = MeshData::new(&verts, &INDICES).expect("create mesh");
-            context.create_mesh(data)
+            context.create_mesh(&data)
         };
 
         let color_mesh = {
@@ -53,7 +53,7 @@ impl App {
                 col: [a, b, 1.],
             });
             let data = MeshData::new(&verts, &INDICES).expect("create mesh");
-            context.create_mesh(data)
+            context.create_mesh(&data)
         };
 
         // Create the view

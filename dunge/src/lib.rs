@@ -35,9 +35,9 @@ pub use crate::{
     canvas::{Canvas, InitialState, WindowMode},
     context::{Context, FrameParameters, Limits},
     frame::Frame,
-    layer::{Layer, LayerBuilder},
-    mesh::MeshData,
+    layer::{Builder as LayerBuilder, Layer},
+    mesh::Data as MeshData,
     r#loop::{Error, Loop},
     render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
-    texture::{FrameFilter, TextureData},
+    texture::{Data as TextureData, FrameFilter},
 };
