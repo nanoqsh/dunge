@@ -8,7 +8,7 @@ keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
 readme = "../README.md"
 repository = "https://github.com/nanoqsh/dunge"
-rust-version = "1.60"
+rust-version = "1.65"
 
 [dependencies]
 ahash = "0.7"

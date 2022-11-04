@@ -295,9 +295,8 @@ pub fn from_element(id: &str) -> Canvas {
         .and_then(Window::document)
         .expect("get document");
 
-    let el = match document.get_element_by_id(id) {
-        Some(el) => el,
-        None => panic!("an element with id {id:?} not found"),
+    let Some(el) = document.get_element_by_id(id) else {
+        panic!("an element with id {id:?} not found");
     };
 
     window.set_inner_size({
