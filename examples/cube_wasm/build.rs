@@ -27,8 +27,9 @@ fn main() {
         .output()
         .expect("build wasm");
 
-    if !output.status.success() {
+    if let Some(code) = output.status.code() {
         let err = String::from_utf8_lossy(&output.stderr);
-        panic!("error while compiling wasm:\n{err}");
+        let out = String::from_utf8_lossy(&output.stdout);
+        panic!("error while compiling wasm:\nerr: {err}\nout: {out}\ncode: {code}\n");
     }
 }

@@ -17,7 +17,6 @@ pub struct Frame<'d> {
     render: &'d Render,
     encoder: CommandEncoder,
     frame_view: TextureView,
-    antialiasing: bool,
     drawn_in_frame: bool,
 }
 
@@ -35,14 +34,8 @@ impl<'d> Frame<'d> {
             render,
             encoder,
             frame_view,
-            antialiasing: false,
             drawn_in_frame: false,
         }
-    }
-
-    /// Sets the value of whether to apply antialiasing to the frame or not.
-    pub fn set_antialiasing(&mut self, enable: bool) {
-        self.antialiasing = enable;
     }
 
     /// Draws the frame in the screen buffer.
@@ -95,7 +88,7 @@ impl<'d> Frame<'d> {
             depth_stencil_attachment: None,
         });
 
-        pass.set_pipeline(self.render.post_pipeline(self.antialiasing).as_ref());
+        pass.set_pipeline(self.render.post_pipeline().as_ref());
         pass.set_bind_group(
             shader_consts::post::T_DIFFUSE.group,
             self.render.render_frame().bind_group(),

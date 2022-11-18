@@ -16,7 +16,6 @@
 * Pixel perfect render
 * Texture and color vertex modes
 * Primitives for object positioning and camera view out of the box
-* Anti-aliasing for pixel art graphics
 
 ## Getting Started
 Let's render a colorful triangle for example. First, we need to add the dependency of dunge in the `Cargo.toml`:

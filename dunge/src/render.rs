@@ -29,7 +29,6 @@ pub(crate) struct Render {
     color_pipeline: Pipeline,
     flat_pipeline: Pipeline,
     post_pipeline: Pipeline,
-    post_antialiasing_pipeline: Pipeline,
     surface: Surface,
     config: SurfaceConfiguration,
     size: Size,
@@ -214,19 +213,6 @@ impl Render {
             Pipeline::new(&device, data)
         };
 
-        let post_antialiasing_pipeline = {
-            let data = PipelineData {
-                shader_src: include_str!("shaders/post_antialiasing.wgsl"),
-                bind_group_layouts: &[&post_shader_data_layout, &texture_layout],
-                vertex_buffers: &[],
-                fragment_texture_format: config.format,
-                topology: PrimitiveTopology::TriangleStrip,
-                cull_mode: None,
-                depth_stencil: None,
-            };
-            Pipeline::new(&device, data)
-        };
-
         let render_frame = RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &texture_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
@@ -239,7 +225,6 @@ impl Render {
             color_pipeline,
             flat_pipeline,
             post_pipeline,
-            post_antialiasing_pipeline,
             surface,
             config,
             size: Size::default(),
@@ -399,12 +384,8 @@ impl Render {
         &self.queue
     }
 
-    pub(crate) fn post_pipeline(&self, with_antialiasing: bool) -> &Pipeline {
-        if with_antialiasing {
-            &self.post_antialiasing_pipeline
-        } else {
-            &self.post_pipeline
-        }
+    pub(crate) fn post_pipeline(&self) -> &Pipeline {
+        &self.post_pipeline
     }
 
     pub(crate) fn post_shader_data(&self) -> &PostShaderData {

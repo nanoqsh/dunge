@@ -213,8 +213,6 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        frame.set_antialiasing(self.antialiasing);
-
         let mut layer = frame
             .texture_layer()
             .with_clear_color(Srgba([46, 34, 47, 255]))
