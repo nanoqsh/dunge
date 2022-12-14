@@ -112,7 +112,7 @@ impl App {
 
                     let x = x as f32 - N as f32 * 0.5 + 0.5;
                     let z = z as f32 - N as f32 * 0.5 + 0.5;
-                    let y = u8::from(obj == F || obj == L) as f32 * -0.5;
+                    let y = f32::from(u8::from(obj == F || obj == L)) * -0.5;
 
                     if obj == V {
                         model_data.push((obj, [x, y + 1., z]));
