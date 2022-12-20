@@ -37,7 +37,6 @@ struct App {
     models: Vec<Model>,
     view: ViewHandle,
     camera: Camera,
-    antialiasing: bool,
 }
 
 impl App {
@@ -155,7 +154,6 @@ impl App {
             models,
             view,
             camera,
-            antialiasing: false,
         }
     }
 }
@@ -168,13 +166,9 @@ impl Loop for App {
 
         // Handle pressed keys
         for key in input.pressed_keys {
-            match key {
-                Key::Escape => {
-                    context.plan_to_close();
-                    return Ok(());
-                }
-                Key::Space => self.antialiasing = !self.antialiasing,
-                _ => {}
+            if let Key::Escape = key {
+                context.plan_to_close();
+                return Ok(());
             }
         }
 
