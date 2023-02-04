@@ -8,16 +8,17 @@ keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
 readme = "../README.md"
 repository = "https://github.com/nanoqsh/dunge"
-rust-version = "1.65"
+rust-version = "1.67"
 
 [dependencies]
-ahash = "0.7"
+ahash = "0.8"
 log = "0.4"
-wgpu = "0.14"
+wgpu = "0.15"
 winit = "0.27"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wgpu = { version = "0.14", features = ["webgl"] }
+getrandom = { version = "0.2", features = ["js"] }
+wgpu = { version = "0.15", features = ["webgl"] }
 web-sys = { version = "0.3", features = ["Document", "Window", "Element", "Performance"] }
 
 [target.'cfg(target_os = "android")'.dependencies]

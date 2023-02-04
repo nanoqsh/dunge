@@ -60,6 +60,7 @@ impl Texture {
             format: TextureFormat::Rgba8UnormSrgb,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             label: Some("texture"),
+            view_formats: &[],
         });
 
         queue.write_texture(
@@ -164,6 +165,7 @@ impl DepthFrame {
             dimension: TextureDimension::D2,
             format: Self::DEPTH_FORMAT,
             usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
         };
         let texture = device.create_texture(&desc);
 
@@ -176,7 +178,7 @@ impl DepthFrame {
             min_filter: FilterMode::Linear,
             mipmap_filter: FilterMode::Nearest,
             compare: Some(CompareFunction::LessEqual),
-            lod_min_clamp: -100.0,
+            lod_min_clamp: 0.,
             lod_max_clamp: 100.0,
             ..Default::default()
         });
@@ -220,6 +222,7 @@ impl RenderFrame {
                 | TextureUsages::COPY_DST
                 | TextureUsages::TEXTURE_BINDING,
             label: Some("texture"),
+            view_formats: &[],
         });
 
         let view = texture.create_view(&TextureViewDescriptor::default());

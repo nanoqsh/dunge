@@ -61,8 +61,8 @@ impl Render {
             Self::wait_for_native_screen();
         }
 
-        let instance = Instance::new(Backends::all());
-        let surface = unsafe { instance.create_surface(window) };
+        let instance = Instance::default();
+        let surface = unsafe { instance.create_surface(window).expect("create surface") };
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
                 power_preference: if cfg!(target_arch = "wasm32") {
@@ -101,6 +101,7 @@ impl Render {
             height: 1,
             present_mode: PresentMode::Fifo,
             alpha_mode: CompositeAlphaMode::Auto,
+            view_formats: vec![],
         };
 
         let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
