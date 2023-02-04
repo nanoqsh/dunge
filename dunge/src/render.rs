@@ -169,7 +169,7 @@ impl Render {
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
                 cull_mode: Some(Face::Back),
-                depth_stencil: Some(depth_stencil),
+                depth_stencil: Some(depth_stencil.clone()),
             };
             Pipeline::new(&device, data)
         };
@@ -182,7 +182,7 @@ impl Render {
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
                 cull_mode: None,
-                depth_stencil: None,
+                depth_stencil: Some(depth_stencil),
             };
             Pipeline::new(&device, data)
         };

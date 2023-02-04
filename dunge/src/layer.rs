@@ -17,6 +17,7 @@ use {
 };
 
 /// The layer builder. It creates a configured [`Layer`].
+#[must_use]
 pub struct Builder<'l, 'd, V> {
     frame: &'l mut Frame<'d>,
     clear_color: Option<Linear<f64>>,
@@ -76,7 +77,6 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
     ///     .with_clear_color(())
     ///     .start();
     /// ```
-    #[must_use]
     pub fn with_clear_color<C>(self, color: C) -> Self
     where
         C: IntoLinear,
@@ -88,7 +88,6 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
     }
 
     /// Sets the flag to clear the depth buffer or not for the layer.
-    #[must_use]
     pub fn with_clear_depth(self) -> Self {
         Self {
             clear_depth: true,
@@ -98,27 +97,25 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
 }
 
 impl<'l, 'd> Builder<'l, 'd, TextureVertex> {
-    #[must_use]
     pub fn start(self) -> Layer<'l, TextureVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }
 }
 
 impl<'l, 'd> Builder<'l, 'd, ColorVertex> {
-    #[must_use]
     pub fn start(self) -> Layer<'l, ColorVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }
 }
 
 impl<'l, 'd> Builder<'l, 'd, FlatVertex> {
-    #[must_use]
     pub fn start(self) -> Layer<'l, FlatVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }
 }
 
 /// The frame layer. Can be created from a [`Frame`] instance.
+#[must_use]
 pub struct Layer<'l, V> {
     pass: RenderPass<'l>,
     size: (u32, u32),
