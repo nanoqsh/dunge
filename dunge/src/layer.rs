@@ -10,7 +10,7 @@ use {
         shader_consts,
         storage::Storage,
         texture::Texture,
-        vertex::{ColorVertex, FlatVertex, TextureVertex},
+        vertex::{ColorVertex, FlatVertex, TextureVertex, UsesDepth},
     },
     std::marker::PhantomData,
     wgpu::{Queue, RenderPass},
@@ -88,7 +88,10 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
     }
 
     /// Sets the flag to clear the depth buffer or not for the layer.
-    pub fn with_clear_depth(self) -> Self {
+    pub fn with_clear_depth(self) -> Self
+    where
+        V: UsesDepth,
+    {
         Self {
             clear_depth: true,
             ..self
@@ -96,19 +99,19 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
     }
 }
 
-impl<'l, 'd> Builder<'l, 'd, TextureVertex> {
+impl<'l> Builder<'l, '_, TextureVertex> {
     pub fn start(self) -> Layer<'l, TextureVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }
 }
 
-impl<'l, 'd> Builder<'l, 'd, ColorVertex> {
+impl<'l> Builder<'l, '_, ColorVertex> {
     pub fn start(self) -> Layer<'l, ColorVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }
 }
 
-impl<'l, 'd> Builder<'l, 'd, FlatVertex> {
+impl<'l> Builder<'l, '_, FlatVertex> {
     pub fn start(self) -> Layer<'l, FlatVertex> {
         self.frame.start_layer(self.clear_color, self.clear_depth)
     }

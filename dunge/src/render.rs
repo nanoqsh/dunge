@@ -140,14 +140,6 @@ impl Render {
             label: Some("camera bind group layout"),
         });
 
-        let depth_stencil = DepthStencilState {
-            format: DepthFrame::DEPTH_FORMAT,
-            depth_write_enabled: true,
-            depth_compare: CompareFunction::Less,
-            stencil: StencilState::default(),
-            bias: DepthBiasState::default(),
-        };
-
         let texture_pipeline = {
             let data = PipelineData {
                 shader_src: include_str!("shaders/textured.wgsl"),
@@ -156,7 +148,13 @@ impl Render {
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
                 cull_mode: Some(Face::Back),
-                depth_stencil: Some(depth_stencil.clone()),
+                depth_stencil: Some(DepthStencilState {
+                    format: DepthFrame::DEPTH_FORMAT,
+                    depth_write_enabled: true,
+                    depth_compare: CompareFunction::Less,
+                    stencil: StencilState::default(),
+                    bias: DepthBiasState::default(),
+                }),
             };
             Pipeline::new(&device, data)
         };
@@ -169,7 +167,13 @@ impl Render {
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
                 cull_mode: Some(Face::Back),
-                depth_stencil: Some(depth_stencil.clone()),
+                depth_stencil: Some(DepthStencilState {
+                    format: DepthFrame::DEPTH_FORMAT,
+                    depth_write_enabled: true,
+                    depth_compare: CompareFunction::Less,
+                    stencil: StencilState::default(),
+                    bias: DepthBiasState::default(),
+                }),
             };
             Pipeline::new(&device, data)
         };
@@ -182,7 +186,13 @@ impl Render {
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
                 cull_mode: None,
-                depth_stencil: Some(depth_stencil),
+                depth_stencil: Some(DepthStencilState {
+                    format: DepthFrame::DEPTH_FORMAT,
+                    depth_write_enabled: false,
+                    depth_compare: CompareFunction::Always,
+                    stencil: StencilState::default(),
+                    bias: DepthBiasState::default(),
+                }),
             };
             Pipeline::new(&device, data)
         };
