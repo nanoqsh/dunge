@@ -9,7 +9,6 @@ use {
         layer::Resources,
         layout::{layout, InstanceModel},
         mesh::{Data as MeshData, Mesh},
-        pipline::{Pipeline, PipelineData},
         r#loop::Loop,
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
@@ -20,7 +19,9 @@ use {
         Error,
     },
     std::marker::PhantomData,
-    wgpu::{BindGroupLayout, Device, Queue, Surface, SurfaceConfiguration, SurfaceError},
+    wgpu::{
+        BindGroupLayout, Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, SurfaceError,
+    },
     winit::window::Window,
 };
 
@@ -30,10 +31,10 @@ pub(crate) struct Render {
     surface: Surface,
     config: SurfaceConfiguration,
     screen: Screen,
-    textured_pipeline: Pipeline,
-    color_pipeline: Pipeline,
-    flat_pipeline: Pipeline,
-    post_pipeline: Pipeline,
+    textured_pipeline: RenderPipeline,
+    color_pipeline: RenderPipeline,
+    flat_pipeline: RenderPipeline,
+    post_pipeline: RenderPipeline,
     post_shader_data: PostShaderData,
     textured_layout: BindGroupLayout,
     camera_layout: BindGroupLayout,
@@ -143,13 +144,43 @@ impl Render {
         });
 
         let textured_pipeline = {
-            let data = PipelineData {
-                shader_src: include_str!("shaders/textured.wgsl"),
+            let shader = device.create_shader_module(ShaderModuleDescriptor {
+                label: Some("textured shader"),
+                source: ShaderSource::Wgsl(include_str!("shaders/textured.wgsl").into()),
+            });
+
+            let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("render pipeline layout"),
                 bind_group_layouts: &[&camera_layout, &textured_layout],
-                vertex_buffers: &[layout::<TextureVertex>(), layout::<InstanceModel>()],
-                fragment_texture_format: config.format,
-                topology: PrimitiveTopology::TriangleList,
-                cull_mode: Some(Face::Back),
+                push_constant_ranges: &[],
+            });
+
+            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+                label: Some("render pipeline"),
+                layout: Some(&pipeline_layout),
+                vertex: VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    buffers: &[layout::<TextureVertex>(), layout::<InstanceModel>()],
+                },
+                fragment: Some(FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    targets: &[Some(ColorTargetState {
+                        format: config.format,
+                        blend: Some(BlendState::REPLACE),
+                        write_mask: ColorWrites::ALL,
+                    })],
+                }),
+                primitive: PrimitiveState {
+                    topology: PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: FrontFace::Ccw,
+                    cull_mode: Some(Face::Back),
+                    polygon_mode: PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
                 depth_stencil: Some(DepthStencilState {
                     format: DepthFrame::DEPTH_FORMAT,
                     depth_write_enabled: true,
@@ -157,18 +188,51 @@ impl Render {
                     stencil: StencilState::default(),
                     bias: DepthBiasState::default(),
                 }),
-            };
-            Pipeline::new(&device, data)
+                multisample: MultisampleState::default(),
+                multiview: None,
+            });
+
+            pipeline
         };
 
         let color_pipeline = {
-            let data = PipelineData {
-                shader_src: include_str!("shaders/color.wgsl"),
+            let shader = device.create_shader_module(ShaderModuleDescriptor {
+                label: Some("color shader"),
+                source: ShaderSource::Wgsl(include_str!("shaders/color.wgsl").into()),
+            });
+
+            let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("render pipeline layout"),
                 bind_group_layouts: &[&camera_layout],
-                vertex_buffers: &[layout::<ColorVertex>(), layout::<InstanceModel>()],
-                fragment_texture_format: config.format,
-                topology: PrimitiveTopology::TriangleList,
-                cull_mode: Some(Face::Back),
+                push_constant_ranges: &[],
+            });
+
+            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+                label: Some("render pipeline"),
+                layout: Some(&pipeline_layout),
+                vertex: VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    buffers: &[layout::<ColorVertex>(), layout::<InstanceModel>()],
+                },
+                fragment: Some(FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    targets: &[Some(ColorTargetState {
+                        format: config.format,
+                        blend: Some(BlendState::REPLACE),
+                        write_mask: ColorWrites::ALL,
+                    })],
+                }),
+                primitive: PrimitiveState {
+                    topology: PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: FrontFace::Ccw,
+                    cull_mode: Some(Face::Back),
+                    polygon_mode: PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
                 depth_stencil: Some(DepthStencilState {
                     format: DepthFrame::DEPTH_FORMAT,
                     depth_write_enabled: true,
@@ -176,18 +240,51 @@ impl Render {
                     stencil: StencilState::default(),
                     bias: DepthBiasState::default(),
                 }),
-            };
-            Pipeline::new(&device, data)
+                multisample: MultisampleState::default(),
+                multiview: None,
+            });
+
+            pipeline
         };
 
         let flat_pipeline = {
-            let data = PipelineData {
-                shader_src: include_str!("shaders/flat.wgsl"),
+            let shader = device.create_shader_module(ShaderModuleDescriptor {
+                label: Some("flat shader"),
+                source: ShaderSource::Wgsl(include_str!("shaders/flat.wgsl").into()),
+            });
+
+            let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("render pipeline layout"),
                 bind_group_layouts: &[&textured_layout],
-                vertex_buffers: &[layout::<FlatVertex>(), layout::<InstanceModel>()],
-                fragment_texture_format: config.format,
-                topology: PrimitiveTopology::TriangleList,
-                cull_mode: None,
+                push_constant_ranges: &[],
+            });
+
+            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+                label: Some("render pipeline"),
+                layout: Some(&pipeline_layout),
+                vertex: VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    buffers: &[layout::<FlatVertex>(), layout::<InstanceModel>()],
+                },
+                fragment: Some(FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    targets: &[Some(ColorTargetState {
+                        format: config.format,
+                        blend: Some(BlendState::REPLACE),
+                        write_mask: ColorWrites::ALL,
+                    })],
+                }),
+                primitive: PrimitiveState {
+                    topology: PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: FrontFace::Ccw,
+                    cull_mode: None,
+                    polygon_mode: PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
                 depth_stencil: Some(DepthStencilState {
                     format: DepthFrame::DEPTH_FORMAT,
                     depth_write_enabled: false,
@@ -195,8 +292,11 @@ impl Render {
                     stencil: StencilState::default(),
                     bias: DepthBiasState::default(),
                 }),
-            };
-            Pipeline::new(&device, data)
+                multisample: MultisampleState::default(),
+                multiview: None,
+            });
+
+            pipeline
         };
 
         let post_shader_data_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -214,16 +314,49 @@ impl Render {
         });
 
         let post_pipeline = {
-            let data = PipelineData {
-                shader_src: include_str!("shaders/post.wgsl"),
+            let shader = device.create_shader_module(ShaderModuleDescriptor {
+                label: Some("post shader"),
+                source: ShaderSource::Wgsl(include_str!("shaders/post.wgsl").into()),
+            });
+
+            let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("render pipeline layout"),
                 bind_group_layouts: &[&post_shader_data_layout, &textured_layout],
-                vertex_buffers: &[],
-                fragment_texture_format: config.format,
-                topology: PrimitiveTopology::TriangleStrip,
-                cull_mode: None,
+                push_constant_ranges: &[],
+            });
+
+            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+                label: Some("render pipeline"),
+                layout: Some(&pipeline_layout),
+                vertex: VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    buffers: &[],
+                },
+                fragment: Some(FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    targets: &[Some(ColorTargetState {
+                        format: config.format,
+                        blend: Some(BlendState::REPLACE),
+                        write_mask: ColorWrites::ALL,
+                    })],
+                }),
+                primitive: PrimitiveState {
+                    topology: PrimitiveTopology::TriangleStrip,
+                    strip_index_format: None,
+                    front_face: FrontFace::Ccw,
+                    cull_mode: None,
+                    polygon_mode: PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
                 depth_stencil: None,
-            };
-            Pipeline::new(&device, data)
+                multisample: MultisampleState::default(),
+                multiview: None,
+            });
+
+            pipeline
         };
 
         let render_frame =
@@ -403,7 +536,7 @@ impl Render {
         &self.queue
     }
 
-    pub(crate) fn post_pipeline(&self) -> &Pipeline {
+    pub(crate) fn post_pipeline(&self) -> &RenderPipeline {
         &self.post_pipeline
     }
 
@@ -436,23 +569,23 @@ impl Render {
 }
 
 pub(crate) trait GetPipeline<V> {
-    fn get_pipeline(&self) -> &Pipeline;
+    fn get_pipeline(&self) -> &RenderPipeline;
 }
 
 impl GetPipeline<TextureVertex> for Render {
-    fn get_pipeline(&self) -> &Pipeline {
+    fn get_pipeline(&self) -> &RenderPipeline {
         &self.textured_pipeline
     }
 }
 
 impl GetPipeline<ColorVertex> for Render {
-    fn get_pipeline(&self) -> &Pipeline {
+    fn get_pipeline(&self) -> &RenderPipeline {
         &self.color_pipeline
     }
 }
 
 impl GetPipeline<FlatVertex> for Render {
-    fn get_pipeline(&self) -> &Pipeline {
+    fn get_pipeline(&self) -> &RenderPipeline {
         &self.flat_pipeline
     }
 }

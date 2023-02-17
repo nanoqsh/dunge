@@ -9,7 +9,6 @@ mod layer;
 mod layout;
 mod r#loop;
 mod mesh;
-mod pipline;
 mod render;
 mod render_frame;
 mod screen;

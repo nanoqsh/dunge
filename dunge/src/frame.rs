@@ -88,7 +88,7 @@ impl<'d> Frame<'d> {
             depth_stencil_attachment: None,
         });
 
-        pass.set_pipeline(self.render.post_pipeline().as_ref());
+        pass.set_pipeline(self.render.post_pipeline());
         pass.set_bind_group(
             shader_consts::post::T_DIFFUSE.group,
             self.render.render_frame().bind_group(),
@@ -156,7 +156,7 @@ impl<'d> Frame<'d> {
             }),
         });
 
-        pass.set_pipeline(self.render.get_pipeline().as_ref());
+        pass.set_pipeline(self.render.get_pipeline());
 
         Layer::new(
             pass,
