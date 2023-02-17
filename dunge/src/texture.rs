@@ -1,7 +1,7 @@
 #![allow(clippy::wildcard_imports)]
 
 use {
-    crate::shader_consts,
+    crate::shader,
     std::num::NonZeroU32,
     wgpu::{BindGroup, BindGroupLayout, Device, Queue, Texture as WgpuTexture},
 };
@@ -90,11 +90,11 @@ impl Texture {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader_consts::textured::T_DIFFUSE.binding,
+                    binding: shader::TEXTURED_TDIFF_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: shader_consts::textured::S_DIFFUSE.binding,
+                    binding: shader::TEXTURED_SDIFF_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

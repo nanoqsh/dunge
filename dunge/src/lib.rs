@@ -12,7 +12,7 @@ mod mesh;
 mod render;
 mod render_frame;
 mod screen;
-mod shader_consts;
+mod shader;
 mod shader_data;
 mod storage;
 mod texture;

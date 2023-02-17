@@ -1,7 +1,7 @@
 #![allow(clippy::wildcard_imports)]
 
 use {
-    crate::shader_consts,
+    crate::shader,
     wgpu::{BindGroup, BindGroupLayout, Device, TextureView},
 };
 
@@ -62,11 +62,11 @@ impl RenderFrame {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader_consts::post::T_DIFFUSE.binding,
+                    binding: shader::POST_TDIFF_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: shader_consts::post::S_DIFFUSE.binding,
+                    binding: shader::POST_SDIFF_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

@@ -12,7 +12,7 @@ use {
         r#loop::Loop,
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
-        shader_consts,
+        shader,
         shader_data::PostShaderData,
         texture::{Data as TextureData, Texture},
         vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
@@ -47,16 +47,14 @@ impl Render {
     pub(crate) async fn new(window: &Window) -> Self {
         use wgpu::*;
 
-        const _: () = {
-            assert!(
-                shader_consts::textured::T_DIFFUSE.binding
-                    == shader_consts::flat::T_DIFFUSE.binding
-            );
+        const TDIFF_BINDING: u32 = {
+            assert!(shader::TEXTURED_TDIFF_BINDING == shader::FLAT_TDIFF_BINDING);
+            shader::TEXTURED_TDIFF_BINDING
+        };
 
-            assert!(
-                shader_consts::textured::S_DIFFUSE.binding
-                    == shader_consts::flat::S_DIFFUSE.binding
-            );
+        const SDIFF_BINDING: u32 = {
+            assert!(shader::TEXTURED_SDIFF_BINDING == shader::FLAT_SDIFF_BINDING);
+            shader::TEXTURED_SDIFF_BINDING
         };
 
         #[cfg(target_os = "android")]
@@ -110,7 +108,7 @@ impl Render {
         let textured_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[
                 BindGroupLayoutEntry {
-                    binding: shader_consts::textured::T_DIFFUSE.binding,
+                    binding: TDIFF_BINDING,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
                         multisampled: false,
@@ -120,7 +118,7 @@ impl Render {
                     count: None,
                 },
                 BindGroupLayoutEntry {
-                    binding: shader_consts::textured::S_DIFFUSE.binding,
+                    binding: SDIFF_BINDING,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
                     count: None,
@@ -131,7 +129,7 @@ impl Render {
 
         let camera_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {
-                binding: shader_consts::textured::CAMERA.binding,
+                binding: shader::TEXTURED_CAMERA_BINDING,
                 visibility: ShaderStages::VERTEX,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
@@ -301,7 +299,7 @@ impl Render {
 
         let post_shader_data_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {
-                binding: shader_consts::post::DATA.binding,
+                binding: shader::POST_DATA_BINDING,
                 visibility: ShaderStages::FRAGMENT,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,

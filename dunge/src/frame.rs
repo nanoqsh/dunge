@@ -5,7 +5,7 @@ use {
         color::Linear,
         layer::{Builder, Layer},
         render::{GetPipeline, Render},
-        shader_consts,
+        shader,
         vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     wgpu::{CommandEncoder, TextureView},
@@ -90,12 +90,12 @@ impl<'d> Frame<'d> {
 
         pass.set_pipeline(self.render.post_pipeline());
         pass.set_bind_group(
-            shader_consts::post::T_DIFFUSE.group,
+            shader::POST_TDIFF_GROUP,
             self.render.render_frame().bind_group(),
             &[],
         );
         pass.set_bind_group(
-            shader_consts::post::DATA.group,
+            shader::POST_DATA_GROUP,
             self.render.post_shader_data().bind_group(),
             &[],
         );

@@ -7,7 +7,7 @@ use {
         mesh::Mesh,
         r#loop::Error,
         render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
-        shader_consts,
+        shader,
         storage::Storage,
         texture::Texture,
         vertex::{ColorVertex, FlatVertex, TextureVertex, UsesDepth},
@@ -171,14 +171,10 @@ impl<'l, V> Layer<'l, V> {
         let mesh = self.resources.meshes.get(handle.id())?;
         let instance = self.instance.ok_or(Error::InstanceNotSet)?;
 
-        self.pass.set_vertex_buffer(
-            shader_consts::INSTANCE_BUFFER_SLOT,
-            instance.buffer().slice(..),
-        );
-        self.pass.set_vertex_buffer(
-            shader_consts::VERTEX_BUFFER_SLOT,
-            mesh.vertex_buffer().slice(..),
-        );
+        self.pass
+            .set_vertex_buffer(shader::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
+        self.pass
+            .set_vertex_buffer(shader::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
         self.pass
             .set_index_buffer(mesh.index_buffer().slice(..), IndexFormat::Uint16);
         self.pass
@@ -211,7 +207,7 @@ impl Layer<'_, TextureVertex> {
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
-        self.bind_view_handle(handle, shader_consts::textured::CAMERA.group)
+        self.bind_view_handle(handle, shader::TEXTURED_CAMERA_GROUP)
     }
 }
 
@@ -221,7 +217,7 @@ impl Layer<'_, ColorVertex> {
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
-        self.bind_view_handle(handle, shader_consts::color::CAMERA.group)
+        self.bind_view_handle(handle, shader::COLOR_CAMERA_GROUP)
     }
 }
 
@@ -231,7 +227,7 @@ impl Layer<'_, TextureVertex> {
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
-        self.bind_texture_handle(handle, shader_consts::textured::S_DIFFUSE.group)
+        self.bind_texture_handle(handle, shader::TEXTURED_SDIFF_GROUP)
     }
 }
 
@@ -241,7 +237,7 @@ impl Layer<'_, FlatVertex> {
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
-        self.bind_texture_handle(handle, shader_consts::flat::S_DIFFUSE.group)
+        self.bind_texture_handle(handle, shader::FLAT_SDIFF_GROUP)
     }
 }
 

@@ -37,9 +37,9 @@ struct Data {
 var<uniform> data: Data;
 
 @group(1) @binding(0)
-var t_diffuse: texture_2d<f32>;
+var tdiff: texture_2d<f32>;
 @group(1) @binding(1)
-var s_diffuse: sampler;
+var sdiff: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
@@ -50,5 +50,5 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         map.x -= 0.5 / data.size.x;
     }
 
-    return textureSample(t_diffuse, s_diffuse, map);
+    return textureSample(tdiff, sdiff, map);
 }

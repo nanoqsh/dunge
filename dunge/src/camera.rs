@@ -5,7 +5,7 @@ pub(crate) use self::proj::{IntoProjection, Projection};
 use {
     crate::{
         layout::Plain,
-        shader_consts,
+        shader,
         transform::{IntoQuat, Quat},
     },
     std::cell::Cell,
@@ -40,9 +40,10 @@ impl Camera {
             *,
         };
 
-        const _: () = assert!(
-            shader_consts::textured::CAMERA.binding == shader_consts::color::CAMERA.binding
-        );
+        const BINDING: u32 = {
+            assert!(shader::TEXTURED_CAMERA_BINDING == shader::COLOR_CAMERA_BINDING);
+            shader::TEXTURED_CAMERA_BINDING
+        };
 
         let uniform = CameraUniform {
             view_proj: IDENTITY,
@@ -57,7 +58,7 @@ impl Camera {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: shader_consts::textured::CAMERA.binding,
+                binding: BINDING,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("camera bind group"),
