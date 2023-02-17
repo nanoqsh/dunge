@@ -4,8 +4,9 @@ use {
         canvas::CanvasEvent,
         mesh::Data as MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle, ViewHandle},
-        size::Size,
-        texture::{Data as TextureData, FrameFilter},
+        render_frame::FrameFilter,
+        screen::Screen,
+        texture::Data as TextureData,
         transform::{IntoQuat, IntoTransform},
         vertex::Vertex,
         Error,
@@ -38,7 +39,7 @@ impl Context {
 
     /// Returns the canvas size.
     pub fn size(&self) -> (u32, u32) {
-        self.render.size().as_virtual()
+        self.render.screen().as_virtual_size()
     }
 
     /// Sets context's [`Limits`].
@@ -54,10 +55,10 @@ impl Context {
             return;
         }
 
-        self.render.resize(Some(Size {
+        self.render.set_screen(Some(Screen {
             pixel_size: params.pixel_size.try_into().expect("non zero"),
             filter: params.filter,
-            ..self.render.size()
+            ..self.render.screen()
         }));
     }
 

@@ -1,18 +1,18 @@
 use {
-    crate::texture::FrameFilter,
+    crate::render_frame::FrameFilter,
     std::num::{NonZeroU32, NonZeroU8},
 };
 
 #[derive(Clone, Copy)]
-pub(crate) struct Size {
+pub(crate) struct Screen {
     pub(crate) width: NonZeroU32,
     pub(crate) height: NonZeroU32,
     pub(crate) pixel_size: NonZeroU8,
     pub(crate) filter: FrameFilter,
 }
 
-impl Size {
-    pub fn as_virtual(&self) -> (u32, u32) {
+impl Screen {
+    pub fn as_virtual_size(&self) -> (u32, u32) {
         let pixel_size = NonZeroU32::from(self.pixel_size);
         (
             self.width.get() / pixel_size,
@@ -21,7 +21,7 @@ impl Size {
     }
 }
 
-impl Default for Size {
+impl Default for Screen {
     fn default() -> Self {
         let n = 1.try_into().expect("1 is non zero");
         Self {

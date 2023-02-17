@@ -3,6 +3,7 @@
 use {
     crate::{
         camera::{Camera, Projection, View},
+        depth_frame::DepthFrame,
         frame::Frame,
         instance::Instance,
         layer::Resources,
@@ -10,10 +11,11 @@ use {
         mesh::{Data as MeshData, Mesh},
         pipline::{Pipeline, PipelineData},
         r#loop::Loop,
+        render_frame::{FrameFilter, RenderFrame},
+        screen::Screen,
         shader_consts,
         shader_data::PostShaderData,
-        size::Size,
-        texture::{Data as TextureData, DepthFrame, FrameFilter, RenderFrame, Texture},
+        texture::{Data as TextureData, Texture},
         vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
         Error,
     },
@@ -25,19 +27,19 @@ use {
 pub(crate) struct Render {
     device: Device,
     queue: Queue,
-    texture_pipeline: Pipeline,
+    surface: Surface,
+    config: SurfaceConfiguration,
+    screen: Screen,
+    textured_pipeline: Pipeline,
     color_pipeline: Pipeline,
     flat_pipeline: Pipeline,
     post_pipeline: Pipeline,
-    surface: Surface,
-    config: SurfaceConfiguration,
-    size: Size,
-    texture_layout: BindGroupLayout,
-    camera_layout: BindGroupLayout,
     post_shader_data: PostShaderData,
-    resources: Resources,
+    textured_layout: BindGroupLayout,
+    camera_layout: BindGroupLayout,
     render_frame: RenderFrame,
     depth_frame: DepthFrame,
+    resources: Resources,
 }
 
 impl Render {
@@ -104,7 +106,7 @@ impl Render {
             view_formats: vec![],
         };
 
-        let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+        let textured_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[
                 BindGroupLayoutEntry {
                     binding: shader_consts::textured::T_DIFFUSE.binding,
@@ -140,10 +142,10 @@ impl Render {
             label: Some("camera bind group layout"),
         });
 
-        let texture_pipeline = {
+        let textured_pipeline = {
             let data = PipelineData {
                 shader_src: include_str!("shaders/textured.wgsl"),
-                bind_group_layouts: &[&camera_layout, &texture_layout],
+                bind_group_layouts: &[&camera_layout, &textured_layout],
                 vertex_buffers: &[layout::<TextureVertex>(), layout::<InstanceModel>()],
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
@@ -181,7 +183,7 @@ impl Render {
         let flat_pipeline = {
             let data = PipelineData {
                 shader_src: include_str!("shaders/flat.wgsl"),
-                bind_group_layouts: &[&texture_layout],
+                bind_group_layouts: &[&textured_layout],
                 vertex_buffers: &[layout::<FlatVertex>(), layout::<InstanceModel>()],
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleList,
@@ -214,7 +216,7 @@ impl Render {
         let post_pipeline = {
             let data = PipelineData {
                 shader_src: include_str!("shaders/post.wgsl"),
-                bind_group_layouts: &[&post_shader_data_layout, &texture_layout],
+                bind_group_layouts: &[&post_shader_data_layout, &textured_layout],
                 vertex_buffers: &[],
                 fragment_texture_format: config.format,
                 topology: PrimitiveTopology::TriangleStrip,
@@ -224,7 +226,8 @@ impl Render {
             Pipeline::new(&device, data)
         };
 
-        let render_frame = RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &texture_layout);
+        let render_frame =
+            RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &textured_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
         let post_shader_data = PostShaderData::new(&device, &post_shader_data_layout);
@@ -232,24 +235,24 @@ impl Render {
         Self {
             device,
             queue,
-            texture_pipeline,
+            surface,
+            config,
+            screen: Screen::default(),
+            textured_pipeline,
             color_pipeline,
             flat_pipeline,
             post_pipeline,
-            surface,
-            config,
-            size: Size::default(),
-            texture_layout,
+            post_shader_data,
+            textured_layout,
             camera_layout,
-            resources: Resources::default(),
             render_frame,
             depth_frame,
-            post_shader_data,
+            resources: Resources::default(),
         }
     }
 
     pub(crate) fn create_texture(&mut self, data: TextureData) -> TextureHandle {
-        let texture = Texture::new(data, &self.device, &self.queue, &self.texture_layout);
+        let texture = Texture::new(data, &self.device, &self.queue, &self.textured_layout);
         let id = self.resources.textures.insert(texture);
         TextureHandle(id)
     }
@@ -339,25 +342,30 @@ impl Render {
         self.resources.views.remove(handle.0)
     }
 
-    pub(crate) fn size(&self) -> Size {
-        self.size
+    pub(crate) fn screen(&self) -> Screen {
+        self.screen
     }
 
-    pub(crate) fn resize(&mut self, size: Option<Size>) {
-        if let Some(size) = size {
-            self.size = size;
+    pub(crate) fn set_screen(&mut self, screen: Option<Screen>) {
+        if let Some(screen) = screen {
+            self.screen = screen;
         }
 
-        self.config.width = self.size.width.get();
-        self.config.height = self.size.height.get();
+        self.config.width = self.screen.width.get();
+        self.config.height = self.screen.height.get();
         self.surface.configure(&self.device, &self.config);
 
-        let virt = self.size.as_virtual();
-        self.post_shader_data.resize(virt, &self.queue);
+        let virt_size = self.screen.as_virtual_size();
+        self.post_shader_data.resize(virt_size, &self.queue);
 
-        self.render_frame =
-            RenderFrame::new(virt, self.size.filter, &self.device, &self.texture_layout);
-        self.depth_frame = DepthFrame::new(virt, &self.device);
+        self.render_frame = RenderFrame::new(
+            virt_size,
+            self.screen.filter,
+            &self.device,
+            &self.textured_layout,
+        );
+
+        self.depth_frame = DepthFrame::new(virt_size, &self.device);
     }
 
     pub(crate) fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
@@ -403,16 +411,16 @@ impl Render {
         &self.post_shader_data
     }
 
-    pub(crate) fn resources(&self) -> &Resources {
-        &self.resources
-    }
-
     pub(crate) fn render_frame(&self) -> &RenderFrame {
         &self.render_frame
     }
 
     pub(crate) fn depth_frame(&self) -> &DepthFrame {
         &self.depth_frame
+    }
+
+    pub(crate) fn resources(&self) -> &Resources {
+        &self.resources
     }
 
     #[cfg(target_os = "android")]
@@ -433,7 +441,7 @@ pub(crate) trait GetPipeline<V> {
 
 impl GetPipeline<TextureVertex> for Render {
     fn get_pipeline(&self) -> &Pipeline {
-        &self.texture_pipeline
+        &self.textured_pipeline
     }
 }
 

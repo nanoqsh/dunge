@@ -3,7 +3,7 @@ use {
         context::{Context, Limits},
         r#loop::{Input, Keys, Loop, Mouse},
         render::{Render, RenderResult},
-        size::Size,
+        screen::Screen,
         time::Time,
     },
     std::num::NonZeroU32,
@@ -47,9 +47,9 @@ impl Canvas {
         let mut render = Render::new(&window).await;
 
         // Initial resize
-        render.resize({
+        render.set_screen({
             let (width, height): (u32, u32) = window.inner_size().into();
-            Some(Size {
+            Some(Screen {
                 width: width.max(1).try_into().expect("non zero"),
                 height: height.max(1).try_into().expect("non zero"),
                 ..Default::default()
@@ -95,13 +95,13 @@ impl Canvas {
                         | WindowEvent::ScaleFactorChanged {
                             new_inner_size: &mut size,
                             ..
-                        } => context.render.resize({
+                        } => context.render.set_screen({
                             let (width, height): (u32, u32) = size.into();
-                            let size = context.render.size();
-                            Some(Size {
+                            let screen = context.render.screen();
+                            Some(Screen {
                                 width: NonZeroU32::new(width.max(1)).expect("non zero"),
                                 height: NonZeroU32::new(height.max(1)).expect("non zero"),
-                                ..size
+                                ..screen
                             })
                         }),
                         WindowEvent::CloseRequested if lp.close_requested() => {
@@ -194,7 +194,7 @@ impl Canvas {
                             log::error!("suface error: outdated");
                         }
                         RenderResult::SurfaceError(SurfaceError::Lost) => {
-                            context.render.resize(None);
+                            context.render.set_screen(None);
                         }
                         RenderResult::SurfaceError(SurfaceError::OutOfMemory) => {
                             log::error!("suface error: out of memory");
