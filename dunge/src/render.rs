@@ -298,16 +298,28 @@ impl Render {
         };
 
         let post_shader_data_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[BindGroupLayoutEntry {
-                binding: shader::POST_DATA_BINDING,
-                visibility: ShaderStages::FRAGMENT,
-                ty: BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: shader::POST_DATA_BINDING,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
                 },
-                count: None,
-            }],
+                BindGroupLayoutEntry {
+                    binding: shader::POST_VIGNETTE_BINDING,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
             label: Some("post shader data bind group layout"),
         });
 
@@ -471,6 +483,10 @@ impl Render {
 
     pub(crate) fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.resources.views.remove(handle.0)
+    }
+
+    pub(crate) fn set_vignette_color(&mut self, col: [f32; 4]) {
+        self.post_shader_data.set_vignette_color(col, &self.queue);
     }
 
     pub(crate) fn screen(&self) -> Screen {

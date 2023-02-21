@@ -36,6 +36,9 @@ struct Data {
 @group(0) @binding(0)
 var<uniform> data: Data;
 
+@group(0) @binding(1)
+var<uniform> vignette: vec4<f32>;
+
 @group(1) @binding(0)
 var tdiff: texture_2d<f32>;
 @group(1) @binding(1)
@@ -50,5 +53,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         map.x -= 0.5 / data.size.x;
     }
 
-    return textureSample(tdiff, sdiff, map);
+    let screen = map * 2. - 1.;
+    let force = length(screen) * vignette.a;
+    let sample = textureSample(tdiff, sdiff, map);
+    let vignette_col = vec4(vignette.rgb, 1.);
+    return mix(sample, vignette_col, force);
 }

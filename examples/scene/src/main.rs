@@ -46,6 +46,8 @@ impl App {
             ..Default::default()
         });
 
+        context.set_vignette_color(Srgba([36, 30, 47, 255]));
+
         // Create the sprite texture
         let sprites = {
             let image = utils::read_png(include_bytes!("sprites.png"));

@@ -95,7 +95,7 @@ impl<'d> Frame<'d> {
             &[],
         );
         pass.set_bind_group(
-            shader::POST_DATA_GROUP,
+            shader::POST_DATA_VIGNETTE_GROUP,
             self.render.post_shader_data().bind_group(),
             &[],
         );
