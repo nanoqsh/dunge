@@ -46,8 +46,6 @@ impl App {
             ..Default::default()
         });
 
-        context.set_vignette_color(Srgba([36, 30, 47, 255]));
-
         // Create the sprite texture
         let sprites = {
             let image = utils::read_png(include_bytes!("sprites.png"));
@@ -209,9 +207,19 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        let mut layer = frame
+        frame.set_vignette_color(Srgba([36, 30, 47, 255]));
+        frame
             .texture_layer()
             .with_clear_color(Srgba([46, 34, 47, 255]))
+            .start()
+            .draw_empty();
+
+        frame.commit_in_frame();
+
+        frame.set_vignette_color(Srgba([0; 4]));
+        let mut layer = frame
+            .texture_layer()
+            .with_clear_color(Srgba([0; 4]))
             .with_clear_depth()
             .start();
 

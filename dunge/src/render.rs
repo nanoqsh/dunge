@@ -348,7 +348,7 @@ impl Render {
                     entry_point: "fs_main",
                     targets: &[Some(ColorTargetState {
                         format: config.format,
-                        blend: Some(BlendState::REPLACE),
+                        blend: Some(BlendState::ALPHA_BLENDING),
                         write_mask: ColorWrites::ALL,
                     })],
                 }),
@@ -485,7 +485,7 @@ impl Render {
         self.resources.views.remove(handle.0)
     }
 
-    pub(crate) fn set_vignette_color(&mut self, col: [f32; 4]) {
+    pub(crate) fn set_vignette_color(&self, col: [f32; 4]) {
         self.post_shader_data.set_vignette_color(col, &self.queue);
     }
 
@@ -536,7 +536,6 @@ impl Render {
         }
 
         frame.commit_in_frame();
-        frame.submit();
         output.present();
 
         RenderResult::Ok

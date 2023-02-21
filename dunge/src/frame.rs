@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        color::Linear,
+        color::{IntoLinear, Linear},
         layer::{Builder, Layer},
         render::{GetPipeline, Render},
         shader,
@@ -15,27 +15,27 @@ use {
 /// and creates new [layers](crate::Layer).
 pub struct Frame<'d> {
     render: &'d Render,
-    encoder: CommandEncoder,
+    encoder: Encoder,
     frame_view: TextureView,
     drawn_in_frame: bool,
 }
 
 impl<'d> Frame<'d> {
     pub(crate) fn new(render: &'d Render, frame_view: TextureView) -> Self {
-        use wgpu::*;
-
-        let encoder = render
-            .device()
-            .create_command_encoder(&CommandEncoderDescriptor {
-                label: Some("render encoder"),
-            });
-
         Self {
             render,
-            encoder,
+            encoder: Encoder::default(),
             frame_view,
             drawn_in_frame: false,
         }
+    }
+
+    pub fn set_vignette_color<C>(&mut self, color: C)
+    where
+        C: IntoLinear,
+    {
+        let Linear(color) = color.into_linear();
+        self.render.set_vignette_color(color.map(|v| v as f32));
     }
 
     /// Draws the frame in the screen buffer.
@@ -75,47 +75,51 @@ impl<'d> Frame<'d> {
 
         self.drawn_in_frame = false;
 
-        let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
-            label: Some("post render pass"),
-            color_attachments: &[Some(RenderPassColorAttachment {
-                view: &self.frame_view,
-                resolve_target: None,
-                ops: Operations {
-                    load: LoadOp::Load,
-                    store: true,
-                },
-            })],
-            depth_stencil_attachment: None,
-        });
+        {
+            let mut pass = self
+                .encoder
+                .get(self.render)
+                .begin_render_pass(&RenderPassDescriptor {
+                    label: Some("post render pass"),
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: &self.frame_view,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: LoadOp::Load,
+                            store: true,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                });
 
-        pass.set_pipeline(self.render.post_pipeline());
-        pass.set_bind_group(
-            shader::POST_TDIFF_GROUP,
-            self.render.render_frame().bind_group(),
-            &[],
-        );
-        pass.set_bind_group(
-            shader::POST_DATA_VIGNETTE_GROUP,
-            self.render.post_shader_data().bind_group(),
-            &[],
-        );
+            pass.set_pipeline(self.render.post_pipeline());
+            pass.set_bind_group(
+                shader::POST_TDIFF_GROUP,
+                self.render.render_frame().bind_group(),
+                &[],
+            );
+            pass.set_bind_group(
+                shader::POST_DATA_VIGNETTE_GROUP,
+                self.render.post_shader_data().bind_group(),
+                &[],
+            );
 
-        pass.draw(0..4, 0..1);
+            pass.draw(0..4, 0..1);
+        }
+
+        let encoder = self.encoder.take().expect("encoder");
+        self.render.queue().submit([encoder.finish()]);
     }
 
-    pub(crate) fn submit(self) {
-        self.render.queue().submit([self.encoder.finish()]);
-    }
-
-    pub fn texture_layer<'l>(&'l mut self) -> Builder<'l, 'd, TextureVertex> {
+    pub fn texture_layer(&mut self) -> Builder<'_, 'd, TextureVertex> {
         Builder::new(self)
     }
 
-    pub fn color_layer<'l>(&'l mut self) -> Builder<'l, 'd, ColorVertex> {
+    pub fn color_layer(&mut self) -> Builder<'_, 'd, ColorVertex> {
         Builder::new(self)
     }
 
-    pub fn flat_layer<'l>(&'l mut self) -> Builder<'l, 'd, FlatVertex> {
+    pub fn flat_layer(&mut self) -> Builder<'_, 'd, FlatVertex> {
         Builder::new(self)
     }
 
@@ -130,31 +134,34 @@ impl<'d> Frame<'d> {
     {
         use wgpu::*;
 
-        let mut pass = self.encoder.begin_render_pass(&RenderPassDescriptor {
-            label: Some("main render pass"),
-            color_attachments: &[Some(RenderPassColorAttachment {
-                view: self.render.render_frame().view(),
-                resolve_target: None,
-                ops: Operations {
-                    load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
-                        LoadOp::Clear(Color { r, g, b, a })
-                    }),
-                    store: true,
-                },
-            })],
-            depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                view: self.render.depth_frame().view(),
-                depth_ops: Some(Operations {
-                    load: if clear_depth {
-                        LoadOp::Clear(1.)
-                    } else {
-                        LoadOp::Load
+        let mut pass = self
+            .encoder
+            .get(self.render)
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("main render pass"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: self.render.render_frame().view(),
+                    resolve_target: None,
+                    ops: Operations {
+                        load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
+                            LoadOp::Clear(Color { r, g, b, a })
+                        }),
+                        store: true,
                     },
-                    store: true,
+                })],
+                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                    view: self.render.depth_frame().view(),
+                    depth_ops: Some(Operations {
+                        load: if clear_depth {
+                            LoadOp::Clear(1.)
+                        } else {
+                            LoadOp::Load
+                        },
+                        store: true,
+                    }),
+                    stencil_ops: None,
                 }),
-                stencil_ops: None,
-            }),
-        });
+            });
 
         pass.set_pipeline(self.render.get_pipeline());
 
@@ -165,5 +172,24 @@ impl<'d> Frame<'d> {
             self.render.resources(),
             &mut self.drawn_in_frame,
         )
+    }
+}
+
+#[derive(Default)]
+struct Encoder(Option<CommandEncoder>);
+
+impl Encoder {
+    fn get(&mut self, render: &Render) -> &mut CommandEncoder {
+        use wgpu::CommandEncoderDescriptor;
+
+        self.0.get_or_insert_with(|| {
+            render
+                .device()
+                .create_command_encoder(&CommandEncoderDescriptor::default())
+        })
+    }
+
+    fn take(&mut self) -> Option<CommandEncoder> {
+        self.0.take()
     }
 }

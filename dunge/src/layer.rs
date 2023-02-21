@@ -135,7 +135,7 @@ impl<'l, V> Layer<'l, V> {
         size: (u32, u32),
         queue: &'l Queue,
         resources: &'l Resources,
-        need_to_commit_in_frame: &'l mut bool,
+        drawn_in_frame: &'l mut bool,
     ) -> Self {
         Self {
             pass,
@@ -144,7 +144,7 @@ impl<'l, V> Layer<'l, V> {
             resources,
             instance: None,
             vertex_type: PhantomData,
-            drawn_in_frame: need_to_commit_in_frame,
+            drawn_in_frame,
         }
     }
 
@@ -157,6 +157,11 @@ impl<'l, V> Layer<'l, V> {
         self.instance = Some(instance);
 
         Ok(())
+    }
+
+    /// Draws nothing.
+    pub fn draw_empty(&mut self) {
+        *self.drawn_in_frame = true;
     }
 
     /// Draws a [mesh](crate::MeshHandle).
@@ -180,8 +185,7 @@ impl<'l, V> Layer<'l, V> {
         self.pass
             .draw_indexed(0..mesh.n_indices(), 0, 0..instance.n_instances());
 
-        *self.drawn_in_frame = true;
-
+        self.draw_empty();
         Ok(())
     }
 
