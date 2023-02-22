@@ -4,9 +4,6 @@ use {
     std::io::Cursor,
 };
 
-#[allow(dead_code)]
-fn main() {}
-
 #[must_use]
 pub fn read_png(bytes: &[u8]) -> RgbaImage {
     Reader::with_format(Cursor::new(bytes), ImageFormat::Png)

@@ -58,7 +58,6 @@ impl App {
             ];
             // Indices of triangle vetrices:
             const INDICES: [u16; 3] = [0, 1, 2];
-
             let data = MeshData::new(&VERTICES, &[INDICES]).unwrap();
             context.create_mesh(data)
         };

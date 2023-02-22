@@ -42,6 +42,7 @@ impl<'d> Frame<'d> {
     ///
     /// You usually don't need to call this method manually.
     /// It is called automatically at the end of the [`Frame`] lifetime.
+    /// It can be useful if you want to partially render a frame in multiple layers.
     ///
     /// # Example
     /// ```
