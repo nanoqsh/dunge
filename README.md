@@ -25,7 +25,11 @@ cargo add dunge
 
 Then, let's create a new window to draw something in it:
 ```rust
-use dunge::*;
+// Import some types
+use dunge::{
+    color::Srgba, input::Input, transform::Position, vertex::ColorVertex, Context, Error, Frame,
+    InitialState, InstanceHandle, Loop, MeshData, MeshHandle, Perspective, View, ViewHandle,
+};
 
 fn main() {
     dunge::make_window(InitialState::default())
@@ -59,7 +63,7 @@ impl App {
             // Indices of triangle vetrices:
             const INDICES: [u16; 3] = [0, 1, 2];
             let data = MeshData::new(&VERTICES, &[INDICES]).unwrap();
-            context.create_mesh(data)
+            context.create_mesh(&data)
         };
 
         // Create the view
