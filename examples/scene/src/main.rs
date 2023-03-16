@@ -147,7 +147,7 @@ impl App {
 
         // Create the view
         let camera = Camera::default();
-        let view = context.create_view(camera.view::<Orthographic>());
+        let view = context.create_view(camera.view(Orthographic::default()));
 
         Self {
             sprites,
@@ -185,7 +185,7 @@ impl Loop for App {
                 height_factor: 1. / sprite_scale,
                 ..Default::default()
             },
-            ..self.camera.view()
+            ..self.camera.view(Orthographic::default())
         };
         context.update_view(self.view, view)?;
 

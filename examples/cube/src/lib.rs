@@ -58,7 +58,7 @@ impl App {
 
         // Create the view
         let camera = Camera::default();
-        let view = context.create_view(camera.view::<Perspective>());
+        let view = context.create_view(camera.view(Perspective::default()));
 
         Self {
             texture,
@@ -99,7 +99,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let view = self.camera.view::<Perspective>();
+        let view = self.camera.view(Perspective::default());
         context.update_view(self.view, view)?;
 
         Ok(())

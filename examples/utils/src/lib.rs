@@ -28,17 +28,15 @@ impl Camera {
     }
 
     #[must_use]
-    pub fn view<P>(&self) -> View<P>
-    where
-        P: Default,
-    {
+    pub fn view<P>(&self, proj: P) -> View<P> {
         let x = self.distance * self.angle.sin() * self.pitch.cos();
         let y = self.distance * self.pitch.sin();
         let z = self.distance * self.angle.cos() * self.pitch.cos();
 
         View {
             eye: [x, y, z],
-            ..Default::default()
+            look: [0.; 3],
+            proj,
         }
     }
 }
