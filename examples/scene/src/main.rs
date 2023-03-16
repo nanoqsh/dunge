@@ -207,21 +207,13 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        const VIGNETTE_COLOR: Srgba<u8> = Srgba([36, 30, 47, 255]);
         const CLEAR_COLOR: Srgba<u8> = Srgba([46, 34, 47, 255]);
 
-        frame.set_vignette_color(VIGNETTE_COLOR);
-        frame
+        let mut layer = frame
             .texture_layer()
             .with_clear_color(CLEAR_COLOR)
             .with_clear_depth()
-            .start()
-            .draw_empty();
-
-        frame.commit_in_frame();
-
-        frame.set_vignette_color(());
-        let mut layer = frame.texture_layer().with_clear_color(()).start();
+            .start();
 
         layer.bind_view(self.view)?;
         layer.bind_texture(self.sprites)?;

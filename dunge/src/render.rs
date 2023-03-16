@@ -153,7 +153,7 @@ impl Render {
                 push_constant_ranges: &[],
             });
 
-            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            device.create_render_pipeline(&RenderPipelineDescriptor {
                 label: Some("render pipeline"),
                 layout: Some(&pipeline_layout),
                 vertex: VertexState {
@@ -188,9 +188,7 @@ impl Render {
                 }),
                 multisample: MultisampleState::default(),
                 multiview: None,
-            });
-
-            pipeline
+            })
         };
 
         let color_pipeline = {
@@ -205,7 +203,7 @@ impl Render {
                 push_constant_ranges: &[],
             });
 
-            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            device.create_render_pipeline(&RenderPipelineDescriptor {
                 label: Some("render pipeline"),
                 layout: Some(&pipeline_layout),
                 vertex: VertexState {
@@ -240,9 +238,7 @@ impl Render {
                 }),
                 multisample: MultisampleState::default(),
                 multiview: None,
-            });
-
-            pipeline
+            })
         };
 
         let flat_pipeline = {
@@ -257,7 +253,7 @@ impl Render {
                 push_constant_ranges: &[],
             });
 
-            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            device.create_render_pipeline(&RenderPipelineDescriptor {
                 label: Some("render pipeline"),
                 layout: Some(&pipeline_layout),
                 vertex: VertexState {
@@ -292,34 +288,20 @@ impl Render {
                 }),
                 multisample: MultisampleState::default(),
                 multiview: None,
-            });
-
-            pipeline
+            })
         };
 
         let post_shader_data_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
-                BindGroupLayoutEntry {
-                    binding: shader::POST_DATA_BINDING,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
+            entries: &[BindGroupLayoutEntry {
+                binding: shader::POST_DATA_BINDING,
+                visibility: ShaderStages::FRAGMENT,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
                 },
-                BindGroupLayoutEntry {
-                    binding: shader::POST_VIGNETTE_BINDING,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
+                count: None,
+            }],
             label: Some("post shader data bind group layout"),
         });
 
@@ -335,7 +317,7 @@ impl Render {
                 push_constant_ranges: &[],
             });
 
-            let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            device.create_render_pipeline(&RenderPipelineDescriptor {
                 label: Some("render pipeline"),
                 layout: Some(&pipeline_layout),
                 vertex: VertexState {
@@ -364,9 +346,7 @@ impl Render {
                 depth_stencil: None,
                 multisample: MultisampleState::default(),
                 multiview: None,
-            });
-
-            pipeline
+            })
         };
 
         let render_frame =
@@ -483,10 +463,6 @@ impl Render {
 
     pub(crate) fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.resources.views.remove(handle.0)
-    }
-
-    pub(crate) fn set_vignette_color(&self, col: [f32; 4]) {
-        self.post_shader_data.set_vignette_color(col, &self.queue);
     }
 
     pub(crate) fn screen(&self) -> Screen {

@@ -159,11 +159,6 @@ impl<'l, V> Layer<'l, V> {
         Ok(())
     }
 
-    /// Draws nothing.
-    pub fn draw_empty(&mut self) {
-        *self.drawn_in_frame = true;
-    }
-
     /// Draws a [mesh](crate::MeshHandle).
     ///
     /// # Errors
@@ -185,7 +180,7 @@ impl<'l, V> Layer<'l, V> {
         self.pass
             .draw_indexed(0..mesh.n_indices(), 0, 0..instance.n_instances());
 
-        self.draw_empty();
+        *self.drawn_in_frame = true;
         Ok(())
     }
 

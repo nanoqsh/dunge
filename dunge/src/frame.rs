@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        color::{IntoLinear, Linear},
+        color::Linear,
         layer::{Builder, Layer},
         render::{GetPipeline, Render},
         shader,
@@ -28,14 +28,6 @@ impl<'d> Frame<'d> {
             frame_view,
             drawn_in_frame: false,
         }
-    }
-
-    pub fn set_vignette_color<C>(&mut self, color: C)
-    where
-        C: IntoLinear,
-    {
-        let Linear(color) = color.into_linear();
-        self.render.set_vignette_color(color.map(|v| v as f32));
     }
 
     /// Draws the frame in the screen buffer.
@@ -100,7 +92,7 @@ impl<'d> Frame<'d> {
                 &[],
             );
             pass.set_bind_group(
-                shader::POST_DATA_VIGNETTE_GROUP,
+                shader::POST_DATA_GROUP,
                 self.render.post_shader_data().bind_group(),
                 &[],
             );

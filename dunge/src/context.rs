@@ -2,7 +2,6 @@ use {
     crate::{
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
-        color::{IntoLinear, Linear},
         mesh::Data as MeshData,
         render::{InstanceHandle, MeshHandle, Render, TextureHandle, ViewHandle},
         render_frame::FrameFilter,
@@ -61,14 +60,6 @@ impl Context {
             filter: params.filter,
             ..self.render.screen()
         }));
-    }
-
-    pub fn set_vignette_color<C>(&mut self, color: C)
-    where
-        C: IntoLinear,
-    {
-        let Linear(color) = color.into_linear();
-        self.render.set_vignette_color(color.map(|v| v as f32));
     }
 
     /// Creates a new texture.
