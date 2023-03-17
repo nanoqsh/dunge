@@ -7,8 +7,8 @@ use {
         input::{Input, Key},
         transform::{Position, ReverseRotation, Transform},
         vertex::TextureVertex,
-        Context, Error, Frame, FrameParameters, InitialState, LayerParameters, Loop, MeshData,
-        Orthographic, TextureData, View, WindowMode,
+        Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData, Orthographic,
+        TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -49,7 +49,7 @@ impl App {
         });
 
         // Create layer
-        let layer = context.create_layer(LayerParameters::default());
+        let layer = context.create_layer();
 
         // Create the sprite texture
         let sprites = {

@@ -5,7 +5,7 @@ use {
         input::{Input, Key},
         transform::Position,
         vertex::{ColorVertex, TextureVertex},
-        Context, Error, Frame, LayerParameters, Loop, MeshData, Perspective, TextureData,
+        Context, Error, Frame, Loop, MeshData, Perspective, TextureData,
     },
     utils::Camera,
 };
@@ -29,9 +29,9 @@ pub struct App {
 
 impl App {
     pub fn new(context: &mut Context) -> Self {
-        // Create layers
-        let texture_layer = context.create_layer(LayerParameters::default());
-        let color_layer = context.create_layer(LayerParameters::default());
+        // Create layers. The vertex type inferred from the context
+        let texture_layer = context.create_layer();
+        let color_layer = context.create_layer();
 
         // Create a texture
         let texture = {

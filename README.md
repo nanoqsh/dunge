@@ -32,8 +32,7 @@ use dunge::{
     input::{Input, Key},
     transform::Position,
     vertex::ColorVertex,
-    Context, Error, Frame, InitialState, LayerParameters, Loop, MeshData, Perspective, View,
-    WindowMode,
+    Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View, WindowMode,
 };
 
 fn main() {
@@ -55,8 +54,8 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Create new layer for `ColorVertex`. The layer type inferred from the context
-        let layer = context.create_layer(LayerParameters::default());
+        // Create new layer for `ColorVertex`. The vertex type inferred from the context
+        let layer = context.create_layer();
 
         // Create a model instance
         let instance = context.create_instances([Position::default()]);

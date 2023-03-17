@@ -4,8 +4,7 @@ use dunge::{
     input::{Input, Key},
     transform::Position,
     vertex::ColorVertex,
-    Context, Error, Frame, InitialState, LayerParameters, Loop, MeshData, Perspective, View,
-    WindowMode,
+    Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View, WindowMode,
 };
 
 fn main() {
@@ -31,7 +30,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         // Create a layer
-        let layer = context.create_layer(LayerParameters::default());
+        let layer = context.create_layer();
 
         // Create a model instance
         let instance = {

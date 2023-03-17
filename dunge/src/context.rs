@@ -4,6 +4,7 @@ use {
         canvas::CanvasEvent,
         handles::*,
         mesh::Data as MeshData,
+        pipeline::{Blend, Compare, PipelineParameters, Topology},
         render::Render,
         render_frame::FrameFilter,
         screen::Screen,
@@ -12,6 +13,7 @@ use {
         vertex::Vertex,
         Error,
     },
+    std::marker::PhantomData,
     winit::{event_loop::EventLoopProxy, window::Window},
 };
 
@@ -63,12 +65,24 @@ impl Context {
         }));
     }
 
-    /// Creates a new layer with [`LayerParameters`].
-    pub fn create_layer<V>(&mut self, params: LayerParameters) -> LayerHandle<V>
+    /// Creates a new layer with default parameters.
+    ///
+    /// This is a shortcut for `context.create_layer_with_parameters().build()`.
+    /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
+    pub fn create_layer<V>(&mut self) -> LayerHandle<V>
     where
         V: Vertex,
     {
-        self.render.create_layer(params)
+        self.create_layer_with_parameters().build()
+    }
+
+    /// Creates a layer [builder](LayerParametersBuilder) with custom parameters.
+    pub fn create_layer_with_parameters<V>(&mut self) -> LayerParametersBuilder<V> {
+        LayerParametersBuilder {
+            render: &mut self.render,
+            params: PipelineParameters::default(),
+            vertex_type: PhantomData,
+        }
     }
 
     /// Deletes the layer.
@@ -229,36 +243,40 @@ impl Default for FrameParameters {
     }
 }
 
-/// Describes layer parameters.
-#[derive(Clone, Copy)]
-pub struct LayerParameters {
-    // Is cull faces enabled
-    pub cull_faces: bool,
-
-    // Depth comparison function
-    pub depth_compare: Compare,
+/// Builds new layer with specific parameters.
+#[must_use]
+pub struct LayerParametersBuilder<'a, V> {
+    render: &'a mut Render,
+    params: PipelineParameters,
+    vertex_type: PhantomData<V>,
 }
 
-impl Default for LayerParameters {
-    fn default() -> Self {
-        Self {
-            cull_faces: true,
-            depth_compare: Compare::Less,
-        }
+impl<V> LayerParametersBuilder<'_, V> {
+    pub fn with_blend(mut self, blend: Blend) -> Self {
+        self.params.blend = blend;
+        self
     }
-}
 
-#[derive(Clone, Copy)]
-pub enum Compare {
-    /// Function never passes
-    Never,
+    pub fn with_topology(mut self, topology: Topology) -> Self {
+        self.params.topology = topology;
+        self
+    }
 
-    /// Function passes if new value less than existing value
-    Less,
+    pub fn with_cull_faces(mut self, cull_faces: bool) -> Self {
+        self.params.cull_faces = cull_faces;
+        self
+    }
 
-    /// Function passes if new value is greater than existing value
-    Greater,
+    pub fn with_depth_compare(mut self, depth_compare: Compare) -> Self {
+        self.params.depth_compare = depth_compare;
+        self
+    }
 
-    /// Function always passes
-    Always,
+    #[must_use]
+    pub fn build(self) -> LayerHandle<V>
+    where
+        V: Vertex,
+    {
+        self.render.create_layer(self.params)
+    }
 }

@@ -1,7 +1,6 @@
 use {
     crate::{
         camera::{Camera, Projection, View},
-        context::LayerParameters,
         depth_frame::DepthFrame,
         frame::Frame,
         handles::*,
@@ -9,6 +8,7 @@ use {
         layout::InstanceModel,
         mesh::{Data as MeshData, Mesh},
         pipeline::Pipeline,
+        pipeline::{Blend, PipelineParameters, Topology},
         r#loop::Loop,
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
@@ -21,8 +21,7 @@ use {
     },
     once_cell::unsync::OnceCell,
     wgpu::{
-        BindGroupLayout, Device, Queue, RenderPipeline, ShaderModule, Surface,
-        SurfaceConfiguration, SurfaceError, TextureFormat,
+        BindGroupLayout, Device, Queue, ShaderModule, Surface, SurfaceConfiguration, SurfaceError,
     },
     winit::window::Window,
 };
@@ -33,19 +32,17 @@ pub(crate) struct Render {
     surface: Surface,
     config: SurfaceConfiguration,
     screen: Screen,
-    post_pipeline: RenderPipeline,
     shaders: Shaders,
+    layouts: Layouts,
+    post_pipeline: Pipeline,
     post_shader_data: PostShaderData,
-    textured_layout: BindGroupLayout,
-    camera_layout: BindGroupLayout,
-    post_shader_data_layout: BindGroupLayout,
     render_frame: RenderFrame,
     depth_frame: DepthFrame,
     resources: Resources,
 }
 
 impl Render {
-    pub(crate) async fn new(window: &Window) -> Self {
+    pub async fn new(window: &Window) -> Self {
         use wgpu::*;
 
         const TDIFF_BINDING: u32 = {
@@ -156,55 +153,33 @@ impl Render {
             label: Some("post shader data bind group layout"),
         });
 
-        let post_pipeline = {
-            let shader = device.create_shader_module(ShaderModuleDescriptor {
-                label: Some("post shader"),
-                source: ShaderSource::Wgsl(include_str!("shaders/post.wgsl").into()),
-            });
-
-            let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-                label: Some("render pipeline layout"),
-                bind_group_layouts: &[&post_shader_data_layout, &textured_layout],
-                push_constant_ranges: &[],
-            });
-
-            device.create_render_pipeline(&RenderPipelineDescriptor {
-                label: Some("render pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: VertexState {
-                    module: &shader,
-                    entry_point: "vs_main",
-                    buffers: &[],
-                },
-                fragment: Some(FragmentState {
-                    module: &shader,
-                    entry_point: "fs_main",
-                    targets: &[Some(ColorTargetState {
-                        format: config.format,
-                        blend: Some(BlendState::ALPHA_BLENDING),
-                        write_mask: ColorWrites::ALL,
-                    })],
-                }),
-                primitive: PrimitiveState {
-                    topology: PrimitiveTopology::TriangleStrip,
-                    strip_index_format: None,
-                    front_face: FrontFace::Ccw,
-                    cull_mode: None,
-                    polygon_mode: PolygonMode::Fill,
-                    unclipped_depth: false,
-                    conservative: false,
-                },
-                depth_stencil: None,
-                multisample: MultisampleState::default(),
-                multiview: None,
-            })
-        };
-
         let render_frame =
             RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &textured_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
         let post_shader_data = PostShaderData::new(&device, &post_shader_data_layout);
+
+        let shaders = Shaders::default();
+        let layouts = Layouts {
+            textured_layout,
+            camera_layout,
+            post_shader_data_layout,
+        };
+
+        let post_pipeline = Pipeline::new(
+            &device,
+            &shaders,
+            &layouts,
+            config.format,
+            Shader::Post,
+            PipelineParameters {
+                blend: Blend::AlphaBlending,
+                topology: Topology::TriangleStrip,
+                cull_faces: false,
+                ..Default::default()
+            },
+            false,
+        );
 
         Self {
             device,
@@ -212,38 +187,51 @@ impl Render {
             surface,
             config,
             screen: Screen::default(),
+            shaders,
+            layouts,
             post_pipeline,
-            shaders: Shaders::default(),
             post_shader_data,
-            textured_layout,
-            camera_layout,
-            post_shader_data_layout,
             render_frame,
             depth_frame,
             resources: Resources::default(),
         }
     }
 
-    pub(crate) fn create_layer<V>(&mut self, params: LayerParameters) -> LayerHandle<V>
+    pub fn create_layer<V>(&mut self, params: PipelineParameters) -> LayerHandle<V>
     where
         V: Vertex,
     {
-        let pipeline = Pipeline::new(self, Shader::from_vertex_type::<V>(), params);
+        let pipeline = Pipeline::new(
+            &self.device,
+            &self.shaders,
+            &self.layouts,
+            self.config.format,
+            Shader::from_vertex_type::<V>(),
+            params,
+            true,
+        );
+
         let id = self.resources.layers.insert(pipeline);
         LayerHandle::new(id)
     }
 
-    pub(crate) fn delete_layer<V>(&mut self, handle: LayerHandle<V>) -> Result<(), Error> {
+    pub fn delete_layer<V>(&mut self, handle: LayerHandle<V>) -> Result<(), Error> {
         self.resources.layers.remove(handle.id())
     }
 
-    pub(crate) fn create_texture(&mut self, data: TextureData) -> TextureHandle {
-        let texture = Texture::new(data, &self.device, &self.queue, &self.textured_layout);
+    pub fn create_texture(&mut self, data: TextureData) -> TextureHandle {
+        let texture = Texture::new(
+            data,
+            &self.device,
+            &self.queue,
+            &self.layouts.textured_layout,
+        );
+
         let id = self.resources.textures.insert(texture);
         TextureHandle(id)
     }
 
-    pub(crate) fn update_texture(
+    pub fn update_texture(
         &mut self,
         handle: TextureHandle,
         data: TextureData,
@@ -254,17 +242,17 @@ impl Render {
             .map(|texture| texture.update_data(data, &self.queue))
     }
 
-    pub(crate) fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
+    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
         self.resources.textures.remove(handle.0)
     }
 
-    pub(crate) fn create_instances(&mut self, models: &[InstanceModel]) -> InstanceHandle {
+    pub fn create_instances(&mut self, models: &[InstanceModel]) -> InstanceHandle {
         let instance = Instance::new(models, &self.device);
         let id = self.resources.instances.insert(instance);
         InstanceHandle(id)
     }
 
-    pub(crate) fn update_instances(
+    pub fn update_instances(
         &mut self,
         handle: InstanceHandle,
         models: &[InstanceModel],
@@ -275,11 +263,11 @@ impl Render {
             .map(|instances| instances.update_models(models, &self.queue))
     }
 
-    pub(crate) fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), Error> {
+    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), Error> {
         self.resources.instances.remove(handle.0)
     }
 
-    pub(crate) fn create_mesh<V>(&mut self, data: &MeshData<V>) -> MeshHandle<V>
+    pub fn create_mesh<V>(&mut self, data: &MeshData<V>) -> MeshHandle<V>
     where
         V: Vertex,
     {
@@ -288,11 +276,7 @@ impl Render {
         MeshHandle::new(id)
     }
 
-    pub(crate) fn update_mesh<V>(
-        &mut self,
-        handle: MeshHandle<V>,
-        data: &MeshData<V>,
-    ) -> Result<(), Error>
+    pub fn update_mesh<V>(&mut self, handle: MeshHandle<V>, data: &MeshData<V>) -> Result<(), Error>
     where
         V: Vertex,
     {
@@ -302,37 +286,33 @@ impl Render {
             .map(|mesh| mesh.update_data(data, &self.queue))
     }
 
-    pub(crate) fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
+    pub fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
         self.resources.meshes.remove(handle.id())
     }
 
-    pub(crate) fn create_view(&mut self, view: View<Projection>) -> ViewHandle {
-        let mut camera = Camera::new(&self.device, &self.camera_layout);
+    pub fn create_view(&mut self, view: View<Projection>) -> ViewHandle {
+        let mut camera = Camera::new(&self.device, &self.layouts.camera_layout);
         camera.set_view(view);
         let id = self.resources.views.insert(camera);
         ViewHandle(id)
     }
 
-    pub(crate) fn update_view(
-        &mut self,
-        handle: ViewHandle,
-        view: View<Projection>,
-    ) -> Result<(), Error> {
+    pub fn update_view(&mut self, handle: ViewHandle, view: View<Projection>) -> Result<(), Error> {
         self.resources
             .views
             .get_mut(handle.0)
             .map(|camera| camera.set_view(view))
     }
 
-    pub(crate) fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.resources.views.remove(handle.0)
     }
 
-    pub(crate) fn screen(&self) -> Screen {
+    pub fn screen(&self) -> Screen {
         self.screen
     }
 
-    pub(crate) fn set_screen(&mut self, screen: Option<Screen>) {
+    pub fn set_screen(&mut self, screen: Option<Screen>) {
         if let Some(screen) = screen {
             self.screen = screen;
         }
@@ -348,13 +328,13 @@ impl Render {
             virt_size,
             self.screen.filter,
             &self.device,
-            &self.textured_layout,
+            &self.layouts.textured_layout,
         );
 
         self.depth_frame = DepthFrame::new(virt_size, &self.device);
     }
 
-    pub(crate) fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
+    pub fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
     where
         L: Loop,
     {
@@ -380,64 +360,31 @@ impl Render {
         RenderResult::Ok
     }
 
-    pub(crate) fn shader_module(&self, shader: Shader) -> &ShaderModule {
-        use wgpu::{ShaderModuleDescriptor, ShaderSource};
-
-        let cell = match shader {
-            Shader::Color => &self.shaders.color,
-            Shader::Flat => &self.shaders.flat,
-            Shader::Post => &self.shaders.post,
-            Shader::Textured => &self.shaders.textured,
-        };
-
-        cell.get_or_init(|| {
-            self.device.create_shader_module(ShaderModuleDescriptor {
-                label: Some("textured shader"),
-                source: ShaderSource::Wgsl(shader.source().into()),
-            })
-        })
-    }
-
-    pub(crate) fn device(&self) -> &Device {
+    pub fn device(&self) -> &Device {
         &self.device
     }
 
-    pub(crate) fn queue(&self) -> &Queue {
+    pub fn queue(&self) -> &Queue {
         &self.queue
     }
 
-    pub(crate) fn format(&self) -> TextureFormat {
-        self.config.format
-    }
-
-    pub(crate) fn post_pipeline(&self) -> &RenderPipeline {
+    pub fn post_pipeline(&self) -> &Pipeline {
         &self.post_pipeline
     }
 
-    pub(crate) fn post_shader_data(&self) -> &PostShaderData {
+    pub fn post_shader_data(&self) -> &PostShaderData {
         &self.post_shader_data
     }
 
-    pub(crate) fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
-        match shader {
-            Shader::Color => BindGroupLayouts::N1([&self.camera_layout]),
-            Shader::Flat => BindGroupLayouts::N1([&self.textured_layout]),
-            Shader::Post => {
-                BindGroupLayouts::N2([&self.post_shader_data_layout, &self.textured_layout])
-            }
-            Shader::Textured => BindGroupLayouts::N2([&self.camera_layout, &self.textured_layout]),
-        }
-    }
-
-    pub(crate) fn render_frame(&self) -> &RenderFrame {
+    pub fn render_frame(&self) -> &RenderFrame {
         &self.render_frame
     }
 
-    pub(crate) fn depth_frame(&self) -> &DepthFrame {
+    pub fn depth_frame(&self) -> &DepthFrame {
         &self.depth_frame
     }
 
-    pub(crate) fn resources(&self) -> &Resources {
+    pub fn resources(&self) -> &Resources {
         &self.resources
     }
 
@@ -460,11 +407,31 @@ pub(crate) enum RenderResult<E> {
 }
 
 #[derive(Default)]
-struct Shaders {
+pub(crate) struct Shaders {
     color: OnceCell<ShaderModule>,
     flat: OnceCell<ShaderModule>,
     post: OnceCell<ShaderModule>,
     textured: OnceCell<ShaderModule>,
+}
+
+impl Shaders {
+    pub fn module(&self, device: &Device, shader: Shader) -> &ShaderModule {
+        use wgpu::{ShaderModuleDescriptor, ShaderSource};
+
+        let cell = match shader {
+            Shader::Color => &self.color,
+            Shader::Flat => &self.flat,
+            Shader::Post => &self.post,
+            Shader::Textured => &self.textured,
+        };
+
+        cell.get_or_init(|| {
+            device.create_shader_module(ShaderModuleDescriptor {
+                label: None,
+                source: ShaderSource::Wgsl(shader.source().into()),
+            })
+        })
+    }
 }
 
 pub(crate) enum BindGroupLayouts<'a> {
@@ -475,8 +442,27 @@ pub(crate) enum BindGroupLayouts<'a> {
 impl<'a> BindGroupLayouts<'a> {
     pub fn as_slice(&self) -> &[&'a BindGroupLayout] {
         match self {
-            BindGroupLayouts::N1(b) => b,
-            BindGroupLayouts::N2(b) => b,
+            Self::N1(b) => b,
+            Self::N2(b) => b,
+        }
+    }
+}
+
+pub(crate) struct Layouts {
+    textured_layout: BindGroupLayout,
+    camera_layout: BindGroupLayout,
+    post_shader_data_layout: BindGroupLayout,
+}
+
+impl Layouts {
+    pub fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
+        match shader {
+            Shader::Color => BindGroupLayouts::N1([&self.camera_layout]),
+            Shader::Flat => BindGroupLayouts::N1([&self.textured_layout]),
+            Shader::Post => {
+                BindGroupLayouts::N2([&self.post_shader_data_layout, &self.textured_layout])
+            }
+            Shader::Textured => BindGroupLayouts::N2([&self.camera_layout, &self.textured_layout]),
         }
     }
 }

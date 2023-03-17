@@ -36,10 +36,11 @@ pub use crate::canvas::from_element;
 pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{Canvas, InitialState, WindowMode},
-    context::{Compare, Context, FrameParameters, LayerParameters, Limits},
+    context::{Context, FrameParameters, LayerParametersBuilder, Limits},
     frame::Frame,
     layer::{Builder as LayerBuilder, Layer},
     mesh::Data as MeshData,
+    pipeline::{Blend, Compare, Topology},
     r#loop::{Error, Loop},
     render_frame::FrameFilter,
     texture::Data as TextureData,

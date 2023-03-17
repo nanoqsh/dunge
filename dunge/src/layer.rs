@@ -45,7 +45,7 @@ impl<'l, V> Layer<'l, V> {
         }
     }
 
-    /// Binds a [instance](crate::InstanceHandle).
+    /// Binds a [instance](crate::handles::InstanceHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given instance handler was deleted.
@@ -56,7 +56,7 @@ impl<'l, V> Layer<'l, V> {
         Ok(())
     }
 
-    /// Draws a [mesh](crate::MeshHandle).
+    /// Draws a [mesh](crate::handles::MeshHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given mesh handler was deleted.
@@ -98,7 +98,7 @@ impl<'l, V> Layer<'l, V> {
 }
 
 impl Layer<'_, TextureVertex> {
-    /// Binds a [view](crate::ViewHandle).
+    /// Binds a [view](crate::handles::ViewHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
@@ -108,7 +108,7 @@ impl Layer<'_, TextureVertex> {
 }
 
 impl Layer<'_, ColorVertex> {
-    /// Binds a [view](crate::ViewHandle).
+    /// Binds a [view](crate::handles::ViewHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
@@ -118,7 +118,7 @@ impl Layer<'_, ColorVertex> {
 }
 
 impl Layer<'_, TextureVertex> {
-    /// Binds a [texture](crate::TextureHandle).
+    /// Binds a [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
@@ -128,7 +128,7 @@ impl Layer<'_, TextureVertex> {
 }
 
 impl Layer<'_, FlatVertex> {
-    /// Binds a [texture](crate::TextureHandle).
+    /// Binds a [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
