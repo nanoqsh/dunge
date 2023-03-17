@@ -1,121 +1,20 @@
+#![allow(clippy::wildcard_imports)]
+
 use {
     crate::{
-        camera::Camera,
         color::{IntoLinear, Linear},
         frame::Frame,
+        handles::*,
         instance::Instance,
-        mesh::Mesh,
+        pipeline::Pipeline,
         r#loop::Error,
-        render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
+        render::Resources,
         shader,
-        storage::Storage,
-        texture::Texture,
         vertex::{ColorVertex, FlatVertex, TextureVertex, UsesDepth},
     },
     std::marker::PhantomData,
     wgpu::{Queue, RenderPass},
 };
-
-/// The layer builder. It creates a configured [`Layer`].
-#[must_use]
-pub struct Builder<'l, 'd, V> {
-    frame: &'l mut Frame<'d>,
-    clear_color: Option<Linear<f64>>,
-    clear_depth: bool,
-    vertex_type: PhantomData<V>,
-}
-
-impl<'l, 'd, V> Builder<'l, 'd, V> {
-    pub(crate) fn new(frame: &'l mut Frame<'d>) -> Self {
-        Self {
-            frame,
-            clear_color: None,
-            clear_depth: false,
-            vertex_type: PhantomData,
-        }
-    }
-
-    /// Sets clear color for the layer.
-    ///
-    /// It takes a color parameter, which must implement the [`IntoLinear`] trait.
-    ///
-    /// Don't set this setting if you don't want to fill
-    /// the previous layer (or frame) with some color.
-    /// Or set to clear the current buffer if a layer is already drawn
-    /// into the frame by calling [`commit_in_frame`](crate::Frame::commit_in_frame).
-    ///
-    /// # Example
-    /// ```
-    /// # use dunge::color::Srgba;
-    /// # struct Frame;
-    /// # impl Frame {
-    /// #     fn texture_layer(self) -> Self { self }
-    /// #     fn with_clear_color(self, _: Srgba<u8>) -> Self { self }
-    /// #     fn start(self) {}
-    /// # }
-    /// # let frame = Frame;
-    /// let color = Srgba([20, 30, 40, 255]);
-    /// let mut layer = frame
-    ///     .texture_layer()
-    ///     .with_clear_color(color)
-    ///     .start();
-    /// ```
-    ///
-    /// To clear a layer with a transparent color, it is enough to pass `()` as a parameter.
-    ///
-    /// # Example
-    /// ```
-    /// # struct Frame;
-    /// # impl Frame {
-    /// #     fn texture_layer(self) -> Self { self }
-    /// #     fn with_clear_color(self, _: ()) -> Self { self }
-    /// #     fn start(self) {}
-    /// # }
-    /// # let frame = Frame;
-    /// let mut layer = frame
-    ///     .texture_layer()
-    ///     .with_clear_color(())
-    ///     .start();
-    /// ```
-    pub fn with_clear_color<C>(self, color: C) -> Self
-    where
-        C: IntoLinear,
-    {
-        Self {
-            clear_color: Some(color.into_linear()),
-            ..self
-        }
-    }
-
-    /// Sets the flag to clear the depth buffer or not for the layer.
-    pub fn with_clear_depth(self) -> Self
-    where
-        V: UsesDepth,
-    {
-        Self {
-            clear_depth: true,
-            ..self
-        }
-    }
-}
-
-impl<'l> Builder<'l, '_, TextureVertex> {
-    pub fn start(self) -> Layer<'l, TextureVertex> {
-        self.frame.start_layer(self.clear_color, self.clear_depth)
-    }
-}
-
-impl<'l> Builder<'l, '_, ColorVertex> {
-    pub fn start(self) -> Layer<'l, ColorVertex> {
-        self.frame.start_layer(self.clear_color, self.clear_depth)
-    }
-}
-
-impl<'l> Builder<'l, '_, FlatVertex> {
-    pub fn start(self) -> Layer<'l, FlatVertex> {
-        self.frame.start_layer(self.clear_color, self.clear_depth)
-    }
-}
 
 /// The frame layer. Can be created from a [`Frame`] instance.
 #[must_use]
@@ -240,11 +139,113 @@ impl Layer<'_, FlatVertex> {
     }
 }
 
-/// A container of drawable resources.
-#[derive(Default)]
-pub(crate) struct Resources {
-    pub(crate) textures: Storage<Texture>,
-    pub(crate) instances: Storage<Instance>,
-    pub(crate) meshes: Storage<Mesh>,
-    pub(crate) views: Storage<Camera>,
+/// The layer builder. It creates a configured [`Layer`].
+#[must_use]
+pub struct Builder<'l, 'd, V> {
+    frame: &'l mut Frame<'d>,
+    pipeline: &'d Pipeline,
+    clear_color: Option<Linear<f64>>,
+    clear_depth: bool,
+    vertex_type: PhantomData<V>,
+}
+
+impl<'l, 'd, V> Builder<'l, 'd, V> {
+    pub(crate) fn new(frame: &'l mut Frame<'d>, pipeline: &'d Pipeline) -> Self {
+        Self {
+            frame,
+            pipeline,
+            clear_color: None,
+            clear_depth: false,
+            vertex_type: PhantomData,
+        }
+    }
+
+    /// Sets clear color for the layer.
+    ///
+    /// It takes a color parameter, which must implement the [`IntoLinear`] trait.
+    ///
+    /// Don't set this setting if you don't want to fill
+    /// the previous layer (or frame) with some color.
+    /// Or set to clear the current buffer if a layer is already drawn
+    /// into the frame by calling [`commit_in_frame`](crate::Frame::commit_in_frame).
+    ///
+    /// # Example
+    /// ```
+    /// # use dunge::color::Srgba;
+    /// # struct Frame;
+    /// # impl Frame {
+    /// #     fn texture_layer(self) -> Self { self }
+    /// #     fn with_clear_color(self, _: Srgba<u8>) -> Self { self }
+    /// #     fn start(self) {}
+    /// # }
+    /// # let frame = Frame;
+    /// let color = Srgba([20, 30, 40, 255]);
+    /// let mut layer = frame
+    ///     .texture_layer()
+    ///     .with_clear_color(color)
+    ///     .start();
+    /// ```
+    ///
+    /// To clear a layer with a transparent color, it is enough to pass `()` as a parameter.
+    ///
+    /// # Example
+    /// ```
+    /// # struct Frame;
+    /// # impl Frame {
+    /// #     fn texture_layer(self) -> Self { self }
+    /// #     fn with_clear_color(self, _: ()) -> Self { self }
+    /// #     fn start(self) {}
+    /// # }
+    /// # let frame = Frame;
+    /// let mut layer = frame
+    ///     .texture_layer()
+    ///     .with_clear_color(())
+    ///     .start();
+    /// ```
+    pub fn with_clear_color<C>(self, color: C) -> Self
+    where
+        C: IntoLinear,
+    {
+        Self {
+            clear_color: Some(color.into_linear()),
+            ..self
+        }
+    }
+
+    /// Sets the flag to clear the depth buffer or not for the layer.
+    pub fn with_clear_depth(self) -> Self
+    where
+        V: UsesDepth,
+    {
+        Self {
+            clear_depth: true,
+            ..self
+        }
+    }
+
+    pub fn start_(self) -> Layer<'l, V> {
+        self.frame
+            .start_layer_(self.pipeline, self.clear_color, self.clear_depth)
+    }
+}
+
+impl<'l> Builder<'l, '_, TextureVertex> {
+    #[deprecated]
+    pub fn start(self) -> Layer<'l, TextureVertex> {
+        self.frame.start_layer(self.clear_color, self.clear_depth)
+    }
+}
+
+impl<'l> Builder<'l, '_, ColorVertex> {
+    #[deprecated]
+    pub fn start(self) -> Layer<'l, ColorVertex> {
+        self.frame.start_layer(self.clear_color, self.clear_depth)
+    }
+}
+
+impl<'l> Builder<'l, '_, FlatVertex> {
+    #[deprecated]
+    pub fn start(self) -> Layer<'l, FlatVertex> {
+        self.frame.start_layer(self.clear_color, self.clear_depth)
+    }
 }

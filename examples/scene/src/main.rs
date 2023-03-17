@@ -209,6 +209,12 @@ impl Loop for App {
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         const CLEAR_COLOR: Srgba<u8> = Srgba([46, 34, 47, 255]);
 
+        // let mut layer = frame
+        //     .layer(self.my_texture_layer)
+        //     .with_clear_color(CLEAR_COLOR)
+        //     .with_clear_depth()
+        //     .start();
+
         let mut layer = frame
             .texture_layer()
             .with_clear_color(CLEAR_COLOR)

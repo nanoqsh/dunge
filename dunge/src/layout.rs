@@ -48,7 +48,7 @@ pub trait Layout: Plain {
     const VERTEX_STEP_MODE: VertexStepMode;
 }
 
-pub(crate) fn layout<V>() -> VertexBufferLayout<'static>
+pub(crate) const fn layout<V>() -> VertexBufferLayout<'static>
 where
     V: Layout,
 {

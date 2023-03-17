@@ -4,11 +4,13 @@ pub mod color;
 mod context;
 mod depth_frame;
 mod frame;
+mod handles;
 mod instance;
 mod layer;
 mod layout;
 mod r#loop;
 mod mesh;
+mod pipeline;
 mod render;
 mod render_frame;
 mod screen;
@@ -36,10 +38,10 @@ pub use crate::{
     canvas::{Canvas, InitialState, WindowMode},
     context::{Context, FrameParameters, Limits},
     frame::Frame,
+    handles::*,
     layer::{Builder as LayerBuilder, Layer},
     mesh::Data as MeshData,
     r#loop::{Error, Loop},
-    render::{InstanceHandle, MeshHandle, TextureHandle, ViewHandle},
     render_frame::FrameFilter,
     texture::Data as TextureData,
 };

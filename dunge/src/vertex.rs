@@ -1,12 +1,15 @@
 //! Vertex types.
 
 use {
-    crate::layout::{Layout, Plain},
+    crate::{
+        layout::{Layout, Plain},
+        shader::ShaderType,
+    },
     wgpu::{VertexAttribute, VertexStepMode},
 };
 
 /// A trait that describes a vertex.
-pub trait Vertex: Layout {}
+pub trait Vertex: Layout + ShaderType {}
 
 /// Vertex for drawing colored triangles.
 #[allow(clippy::module_name_repetitions)]

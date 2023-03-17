@@ -1,9 +1,12 @@
+#![allow(clippy::wildcard_imports)]
+
 use {
     crate::{
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
+        handles::*,
         mesh::Data as MeshData,
-        render::{InstanceHandle, MeshHandle, Render, TextureHandle, ViewHandle},
+        render::Render,
         render_frame::FrameFilter,
         screen::Screen,
         texture::Data as TextureData,
@@ -60,6 +63,19 @@ impl Context {
             filter: params.filter,
             ..self.render.screen()
         }));
+    }
+
+    /// Creates a new layer.
+    pub fn create_layer<V>(&mut self) -> LayerHandle<V>
+    where
+        V: Vertex,
+    {
+        self.render.create_layer()
+    }
+
+    /// Deletes the layer.
+    pub fn delete_layer<V>(&mut self, handle: LayerHandle<V>) -> Result<(), Error> {
+        self.render.delete_layer(handle)
     }
 
     /// Creates a new texture.

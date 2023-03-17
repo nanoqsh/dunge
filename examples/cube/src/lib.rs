@@ -4,8 +4,8 @@ use {
         input::{Input, Key},
         transform::Position,
         vertex::{ColorVertex, TextureVertex},
-        Context, Error, Frame, InstanceHandle, Loop, MeshData, MeshHandle, Perspective,
-        TextureData, TextureHandle, ViewHandle,
+        Context, Error, Frame, InstanceHandle, LayerHandle, Loop, MeshData, MeshHandle,
+        Perspective, TextureData, TextureHandle, ViewHandle,
     },
     utils::Camera,
 };
@@ -16,6 +16,8 @@ enum State {
 }
 
 pub struct App {
+    texture_layer: LayerHandle<TextureVertex>,
+    color_layer: LayerHandle<ColorVertex>,
     texture: TextureHandle,
     instance: InstanceHandle,
     texture_mesh: MeshHandle<TextureVertex>,
@@ -27,6 +29,10 @@ pub struct App {
 
 impl App {
     pub fn new(context: &mut Context) -> Self {
+        // Create layers
+        let texture_layer = context.create_layer();
+        let color_layer = context.create_layer();
+
         // Create a texture
         let texture = {
             let image = utils::read_png(include_bytes!("grass.png"));
@@ -61,6 +67,8 @@ impl App {
         let view = context.create_view(camera.view(Perspective::default()));
 
         Self {
+            texture_layer,
+            color_layer,
             texture,
             instance,
             texture_mesh,
@@ -111,10 +119,10 @@ impl Loop for App {
         match self.state {
             State::Texture => {
                 let mut layer = frame
-                    .texture_layer()
+                    .layer(self.texture_layer)?
                     .with_clear_color(color)
                     .with_clear_depth()
-                    .start();
+                    .start_();
 
                 layer.bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;
@@ -123,10 +131,10 @@ impl Loop for App {
             }
             State::Color => {
                 let mut layer = frame
-                    .color_layer()
+                    .layer(self.color_layer)?
                     .with_clear_color(color)
                     .with_clear_depth()
-                    .start();
+                    .start_();
 
                 layer.bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;
