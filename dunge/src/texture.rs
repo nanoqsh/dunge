@@ -32,12 +32,7 @@ pub(crate) struct Texture {
 }
 
 impl Texture {
-    pub(crate) fn new(
-        data: Data,
-        device: &Device,
-        queue: &Queue,
-        layout: &BindGroupLayout,
-    ) -> Self {
+    pub fn new(data: Data, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> Self {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -105,7 +100,7 @@ impl Texture {
         }
     }
 
-    pub(crate) fn update_data(&mut self, data: Data, queue: &Queue) {
+    pub fn update_data(&mut self, data: Data, queue: &Queue) {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -132,7 +127,7 @@ impl Texture {
         );
     }
 
-    pub(crate) fn bind_group(&self) -> &BindGroup {
+    pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
 }

@@ -9,7 +9,7 @@ pub(crate) struct PostShaderData {
 }
 
 impl PostShaderData {
-    pub(crate) fn new(device: &Device, layout: &BindGroupLayout) -> Self {
+    pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
@@ -39,12 +39,12 @@ impl PostShaderData {
         }
     }
 
-    pub(crate) fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
+    pub fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
         let uniform = PostShaderDataUniform::new(width as f32, height as f32);
         queue.write_buffer(&self.buffer_data, 0, uniform.as_bytes());
     }
 
-    pub(crate) fn bind_group(&self) -> &BindGroup {
+    pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
 }

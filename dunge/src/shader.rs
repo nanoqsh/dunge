@@ -2,7 +2,7 @@ pub(crate) use shader_type::{ShaderType, ShaderValue};
 
 use {
     crate::{
-        layout::{layout, InstanceModel},
+        layout::{InstanceModel, Layout},
         vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     wgpu::VertexBufferLayout,
@@ -101,4 +101,17 @@ impl ShaderType for FlatVertex {
 
 impl ShaderType for TextureVertex {
     const SHADER: ShaderValue = ShaderValue(Shader::Textured);
+}
+
+const fn layout<V>() -> VertexBufferLayout<'static>
+where
+    V: Layout,
+{
+    use {std::mem, wgpu::BufferAddress};
+
+    VertexBufferLayout {
+        array_stride: mem::size_of::<V>() as BufferAddress,
+        step_mode: V::VERTEX_STEP_MODE,
+        attributes: V::ATTRIBS,
+    }
 }

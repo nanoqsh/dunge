@@ -63,19 +63,30 @@ impl<'l, V> Layer<'l, V> {
     /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
     /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
     pub fn draw(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
-        use wgpu::IndexFormat;
+        use {crate::mesh::Type, wgpu::IndexFormat};
 
         let mesh = self.resources.meshes.get(handle.id())?;
         let instance = self.instance.ok_or(Error::InstanceNotSet)?;
 
         self.pass
-            .set_vertex_buffer(shader::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
-        self.pass
             .set_vertex_buffer(shader::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
-        self.pass
-            .set_index_buffer(mesh.index_buffer().slice(..), IndexFormat::Uint16);
-        self.pass
-            .draw_indexed(0..mesh.n_indices(), 0, 0..instance.n_instances());
+
+        match mesh.mesh_type() {
+            Type::Indexed {
+                index_buffer,
+                n_indices,
+            } => {
+                self.pass
+                    .set_vertex_buffer(shader::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
+                self.pass
+                    .set_index_buffer(index_buffer.slice(..), IndexFormat::Uint16);
+                self.pass
+                    .draw_indexed(0..*n_indices, 0, 0..instance.n_instances());
+            }
+            Type::Sequential { n_vertices } => {
+                self.pass.draw(0..*n_vertices, 0..instance.n_instances());
+            }
+        }
 
         *self.drawn_in_frame = true;
         Ok(())
@@ -218,6 +229,7 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
         }
     }
 
+    /// Starts draw the layer.
     pub fn start(self) -> Layer<'l, V> {
         self.frame
             .start_layer(self.pipeline, self.clear_color, self.clear_depth)

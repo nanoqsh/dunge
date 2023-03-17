@@ -5,10 +5,10 @@ use {
 
 #[derive(Clone, Copy)]
 pub(crate) struct Screen {
-    pub(crate) width: NonZeroU32,
-    pub(crate) height: NonZeroU32,
-    pub(crate) pixel_size: NonZeroU8,
-    pub(crate) filter: FrameFilter,
+    pub width: NonZeroU32,
+    pub height: NonZeroU32,
+    pub pixel_size: NonZeroU8,
+    pub filter: FrameFilter,
 }
 
 impl Screen {

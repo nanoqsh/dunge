@@ -8,7 +8,7 @@ pub(crate) struct DepthFrame {
 impl DepthFrame {
     pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth24Plus;
 
-    pub(crate) fn new((width, height): (u32, u32), device: &Device) -> Self {
+    pub fn new((width, height): (u32, u32), device: &Device) -> Self {
         use wgpu::*;
 
         let desc = TextureDescriptor {
@@ -47,7 +47,7 @@ impl DepthFrame {
         }
     }
 
-    pub(crate) fn view(&self) -> &TextureView {
+    pub fn view(&self) -> &TextureView {
         &self.view
     }
 }

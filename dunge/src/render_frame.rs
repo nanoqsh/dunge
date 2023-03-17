@@ -16,7 +16,7 @@ pub(crate) struct RenderFrame {
 }
 
 impl RenderFrame {
-    pub(crate) fn new(
+    pub fn new(
         (width, height): (u32, u32),
         filter: FrameFilter,
         device: &Device,
@@ -74,11 +74,11 @@ impl RenderFrame {
         Self { view, bind_group }
     }
 
-    pub(crate) fn view(&self) -> &TextureView {
+    pub fn view(&self) -> &TextureView {
         &self.view
     }
 
-    pub(crate) fn bind_group(&self) -> &BindGroup {
+    pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
 }

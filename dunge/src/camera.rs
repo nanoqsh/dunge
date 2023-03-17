@@ -32,7 +32,7 @@ pub(crate) struct Camera {
 }
 
 impl Camera {
-    pub(crate) fn new(device: &Device, layout: &BindGroupLayout) -> Self {
+    pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             *,
@@ -70,12 +70,12 @@ impl Camera {
         }
     }
 
-    pub(crate) fn set_view(&mut self, view: View<Projection>) {
+    pub fn set_view(&mut self, view: View<Projection>) {
         self.view = view;
         self.size.set(None);
     }
 
-    pub(crate) fn resize(&self, size @ (width, height): (u32, u32), queue: &Queue) {
+    pub fn resize(&self, size @ (width, height): (u32, u32), queue: &Queue) {
         if self
             .size
             .get()
@@ -92,7 +92,7 @@ impl Camera {
         queue.write_buffer(&self.buffer, 0, uniform.as_bytes());
     }
 
-    pub(crate) fn bind_group(&self) -> &BindGroup {
+    pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
 }
@@ -112,7 +112,7 @@ pub struct View<P = Perspective> {
 }
 
 impl<P> View<P> {
-    pub(crate) fn into_projection_view(self) -> View<Projection>
+    pub fn into_projection_view(self) -> View<Projection>
     where
         P: IntoProjection,
     {
@@ -123,7 +123,7 @@ impl<P> View<P> {
         }
     }
 
-    pub(crate) fn rotation_quat(&self) -> Quat {
+    pub fn rotation_quat(&self) -> Quat {
         let [xe, ye, ze] = self.eye;
         let [xl, yl, zl] = self.look;
         let [sx, sy, sz] = normalize([xe - xl, ye - yl, ze - zl]);

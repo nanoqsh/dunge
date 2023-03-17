@@ -1,6 +1,6 @@
 pub(crate) use self::plain::Plain;
 
-use wgpu::{VertexAttribute, VertexBufferLayout, VertexStepMode};
+use wgpu::{VertexAttribute, VertexStepMode};
 
 mod plain {
     /// A trait for plain structs which can be safely casted to bytes.
@@ -46,19 +46,6 @@ mod plain {
 pub trait Layout: Plain {
     const ATTRIBS: &'static [VertexAttribute];
     const VERTEX_STEP_MODE: VertexStepMode;
-}
-
-pub(crate) const fn layout<V>() -> VertexBufferLayout<'static>
-where
-    V: Layout,
-{
-    use {std::mem, wgpu::BufferAddress};
-
-    VertexBufferLayout {
-        array_stride: mem::size_of::<V>() as BufferAddress,
-        step_mode: V::VERTEX_STEP_MODE,
-        attributes: V::ATTRIBS,
-    }
 }
 
 #[repr(C)]

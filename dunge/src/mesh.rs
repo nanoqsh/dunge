@@ -7,7 +7,7 @@ use {
 /// A data struct for a mesh creation.
 pub struct Data<'a, V> {
     verts: &'a [V],
-    indxs: Cow<'a, [[u16; 3]]>,
+    indxs: Option<Cow<'a, [[u16; 3]]>>,
 }
 
 impl<'a, V> Data<'a, V> {
@@ -16,15 +16,11 @@ impl<'a, V> Data<'a, V> {
     /// Returns `Some` if a data length fits in `u16` and all indices point to the data,
     /// otherwise returns `None`.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Option<Self> {
-        verts
-            .len()
-            .try_into()
-            .ok()
-            .filter(|len| indxs.iter().flatten().all(|i| i < len))
-            .map(|_| Self {
-                verts,
-                indxs: indxs.into(),
-            })
+        let len: u16 = verts.len().try_into().ok()?;
+        indxs.iter().flatten().all(|&i| i < len).then_some(Self {
+            verts,
+            indxs: Some(indxs.into()),
+        })
     }
 
     /// Creates a new [`MeshData`](crate::MeshData) from given triangles.
@@ -32,16 +28,13 @@ impl<'a, V> Data<'a, V> {
     /// Returns `Some` if a data length fits in `u16` and is multiple by 3,
     /// otherwise returns `None`.
     pub fn from_triangles(verts: &'a [V]) -> Option<Self> {
-        verts
-            .len()
-            .try_into()
-            .ok()
-            .filter(|len| len % 3 == 0)
-            .map(|len| {
-                let indxs = (0..len).step_by(3).map(|i| [i, i + 1, i + 2]).collect();
-
-                Self { verts, indxs }
-            })
+        let len: u16 = verts.len().try_into().ok()?;
+        (len % 3 == 0).then_some({
+            Self {
+                verts,
+                indxs: Some((0..len).step_by(3).map(|i| [i, i + 1, i + 2]).collect()),
+            }
+        })
     }
 
     /// Creates a new [`MeshData`](crate::MeshData) from given quadrangles.
@@ -49,19 +42,18 @@ impl<'a, V> Data<'a, V> {
     /// Returns `Some` if a data length fits in `u16` and is multiple by 4,
     /// otherwise returns `None`.
     pub fn from_quads(verts: &'a [V]) -> Option<Self> {
-        verts
-            .len()
-            .try_into()
-            .ok()
-            .filter(|len| len % 4 == 0)
-            .map(|len| {
-                let indxs = (0..len)
-                    .step_by(4)
-                    .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
-                    .collect();
-
-                Self { verts, indxs }
-            })
+        let len: u16 = verts.len().try_into().ok()?;
+        (len % 4 == 0).then_some({
+            Self {
+                verts,
+                indxs: Some(
+                    (0..len)
+                        .step_by(4)
+                        .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
+                        .collect(),
+                ),
+            }
+        })
     }
 }
 
@@ -76,12 +68,11 @@ impl<'a, V> Clone for Data<'a, V> {
 
 pub(crate) struct Mesh {
     vertex_buffer: Buffer,
-    index_buffer: Buffer,
-    n_indices: u32,
+    ty: Type,
 }
 
 impl Mesh {
-    pub(crate) fn new<V>(data: &Data<V>, device: &Device) -> Self
+    pub fn new<V>(data: &Data<V>, device: &Device) -> Self
     where
         V: Vertex,
     {
@@ -90,45 +81,82 @@ impl Mesh {
             BufferUsages,
         };
 
-        let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("vertex buffer"),
-            contents: data.verts.as_bytes(),
-            usage: BufferUsages::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("index buffer"),
-            contents: data.indxs.as_ref().as_bytes(),
-            usage: BufferUsages::INDEX,
-        });
-
-        let n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
-
         Self {
-            vertex_buffer,
-            index_buffer,
-            n_indices,
+            vertex_buffer: device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("vertex buffer"),
+                contents: data.verts.as_bytes(),
+                usage: BufferUsages::VERTEX,
+            }),
+            ty: match &data.indxs {
+                Some(indxs) => Type::indexed(indxs, device),
+                None => Type::sequential(data.verts),
+            },
         }
     }
 
-    pub(crate) fn update_data<V>(&mut self, data: &Data<V>, queue: &Queue)
+    pub fn update_data<V>(&mut self, data: &Data<V>, device: &Device, queue: &Queue)
     where
         V: Vertex,
     {
         queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
-        queue.write_buffer(&self.index_buffer, 0, data.indxs.as_ref().as_bytes());
-        self.n_indices = (data.indxs.len() * 3).try_into().expect("too many indexes");
+
+        match &mut self.ty {
+            Type::Indexed {
+                index_buffer,
+                n_indices,
+            } => match &data.indxs {
+                Some(indxs) => {
+                    queue.write_buffer(index_buffer, 0, indxs.as_ref().as_bytes());
+                    *n_indices = (indxs.len() * 3).try_into().expect("too many indexes");
+                }
+                None => self.ty = Type::sequential(data.verts),
+            },
+            Type::Sequential { .. } => match &data.indxs {
+                Some(indxs) => self.ty = Type::indexed(indxs, device),
+                None => self.ty = Type::sequential(data.verts),
+            },
+        }
     }
 
-    pub(crate) fn vertex_buffer(&self) -> &Buffer {
+    pub fn vertex_buffer(&self) -> &Buffer {
         &self.vertex_buffer
     }
 
-    pub(crate) fn index_buffer(&self) -> &Buffer {
-        &self.index_buffer
+    pub fn mesh_type(&self) -> &Type {
+        &self.ty
+    }
+}
+
+pub(crate) enum Type {
+    Indexed {
+        index_buffer: Buffer,
+        n_indices: u32,
+    },
+    Sequential {
+        n_vertices: u32,
+    },
+}
+
+impl Type {
+    fn indexed(indxs: &[[u16; 3]], device: &Device) -> Self {
+        use wgpu::{
+            util::{BufferInitDescriptor, DeviceExt},
+            BufferUsages,
+        };
+
+        Self::Indexed {
+            index_buffer: device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("index buffer"),
+                contents: indxs.as_ref().as_bytes(),
+                usage: BufferUsages::INDEX,
+            }),
+            n_indices: (indxs.len() * 3).try_into().expect("too many indexes"),
+        }
     }
 
-    pub(crate) fn n_indices(&self) -> u32 {
-        self.n_indices
+    fn sequential<V>(verts: &[V]) -> Self {
+        Self::Sequential {
+            n_vertices: verts.len().try_into().expect("too many vertices"),
+        }
     }
 }

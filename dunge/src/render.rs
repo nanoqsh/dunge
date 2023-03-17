@@ -283,7 +283,7 @@ impl Render {
         self.resources
             .meshes
             .get_mut(handle.id())
-            .map(|mesh| mesh.update_data(data, &self.queue))
+            .map(|mesh| mesh.update_data(data, &self.device, &self.queue))
     }
 
     pub fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {

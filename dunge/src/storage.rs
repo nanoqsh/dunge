@@ -6,7 +6,7 @@ pub(crate) struct Storage<T> {
 }
 
 impl<T> Storage<T> {
-    pub(crate) fn insert(&mut self, value: T) -> u32 {
+    pub fn insert(&mut self, value: T) -> u32 {
         use std::collections::hash_map::Entry;
 
         loop {
@@ -20,15 +20,15 @@ impl<T> Storage<T> {
         }
     }
 
-    pub(crate) fn get(&self, index: u32) -> Result<&T, Error> {
+    pub fn get(&self, index: u32) -> Result<&T, Error> {
         self.map.get(&index).ok_or(Error::ResourceNotFound)
     }
 
-    pub(crate) fn get_mut(&mut self, index: u32) -> Result<&mut T, Error> {
+    pub fn get_mut(&mut self, index: u32) -> Result<&mut T, Error> {
         self.map.get_mut(&index).ok_or(Error::ResourceNotFound)
     }
 
-    pub(crate) fn remove(&mut self, index: u32) -> Result<(), Error> {
+    pub fn remove(&mut self, index: u32) -> Result<(), Error> {
         self.map
             .remove(&index)
             .map(drop)
