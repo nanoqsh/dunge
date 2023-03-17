@@ -4,7 +4,7 @@ pub mod color;
 mod context;
 mod depth_frame;
 mod frame;
-mod handles;
+pub mod handles;
 mod instance;
 mod layer;
 mod layout;
@@ -36,9 +36,8 @@ pub use crate::canvas::from_element;
 pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{Canvas, InitialState, WindowMode},
-    context::{Context, FrameParameters, Limits},
+    context::{Compare, Context, FrameParameters, LayerParameters, Limits},
     frame::Frame,
-    handles::*,
     layer::{Builder as LayerBuilder, Layer},
     mesh::Data as MeshData,
     r#loop::{Error, Loop},

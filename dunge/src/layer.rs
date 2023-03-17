@@ -1,5 +1,3 @@
-#![allow(clippy::wildcard_imports)]
-
 use {
     crate::{
         color::{IntoLinear, Linear},
@@ -10,7 +8,7 @@ use {
         r#loop::Error,
         render::Resources,
         shader,
-        vertex::{ColorVertex, FlatVertex, TextureVertex, UsesDepth},
+        vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     std::marker::PhantomData,
     wgpu::{Queue, RenderPass},
@@ -213,39 +211,15 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
     }
 
     /// Sets the flag to clear the depth buffer or not for the layer.
-    pub fn with_clear_depth(self) -> Self
-    where
-        V: UsesDepth,
-    {
+    pub fn with_clear_depth(self) -> Self {
         Self {
             clear_depth: true,
             ..self
         }
     }
 
-    pub fn start_(self) -> Layer<'l, V> {
+    pub fn start(self) -> Layer<'l, V> {
         self.frame
-            .start_layer_(self.pipeline, self.clear_color, self.clear_depth)
-    }
-}
-
-impl<'l> Builder<'l, '_, TextureVertex> {
-    #[deprecated]
-    pub fn start(self) -> Layer<'l, TextureVertex> {
-        self.frame.start_layer(self.clear_color, self.clear_depth)
-    }
-}
-
-impl<'l> Builder<'l, '_, ColorVertex> {
-    #[deprecated]
-    pub fn start(self) -> Layer<'l, ColorVertex> {
-        self.frame.start_layer(self.clear_color, self.clear_depth)
-    }
-}
-
-impl<'l> Builder<'l, '_, FlatVertex> {
-    #[deprecated]
-    pub fn start(self) -> Layer<'l, FlatVertex> {
-        self.frame.start_layer(self.clear_color, self.clear_depth)
+            .start_layer(self.pipeline, self.clear_color, self.clear_depth)
     }
 }

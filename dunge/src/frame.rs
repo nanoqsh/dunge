@@ -1,5 +1,3 @@
-#![allow(clippy::wildcard_imports)]
-
 use {
     crate::{
         color::Linear,
@@ -7,9 +5,8 @@ use {
         layer::{Builder, Layer},
         pipeline::Pipeline,
         r#loop::Error,
-        render::{GetPipeline, Render},
+        render::Render,
         shader,
-        vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -118,23 +115,8 @@ impl<'d> Frame<'d> {
         ))
     }
 
-    #[deprecated]
-    pub fn texture_layer(&mut self) -> Builder<'_, 'd, TextureVertex> {
-        Builder::new(self, unreachable!())
-    }
-
-    #[deprecated]
-    pub fn color_layer(&mut self) -> Builder<'_, 'd, ColorVertex> {
-        Builder::new(self, unreachable!())
-    }
-
-    #[deprecated]
-    pub fn flat_layer(&mut self) -> Builder<'_, 'd, FlatVertex> {
-        Builder::new(self, unreachable!())
-    }
-
     /// Creates a new [layer](crate::Layer).
-    pub(crate) fn start_layer_<'l, V>(
+    pub(crate) fn start_layer<'l, V>(
         &'l mut self,
         pipeline: &'l Pipeline,
         clear_color: Option<Linear<f64>>,
@@ -146,7 +128,7 @@ impl<'d> Frame<'d> {
             .encoder
             .get(self.render)
             .begin_render_pass(&RenderPassDescriptor {
-                label: Some("main render pass"),
+                label: Some("layer render pass"),
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: self.render.render_frame().view(),
                     resolve_target: None,
@@ -172,57 +154,6 @@ impl<'d> Frame<'d> {
             });
 
         pass.set_pipeline(pipeline.as_ref());
-
-        Layer::new(
-            pass,
-            self.render.screen().as_virtual_size(),
-            self.render.queue(),
-            self.render.resources(),
-            &mut self.drawn_in_frame,
-        )
-    }
-
-    /// Creates a new [layer](crate::Layer).
-    pub(crate) fn start_layer<V>(
-        &mut self,
-        clear_color: Option<Linear<f64>>,
-        clear_depth: bool,
-    ) -> Layer<V>
-    where
-        Render: GetPipeline<V>,
-    {
-        use wgpu::*;
-
-        let mut pass = self
-            .encoder
-            .get(self.render)
-            .begin_render_pass(&RenderPassDescriptor {
-                label: Some("main render pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: self.render.render_frame().view(),
-                    resolve_target: None,
-                    ops: Operations {
-                        load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
-                            LoadOp::Clear(Color { r, g, b, a })
-                        }),
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: self.render.depth_frame().view(),
-                    depth_ops: Some(Operations {
-                        load: if clear_depth {
-                            LoadOp::Clear(1.)
-                        } else {
-                            LoadOp::Load
-                        },
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
-
-        pass.set_pipeline(self.render.get_pipeline());
 
         Layer::new(
             pass,

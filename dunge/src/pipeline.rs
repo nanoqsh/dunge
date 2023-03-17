@@ -1,14 +1,16 @@
-#![allow(clippy::wildcard_imports)]
-
 use {
-    crate::{render::Render, shader::Shader},
+    crate::{
+        context::{Compare, LayerParameters},
+        render::Render,
+        shader::Shader,
+    },
     wgpu::RenderPipeline,
 };
 
 pub(crate) struct Pipeline(RenderPipeline);
 
 impl Pipeline {
-    pub fn new(render: &Render, shader: Shader) -> Self {
+    pub fn new(render: &Render, shader: Shader, params: LayerParameters) -> Self {
         use {crate::depth_frame::DepthFrame, wgpu::*};
 
         Self({
@@ -46,7 +48,7 @@ impl Pipeline {
                         topology: PrimitiveTopology::TriangleList,
                         strip_index_format: None,
                         front_face: FrontFace::Ccw,
-                        cull_mode: Some(Face::Back),
+                        cull_mode: params.cull_faces.then_some(Face::Back),
                         polygon_mode: PolygonMode::Fill,
                         unclipped_depth: false,
                         conservative: false,
@@ -54,7 +56,12 @@ impl Pipeline {
                     depth_stencil: Some(DepthStencilState {
                         format: DepthFrame::DEPTH_FORMAT,
                         depth_write_enabled: true,
-                        depth_compare: CompareFunction::Less,
+                        depth_compare: match params.depth_compare {
+                            Compare::Never => CompareFunction::Never,
+                            Compare::Less => CompareFunction::Less,
+                            Compare::Greater => CompareFunction::Greater,
+                            Compare::Always => CompareFunction::Always,
+                        },
                         stencil: StencilState::default(),
                         bias: DepthBiasState::default(),
                     }),

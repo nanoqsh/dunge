@@ -1,10 +1,11 @@
 use dunge::{
     color::Srgba,
+    handles::*,
     input::{Input, Key},
     transform::Position,
     vertex::ColorVertex,
-    Context, Error, Frame, InitialState, InstanceHandle, Loop, MeshData, MeshHandle, Perspective,
-    View, ViewHandle, WindowMode,
+    Context, Error, Frame, InitialState, LayerParameters, Loop, MeshData, Perspective, View,
+    WindowMode,
 };
 
 fn main() {
@@ -21,6 +22,7 @@ fn main() {
 }
 
 struct App {
+    layer: LayerHandle<ColorVertex>,
     instance: InstanceHandle,
     mesh: MeshHandle<ColorVertex>,
     view: ViewHandle,
@@ -28,6 +30,9 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
+        // Create a layer
+        let layer = context.create_layer(LayerParameters::default());
+
         // Create a model instance
         let instance = {
             let data = Position::default();
@@ -61,6 +66,7 @@ impl App {
         let view = context.create_view::<Perspective>(View::default());
 
         Self {
+            layer,
             instance,
             mesh,
             view,
@@ -85,7 +91,7 @@ impl Loop for App {
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         let mut layer = frame
-            .color_layer()
+            .layer(self.layer)?
             .with_clear_color(Srgba([0, 0, 0, 255]))
             .with_clear_depth()
             .start();

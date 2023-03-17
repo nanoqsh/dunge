@@ -1,5 +1,3 @@
-#![allow(clippy::wildcard_imports)]
-
 use wgpu::{Device, Sampler, TextureFormat, TextureView};
 
 pub(crate) struct DepthFrame {

@@ -1,5 +1,3 @@
-#![allow(clippy::wildcard_imports)]
-
 use {
     crate::{
         camera::{IntoProjection, View},
@@ -65,15 +63,18 @@ impl Context {
         }));
     }
 
-    /// Creates a new layer.
-    pub fn create_layer<V>(&mut self) -> LayerHandle<V>
+    /// Creates a new layer with [`LayerParameters`].
+    pub fn create_layer<V>(&mut self, params: LayerParameters) -> LayerHandle<V>
     where
         V: Vertex,
     {
-        self.render.create_layer()
+        self.render.create_layer(params)
     }
 
     /// Deletes the layer.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn delete_layer<V>(&mut self, handle: LayerHandle<V>) -> Result<(), Error> {
         self.render.delete_layer(handle)
     }
@@ -226,4 +227,38 @@ impl Default for FrameParameters {
             filter: FrameFilter::Nearest,
         }
     }
+}
+
+/// Describes layer parameters.
+#[derive(Clone, Copy)]
+pub struct LayerParameters {
+    // Is cull faces enabled
+    pub cull_faces: bool,
+
+    // Depth comparison function
+    pub depth_compare: Compare,
+}
+
+impl Default for LayerParameters {
+    fn default() -> Self {
+        Self {
+            cull_faces: true,
+            depth_compare: Compare::Less,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum Compare {
+    /// Function never passes
+    Never,
+
+    /// Function passes if new value less than existing value
+    Less,
+
+    /// Function passes if new value is greater than existing value
+    Greater,
+
+    /// Function always passes
+    Always,
 }

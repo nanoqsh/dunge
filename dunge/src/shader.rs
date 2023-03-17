@@ -48,6 +48,7 @@ pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;
 pub(crate) enum Shader {
     Color,
     Flat,
+    #[allow(dead_code)]
     Post,
     Textured,
 }

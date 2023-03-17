@@ -3,11 +3,12 @@ mod models;
 use {
     dunge::{
         color::Srgba,
+        handles::*,
         input::{Input, Key},
         transform::{Position, ReverseRotation, Transform},
         vertex::TextureVertex,
-        Context, Error, Frame, FrameParameters, InitialState, InstanceHandle, Loop, MeshData,
-        MeshHandle, Orthographic, TextureData, TextureHandle, View, ViewHandle, WindowMode,
+        Context, Error, Frame, FrameParameters, InitialState, LayerParameters, Loop, MeshData,
+        Orthographic, TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -33,6 +34,7 @@ struct Model {
 }
 
 struct App {
+    layer: LayerHandle<TextureVertex>,
     sprites: TextureHandle,
     models: Vec<Model>,
     view: ViewHandle,
@@ -45,6 +47,9 @@ impl App {
             pixel_size: 2,
             ..Default::default()
         });
+
+        // Create layer
+        let layer = context.create_layer(LayerParameters::default());
 
         // Create the sprite texture
         let sprites = {
@@ -150,6 +155,7 @@ impl App {
         let view = context.create_view(camera.view(Orthographic::default()));
 
         Self {
+            layer,
             sprites,
             models,
             view,
@@ -209,14 +215,8 @@ impl Loop for App {
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         const CLEAR_COLOR: Srgba<u8> = Srgba([46, 34, 47, 255]);
 
-        // let mut layer = frame
-        //     .layer(self.my_texture_layer)
-        //     .with_clear_color(CLEAR_COLOR)
-        //     .with_clear_depth()
-        //     .start();
-
         let mut layer = frame
-            .texture_layer()
+            .layer(self.layer)?
             .with_clear_color(CLEAR_COLOR)
             .with_clear_depth()
             .start();

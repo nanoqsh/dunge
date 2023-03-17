@@ -27,8 +27,13 @@ Then, let's create a new window to draw something in it:
 ```rust
 // Import some types
 use dunge::{
-    color::Srgba, input::Input, transform::Position, vertex::ColorVertex, Context, Error, Frame,
-    InitialState, InstanceHandle, Loop, MeshData, MeshHandle, Perspective, View, ViewHandle,
+    color::Srgba,
+    handles::*,
+    input::{Input, Key},
+    transform::Position,
+    vertex::ColorVertex,
+    Context, Error, Frame, InitialState, LayerParameters, Loop, MeshData, Perspective, View,
+    WindowMode,
 };
 
 fn main() {
@@ -42,6 +47,7 @@ fn main() {
 The `App` is our application type, we need to create it:
 ```rust
 struct App {
+    layer: LayerHandle<ColorVertex>,
     instance: InstanceHandle,
     mesh: MeshHandle<ColorVertex>,
     view: ViewHandle,
@@ -49,6 +55,9 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
+        // Create new layer for `ColorVertex`. The layer type inferred from the context
+        let layer = context.create_layer(LayerParameters::default());
+
         // Create a model instance
         let instance = context.create_instances([Position::default()]);
 
@@ -68,7 +77,7 @@ impl App {
 
         // Create the view
         let view = context.create_view::<Perspective>(View::default());
-        Self { instance, mesh, view }
+        Self { layer, instance, mesh, view }
     }
 }
 ```
@@ -87,9 +96,9 @@ impl Loop for App {
 
     // This calls every time the application needs to draw something in the window
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        // Draw a new layer. Use `color_layer` for this since our triangle has color vertices
+        // Draw a new layer
         let mut layer = frame
-            .color_layer()
+            .layer(self.layer)?
             .with_clear_color(Srgba([0, 0, 0, 255]))
             .with_clear_depth()
             .start();

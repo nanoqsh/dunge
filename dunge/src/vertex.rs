@@ -70,7 +70,3 @@ impl Layout for FlatVertex {
 }
 
 impl Vertex for FlatVertex {}
-
-pub trait UsesDepth: Layout {}
-impl UsesDepth for ColorVertex {}
-impl UsesDepth for TextureVertex {}

@@ -1,11 +1,11 @@
 use {
     dunge::{
         color::Srgba,
+        handles::*,
         input::{Input, Key},
         transform::Position,
         vertex::{ColorVertex, TextureVertex},
-        Context, Error, Frame, InstanceHandle, LayerHandle, Loop, MeshData, MeshHandle,
-        Perspective, TextureData, TextureHandle, ViewHandle,
+        Context, Error, Frame, LayerParameters, Loop, MeshData, Perspective, TextureData,
     },
     utils::Camera,
 };
@@ -30,8 +30,8 @@ pub struct App {
 impl App {
     pub fn new(context: &mut Context) -> Self {
         // Create layers
-        let texture_layer = context.create_layer();
-        let color_layer = context.create_layer();
+        let texture_layer = context.create_layer(LayerParameters::default());
+        let color_layer = context.create_layer(LayerParameters::default());
 
         // Create a texture
         let texture = {
@@ -122,7 +122,7 @@ impl Loop for App {
                     .layer(self.texture_layer)?
                     .with_clear_color(color)
                     .with_clear_depth()
-                    .start_();
+                    .start();
 
                 layer.bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;
@@ -134,7 +134,7 @@ impl Loop for App {
                     .layer(self.color_layer)?
                     .with_clear_color(color)
                     .with_clear_depth()
-                    .start_();
+                    .start();
 
                 layer.bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;

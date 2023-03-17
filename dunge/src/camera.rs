@@ -1,5 +1,3 @@
-#![allow(clippy::wildcard_imports)]
-
 pub(crate) use self::proj::{IntoProjection, Projection};
 
 use {
