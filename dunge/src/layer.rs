@@ -16,17 +16,17 @@ use {
 
 /// The frame layer. Can be created from a [`Frame`] instance.
 #[must_use]
-pub struct Layer<'l, V> {
+pub struct Layer<'l, V, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),
     queue: &'l Queue,
     resources: &'l Resources,
     instance: Option<&'l Instance>,
-    vertex_type: PhantomData<V>,
     drawn_in_frame: &'l mut bool,
+    vertex_type: PhantomData<(V, T)>,
 }
 
-impl<'l, V> Layer<'l, V> {
+impl<'l, V, T> Layer<'l, V, T> {
     pub(crate) fn new(
         pass: RenderPass<'l>,
         size: (u32, u32),
@@ -40,8 +40,8 @@ impl<'l, V> Layer<'l, V> {
             queue,
             resources,
             instance: None,
-            vertex_type: PhantomData,
             drawn_in_frame,
+            vertex_type: PhantomData,
         }
     }
 
@@ -62,12 +62,14 @@ impl<'l, V> Layer<'l, V> {
     /// Returns [`Error::ResourceNotFound`] if given mesh handler was deleted.
     /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
     /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
-    pub fn draw(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
+    pub fn draw(&mut self, handle: MeshHandle<V, T>) -> Result<(), Error> {
         use {crate::mesh::Type, wgpu::IndexFormat};
 
         let mesh = self.resources.meshes.get(handle.id())?;
         let instance = self.instance.ok_or(Error::InstanceNotSet)?;
 
+        self.pass
+            .set_vertex_buffer(shader::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
         self.pass
             .set_vertex_buffer(shader::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
 
@@ -76,8 +78,6 @@ impl<'l, V> Layer<'l, V> {
                 index_buffer,
                 n_indices,
             } => {
-                self.pass
-                    .set_vertex_buffer(shader::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
                 self.pass
                     .set_index_buffer(index_buffer.slice(..), IndexFormat::Uint16);
                 self.pass
@@ -108,7 +108,7 @@ impl<'l, V> Layer<'l, V> {
     }
 }
 
-impl Layer<'_, TextureVertex> {
+impl<T> Layer<'_, TextureVertex, T> {
     /// Binds a [view](crate::handles::ViewHandle).
     ///
     /// # Errors
@@ -118,7 +118,7 @@ impl Layer<'_, TextureVertex> {
     }
 }
 
-impl Layer<'_, ColorVertex> {
+impl<T> Layer<'_, ColorVertex, T> {
     /// Binds a [view](crate::handles::ViewHandle).
     ///
     /// # Errors
@@ -128,7 +128,7 @@ impl Layer<'_, ColorVertex> {
     }
 }
 
-impl Layer<'_, TextureVertex> {
+impl<T> Layer<'_, TextureVertex, T> {
     /// Binds a [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
@@ -138,7 +138,7 @@ impl Layer<'_, TextureVertex> {
     }
 }
 
-impl Layer<'_, FlatVertex> {
+impl<T> Layer<'_, FlatVertex, T> {
     /// Binds a [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
@@ -150,15 +150,15 @@ impl Layer<'_, FlatVertex> {
 
 /// The layer builder. It creates a configured [`Layer`].
 #[must_use]
-pub struct Builder<'l, 'd, V> {
+pub struct Builder<'l, 'd, V, T> {
     frame: &'l mut Frame<'d>,
     pipeline: &'d Pipeline,
     clear_color: Option<Linear<f64>>,
     clear_depth: bool,
-    vertex_type: PhantomData<V>,
+    vertex_type: PhantomData<(V, T)>,
 }
 
-impl<'l, 'd, V> Builder<'l, 'd, V> {
+impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
     pub(crate) fn new(frame: &'l mut Frame<'d>, pipeline: &'d Pipeline) -> Self {
         Self {
             frame,
@@ -230,7 +230,7 @@ impl<'l, 'd, V> Builder<'l, 'd, V> {
     }
 
     /// Starts draw the layer.
-    pub fn start(self) -> Layer<'l, V> {
+    pub fn start(self) -> Layer<'l, V, T> {
         self.frame
             .start_layer(self.pipeline, self.clear_color, self.clear_depth)
     }

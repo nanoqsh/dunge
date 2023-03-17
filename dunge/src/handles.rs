@@ -1,12 +1,12 @@
 //! Handles for context's objects management.
 
-use std::marker::PhantomData;
+use {crate::topology::TriangleList, std::marker::PhantomData};
 
 /// A layer handle. May be obtained from the [`create_layer`](crate::Context::create_layer) method.
 #[derive(Clone, Copy)]
-pub struct LayerHandle<V>(u32, PhantomData<V>);
+pub struct LayerHandle<V, T = TriangleList>(u32, PhantomData<(V, T)>);
 
-impl<V> LayerHandle<V> {
+impl<V, T> LayerHandle<V, T> {
     pub(crate) fn new(id: u32) -> Self {
         Self(id, PhantomData)
     }
@@ -26,9 +26,9 @@ pub struct InstanceHandle(pub(crate) u32);
 
 /// A mesh handle. May be obtained from the [`create_mesh`](crate::Context::create_mesh) method.
 #[derive(Clone, Copy)]
-pub struct MeshHandle<V>(u32, PhantomData<V>);
+pub struct MeshHandle<V, T = TriangleList>(u32, PhantomData<(V, T)>);
 
-impl<V> MeshHandle<V> {
+impl<V, T> MeshHandle<V, T> {
     pub(crate) fn new(id: u32) -> Self {
         Self(id, PhantomData)
     }

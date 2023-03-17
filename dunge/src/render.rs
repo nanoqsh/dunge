@@ -8,7 +8,7 @@ use {
         layout::InstanceModel,
         mesh::{Data as MeshData, Mesh},
         pipeline::Pipeline,
-        pipeline::{Blend, PipelineParameters, Topology},
+        pipeline::{Blend, PipelineParameters, Topology as Top},
         r#loop::Loop,
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
@@ -174,7 +174,7 @@ impl Render {
             Shader::Post,
             PipelineParameters {
                 blend: Blend::AlphaBlending,
-                topology: Topology::TriangleStrip,
+                topology: Top::TriangleStrip,
                 cull_faces: false,
                 ..Default::default()
             },
@@ -197,7 +197,7 @@ impl Render {
         }
     }
 
-    pub fn create_layer<V>(&mut self, params: PipelineParameters) -> LayerHandle<V>
+    pub fn create_layer<V, T>(&mut self, params: PipelineParameters) -> LayerHandle<V, T>
     where
         V: Vertex,
     {
@@ -215,7 +215,7 @@ impl Render {
         LayerHandle::new(id)
     }
 
-    pub fn delete_layer<V>(&mut self, handle: LayerHandle<V>) -> Result<(), Error> {
+    pub fn delete_layer<V, T>(&mut self, handle: LayerHandle<V, T>) -> Result<(), Error> {
         self.resources.layers.remove(handle.id())
     }
 
@@ -286,7 +286,7 @@ impl Render {
             .map(|mesh| mesh.update_data(data, &self.device, &self.queue))
     }
 
-    pub fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
+    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), Error> {
         self.resources.meshes.remove(handle.id())
     }
 

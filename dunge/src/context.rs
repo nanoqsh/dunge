@@ -69,7 +69,7 @@ impl Context {
     ///
     /// This is a shortcut for `context.create_layer_with_parameters().build()`.
     /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
-    pub fn create_layer<V>(&mut self) -> LayerHandle<V>
+    pub fn create_layer<V, T>(&mut self) -> LayerHandle<V, T>
     where
         V: Vertex,
     {
@@ -77,7 +77,7 @@ impl Context {
     }
 
     /// Creates a layer [builder](LayerParametersBuilder) with custom parameters.
-    pub fn create_layer_with_parameters<V>(&mut self) -> LayerParametersBuilder<V> {
+    pub fn create_layer_with_parameters<V, T>(&mut self) -> LayerParametersBuilder<V, T> {
         LayerParametersBuilder {
             render: &mut self.render,
             params: PipelineParameters::default(),
@@ -89,7 +89,7 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn delete_layer<V>(&mut self, handle: LayerHandle<V>) -> Result<(), Error> {
+    pub fn delete_layer<V, T>(&mut self, handle: LayerHandle<V, T>) -> Result<(), Error> {
         self.render.delete_layer(handle)
     }
 
@@ -182,7 +182,7 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn delete_mesh<V>(&mut self, handle: MeshHandle<V>) -> Result<(), Error> {
+    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), Error> {
         self.render.delete_mesh(handle)
     }
 
@@ -245,13 +245,13 @@ impl Default for FrameParameters {
 
 /// Builds new layer with specific parameters.
 #[must_use]
-pub struct LayerParametersBuilder<'a, V> {
+pub struct LayerParametersBuilder<'a, V, T> {
     render: &'a mut Render,
     params: PipelineParameters,
-    vertex_type: PhantomData<V>,
+    vertex_type: PhantomData<(V, T)>,
 }
 
-impl<V> LayerParametersBuilder<'_, V> {
+impl<V, T> LayerParametersBuilder<'_, V, T> {
     pub fn with_blend(mut self, blend: Blend) -> Self {
         self.params.blend = blend;
         self
@@ -273,7 +273,7 @@ impl<V> LayerParametersBuilder<'_, V> {
     }
 
     #[must_use]
-    pub fn build(self) -> LayerHandle<V>
+    pub fn build(self) -> LayerHandle<V, T>
     where
         V: Vertex,
     {

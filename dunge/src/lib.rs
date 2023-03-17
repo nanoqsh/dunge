@@ -19,6 +19,7 @@ mod shader_data;
 mod storage;
 mod texture;
 mod time;
+mod topology;
 pub mod transform;
 pub mod vertex;
 

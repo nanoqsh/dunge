@@ -108,7 +108,10 @@ impl<'d> Frame<'d> {
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given instance handler was deleted.
-    pub fn layer<V>(&mut self, handle: LayerHandle<V>) -> Result<Builder<'_, 'd, V>, Error> {
+    pub fn layer<V, T>(
+        &mut self,
+        handle: LayerHandle<V, T>,
+    ) -> Result<Builder<'_, 'd, V, T>, Error> {
         Ok(Builder::new(
             self,
             self.render.resources().layers.get(handle.id())?,
@@ -116,12 +119,12 @@ impl<'d> Frame<'d> {
     }
 
     /// Creates a new [layer](crate::Layer).
-    pub(crate) fn start_layer<'l, V>(
+    pub(crate) fn start_layer<'l, V, T>(
         &'l mut self,
         pipeline: &'l Pipeline,
         clear_color: Option<Linear<f64>>,
         clear_depth: bool,
-    ) -> Layer<V> {
+    ) -> Layer<V, T> {
         use wgpu::*;
 
         let mut pass = self

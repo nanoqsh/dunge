@@ -1,13 +1,21 @@
 use {
-    crate::{layout::Plain, vertex::Vertex},
-    std::borrow::Cow,
+    crate::{
+        layout::Plain,
+        topology::{Topology, TriangleList},
+        vertex::Vertex,
+    },
+    std::{borrow::Cow, slice},
     wgpu::{Buffer, Device, Queue},
 };
 
 /// A data struct for a mesh creation.
-pub struct Data<'a, V> {
+#[derive(Clone)]
+pub struct Data<'a, V, T = TriangleList>
+where
+    T: Topology,
+{
     verts: &'a [V],
-    indxs: Option<Cow<'a, [[u16; 3]]>>,
+    indxs: Option<Cow<'a, [T::Face]>>,
 }
 
 impl<'a, V> Data<'a, V> {
@@ -28,13 +36,7 @@ impl<'a, V> Data<'a, V> {
     /// Returns `Some` if a data length fits in `u16` and is multiple by 3,
     /// otherwise returns `None`.
     pub fn from_triangles(verts: &'a [V]) -> Option<Self> {
-        let len: u16 = verts.len().try_into().ok()?;
-        (len % 3 == 0).then_some({
-            Self {
-                verts,
-                indxs: Some((0..len).step_by(3).map(|i| [i, i + 1, i + 2]).collect()),
-            }
-        })
+        (verts.len() % 3 == 0).then_some(Self { verts, indxs: None })
     }
 
     /// Creates a new [`MeshData`](crate::MeshData) from given quadrangles.
@@ -54,15 +56,6 @@ impl<'a, V> Data<'a, V> {
                 ),
             }
         })
-    }
-}
-
-impl<'a, V> Clone for Data<'a, V> {
-    fn clone(&self) -> Self {
-        Self {
-            verts: self.verts,
-            indxs: self.indxs.clone(),
-        }
     }
 }
 
@@ -88,7 +81,10 @@ impl Mesh {
                 usage: BufferUsages::VERTEX,
             }),
             ty: match &data.indxs {
-                Some(indxs) => Type::indexed(indxs, device),
+                Some(indxs) => Type::indexed(
+                    unsafe { slice::from_raw_parts(indxs.as_ptr().cast(), indxs.len() * 3) },
+                    device,
+                ),
                 None => Type::sequential(data.verts),
             },
         }
@@ -112,7 +108,12 @@ impl Mesh {
                 None => self.ty = Type::sequential(data.verts),
             },
             Type::Sequential { .. } => match &data.indxs {
-                Some(indxs) => self.ty = Type::indexed(indxs, device),
+                Some(indxs) => {
+                    self.ty = Type::indexed(
+                        unsafe { slice::from_raw_parts(indxs.as_ptr().cast(), indxs.len() * 3) },
+                        device,
+                    );
+                }
                 None => self.ty = Type::sequential(data.verts),
             },
         }
@@ -138,7 +139,7 @@ pub(crate) enum Type {
 }
 
 impl Type {
-    fn indexed(indxs: &[[u16; 3]], device: &Device) -> Self {
+    fn indexed(indxs: &[u16], device: &Device) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BufferUsages,
@@ -150,7 +151,7 @@ impl Type {
                 contents: indxs.as_ref().as_bytes(),
                 usage: BufferUsages::INDEX,
             }),
-            n_indices: (indxs.len() * 3).try_into().expect("too many indexes"),
+            n_indices: indxs.len().try_into().expect("too many indexes"),
         }
     }
 

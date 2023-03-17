@@ -68,9 +68,7 @@ impl App {
                 ColorVertex { pos: [ 0.5, -0.5, 0.], col: [0., 1., 0.] },
                 ColorVertex { pos: [ 0.,   0.5, 0.], col: [0., 0., 1.] },
             ];
-            // Indices of triangle vetrices:
-            const INDICES: [u16; 3] = [0, 1, 2];
-            let data = MeshData::new(&VERTICES, &[INDICES]).unwrap();
+            let data = MeshData::from_triangles(&VERTICES).expect("create mesh");
             context.create_mesh(&data)
         };
 
