@@ -95,7 +95,7 @@ impl Render {
 
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
-            format: TextureFormat::Rgba8UnormSrgb,
+            format: TextureFormat::Bgra8UnormSrgb,
             width: 1,
             height: 1,
             present_mode: PresentMode::Fifo,
@@ -175,6 +175,7 @@ impl Render {
             PipelineParameters {
                 blend: BlendState::ALPHA_BLENDING,
                 topology: PrimitiveTopology::TriangleStrip,
+                cull_faces: false,
                 depth_stencil: None,
                 ..Default::default()
             },

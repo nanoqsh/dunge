@@ -33,7 +33,7 @@ impl RenderFrame {
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8UnormSrgb,
+            format: TextureFormat::Bgra8UnormSrgb,
             usage: TextureUsages::RENDER_ATTACHMENT
                 | TextureUsages::COPY_DST
                 | TextureUsages::TEXTURE_BINDING,
