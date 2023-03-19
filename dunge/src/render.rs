@@ -7,8 +7,7 @@ use {
         instance::Instance,
         layout::InstanceModel,
         mesh::{Data as MeshData, Mesh},
-        pipeline::Pipeline,
-        pipeline::{Blend, PipelineParameters, Topology as Top},
+        pipeline::{Pipeline, PipelineParameters},
         r#loop::Loop,
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
@@ -16,6 +15,7 @@ use {
         shader_data::PostShaderData,
         storage::Storage,
         texture::{Data as TextureData, Texture},
+        topology::Topology,
         vertex::Vertex,
         Error,
     },
@@ -173,12 +173,11 @@ impl Render {
             config.format,
             Shader::Post,
             PipelineParameters {
-                blend: Blend::AlphaBlending,
-                topology: Top::TriangleStrip,
-                cull_faces: false,
+                blend: BlendState::ALPHA_BLENDING,
+                topology: PrimitiveTopology::TriangleStrip,
+                depth_stencil: None,
                 ..Default::default()
             },
-            false,
         );
 
         Self {
@@ -200,15 +199,18 @@ impl Render {
     pub fn create_layer<V, T>(&mut self, params: PipelineParameters) -> LayerHandle<V, T>
     where
         V: Vertex,
+        T: Topology,
     {
         let pipeline = Pipeline::new(
             &self.device,
             &self.shaders,
             &self.layouts,
             self.config.format,
-            Shader::from_vertex_type::<V>(),
-            params,
-            true,
+            V::VALUE.into_inner(),
+            PipelineParameters {
+                topology: T::VALUE.into_inner(),
+                ..params
+            },
         );
 
         let id = self.resources.layers.insert(pipeline);
@@ -267,18 +269,24 @@ impl Render {
         self.resources.instances.remove(handle.0)
     }
 
-    pub fn create_mesh<V>(&mut self, data: &MeshData<V>) -> MeshHandle<V>
+    pub fn create_mesh<V, T>(&mut self, data: &MeshData<V, T>) -> MeshHandle<V, T>
     where
         V: Vertex,
+        T: Topology,
     {
         let mesh = Mesh::new(data, &self.device);
         let id = self.resources.meshes.insert(mesh);
         MeshHandle::new(id)
     }
 
-    pub fn update_mesh<V>(&mut self, handle: MeshHandle<V>, data: &MeshData<V>) -> Result<(), Error>
+    pub fn update_mesh<V, T>(
+        &mut self,
+        handle: MeshHandle<V, T>,
+        data: &MeshData<V, T>,
+    ) -> Result<(), Error>
     where
         V: Vertex,
+        T: Topology,
     {
         self.resources
             .meshes

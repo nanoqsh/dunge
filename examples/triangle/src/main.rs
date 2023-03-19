@@ -55,7 +55,7 @@ impl App {
                 },
             ];
 
-            let data = MeshData::from_triangles(&VERTICES).expect("create mesh");
+            let data = MeshData::from_verts(&VERTICES);
             context.create_mesh(&data)
         };
 

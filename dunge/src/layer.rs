@@ -4,6 +4,7 @@ use {
         frame::Frame,
         handles::*,
         instance::Instance,
+        mesh::Mesh,
         pipeline::Pipeline,
         r#loop::Error,
         render::Resources,
@@ -63,9 +64,12 @@ impl<'l, V, T> Layer<'l, V, T> {
     /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
     /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
     pub fn draw(&mut self, handle: MeshHandle<V, T>) -> Result<(), Error> {
+        self.draw_mesh(self.resources.meshes.get(handle.id())?)
+    }
+
+    fn draw_mesh(&mut self, mesh: &'l Mesh) -> Result<(), Error> {
         use {crate::mesh::Type, wgpu::IndexFormat};
 
-        let mesh = self.resources.meshes.get(handle.id())?;
         let instance = self.instance.ok_or(Error::InstanceNotSet)?;
 
         self.pass

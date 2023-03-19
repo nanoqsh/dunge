@@ -68,7 +68,7 @@ impl App {
                 ColorVertex { pos: [ 0.5, -0.5, 0.], col: [0., 1., 0.] },
                 ColorVertex { pos: [ 0.,   0.5, 0.], col: [0., 0., 1.] },
             ];
-            let data = MeshData::from_triangles(&VERTICES).expect("create mesh");
+            let data = MeshData::from_verts(&VERTICES);
             context.create_mesh(&data)
         };
 

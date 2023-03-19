@@ -19,7 +19,7 @@ mod shader_data;
 mod storage;
 mod texture;
 mod time;
-mod topology;
+pub mod topology;
 pub mod transform;
 pub mod vertex;
 
@@ -37,11 +37,11 @@ pub use crate::canvas::from_element;
 pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{Canvas, InitialState, WindowMode},
-    context::{Context, FrameParameters, LayerParametersBuilder, Limits},
+    context::{Context, FrameParameters, Limits},
     frame::Frame,
     layer::{Builder as LayerBuilder, Layer},
     mesh::Data as MeshData,
-    pipeline::{Blend, Compare, Topology},
+    pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
     r#loop::{Error, Loop},
     render_frame::FrameFilter,
     texture::Data as TextureData,

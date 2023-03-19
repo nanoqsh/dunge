@@ -18,6 +18,16 @@ where
     indxs: Option<Cow<'a, [T::Face]>>,
 }
 
+impl<'a, V, T> Data<'a, V, T>
+where
+    T: Topology,
+{
+    /// Creates a new [`MeshData`](crate::MeshData) from given vertices.
+    pub fn from_verts(verts: &'a [V]) -> Self {
+        Self { verts, indxs: None }
+    }
+}
+
 impl<'a, V> Data<'a, V> {
     /// Creates a new [`MeshData`](crate::MeshData) from given vertices and indices.
     ///
@@ -29,14 +39,6 @@ impl<'a, V> Data<'a, V> {
             verts,
             indxs: Some(indxs.into()),
         })
-    }
-
-    /// Creates a new [`MeshData`](crate::MeshData) from given triangles.
-    ///
-    /// Returns `Some` if a data length fits in `u16` and is multiple by 3,
-    /// otherwise returns `None`.
-    pub fn from_triangles(verts: &'a [V]) -> Option<Self> {
-        (verts.len() % 3 == 0).then_some(Self { verts, indxs: None })
     }
 
     /// Creates a new [`MeshData`](crate::MeshData) from given quadrangles.
@@ -65,9 +67,10 @@ pub(crate) struct Mesh {
 }
 
 impl Mesh {
-    pub fn new<V>(data: &Data<V>, device: &Device) -> Self
+    pub fn new<V, T>(data: &Data<V, T>, device: &Device) -> Self
     where
         V: Vertex,
+        T: Topology,
     {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -90,9 +93,10 @@ impl Mesh {
         }
     }
 
-    pub fn update_data<V>(&mut self, data: &Data<V>, device: &Device, queue: &Queue)
+    pub fn update_data<V, T>(&mut self, data: &Data<V, T>, device: &Device, queue: &Queue)
     where
         V: Vertex,
+        T: Topology,
     {
         queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
 

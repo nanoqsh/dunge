@@ -5,10 +5,11 @@ use {
         color::Srgba,
         handles::*,
         input::{Input, Key},
+        topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
-        vertex::TextureVertex,
-        Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData, Orthographic,
-        TextureData, View, WindowMode,
+        vertex::{ColorVertex, TextureVertex},
+        Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
+        Orthographic, TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -33,10 +34,17 @@ struct Model {
     pos: [f32; 3],
 }
 
+struct Cube {
+    instance: InstanceHandle,
+    mesh: MeshHandle<ColorVertex, LineStrip>,
+}
+
 struct App {
-    layer: LayerHandle<TextureVertex>,
+    texture_layer: LayerHandle<TextureVertex>,
+    color_layer: LayerHandle<ColorVertex, LineStrip>,
     sprites: TextureHandle,
     models: Vec<Model>,
+    cubes: Vec<Cube>,
     view: ViewHandle,
     camera: Camera,
 }
@@ -49,7 +57,11 @@ impl App {
         });
 
         // Create layer
-        let layer = context.create_layer();
+        let texture_layer = context.create_layer();
+        let color_layer = context
+            .create_layer_with_parameters()
+            .with_depth_compare(Compare::Always)
+            .build();
 
         // Create the sprite texture
         let sprites = {
@@ -150,14 +162,40 @@ impl App {
                 .collect()
         };
 
+        // Create cube models
+        let cubes = {
+            const POSITIONS: [[f32; 3]; 2] = [[1., 0., 0.], [-1., 0., -1.]];
+
+            POSITIONS
+                .into_iter()
+                .map(|pos| Cube {
+                    instance: context.create_instances([Position(pos)]),
+                    mesh: {
+                        let verts: Vec<_> = models::square::VERTICES
+                            .iter()
+                            .map(|&pos| ColorVertex {
+                                pos,
+                                col: [0., 1., 0.3],
+                            })
+                            .collect();
+
+                        let data = MeshData::from_verts(&verts);
+                        context.create_mesh(&data)
+                    },
+                })
+                .collect()
+        };
+
         // Create the view
         let camera = Camera::default();
         let view = context.create_view(camera.view(Orthographic::default()));
 
         Self {
-            layer,
+            texture_layer,
+            color_layer,
             sprites,
             models,
+            cubes,
             view,
             camera,
         }
@@ -215,17 +253,28 @@ impl Loop for App {
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         const CLEAR_COLOR: Srgba<u8> = Srgba([46, 34, 47, 255]);
 
-        let mut layer = frame
-            .layer(self.layer)?
-            .with_clear_color(CLEAR_COLOR)
-            .with_clear_depth()
-            .start();
+        {
+            let mut layer = frame
+                .layer(self.texture_layer)?
+                .with_clear_color(CLEAR_COLOR)
+                .with_clear_depth()
+                .start();
 
-        layer.bind_view(self.view)?;
-        layer.bind_texture(self.sprites)?;
-        for model in &self.models {
-            layer.bind_instance(model.instance)?;
-            layer.draw(model.mesh)?;
+            layer.bind_view(self.view)?;
+            layer.bind_texture(self.sprites)?;
+            for model in &self.models {
+                layer.bind_instance(model.instance)?;
+                layer.draw(model.mesh)?;
+            }
+        }
+
+        {
+            let mut layer = frame.layer(self.color_layer)?.start();
+            layer.bind_view(self.view)?;
+            for cube in &self.cubes {
+                layer.bind_instance(cube.instance)?;
+                layer.draw(cube.mesh)?;
+            }
         }
 
         Ok(())

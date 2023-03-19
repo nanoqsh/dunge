@@ -12,12 +12,12 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
             out.map = vec2(1., 1.);
         }
         case 1u {
-            out.clip_position = vec4(-1., -1., 0., 1.);
-            out.map = vec2(0., 1.);
-        }
-        case 2u {
             out.clip_position = vec4(1., 1., 0., 1.);
             out.map = vec2(1., 0.);
+        }
+        case 2u {
+             out.clip_position = vec4(-1., -1., 0., 1.);
+            out.map = vec2(0., 1.);
         }
         case 3u {
             out.clip_position = vec4(-1., 1., 0., 1.);

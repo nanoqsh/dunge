@@ -4,16 +4,16 @@ use {
         canvas::CanvasEvent,
         handles::*,
         mesh::Data as MeshData,
-        pipeline::{Blend, Compare, PipelineParameters, Topology},
+        pipeline::ParametersBuilder,
         render::Render,
         render_frame::FrameFilter,
         screen::Screen,
         texture::Data as TextureData,
+        topology::Topology,
         transform::{IntoQuat, IntoTransform},
         vertex::Vertex,
         Error,
     },
-    std::marker::PhantomData,
     winit::{event_loop::EventLoopProxy, window::Window},
 };
 
@@ -72,17 +72,14 @@ impl Context {
     pub fn create_layer<V, T>(&mut self) -> LayerHandle<V, T>
     where
         V: Vertex,
+        T: Topology,
     {
         self.create_layer_with_parameters().build()
     }
 
-    /// Creates a layer [builder](LayerParametersBuilder) with custom parameters.
-    pub fn create_layer_with_parameters<V, T>(&mut self) -> LayerParametersBuilder<V, T> {
-        LayerParametersBuilder {
-            render: &mut self.render,
-            params: PipelineParameters::default(),
-            vertex_type: PhantomData,
-        }
+    /// Creates a layer [builder](ParametersBuilder) with custom parameters.
+    pub fn create_layer_with_parameters<V, T>(&mut self) -> ParametersBuilder<V, T> {
+        ParametersBuilder::new(&mut self.render)
     }
 
     /// Deletes the layer.
@@ -160,9 +157,10 @@ impl Context {
     }
 
     /// Creates a new mesh.
-    pub fn create_mesh<V>(&mut self, data: &MeshData<V>) -> MeshHandle<V>
+    pub fn create_mesh<V, T>(&mut self, data: &MeshData<V, T>) -> MeshHandle<V, T>
     where
         V: Vertex,
+        T: Topology,
     {
         self.render.create_mesh(data)
     }
@@ -171,9 +169,14 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_mesh<V>(&mut self, handle: MeshHandle<V>, data: &MeshData<V>) -> Result<(), Error>
+    pub fn update_mesh<V, T>(
+        &mut self,
+        handle: MeshHandle<V, T>,
+        data: &MeshData<V, T>,
+    ) -> Result<(), Error>
     where
         V: Vertex,
+        T: Topology,
     {
         self.render.update_mesh(handle, data)
     }
@@ -240,43 +243,5 @@ impl Default for FrameParameters {
             pixel_size: 1,
             filter: FrameFilter::Nearest,
         }
-    }
-}
-
-/// Builds new layer with specific parameters.
-#[must_use]
-pub struct LayerParametersBuilder<'a, V, T> {
-    render: &'a mut Render,
-    params: PipelineParameters,
-    vertex_type: PhantomData<(V, T)>,
-}
-
-impl<V, T> LayerParametersBuilder<'_, V, T> {
-    pub fn with_blend(mut self, blend: Blend) -> Self {
-        self.params.blend = blend;
-        self
-    }
-
-    pub fn with_topology(mut self, topology: Topology) -> Self {
-        self.params.topology = topology;
-        self
-    }
-
-    pub fn with_cull_faces(mut self, cull_faces: bool) -> Self {
-        self.params.cull_faces = cull_faces;
-        self
-    }
-
-    pub fn with_depth_compare(mut self, depth_compare: Compare) -> Self {
-        self.params.depth_compare = depth_compare;
-        self
-    }
-
-    #[must_use]
-    pub fn build(self) -> LayerHandle<V, T>
-    where
-        V: Vertex,
-    {
-        self.render.create_layer(self.params)
     }
 }

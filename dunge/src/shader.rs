@@ -1,5 +1,3 @@
-pub(crate) use shader_type::{ShaderType, ShaderValue};
-
 use {
     crate::{
         layout::{InstanceModel, Layout},
@@ -7,17 +5,6 @@ use {
     },
     wgpu::VertexBufferLayout,
 };
-
-mod shader_type {
-    use crate::shader::Shader;
-
-    pub struct ShaderValue(pub(crate) Shader);
-
-    /// Getting a shader from a vertex type
-    pub trait ShaderType {
-        const SHADER: ShaderValue;
-    }
-}
 
 pub(crate) const COLOR_CAMERA_GROUP: u32 = 0;
 pub(crate) const COLOR_CAMERA_BINDING: u32 = 0;
@@ -53,14 +40,6 @@ pub(crate) enum Shader {
 }
 
 impl Shader {
-    pub const fn from_vertex_type<V>() -> Self
-    where
-        V: ShaderType,
-    {
-        let ShaderValue(shader) = V::SHADER;
-        shader
-    }
-
     pub const fn source(self) -> &'static str {
         match self {
             Self::Color => include_str!("shaders/color.wgsl"),
@@ -91,16 +70,30 @@ impl Shader {
         [layout::<TextureVertex>(), layout::<InstanceModel>()];
 }
 
+pub struct ShaderValue(Shader);
+
+impl ShaderValue {
+    pub(crate) fn into_inner(self) -> Shader {
+        let Self(value) = self;
+        value
+    }
+}
+
+/// Getting a shader from a vertex type
+pub trait ShaderType {
+    const VALUE: ShaderValue;
+}
+
 impl ShaderType for ColorVertex {
-    const SHADER: ShaderValue = ShaderValue(Shader::Color);
+    const VALUE: ShaderValue = ShaderValue(Shader::Color);
 }
 
 impl ShaderType for FlatVertex {
-    const SHADER: ShaderValue = ShaderValue(Shader::Flat);
+    const VALUE: ShaderValue = ShaderValue(Shader::Flat);
 }
 
 impl ShaderType for TextureVertex {
-    const SHADER: ShaderValue = ShaderValue(Shader::Textured);
+    const VALUE: ShaderValue = ShaderValue(Shader::Textured);
 }
 
 const fn layout<V>() -> VertexBufferLayout<'static>
