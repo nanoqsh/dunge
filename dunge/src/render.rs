@@ -326,8 +326,17 @@ impl Render {
             self.screen = screen;
         }
 
-        self.config.width = self.screen.width.get();
-        self.config.height = self.screen.height.get();
+        // Keep the screen dimensions as a multiple of the
+        // `pixel_size` so that the sprites do not stretch
+        let pixel_size = self.screen.pixel_size.get() as u32;
+        self.config.width = {
+            let width = self.screen.width.get();
+            width - width % pixel_size
+        };
+        self.config.height = {
+            let height = self.screen.height.get();
+            height - height % pixel_size
+        };
         self.surface.configure(&self.device, &self.config);
 
         let virt_size = self.screen.as_virtual_size();

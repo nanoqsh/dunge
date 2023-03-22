@@ -43,12 +43,5 @@ var sdiff: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // This fixes the annoying effect of a sprite stretching
-    // caused by f32 rounding up or down depending on its sign.
-    var map = in.map;
-    if map.x < 0.5 {
-        map.x -= 0.5 / data.size.x;
-    }
-
-    return textureSample(tdiff, sdiff, map);
+    return textureSample(tdiff, sdiff, in.map);
 }
