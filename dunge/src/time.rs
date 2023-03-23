@@ -6,7 +6,7 @@ use self::instant::Instant;
 
 pub(crate) struct Time {
     last: Instant,
-    delta_time: f64,
+    delta_time: f32,
 }
 
 impl Time {
@@ -17,13 +17,12 @@ impl Time {
         }
     }
 
-    #[allow(clippy::cast_possible_truncation)]
     pub fn delta(&mut self) -> f32 {
         let now = Instant::now();
         let delta = now.duration_since(self.last);
         self.last = now;
-        self.delta_time = delta.as_secs_f64();
-        self.delta_time as _
+        self.delta_time += delta.as_secs_f32();
+        self.delta_time
     }
 
     pub fn reset(&mut self) {
@@ -34,7 +33,7 @@ impl Time {
 #[cfg(target_arch = "wasm32")]
 mod instant {
     #[derive(Clone, Copy)]
-    pub(crate) struct Instant(f64);
+    pub(crate) struct Instant(f32);
 
     impl Instant {
         pub fn now() -> Self {
@@ -45,7 +44,7 @@ mod instant {
                 .and_then(Window::performance)
                 .expect("get performance");
 
-            Self(performance.now())
+            Self(performance.now() as f32)
         }
 
         pub fn duration_since(&self, Self(earlier): Self) -> Duration {
@@ -53,10 +52,10 @@ mod instant {
         }
     }
 
-    pub(crate) struct Duration(f64);
+    pub(crate) struct Duration(f32);
 
     impl Duration {
-        pub fn as_secs_f64(&self) -> f64 {
+        pub fn as_secs_f32(&self) -> f32 {
             self.0 / 1000.
         }
     }

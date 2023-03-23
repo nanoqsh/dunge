@@ -95,7 +95,7 @@ impl Render {
 
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
-            format: TextureFormat::Bgra8UnormSrgb,
+            format: RenderFrame::RENDER_FORMAT,
             width: 1,
             height: 1,
             present_mode: PresentMode::Fifo,
@@ -326,20 +326,12 @@ impl Render {
             self.screen = screen;
         }
 
-        // Keep the screen dimensions as a multiple of the
-        // `pixel_size` so that the sprites do not stretch
-        let pixel_size = self.screen.pixel_size.get() as u32;
-        self.config.width = {
-            let width = self.screen.width.get();
-            width - width % pixel_size
-        };
-        self.config.height = {
-            let height = self.screen.height.get();
-            height - height % pixel_size
-        };
+        let (width, height) = self.screen.physical_size();
+        self.config.width = width;
+        self.config.height = height;
         self.surface.configure(&self.device, &self.config);
 
-        let virt_size = self.screen.as_virtual_size();
+        let virt_size = self.screen.virtual_size();
         self.post_shader_data.resize(virt_size, &self.queue);
 
         self.render_frame = RenderFrame::new(

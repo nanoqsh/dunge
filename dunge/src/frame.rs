@@ -160,7 +160,7 @@ impl<'d> Frame<'d> {
 
         Layer::new(
             pass,
-            self.render.screen().as_virtual_size(),
+            self.render.screen().virtual_size(),
             self.render.queue(),
             self.render.resources(),
             &mut self.drawn_in_frame,

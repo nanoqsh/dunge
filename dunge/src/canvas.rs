@@ -6,7 +6,7 @@ use {
         screen::Screen,
         time::Time,
     },
-    std::num::NonZeroU32,
+    std::{num::NonZeroU32, time::Duration},
     winit::{
         event_loop::EventLoop,
         window::{Window, WindowBuilder},
@@ -83,12 +83,17 @@ impl Canvas {
                         DeviceEvent, ElementState, Event, KeyboardInput, MouseButton,
                         MouseScrollDelta, StartCause, WindowEvent,
                     },
-                    event_loop::ControlFlow,
                 },
             };
 
-            #[allow(clippy::cast_possible_truncation)]
             match ev {
+                Event::NewEvents(StartCause::Init) => {
+                    // Reset the timer before start the loop
+                    time.reset();
+                }
+                Event::NewEvents(StartCause::ResumeTimeReached { .. }) => {
+                    context.window.request_redraw();
+                }
                 Event::WindowEvent { event, window_id } if window_id == context.window.id() => {
                     match event {
                         WindowEvent::Resized(size)
@@ -104,9 +109,7 @@ impl Canvas {
                                 ..screen
                             })
                         }),
-                        WindowEvent::CloseRequested if lp.close_requested() => {
-                            *flow = ControlFlow::Exit;
-                        }
+                        WindowEvent::CloseRequested if lp.close_requested() => flow.set_exit(),
                         WindowEvent::KeyboardInput {
                             input:
                                 KeyboardInput {
@@ -154,6 +157,8 @@ impl Canvas {
                     let delta_time = time.delta();
                     if let Some(min_delta_time) = context.limits.min_frame_delta_time {
                         if delta_time < min_delta_time {
+                            let wait = min_delta_time - delta_time;
+                            flow.set_wait_timeout(Duration::from_secs_f32(wait));
                             return;
                         }
                     }
@@ -198,7 +203,7 @@ impl Canvas {
                         }
                         RenderResult::SurfaceError(SurfaceError::OutOfMemory) => {
                             log::error!("suface error: out of memory");
-                            *flow = ControlFlow::Exit;
+                            flow.set_exit();
                         }
                         RenderResult::Error(err) => lp.error_occurred(err),
                     }
@@ -210,16 +215,7 @@ impl Canvas {
                     mouse.motion_delta.0 += x as f32;
                     mouse.motion_delta.1 += y as f32;
                 }
-                Event::UserEvent(CanvasEvent::Close) => {
-                    if lp.close_requested() {
-                        *flow = ControlFlow::Exit;
-                    }
-                }
-                Event::MainEventsCleared => context.window.request_redraw(),
-                Event::NewEvents(StartCause::Init) => {
-                    // Reset the timer before start the loop
-                    _ = time.delta();
-                }
+                Event::UserEvent(CanvasEvent::Close) if lp.close_requested() => flow.set_exit(),
                 _ => {}
             }
         })

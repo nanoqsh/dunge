@@ -1,11 +1,12 @@
 use {
     crate::shader,
-    wgpu::{BindGroup, BindGroupLayout, Device, TextureView},
+    wgpu::{BindGroup, BindGroupLayout, Device, TextureFormat, TextureView},
 };
 
 /// Describes a frame render filter mode.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum FrameFilter {
+    #[default]
     Nearest,
     Linear,
 }
@@ -16,6 +17,12 @@ pub(crate) struct RenderFrame {
 }
 
 impl RenderFrame {
+    pub const RENDER_FORMAT: TextureFormat = if cfg!(target_arch = "wasm32") {
+        TextureFormat::Rgba8UnormSrgb
+    } else {
+        TextureFormat::Bgra8UnormSrgb
+    };
+
     pub fn new(
         (width, height): (u32, u32),
         filter: FrameFilter,
@@ -33,7 +40,7 @@ impl RenderFrame {
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
-            format: TextureFormat::Bgra8UnormSrgb,
+            format: Self::RENDER_FORMAT,
             usage: TextureUsages::RENDER_ATTACHMENT
                 | TextureUsages::COPY_DST
                 | TextureUsages::TEXTURE_BINDING,

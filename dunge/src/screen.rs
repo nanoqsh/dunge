@@ -1,23 +1,38 @@
 use {
-    crate::render_frame::FrameFilter,
-    std::num::{NonZeroU32, NonZeroU8},
+    crate::{context::PixelSize, render_frame::FrameFilter},
+    std::num::NonZeroU32,
 };
 
 #[derive(Clone, Copy)]
 pub(crate) struct Screen {
     pub width: NonZeroU32,
     pub height: NonZeroU32,
-    pub pixel_size: NonZeroU8,
+    pub pixel_size: PixelSize,
     pub filter: FrameFilter,
 }
 
 impl Screen {
-    pub fn as_virtual_size(&self) -> (u32, u32) {
-        let pixel_size = NonZeroU32::from(self.pixel_size);
-        (
-            self.width.get() / pixel_size,
-            self.height.get() / pixel_size,
-        )
+    pub fn physical_size(&self) -> (u32, u32) {
+        let width = self.width.get();
+        let height = self.height.get();
+        match self.pixel_size {
+            PixelSize::XHalf | PixelSize::X1 => (width, height),
+            PixelSize::X2 => (width - width % 2, height - height % 2),
+            PixelSize::X3 => (width - width % 3, height - height % 3),
+            PixelSize::X4 => (width - width % 4, height - height % 4),
+        }
+    }
+
+    pub fn virtual_size(&self) -> (u32, u32) {
+        let width = self.width.get();
+        let height = self.height.get();
+        match self.pixel_size {
+            PixelSize::XHalf => (width * 2 + width % 2, height * 2 + height % 2),
+            PixelSize::X1 => (width, height),
+            PixelSize::X2 => (width / 2, height / 2),
+            PixelSize::X3 => (width / 3, height / 3),
+            PixelSize::X4 => (width / 4, height / 4),
+        }
     }
 }
 
@@ -27,8 +42,8 @@ impl Default for Screen {
         Self {
             width: n,
             height: n,
-            pixel_size: 1.try_into().expect("1 is non zero"),
-            filter: FrameFilter::Nearest,
+            pixel_size: PixelSize::default(),
+            filter: FrameFilter::default(),
         }
     }
 }

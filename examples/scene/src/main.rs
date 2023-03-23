@@ -9,7 +9,7 @@ use {
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
         Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, TextureData, View, WindowMode,
+        Orthographic, PixelSize, TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -52,7 +52,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: 2,
+            pixel_size: PixelSize::X2,
             ..Default::default()
         });
 

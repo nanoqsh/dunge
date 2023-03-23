@@ -42,7 +42,7 @@ impl Context {
 
     /// Returns the canvas size.
     pub fn size(&self) -> (u32, u32) {
-        self.render.screen().as_virtual_size()
+        self.render.screen().virtual_size()
     }
 
     /// Sets context's [`Limits`].
@@ -51,15 +51,9 @@ impl Context {
     }
 
     /// Sets context's frame parameters via [`FrameParameters`] struct.
-    ///
-    /// No effect if `pixel_size` in [`FrameParameters`] is 0.
     pub fn set_frame_parameters(&mut self, params: FrameParameters) {
-        if params.pixel_size == 0 {
-            return;
-        }
-
         self.render.set_screen(Some(Screen {
-            pixel_size: params.pixel_size.try_into().expect("non zero"),
+            pixel_size: params.pixel_size,
             filter: params.filter,
             ..self.render.screen()
         }));
@@ -218,7 +212,7 @@ impl Context {
 }
 
 /// The context's limits.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub struct Limits {
     /// Sets a minimal time between two frames in seconds.
     ///
@@ -227,21 +221,33 @@ pub struct Limits {
     pub min_frame_delta_time: Option<f32>,
 }
 
-/// Describes frame parameters.
-#[derive(Clone, Copy)]
-pub struct FrameParameters {
-    // Virtual pixels size in physical pixels.
-    pub pixel_size: u8,
+impl Default for Limits {
+    fn default() -> Self {
+        const FPS: f32 = 60.;
 
-    // The frame filter mode.
+        Self {
+            min_frame_delta_time: Some(1. / FPS),
+        }
+    }
+}
+
+/// Describes frame parameters.
+#[derive(Clone, Copy, Default)]
+pub struct FrameParameters {
+    /// Virtual pixels size in physical pixels.
+    pub pixel_size: PixelSize,
+
+    /// The frame filter mode.
     pub filter: FrameFilter,
 }
 
-impl Default for FrameParameters {
-    fn default() -> Self {
-        Self {
-            pixel_size: 1,
-            filter: FrameFilter::Nearest,
-        }
-    }
+/// Virtual pixels size in physical pixels.
+#[derive(Clone, Copy, Default)]
+pub enum PixelSize {
+    XHalf,
+    #[default]
+    X1,
+    X2,
+    X3,
+    X4,
 }

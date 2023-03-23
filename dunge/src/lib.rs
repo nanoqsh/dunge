@@ -37,7 +37,7 @@ pub use crate::canvas::from_element;
 pub use crate::{
     camera::{Orthographic, Perspective, View},
     canvas::{Canvas, InitialState, WindowMode},
-    context::{Context, FrameParameters, Limits},
+    context::{Context, FrameParameters, Limits, PixelSize},
     frame::Frame,
     layer::{Builder as LayerBuilder, Layer},
     mesh::Data as MeshData,
