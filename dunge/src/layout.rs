@@ -62,3 +62,9 @@ impl Layout for InstanceModel {
 
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Instance;
 }
+
+impl From<[[f32; 4]; 4]> for InstanceModel {
+    fn from(mat: [[f32; 4]; 4]) -> Self {
+        Self { mat }
+    }
+}

@@ -10,7 +10,7 @@ use {
         screen::Screen,
         texture::Data as TextureData,
         topology::Topology,
-        transform::{IntoQuat, IntoTransform},
+        transform::IntoMat,
         vertex::Vertex,
         Error,
     },
@@ -113,12 +113,11 @@ impl Context {
     pub fn create_instances<I>(&mut self, data: I) -> InstanceHandle
     where
         I: IntoIterator,
-        I::Item: IntoTransform,
-        <I::Item as IntoTransform>::IntoQuat: IntoQuat,
+        I::Item: IntoMat,
     {
         let models: Vec<_> = data
             .into_iter()
-            .map(|transform| transform.into_transform().into_model())
+            .map(|transform| transform.into_mat().into())
             .collect();
 
         self.render.create_instances(&models)
@@ -131,12 +130,11 @@ impl Context {
     pub fn update_instances<I>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
     where
         I: IntoIterator,
-        I::Item: IntoTransform,
-        <I::Item as IntoTransform>::IntoQuat: IntoQuat,
+        I::Item: IntoMat,
     {
         let models: Vec<_> = data
             .into_iter()
-            .map(|transform| transform.into_transform().into_model())
+            .map(|transform| transform.into_mat().into())
             .collect();
 
         self.render.update_instances(handle, &models)

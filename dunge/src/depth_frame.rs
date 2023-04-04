@@ -12,7 +12,7 @@ impl DepthFrame {
         use wgpu::*;
 
         let desc = TextureDescriptor {
-            label: Some("depth texture"),
+            label: None,
             size: Extent3d {
                 width,
                 height,

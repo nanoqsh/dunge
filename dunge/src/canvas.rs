@@ -153,8 +153,10 @@ impl Canvas {
                     }
                 }
                 Event::RedrawRequested(window_id) if window_id == context.window.id() => {
-                    // Measure a delta time
+                    // Measure the delta time
                     let delta_time = time.delta();
+
+                    // If frame rate is limited, skip drawing until it's time
                     if let Some(min_delta_time) = context.limits.min_frame_delta_time {
                         if delta_time < min_delta_time {
                             let wait = min_delta_time - delta_time;

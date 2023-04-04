@@ -1,6 +1,16 @@
 //! Model transformation types and traits.
 
-use crate::layout::InstanceModel;
+type Mat = [[f32; 4]; 4];
+
+pub trait IntoMat {
+    fn into_mat(self) -> Mat;
+}
+
+impl IntoMat for Mat {
+    fn into_mat(self) -> Mat {
+        self
+    }
+}
 
 /// An instance position.
 ///
@@ -30,23 +40,8 @@ pub struct Transform<Q = Identity> {
     pub scl: [f32; 3],
 }
 
-impl<Q> Transform<Q>
-where
-    Q: IntoQuat,
-{
-    pub(crate) fn into_model(self) -> InstanceModel {
-        let Self { pos, rot, scl } = self;
-        let transform = Transform {
-            pos,
-            rot: rot.into_quat(),
-            scl,
-        };
-        transform.into_model_quat()
-    }
-}
-
 impl Transform<Quat> {
-    fn into_model_quat(self) -> InstanceModel {
+    fn mat(self) -> Mat {
         fn rotation(Quat([x, y, z, w]): Quat) -> [[f32; 3]; 3] {
             let x2 = x + x;
             let y2 = y + y;
@@ -76,14 +71,12 @@ impl Transform<Quat> {
         let [yx, yy, yz] = y_axis.map(|v| v * ys);
         let [zx, zy, zz] = z_axis.map(|v| v * zs);
 
-        InstanceModel {
-            mat: [
-                [xx, xy, xz, 0.],
-                [yx, yy, yz, 0.],
-                [zx, zy, zz, 0.],
-                [xt, yt, zt, 1.],
-            ],
-        }
+        [
+            [xx, xy, xz, 0.],
+            [yx, yy, yz, 0.],
+            [zx, zy, zz, 0.],
+            [xt, yt, zt, 1.],
+        ]
     }
 }
 
@@ -97,27 +90,27 @@ impl Default for Transform<Identity> {
     }
 }
 
-pub trait IntoTransform {
-    type IntoQuat;
-    fn into_transform(self) -> Transform<Self::IntoQuat>;
-}
-
-impl IntoTransform for Position {
-    type IntoQuat = Identity;
-
-    fn into_transform(self) -> Transform<Self::IntoQuat> {
+impl IntoMat for Position {
+    fn into_mat(self) -> Mat {
         Transform {
             pos: self.0,
             ..Default::default()
         }
+        .into_mat()
     }
 }
 
-impl<Q> IntoTransform for Transform<Q> {
-    type IntoQuat = Q;
-
-    fn into_transform(self) -> Transform<Self::IntoQuat> {
-        self
+impl<Q> IntoMat for Transform<Q>
+where
+    Q: IntoQuat,
+{
+    fn into_mat(self) -> Mat {
+        Transform {
+            pos: self.pos,
+            rot: self.rot.into_quat(),
+            scl: self.scl,
+        }
+        .mat()
     }
 }
 

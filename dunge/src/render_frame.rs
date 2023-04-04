@@ -32,6 +32,7 @@ impl RenderFrame {
         use wgpu::*;
 
         let texture = device.create_texture(&TextureDescriptor {
+            label: None,
             size: Extent3d {
                 width,
                 height,
@@ -44,7 +45,6 @@ impl RenderFrame {
             usage: TextureUsages::RENDER_ATTACHMENT
                 | TextureUsages::COPY_DST
                 | TextureUsages::TEXTURE_BINDING,
-            label: Some("texture"),
             view_formats: &[],
         });
 
