@@ -424,17 +424,16 @@ impl Render {
 
         let (sender, receiver) = mpsc::channel();
         let buffer_slice = buffer.buffer.slice(..);
-        buffer_slice.map_async(MapMode::Read, move |res| {
-            if let Err(err) = res {
-                eprintln!("{err}");
-                return;
-            }
-
-            _ = sender.send(());
-        });
+        buffer_slice.map_async(MapMode::Read, move |res| _ = sender.send(res));
 
         self.device.poll(Maintain::Wait);
-        receiver.recv().expect("wait until the buffer maps");
+        if let Err(_) = receiver.recv().expect("wait until the buffer maps") {
+            return Screenshot {
+                width,
+                height,
+                data: vec![],
+            };
+        }
 
         let (vw, vh) = self.screen.virtual_size();
         let data = {

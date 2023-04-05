@@ -209,6 +209,9 @@ impl Context {
     }
 
     /// Takes a screenshot of the current frame.
+    ///
+    /// If the buffer cannot be copied for some reason,
+    /// this method returns an empty.
     pub fn take_screenshot(&self) -> Screenshot {
         self.render.take_screenshot()
     }
