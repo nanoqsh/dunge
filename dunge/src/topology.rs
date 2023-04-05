@@ -1,5 +1,8 @@
+//! Topology types and traits.
+
 use {crate::layout::Plain, wgpu::PrimitiveTopology};
 
+/// The topology type of [`Topology`](crate::topology::Topology) trait.
 pub struct TopologyValue(PrimitiveTopology);
 
 impl TopologyValue {
@@ -14,6 +17,7 @@ pub trait Topology {
     const VALUE: TopologyValue;
 }
 
+/// Represents a vertex data as a list of points.
 #[derive(Clone, Copy)]
 pub struct PointList;
 
@@ -22,6 +26,7 @@ impl Topology for PointList {
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::PointList);
 }
 
+/// Represents a vertex data as a list of lines.
 #[derive(Clone, Copy)]
 pub struct LineList;
 
@@ -30,6 +35,7 @@ impl Topology for LineList {
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::LineList);
 }
 
+/// Represents a vertex data as a line strip.
 #[derive(Clone, Copy)]
 pub struct LineStrip;
 
@@ -38,6 +44,7 @@ impl Topology for LineStrip {
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::LineStrip);
 }
 
+/// Represents a vertex data as a list of triangles.
 #[derive(Clone, Copy)]
 pub struct TriangleList;
 
@@ -46,6 +53,7 @@ impl Topology for TriangleList {
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::TriangleList);
 }
 
+/// Represents a vertex data as a triangle strip.
 #[derive(Clone, Copy)]
 pub struct TriangleStrip;
 

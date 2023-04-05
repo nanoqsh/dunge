@@ -34,6 +34,15 @@ impl Screen {
             PixelSize::X4 => (width / 4, height / 4),
         }
     }
+
+    pub fn virtual_size_aligned(&self) -> (u32, u32) {
+        const N_COLOR_CHANNELS: u32 = 4;
+        const ALIGNMENT: u32 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT / N_COLOR_CHANNELS;
+
+        let (mut width, height) = self.virtual_size();
+        width += ALIGNMENT - width % ALIGNMENT;
+        (width, height)
+    }
 }
 
 impl Default for Screen {

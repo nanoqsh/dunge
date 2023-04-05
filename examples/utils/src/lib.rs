@@ -12,6 +12,11 @@ pub fn read_png(bytes: &[u8]) -> RgbaImage {
         .to_rgba8()
 }
 
+#[must_use]
+pub fn create_image(width: u32, height: u32, data: Vec<u8>) -> RgbaImage {
+    RgbaImage::from_vec(width, height, data).expect("create an image")
+}
+
 pub struct Camera {
     angle: f32,
     pitch: f32,

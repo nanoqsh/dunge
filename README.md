@@ -13,7 +13,7 @@
 ## Features
 * Simple but flexible API
 * Desktop, WASM and Android (WIP) support
-* Pixel perfect render
+* Pixel perfect render with custom layers
 * Texture and color vertex modes
 * Primitives for object positioning and camera view out of the box
 

@@ -158,9 +158,12 @@ impl<'d> Frame<'d> {
 
         pass.set_pipeline(pipeline.as_ref());
 
+        let (vw, vh) = self.render.screen().virtual_size();
+        pass.set_viewport(0., 0., vw as f32, vh as f32, 0., 1.);
+
         Layer::new(
             pass,
-            self.render.screen().virtual_size(),
+            (vw, vh),
             self.render.queue(),
             self.render.resources(),
             &mut self.drawn_in_frame,

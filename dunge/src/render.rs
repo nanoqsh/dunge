@@ -1,6 +1,7 @@
 use {
     crate::{
         camera::{Camera, Projection, View},
+        context::Screenshot,
         depth_frame::DepthFrame,
         frame::Frame,
         handles::*,
@@ -142,7 +143,7 @@ impl Render {
         let post_shader_data_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {
                 binding: shader::POST_DATA_BINDING,
-                visibility: ShaderStages::FRAGMENT,
+                visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
                     has_dynamic_offset: false,
@@ -331,17 +332,23 @@ impl Render {
         self.config.height = height;
         self.surface.configure(&self.device, &self.config);
 
-        let virt_size = self.screen.virtual_size();
-        self.post_shader_data.resize(virt_size, &self.queue);
+        let (vw, vh) = {
+            let (vw, vh) = self.screen.virtual_size();
+            (vw as f32, vh as f32)
+        };
+
+        let (aw, ah) = self.screen.virtual_size_aligned();
+        let factor = [vw / aw as f32, vh / ah as f32];
+        self.post_shader_data.resize([vw, vh], factor, &self.queue);
 
         self.render_frame = RenderFrame::new(
-            virt_size,
+            (aw, ah),
             self.screen.filter,
             &self.device,
             &self.layouts.textured_layout,
         );
 
-        self.depth_frame = DepthFrame::new(virt_size, &self.device);
+        self.depth_frame = DepthFrame::new((aw, ah), &self.device);
     }
 
     pub fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
@@ -368,6 +375,91 @@ impl Render {
         output.present();
 
         RenderResult::Ok
+    }
+
+    pub fn take_screenshot(&self) -> Screenshot {
+        use {
+            std::{num::NonZeroU32, sync::mpsc},
+            wgpu::*,
+        };
+
+        const N_COLOR_CHANNELS: usize = 4;
+
+        let image = ImageCopyTexture {
+            texture: self.render_frame.texture(),
+            mip_level: 0,
+            origin: Origin3d::ZERO,
+            aspect: TextureAspect::All,
+        };
+
+        let (width, height) = self.screen.virtual_size_aligned();
+        let buffer = self.device.create_buffer(&BufferDescriptor {
+            label: Some("copy buffer"),
+            size: width as u64 * height as u64 * N_COLOR_CHANNELS as u64,
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let buffer = ImageCopyBuffer {
+            buffer: &buffer,
+            layout: ImageDataLayout {
+                offset: 0,
+                bytes_per_row: NonZeroU32::new(width * N_COLOR_CHANNELS as u32),
+                rows_per_image: NonZeroU32::new(height),
+            },
+        };
+
+        let size = Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor::default());
+
+        encoder.copy_texture_to_buffer(image, buffer, size);
+        self.queue.submit([encoder.finish()]);
+
+        let (sender, receiver) = mpsc::channel();
+        let buffer_slice = buffer.buffer.slice(..);
+        buffer_slice.map_async(MapMode::Read, move |res| {
+            if let Err(err) = res {
+                eprintln!("{err}");
+                return;
+            }
+
+            _ = sender.send(());
+        });
+
+        self.device.poll(Maintain::Wait);
+        receiver.recv().expect("wait until the buffer maps");
+
+        let (vw, vh) = self.screen.virtual_size();
+        let data = {
+            let view = buffer_slice.get_mapped_range();
+            let mut data = Vec::with_capacity(vw as usize * vh as usize * N_COLOR_CHANNELS);
+            let row_size = width as usize * N_COLOR_CHANNELS;
+            let virt_row_size = vw as usize * N_COLOR_CHANNELS;
+            for row in view.chunks(row_size) {
+                data.extend_from_slice(&row[..virt_row_size]);
+            }
+
+            if RenderFrame::RENDER_FORMAT == TextureFormat::Bgra8UnormSrgb {
+                for chunk in data.chunks_mut(N_COLOR_CHANNELS) {
+                    chunk.swap(0, 2);
+                }
+            }
+
+            data
+        };
+
+        Screenshot {
+            width: vw,
+            height: vh,
+            data,
+        }
     }
 
     pub fn device(&self) -> &Device {

@@ -207,6 +207,11 @@ impl Context {
     pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.render.delete_view(handle)
     }
+
+    /// Takes a screenshot of the current frame.
+    pub fn take_screenshot(&self) -> Screenshot {
+        self.render.take_screenshot()
+    }
 }
 
 /// The context's limits.
@@ -248,4 +253,11 @@ pub enum PixelSize {
     X2,
     X3,
     X4,
+}
+
+/// The representation of a screenshot.
+pub struct Screenshot {
+    pub width: u32,
+    pub height: u32,
+    pub data: Vec<u8>,
 }

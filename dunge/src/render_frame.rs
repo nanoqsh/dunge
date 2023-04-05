@@ -1,6 +1,6 @@
 use {
     crate::shader,
-    wgpu::{BindGroup, BindGroupLayout, Device, TextureFormat, TextureView},
+    wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
 
 /// Describes a frame render filter mode.
@@ -12,6 +12,7 @@ pub enum FrameFilter {
 }
 
 pub(crate) struct RenderFrame {
+    texture: Texture,
     view: TextureView,
     bind_group: BindGroup,
 }
@@ -42,8 +43,9 @@ impl RenderFrame {
             sample_count: 1,
             dimension: TextureDimension::D2,
             format: Self::RENDER_FORMAT,
-            usage: TextureUsages::RENDER_ATTACHMENT
+            usage: TextureUsages::COPY_SRC
                 | TextureUsages::COPY_DST
+                | TextureUsages::RENDER_ATTACHMENT
                 | TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
@@ -64,6 +66,7 @@ impl RenderFrame {
         });
 
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: None,
             layout,
             entries: &[
                 BindGroupEntry {
@@ -75,10 +78,17 @@ impl RenderFrame {
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
-            label: Some("texture bind group"),
         });
 
-        Self { view, bind_group }
+        Self {
+            texture,
+            view,
+            bind_group,
+        }
+    }
+
+    pub fn texture(&self) -> &Texture {
+        &self.texture
     }
 
     pub fn view(&self) -> &TextureView {

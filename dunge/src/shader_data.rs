@@ -16,7 +16,7 @@ impl PostShaderData {
         };
 
         let buffer_data = {
-            let uniform = PostShaderDataUniform::new(1., 1.);
+            let uniform = PostShaderDataUniform::new([1., 1.], [1., 1.]);
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("post data buffer"),
                 contents: uniform.as_bytes(),
@@ -39,8 +39,8 @@ impl PostShaderData {
         }
     }
 
-    pub fn resize(&self, (width, height): (u32, u32), queue: &Queue) {
-        let uniform = PostShaderDataUniform::new(width as f32, height as f32);
+    pub fn resize(&self, size: [f32; 2], factor: [f32; 2], queue: &Queue) {
+        let uniform = PostShaderDataUniform::new(size, factor);
         queue.write_buffer(&self.buffer_data, 0, uniform.as_bytes());
     }
 
@@ -53,15 +53,12 @@ impl PostShaderData {
 #[derive(Copy, Clone)]
 pub(crate) struct PostShaderDataUniform {
     size: [f32; 2],
-    _pad: [f32; 2],
+    factor: [f32; 2],
 }
 
 impl PostShaderDataUniform {
-    fn new(width: f32, height: f32) -> Self {
-        Self {
-            size: [width, height],
-            _pad: [0.; 2],
-        }
+    fn new(size: [f32; 2], factor: [f32; 2]) -> Self {
+        Self { size, factor }
     }
 }
 

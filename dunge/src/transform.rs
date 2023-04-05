@@ -118,6 +118,7 @@ pub trait IntoQuat {
     fn into_quat(self) -> Quat;
 }
 
+/// The identity rotation.
 #[derive(Default)]
 pub struct Identity;
 
@@ -127,6 +128,7 @@ impl IntoQuat for Identity {
     }
 }
 
+/// Represents a quaternion.
 pub struct Quat(pub [f32; 4]);
 
 impl Default for Quat {
@@ -141,6 +143,7 @@ impl IntoQuat for Quat {
     }
 }
 
+/// The rotation along an axis by an angle.
 pub struct AxisAngle(pub [f32; 3], pub f32);
 
 impl IntoQuat for AxisAngle {

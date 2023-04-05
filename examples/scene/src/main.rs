@@ -210,9 +210,18 @@ impl Loop for App {
 
         // Handle pressed keys
         for key in input.pressed_keys {
-            if let Key::Escape = key {
-                context.plan_to_close();
-                return Ok(());
+            match key {
+                Key::Escape => {
+                    context.plan_to_close();
+                    return Ok(());
+                }
+                Key::P => {
+                    let shot = context.take_screenshot();
+                    utils::create_image(shot.width, shot.height, shot.data)
+                        .save("screen.png")
+                        .expect("save screenshot");
+                }
+                _ => (),
             }
         }
 
