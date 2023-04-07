@@ -62,28 +62,37 @@ impl Render {
 
         let instance = Instance::default();
         let surface = unsafe { instance.create_surface(window).expect("create surface") };
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: if cfg!(target_arch = "wasm32") {
-                    PowerPreference::LowPower
-                } else {
-                    PowerPreference::HighPerformance
-                },
-                compatible_surface: Some(&surface),
-                force_fallback_adapter: false,
-            })
-            .await
-            .expect("request adapter");
+
+        let mut adapter = None;
+        for ad in instance.enumerate_adapters(Backends::all()) {
+            let info = ad.get_info();
+            println!("{info:?}");
+            if info.backend == Backend::Gl {
+                adapter = Some(ad);
+            }
+        }
+
+        let adapter = adapter.expect("gl adapter");
 
         let (device, queue) = adapter
             .request_device(
                 &DeviceDescriptor {
                     features: Features::empty(),
                     limits: Limits {
+                        max_storage_buffers_per_shader_stage: 0,
+                        max_storage_textures_per_shader_stage: 0,
+                        max_dynamic_storage_buffers_per_pipeline_layout: 0,
+                        max_storage_buffer_binding_size: 0,
+                        max_compute_workgroup_storage_size: 0,
+                        max_compute_invocations_per_workgroup: 0,
+                        max_compute_workgroup_size_x: 0,
+                        max_compute_workgroup_size_y: 0,
+                        max_compute_workgroup_size_z: 0,
+                        max_compute_workgroups_per_dimension: 0,
                         ..if cfg!(target_arch = "wasm32") {
                             Limits::downlevel_webgl2_defaults()
                         } else {
-                            Limits::default()
+                            Limits::downlevel_defaults()
                         }
                     },
                     label: None,
