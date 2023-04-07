@@ -28,6 +28,10 @@ pub(crate) const _TEXTURED_TDIFF_GROUP: u32 = 1;
 pub(crate) const TEXTURED_TDIFF_BINDING: u32 = 0;
 pub(crate) const TEXTURED_SDIFF_GROUP: u32 = 1;
 pub(crate) const TEXTURED_SDIFF_BINDING: u32 = 1;
+pub(crate) const TEXTURED_LIGHT_GROUP: u32 = 2;
+pub(crate) const TEXTURED_LIGHT_BINDING: u32 = 0;
+pub(crate) const _TEXTURED_AMBIENT_GROUP: u32 = 2;
+pub(crate) const TEXTURED_AMBIENT_BINDING: u32 = 1;
 
 pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
 pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;

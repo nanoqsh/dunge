@@ -52,7 +52,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X2,
+            pixel_size: PixelSize::X1,
             ..Default::default()
         });
 
@@ -231,7 +231,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let sprite_scale = 16.;
+        let sprite_scale = 16. * 2.;
         let view = View {
             proj: Orthographic {
                 width_factor: 1. / sprite_scale,
@@ -269,6 +269,9 @@ impl Loop for App {
                 .with_clear_depth()
                 .start();
 
+            layer.set_light([0., 0., 0.], 3., [2., 2., 0.]);
+            layer.set_ambient([0.2, 0.1, 0.3]);
+
             layer.bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;
             for model in &self.models {
@@ -282,7 +285,8 @@ impl Loop for App {
             layer.bind_view(self.view)?;
             for cube in &self.cubes {
                 layer.bind_instance(cube.instance)?;
-                layer.draw(cube.mesh)?;
+                _ = cube.mesh;
+                // layer.draw(cube.mesh)?;
             }
         }
 

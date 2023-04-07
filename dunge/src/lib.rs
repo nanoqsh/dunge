@@ -15,7 +15,13 @@ mod render;
 mod render_frame;
 mod screen;
 mod shader;
-mod shader_data;
+mod shader_data {
+    mod camera;
+    mod light;
+    mod post;
+
+    pub(crate) use self::{camera::CameraUniform, light::Light, post::PostShaderData};
+}
 mod storage;
 mod texture;
 mod time;

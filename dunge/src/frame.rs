@@ -166,6 +166,7 @@ impl<'d> Frame<'d> {
             (vw, vh),
             self.render.queue(),
             self.render.resources(),
+            self.render.light(),
             &mut self.drawn_in_frame,
         )
     }

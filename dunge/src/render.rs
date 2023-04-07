@@ -12,7 +12,7 @@ use {
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
         shader::{self, Shader},
-        shader_data::PostShaderData,
+        shader_data::{Light, PostShaderData},
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -36,6 +36,7 @@ pub(crate) struct Render {
     layouts: Layouts,
     post_pipeline: Pipeline,
     post_shader_data: PostShaderData,
+    light: Light,
     render_frame: RenderFrame,
     depth_frame: DepthFrame,
     resources: Resources,
@@ -66,9 +67,9 @@ impl Render {
         let mut adapter = None;
         for ad in instance.enumerate_adapters(Backends::all()) {
             let info = ad.get_info();
-            println!("{info:?}");
             if info.backend == Backend::Gl {
                 adapter = Some(ad);
+                break;
             }
         }
 
@@ -162,17 +163,45 @@ impl Render {
             label: Some("post shader data bind group layout"),
         });
 
+        let light_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: shader::TEXTURED_LIGHT_BINDING,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: shader::TEXTURED_AMBIENT_BINDING,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+            label: Some("light bind group layout"),
+        });
+
         let render_frame =
             RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &textured_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
         let post_shader_data = PostShaderData::new(&device, &post_shader_data_layout);
+        let light = Light::new(&device, &light_layout);
 
         let shaders = Shaders::default();
         let layouts = Layouts {
             textured_layout,
             camera_layout,
             post_shader_data_layout,
+            light_layout,
         };
 
         let post_pipeline = Pipeline::new(
@@ -200,6 +229,7 @@ impl Render {
             layouts,
             post_pipeline,
             post_shader_data,
+            light,
             render_frame,
             depth_frame,
             resources: Resources::default(),
@@ -489,6 +519,10 @@ impl Render {
         &self.post_shader_data
     }
 
+    pub fn light(&self) -> &Light {
+        &self.light
+    }
+
     pub fn render_frame(&self) -> &RenderFrame {
         &self.render_frame
     }
@@ -547,24 +581,11 @@ impl Shaders {
     }
 }
 
-pub(crate) enum BindGroupLayouts<'a> {
-    N1([&'a BindGroupLayout; 1]),
-    N2([&'a BindGroupLayout; 2]),
-}
-
-impl<'a> BindGroupLayouts<'a> {
-    pub fn as_slice(&self) -> &[&'a BindGroupLayout] {
-        match self {
-            Self::N1(b) => b,
-            Self::N2(b) => b,
-        }
-    }
-}
-
 pub(crate) struct Layouts {
     textured_layout: BindGroupLayout,
     camera_layout: BindGroupLayout,
     post_shader_data_layout: BindGroupLayout,
+    light_layout: BindGroupLayout,
 }
 
 impl Layouts {
@@ -575,7 +596,27 @@ impl Layouts {
             Shader::Post => {
                 BindGroupLayouts::N2([&self.post_shader_data_layout, &self.textured_layout])
             }
-            Shader::Textured => BindGroupLayouts::N2([&self.camera_layout, &self.textured_layout]),
+            Shader::Textured => BindGroupLayouts::N3([
+                &self.camera_layout,
+                &self.textured_layout,
+                &self.light_layout,
+            ]),
+        }
+    }
+}
+
+pub(crate) enum BindGroupLayouts<'a> {
+    N1([&'a BindGroupLayout; 1]),
+    N2([&'a BindGroupLayout; 2]),
+    N3([&'a BindGroupLayout; 3]),
+}
+
+impl<'a> BindGroupLayouts<'a> {
+    pub fn as_slice(&self) -> &[&'a BindGroupLayout] {
+        match self {
+            Self::N1(b) => b,
+            Self::N2(b) => b,
+            Self::N3(b) => b,
         }
     }
 }

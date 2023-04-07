@@ -9,6 +9,7 @@ use {
         r#loop::Error,
         render::Resources,
         shader,
+        shader_data::Light,
         vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     std::marker::PhantomData,
@@ -23,6 +24,7 @@ pub struct Layer<'l, V, T> {
     queue: &'l Queue,
     resources: &'l Resources,
     instance: Option<&'l Instance>,
+    light: &'l Light,
     drawn_in_frame: &'l mut bool,
     vertex_type: PhantomData<(V, T)>,
 }
@@ -33,6 +35,7 @@ impl<'l, V, T> Layer<'l, V, T> {
         size: (u32, u32),
         queue: &'l Queue,
         resources: &'l Resources,
+        light: &'l Light,
         drawn_in_frame: &'l mut bool,
     ) -> Self {
         Self {
@@ -41,6 +44,7 @@ impl<'l, V, T> Layer<'l, V, T> {
             queue,
             resources,
             instance: None,
+            light,
             drawn_in_frame,
             vertex_type: PhantomData,
         }
@@ -120,6 +124,26 @@ impl<T> Layer<'_, TextureVertex, T> {
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.bind_view_handle(handle, shader::TEXTURED_CAMERA_GROUP)
     }
+
+    /// Binds a [texture](crate::handles::TextureHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
+    pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
+        self.bind_texture_handle(handle, shader::TEXTURED_SDIFF_GROUP)
+    }
+
+    pub fn set_light(&mut self, pos: [f32; 3], rad: f32, col: [f32; 3]) {
+        self.light.set_light(pos, rad, col, &self.queue);
+        self.pass
+            .set_bind_group(shader::TEXTURED_LIGHT_GROUP, self.light.bind_group(), &[]);
+    }
+
+    pub fn set_ambient(&mut self, ambient: [f32; 3]) {
+        self.light.set_ambient(ambient, &self.queue);
+        self.pass
+            .set_bind_group(shader::TEXTURED_LIGHT_GROUP, self.light.bind_group(), &[]);
+    }
 }
 
 impl<T> Layer<'_, ColorVertex, T> {
@@ -129,16 +153,6 @@ impl<T> Layer<'_, ColorVertex, T> {
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.bind_view_handle(handle, shader::COLOR_CAMERA_GROUP)
-    }
-}
-
-impl<T> Layer<'_, TextureVertex, T> {
-    /// Binds a [texture](crate::handles::TextureHandle).
-    ///
-    /// # Errors
-    /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
-    pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
-        self.bind_texture_handle(handle, shader::TEXTURED_SDIFF_GROUP)
     }
 }
 

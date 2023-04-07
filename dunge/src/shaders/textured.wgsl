@@ -20,6 +20,7 @@ struct InstanceInput {
 struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
     @location(0) map: vec2<f32>,
+    @location(1) world: vec3<f32>,
 }
 
 @vertex
@@ -32,8 +33,10 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     );
 
     var out: VertexOutput;
-    out.pos = camera.view_proj * model * vec4<f32>(vert.pos, 1.);
+    let world = model * vec4<f32>(vert.pos, 1.);
+    out.pos = camera.view_proj * world;
     out.map = vert.map;
+    out.world = world.xyz;
     return out;
 }
 
@@ -42,12 +45,47 @@ var tdiff: texture_2d<f32>;
 @group(1) @binding(1)
 var sdiff: sampler;
 
+struct Light {
+    pos: vec3<f32>,
+    rad: f32,
+    col: vec3<f32>,
+    flags: u32,
+}
+
+@group(2) @binding(0)
+var<uniform> light: Light;
+@group(2) @binding(1)
+var<uniform> ambient: vec3<f32>;
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let out = textureSample(tdiff, sdiff, in.map);
     if out.w < 0.9 {
         discard;
     }
-    
-    return out;
+
+    var diffuse = vec3(0., 0., 0.);
+    if in.world.x > light.pos.x - light.rad && in.world.x < light.pos.x + light.rad
+    && in.world.y > light.pos.y - light.rad && in.world.y < light.pos.y + light.rad
+    && in.world.z > light.pos.z - light.rad && in.world.z < light.pos.z + light.rad {
+        let len = length(in.world - light.pos);
+        if len < light.rad {
+            var sharp = 1.;
+            if (light.flags & 1u) == 0u {
+                sharp -= (len / light.rad);
+            }
+
+            var shadow: vec3<f32>;
+            if (light.flags & 2u) == 0u {
+                shadow = vec3(1.);
+            } else {
+                shadow = -ambient;
+            }
+
+            diffuse = shadow * sharp * light.col;
+        }
+    }
+
+    let result = (ambient + diffuse) * out.rgb;
+    return vec4(result, out.a);
 }
