@@ -3,6 +3,7 @@ use {
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
         handles::*,
+        instance::InstanceModel,
         mesh::Data as MeshData,
         pipeline::ParametersBuilder,
         render::Render,
@@ -17,15 +18,34 @@ use {
     winit::{event_loop::EventLoopProxy, window::Window},
 };
 
+type Proxy = EventLoopProxy<CanvasEvent>;
+
 /// The application context.
 pub struct Context {
     pub(crate) window: Window,
-    pub(crate) proxy: EventLoopProxy<CanvasEvent>,
+    pub(crate) proxy: Proxy,
     pub(crate) render: Render,
-    pub(crate) limits: Limits,
+    limits: Limits,
+    models: Vec<InstanceModel>,
 }
 
 impl Context {
+    pub(crate) fn new(window: Window, proxy: Proxy, render: Render) -> Self {
+        const DEFAULT_MODELS_CAPACITY: usize = 8;
+
+        Self {
+            window,
+            proxy,
+            render,
+            limits: Limits::default(),
+            models: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
+        }
+    }
+
+    pub(crate) fn min_frame_delta_time(&self) -> Option<f32> {
+        self.limits.min_frame_delta_time
+    }
+
     /// Returns the window.
     pub fn window(&self) -> &Window {
         &self.window
@@ -115,12 +135,13 @@ impl Context {
         I: IntoIterator,
         I::Item: IntoMat,
     {
-        let models: Vec<_> = data
+        self.models.clear();
+        let models = data
             .into_iter()
-            .map(|transform| transform.into_mat().into())
-            .collect();
+            .map(|transform| InstanceModel::from(transform.into_mat()));
 
-        self.render.create_instances(&models)
+        self.models.extend(models);
+        self.render.create_instances(&self.models)
     }
 
     /// Updates instances.
@@ -132,12 +153,13 @@ impl Context {
         I: IntoIterator,
         I::Item: IntoMat,
     {
-        let models: Vec<_> = data
+        self.models.clear();
+        let models = data
             .into_iter()
-            .map(|transform| transform.into_mat().into())
-            .collect();
+            .map(|transform| InstanceModel::from(transform.into_mat()));
 
-        self.render.update_instances(handle, &models)
+        self.models.extend(models);
+        self.render.update_instances(handle, &self.models)
     }
 
     /// Deletes instances.

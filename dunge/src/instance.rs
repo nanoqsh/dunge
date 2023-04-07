@@ -1,6 +1,6 @@
 use {
-    crate::layout::{InstanceModel, Plain},
-    wgpu::{Buffer, Device, Queue},
+    crate::layout::{Layout, Plain},
+    wgpu::{Buffer, Device, Queue, VertexAttribute, VertexStepMode},
 };
 
 pub(crate) struct Instance {
@@ -36,5 +36,26 @@ impl Instance {
 
     pub fn n_instances(&self) -> u32 {
         self.n_instances
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub(crate) struct InstanceModel {
+    pub(crate) mat: [[f32; 4]; 4],
+}
+
+unsafe impl Plain for InstanceModel {}
+
+impl Layout for InstanceModel {
+    const ATTRIBS: &'static [VertexAttribute] =
+        &wgpu::vertex_attr_array![2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4];
+
+    const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Instance;
+}
+
+impl From<[[f32; 4]; 4]> for InstanceModel {
+    fn from(mat: [[f32; 4]; 4]) -> Self {
+        Self { mat }
     }
 }

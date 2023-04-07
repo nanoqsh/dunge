@@ -5,8 +5,7 @@ use {
         depth_frame::DepthFrame,
         frame::Frame,
         handles::*,
-        instance::Instance,
-        layout::InstanceModel,
+        instance::{Instance, InstanceModel},
         mesh::{Data as MeshData, Mesh},
         pipeline::{Pipeline, PipelineParameters},
         r#loop::Loop,
@@ -427,7 +426,11 @@ impl Render {
         buffer_slice.map_async(MapMode::Read, move |res| _ = sender.send(res));
 
         self.device.poll(Maintain::Wait);
-        if let Err(_) = receiver.recv().expect("wait until the buffer maps") {
+        if receiver
+            .recv()
+            .expect("wait until the buffer maps")
+            .is_err()
+        {
             return Screenshot {
                 width,
                 height,
