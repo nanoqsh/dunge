@@ -53,8 +53,11 @@ struct Light {
 }
 
 @group(2) @binding(0)
-var<uniform> light: Light;
+var<uniform> lights: array<Light, 64>;
 @group(2) @binding(1)
+var<uniform> n_lights: u32;
+
+@group(3) @binding(0)
 var<uniform> ambient: vec3<f32>;
 
 @fragment
@@ -65,24 +68,28 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     var diffuse = vec3(0., 0., 0.);
-    if in.world.x > light.pos.x - light.rad && in.world.x < light.pos.x + light.rad
-    && in.world.y > light.pos.y - light.rad && in.world.y < light.pos.y + light.rad
-    && in.world.z > light.pos.z - light.rad && in.world.z < light.pos.z + light.rad {
-        let len = length(in.world - light.pos);
-        if len < light.rad {
-            var sharp = 1.;
-            if (light.flags & 1u) == 0u {
-                sharp -= (len / light.rad);
-            }
+    for (var i: u32 = 0u; i < n_lights; i++) {
+        let light = lights[i];
 
-            var shadow: vec3<f32>;
-            if (light.flags & 2u) == 0u {
-                shadow = vec3(1.);
-            } else {
-                shadow = -ambient;
-            }
+        if in.world.x > light.pos.x - light.rad && in.world.x < light.pos.x + light.rad
+        && in.world.y > light.pos.y - light.rad && in.world.y < light.pos.y + light.rad
+        && in.world.z > light.pos.z - light.rad && in.world.z < light.pos.z + light.rad {
+            let len = length(in.world - light.pos);
+            if len < light.rad {
+                var sharp = 1.;
+                if (light.flags & 1u) == 0u {
+                    sharp -= (len / light.rad);
+                }
 
-            diffuse = shadow * sharp * light.col;
+                var gloom: vec3<f32>;
+                if (light.flags & 2u) == 0u {
+                    gloom = vec3(1.);
+                } else {
+                    gloom = -ambient;
+                }
+
+                diffuse += gloom * sharp * light.col;
+            }
         }
     }
 

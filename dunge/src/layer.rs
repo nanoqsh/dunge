@@ -9,7 +9,7 @@ use {
         r#loop::Error,
         render::Resources,
         shader,
-        shader_data::Light,
+        shader_data::Ambient,
         vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     std::marker::PhantomData,
@@ -24,7 +24,7 @@ pub struct Layer<'l, V, T> {
     queue: &'l Queue,
     resources: &'l Resources,
     instance: Option<&'l Instance>,
-    light: &'l Light,
+    ambient: &'l Ambient,
     drawn_in_frame: &'l mut bool,
     vertex_type: PhantomData<(V, T)>,
 }
@@ -35,19 +35,31 @@ impl<'l, V, T> Layer<'l, V, T> {
         size: (u32, u32),
         queue: &'l Queue,
         resources: &'l Resources,
-        light: &'l Light,
+        ambient: &'l Ambient,
         drawn_in_frame: &'l mut bool,
     ) -> Self {
-        Self {
+        const DEFAULT_AMBIENT: [f32; 3] = [1.; 3];
+
+        let mut layer = Self {
             pass,
             size,
             queue,
             resources,
             instance: None,
-            light,
+            ambient,
             drawn_in_frame,
             vertex_type: PhantomData,
-        }
+        };
+
+        // Bind default light
+        // layer
+        //     .bind_light(LightHandle::DEFAULT)
+        //     .expect("bind default light");
+
+        // Set default ambient
+        //layer.set_ambient(DEFAULT_AMBIENT);
+
+        layer
     }
 
     /// Binds a [instance](crate::handles::InstanceHandle).
@@ -114,6 +126,23 @@ impl<'l, V, T> Layer<'l, V, T> {
 
         Ok(())
     }
+
+    pub fn bind_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+        let light = self.resources.lights.get(handle.0)?;
+        self.pass
+            .set_bind_group(shader::TEXTURED_LIGHTS_GROUP, light.bind_group(), &[]);
+
+        Ok(())
+    }
+
+    pub fn set_ambient(&mut self, ambient: [f32; 3]) {
+        self.ambient.set_ambient(ambient, &self.queue);
+        self.pass.set_bind_group(
+            shader::TEXTURED_AMBIENT_GROUP,
+            self.ambient.bind_group(),
+            &[],
+        );
+    }
 }
 
 impl<T> Layer<'_, TextureVertex, T> {
@@ -131,18 +160,6 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
         self.bind_texture_handle(handle, shader::TEXTURED_SDIFF_GROUP)
-    }
-
-    pub fn set_light(&mut self, pos: [f32; 3], rad: f32, col: [f32; 3]) {
-        self.light.set_light(pos, rad, col, &self.queue);
-        self.pass
-            .set_bind_group(shader::TEXTURED_LIGHT_GROUP, self.light.bind_group(), &[]);
-    }
-
-    pub fn set_ambient(&mut self, ambient: [f32; 3]) {
-        self.light.set_ambient(ambient, &self.queue);
-        self.pass
-            .set_bind_group(shader::TEXTURED_LIGHT_GROUP, self.light.bind_group(), &[]);
     }
 }
 

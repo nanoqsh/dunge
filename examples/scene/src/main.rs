@@ -9,7 +9,7 @@ use {
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
         Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, PixelSize, TextureData, View, WindowMode,
+        Orthographic, PixelSize, Source, TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -45,6 +45,7 @@ struct App {
     sprites: TextureHandle,
     models: Vec<Model>,
     cubes: Vec<Cube>,
+    light: LightHandle,
     view: ViewHandle,
     camera: Camera,
 }
@@ -186,6 +187,18 @@ impl App {
                 .collect()
         };
 
+        let light = {
+            const LIGHTS: [([f32; 3], [f32; 3]); 2] =
+                [([1., 0., 1.], [2., 0., 0.]), ([-1., 0., -1.], [0., 0., 2.])];
+
+            context.create_light(LIGHTS.map(|(pos, col)| Source {
+                pos,
+                rad: 3.,
+                col,
+                ..Default::default()
+            }))
+        };
+
         // Create the view
         let camera = Camera::default();
         let view = context.create_view(camera.view(Orthographic::default()));
@@ -196,6 +209,7 @@ impl App {
             sprites,
             models,
             cubes,
+            light,
             view,
             camera,
         }
@@ -269,8 +283,8 @@ impl Loop for App {
                 .with_clear_depth()
                 .start();
 
-            layer.set_light([0., 0., 0.], 3., [2., 2., 0.]);
-            layer.set_ambient([0.2, 0.1, 0.3]);
+            layer.set_ambient([0.3, 0.3, 0.3]);
+            layer.bind_light(self.light)?;
 
             layer.bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;
@@ -285,8 +299,7 @@ impl Loop for App {
             layer.bind_view(self.view)?;
             for cube in &self.cubes {
                 layer.bind_instance(cube.instance)?;
-                _ = cube.mesh;
-                // layer.draw(cube.mesh)?;
+                layer.draw(cube.mesh)?;
             }
         }
 

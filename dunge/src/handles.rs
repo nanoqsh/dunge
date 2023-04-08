@@ -41,3 +41,11 @@ impl<V, T> MeshHandle<V, T> {
 /// A view handle. May be obtained from the [`create_view`](crate::Context::create_view) method.
 #[derive(Clone, Copy)]
 pub struct ViewHandle(pub(crate) u32);
+
+/// A light handle. May be obtained from the [`create_light`](crate::Context::create_light) method.
+#[derive(Clone, Copy)]
+pub struct LightHandle(pub(crate) u32);
+
+impl LightHandle {
+    pub(crate) const DEFAULT: Self = Self(0);
+}

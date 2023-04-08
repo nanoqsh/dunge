@@ -9,6 +9,7 @@ use {
         render::Render,
         render_frame::FrameFilter,
         screen::Screen,
+        shader_data::{LightModel, Source},
         texture::Data as TextureData,
         topology::Topology,
         transform::IntoMat,
@@ -27,6 +28,7 @@ pub struct Context {
     pub(crate) render: Render,
     limits: Limits,
     models: Vec<InstanceModel>,
+    lights: Vec<LightModel>,
 }
 
 impl Context {
@@ -39,6 +41,7 @@ impl Context {
             render,
             limits: Limits::default(),
             models: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
+            lights: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
         }
     }
 
@@ -228,6 +231,17 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.render.delete_view(handle)
+    }
+
+    /// Creates new light.
+    pub fn create_light<I>(&mut self, light: I) -> LightHandle
+    where
+        I: IntoIterator<Item = Source>,
+    {
+        self.lights.clear();
+        let models = light.into_iter().map(LightModel::new);
+        self.lights.extend(models);
+        self.render.create_light(&self.lights)
     }
 
     /// Takes a screenshot of the current frame.

@@ -16,11 +16,19 @@ mod render_frame;
 mod screen;
 mod shader;
 mod shader_data {
+    mod ambient;
     mod camera;
     mod light;
     mod post;
 
-    pub(crate) use self::{camera::CameraUniform, light::Light, post::PostShaderData};
+    pub(crate) use self::{
+        ambient::Ambient,
+        camera::CameraUniform,
+        light::{Light, LightModel},
+        post::PostShaderData,
+    };
+
+    pub use self::light::{LightKind, LightMode, Source};
 }
 mod storage;
 mod texture;
@@ -50,5 +58,6 @@ pub use crate::{
     pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
     r#loop::{Error, Loop},
     render_frame::FrameFilter,
+    shader_data::{LightKind, LightMode, Source},
     texture::Data as TextureData,
 };
