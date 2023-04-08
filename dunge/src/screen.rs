@@ -12,22 +12,16 @@ pub(crate) struct Screen {
 }
 
 impl Screen {
+    pub const MAX_SIZE: u32 = 8192;
+
     pub fn physical_size(&self) -> (u32, u32) {
-        let width = self.width.get();
-        let height = self.height.get();
-        match self.pixel_size {
-            PixelSize::XHalf | PixelSize::X1 => (width, height),
-            PixelSize::X2 => (width - width % 2, height - height % 2),
-            PixelSize::X3 => (width - width % 3, height - height % 3),
-            PixelSize::X4 => (width - width % 4, height - height % 4),
-        }
+        (self.width.get(), self.height.get())
     }
 
     pub fn virtual_size(&self) -> (u32, u32) {
-        let width = self.width.get();
-        let height = self.height.get();
+        let (width, height) = self.physical_size();
         match self.pixel_size {
-            PixelSize::XHalf => (width * 2 + width % 2, height * 2 + height % 2),
+            PixelSize::XHalf => (width * 2, height * 2),
             PixelSize::X1 => (width, height),
             PixelSize::X2 => (width / 2, height / 2),
             PixelSize::X3 => (width / 3, height / 3),
@@ -42,6 +36,30 @@ impl Screen {
         let (mut width, height) = self.virtual_size();
         width += ALIGNMENT - width % ALIGNMENT;
         (width, height)
+    }
+
+    pub fn buffer_size(&self) -> (u32, u32) {
+        let (width, height) = self.virtual_size_aligned();
+        let (width, height) = match self.pixel_size {
+            PixelSize::XHalf => (width + 1, height + 1),
+            _ => (width, height),
+        };
+
+        (width.min(Self::MAX_SIZE), height.min(Self::MAX_SIZE))
+    }
+
+    pub fn size_factor(&self) -> (f32, f32) {
+        let (width, height) = self.virtual_size_aligned();
+        let (width, height) = match self.pixel_size {
+            PixelSize::XHalf => (width / 2, height / 2),
+            PixelSize::X1 => (width, height),
+            PixelSize::X2 => (width * 2, height * 2),
+            PixelSize::X3 => (width * 3, height * 3),
+            PixelSize::X4 => (width * 4, height * 4),
+        };
+
+        let (pw, ph) = self.physical_size();
+        (pw as f32 / width as f32, ph as f32 / height as f32)
     }
 }
 

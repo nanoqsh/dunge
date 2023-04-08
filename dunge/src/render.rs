@@ -79,6 +79,8 @@ impl Render {
                 &DeviceDescriptor {
                     features: Features::empty(),
                     limits: Limits {
+                        max_texture_dimension_1d: Screen::MAX_SIZE,
+                        max_texture_dimension_2d: Screen::MAX_SIZE,
                         max_storage_buffers_per_shader_stage: 0,
                         max_storage_textures_per_shader_stage: 0,
                         max_dynamic_storage_buffers_per_pipeline_layout: 0,
@@ -340,23 +342,19 @@ impl Render {
         self.config.height = height;
         self.surface.configure(&self.device, &self.config);
 
-        let (vw, vh) = {
-            let (vw, vh) = self.screen.virtual_size();
-            (vw as f32, vh as f32)
-        };
-
-        let (aw, ah) = self.screen.virtual_size_aligned();
-        let factor = [vw / aw as f32, vh / ah as f32];
-        self.post_shader_data.resize([vw, vh], factor, &self.queue);
+        let (bw, bh) = self.screen.buffer_size();
+        let (fw, fh) = self.screen.size_factor();
+        self.post_shader_data
+            .resize([bw as f32, bh as f32], [fw, fh], &self.queue);
 
         self.render_frame = RenderFrame::new(
-            (aw, ah),
+            (bw, bh),
             self.screen.filter,
             &self.device,
             &self.layouts.textured_layout,
         );
 
-        self.depth_frame = DepthFrame::new((aw, ah), &self.device);
+        self.depth_frame = DepthFrame::new((bw, bh), &self.device);
     }
 
     pub fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
