@@ -52,17 +52,17 @@ impl<'l, V, T> Layer<'l, V, T> {
         };
 
         // Bind default light
-        // layer
-        //     .bind_light(LightHandle::DEFAULT)
-        //     .expect("bind default light");
+        layer
+            .bind_light(LightHandle::DEFAULT)
+            .expect("bind default light");
 
         // Set default ambient
-        //layer.set_ambient(DEFAULT_AMBIENT);
+        layer.set_ambient(DEFAULT_AMBIENT);
 
         layer
     }
 
-    /// Binds a [instance](crate::handles::InstanceHandle).
+    /// Binds the [instance](crate::handles::InstanceHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given instance handler was deleted.
@@ -73,7 +73,7 @@ impl<'l, V, T> Layer<'l, V, T> {
         Ok(())
     }
 
-    /// Draws a [mesh](crate::handles::MeshHandle).
+    /// Draws the [mesh](crate::handles::MeshHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given mesh handler was deleted.
@@ -127,16 +127,21 @@ impl<'l, V, T> Layer<'l, V, T> {
         Ok(())
     }
 
+    /// Binds the [light](crate::handles::LightHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given light handler was deleted.
     pub fn bind_light(&mut self, handle: LightHandle) -> Result<(), Error> {
         let light = self.resources.lights.get(handle.0)?;
         self.pass
-            .set_bind_group(shader::TEXTURED_LIGHTS_GROUP, light.bind_group(), &[]);
+            .set_bind_group(shader::TEXTURED_SOURCES_GROUP, light.bind_group(), &[]);
 
         Ok(())
     }
 
+    /// Sets the ambient color.
     pub fn set_ambient(&mut self, ambient: [f32; 3]) {
-        self.ambient.set_ambient(ambient, &self.queue);
+        self.ambient.set_ambient(ambient, self.queue);
         self.pass.set_bind_group(
             shader::TEXTURED_AMBIENT_GROUP,
             self.ambient.bind_group(),
@@ -146,7 +151,7 @@ impl<'l, V, T> Layer<'l, V, T> {
 }
 
 impl<T> Layer<'_, TextureVertex, T> {
-    /// Binds a [view](crate::handles::ViewHandle).
+    /// Binds the [view](crate::handles::ViewHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
@@ -154,7 +159,7 @@ impl<T> Layer<'_, TextureVertex, T> {
         self.bind_view_handle(handle, shader::TEXTURED_CAMERA_GROUP)
     }
 
-    /// Binds a [texture](crate::handles::TextureHandle).
+    /// Binds the [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
@@ -164,7 +169,7 @@ impl<T> Layer<'_, TextureVertex, T> {
 }
 
 impl<T> Layer<'_, ColorVertex, T> {
-    /// Binds a [view](crate::handles::ViewHandle).
+    /// Binds the [view](crate::handles::ViewHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
@@ -174,7 +179,7 @@ impl<T> Layer<'_, ColorVertex, T> {
 }
 
 impl<T> Layer<'_, FlatVertex, T> {
-    /// Binds a [texture](crate::handles::TextureHandle).
+    /// Binds the [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.

@@ -28,10 +28,10 @@ pub(crate) const _TEXTURED_TDIFF_GROUP: u32 = 1;
 pub(crate) const TEXTURED_TDIFF_BINDING: u32 = 0;
 pub(crate) const TEXTURED_SDIFF_GROUP: u32 = 1;
 pub(crate) const TEXTURED_SDIFF_BINDING: u32 = 1;
-pub(crate) const TEXTURED_LIGHTS_GROUP: u32 = 2;
-pub(crate) const TEXTURED_LIGHTS_BINDING: u32 = 0;
-pub(crate) const _TEXTURED_N_LIGHTS_GROUP: u32 = 2;
-pub(crate) const TEXTURED_N_LIGHTS_BINDING: u32 = 1;
+pub(crate) const TEXTURED_SOURCES_GROUP: u32 = 2;
+pub(crate) const TEXTURED_SOURCES_BINDING: u32 = 0;
+pub(crate) const _TEXTURED_N_SOURCES_GROUP: u32 = 2;
+pub(crate) const TEXTURED_N_SOURCES_BINDING: u32 = 1;
 pub(crate) const TEXTURED_AMBIENT_GROUP: u32 = 3;
 pub(crate) const TEXTURED_AMBIENT_BINDING: u32 = 0;
 

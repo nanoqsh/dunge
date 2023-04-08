@@ -8,7 +8,7 @@ use {
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
-        Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
+        Compare, Context, Error, Frame, FrameParameters, InitialState, LightMode, Loop, MeshData,
         Orthographic, PixelSize, Source, TextureData, View, WindowMode,
     },
     utils::Camera,
@@ -48,12 +48,13 @@ struct App {
     light: LightHandle,
     view: ViewHandle,
     camera: Camera,
+    time: f32,
 }
 
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X1,
+            pixel_size: PixelSize::X2,
             ..Default::default()
         });
 
@@ -187,17 +188,9 @@ impl App {
                 .collect()
         };
 
-        let light = {
-            const LIGHTS: [([f32; 3], [f32; 3]); 2] =
-                [([1., 0., 1.], [2., 0., 0.]), ([-1., 0., -1.], [0., 0., 2.])];
-
-            context.create_light(LIGHTS.map(|(pos, col)| Source {
-                pos,
-                rad: 3.,
-                col,
-                ..Default::default()
-            }))
-        };
+        let light = context
+            .create_light([Source::default(), Source::default()])
+            .expect("create light");
 
         // Create the view
         let camera = Camera::default();
@@ -212,6 +205,7 @@ impl App {
             light,
             view,
             camera,
+            time: 0.,
         }
     }
 }
@@ -220,7 +214,32 @@ impl Loop for App {
     type Error = Error;
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+        use std::f32::consts::{PI, TAU};
+
         const SENSITIVITY: f32 = 0.01;
+        const LIGHTS_DISTANCE: f32 = 3.;
+        const LIGHTS_SPEED: f32 = 1.;
+        const LIGHTS: [(f32, [f32; 3]); 2] = [(0., [2., 0., 0.]), (PI, [0., 0., 2.])];
+
+        self.time += input.delta_time * LIGHTS_SPEED;
+        for (n, (step, col)) in (0..).zip(LIGHTS) {
+            let step = (self.time + step) % TAU;
+            context.update_nth_light(
+                self.light,
+                n,
+                Source {
+                    pos: [
+                        step.sin() * LIGHTS_DISTANCE,
+                        0.,
+                        step.cos() * LIGHTS_DISTANCE,
+                    ],
+                    rad: 3.,
+                    col,
+                    mode: LightMode::Sharp,
+                    ..Default::default()
+                },
+            )?;
+        }
 
         // Handle pressed keys
         for key in input.pressed_keys {
@@ -245,7 +264,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let sprite_scale = 16. * 2.;
+        let sprite_scale = 16.;
         let view = View {
             proj: Orthographic {
                 width_factor: 1. / sprite_scale,

@@ -100,8 +100,7 @@ impl<'d> Frame<'d> {
             pass.draw(0..4, 0..1);
         }
 
-        let encoder = self.encoder.take().expect("encoder");
-        self.render.queue().submit([encoder.finish()]);
+        self.encoder.finish(self.render);
     }
 
     /// Starts a [layer](crate::handles::LayerHandle).
@@ -126,6 +125,9 @@ impl<'d> Frame<'d> {
         clear_depth: bool,
     ) -> Layer<V, T> {
         use wgpu::*;
+
+        // Before start a new layer, finish the previous one if it exists
+        self.encoder.finish(self.render);
 
         let mut pass = self
             .encoder
@@ -186,7 +188,9 @@ impl Encoder {
         })
     }
 
-    fn take(&mut self) -> Option<CommandEncoder> {
-        self.0.take()
+    fn finish(&mut self, render: &Render) {
+        if let Some(encoder) = self.0.take() {
+            render.queue().submit([encoder.finish()]);
+        }
     }
 }

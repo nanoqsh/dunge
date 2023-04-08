@@ -24,7 +24,7 @@ mod shader_data {
     pub(crate) use self::{
         ambient::Ambient,
         camera::CameraUniform,
-        light::{Light, LightModel},
+        light::{Light, SourceModel},
         post::PostShaderData,
     };
 

@@ -1,5 +1,5 @@
 use {
-    crate::{layout::Plain, shader},
+    crate::{layout::Plain, r#loop::Error, shader},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
@@ -27,38 +27,42 @@ pub enum LightKind {
 }
 
 pub(crate) struct Light {
-    lights_buffer: Buffer,
-    n_lights: usize,
+    sources_buffer: Buffer,
+    n_sources: usize,
     bind_group: BindGroup,
 }
 
 impl Light {
-    const MAX_N_LIGHTS: usize = 64;
+    const MAX_N_SOURCES: usize = 64;
 
-    pub fn new(lights: &[LightModel], device: &Device, layout: &BindGroupLayout) -> Self {
+    pub fn new(
+        srcs: &[SourceModel],
+        device: &Device,
+        layout: &BindGroupLayout,
+    ) -> Result<Self, Error> {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
-        if lights.len() > Self::MAX_N_LIGHTS {
-            panic!("too many lights");
+        if srcs.len() > Self::MAX_N_SOURCES {
+            return Err(Error::TooManySources);
         }
 
-        let lights_buffer = {
-            let default = [LightModel::default()];
-            let uniform = if lights.is_empty() { &default } else { lights };
+        let sources_buffer = {
+            let default = [SourceModel::default()];
+            let uniform = if srcs.is_empty() { &default } else { srcs };
             device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("lights buffer"),
+                label: Some("sources buffer"),
                 contents: uniform.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
 
-        let n_lights_buffer = {
-            let len = lights.len() as u32;
+        let n_sources_buffer = {
+            let len = srcs.len() as u32;
             device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("n lights buffer"),
+                label: Some("n sources buffer"),
                 contents: len.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
@@ -68,36 +72,47 @@ impl Light {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::TEXTURED_LIGHTS_BINDING,
-                    resource: lights_buffer.as_entire_binding(),
+                    binding: shader::TEXTURED_SOURCES_BINDING,
+                    resource: sources_buffer.as_entire_binding(),
                 },
                 BindGroupEntry {
-                    binding: shader::TEXTURED_N_LIGHTS_BINDING,
-                    resource: n_lights_buffer.as_entire_binding(),
+                    binding: shader::TEXTURED_N_SOURCES_BINDING,
+                    resource: n_sources_buffer.as_entire_binding(),
                 },
             ],
             label: Some("lights bind group"),
         });
 
-        Self {
-            lights_buffer,
-            n_lights: lights.len(),
+        Ok(Self {
+            sources_buffer,
+            n_sources: srcs.len(),
             bind_group,
-        }
+        })
     }
 
-    pub fn set_nth_light(&self, n: usize, light: LightModel, queue: &Queue) {
+    pub fn update(&self, srcs: &[SourceModel], queue: &Queue) -> bool {
+        if srcs.is_empty() || self.n_sources != srcs.len() {
+            return false;
+        }
+
+        queue.write_buffer(&self.sources_buffer, 0, srcs.as_bytes());
+        true
+    }
+
+    pub fn update_nth(&self, n: usize, source: SourceModel, queue: &Queue) -> Result<(), Error> {
         use std::mem;
 
-        if n >= self.n_lights {
-            panic!("wrong light index");
+        if n >= self.n_sources {
+            return Err(Error::SourceNotFound);
         }
 
         queue.write_buffer(
-            &self.lights_buffer,
-            (mem::size_of::<LightModel>() * n) as _,
-            light.as_bytes(),
+            &self.sources_buffer,
+            (mem::size_of::<SourceModel>() * n) as _,
+            source.as_bytes(),
         );
+
+        Ok(())
     }
 
     pub fn bind_group(&self) -> &BindGroup {
@@ -107,14 +122,14 @@ impl Light {
 
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
-pub(crate) struct LightModel {
+pub(crate) struct SourceModel {
     pos: [f32; 3],
     rad: f32,
     col: [f32; 3],
     flags: u32,
 }
 
-impl LightModel {
+impl SourceModel {
     pub fn new(src: Source) -> Self {
         Self {
             pos: src.pos,
@@ -137,4 +152,4 @@ impl LightModel {
     }
 }
 
-unsafe impl Plain for LightModel {}
+unsafe impl Plain for SourceModel {}

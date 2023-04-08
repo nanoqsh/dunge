@@ -12,7 +12,7 @@ use {
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
         shader::{self, Shader},
-        shader_data::{Ambient, Light, LightModel, PostShaderData},
+        shader_data::{Ambient, Light, PostShaderData, SourceModel},
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -166,7 +166,7 @@ impl Render {
         let lights_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[
                 BindGroupLayoutEntry {
-                    binding: shader::TEXTURED_LIGHTS_BINDING,
+                    binding: shader::TEXTURED_SOURCES_BINDING,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
@@ -176,7 +176,7 @@ impl Render {
                     count: None,
                 },
                 BindGroupLayoutEntry {
-                    binding: shader::TEXTURED_N_LIGHTS_BINDING,
+                    binding: shader::TEXTURED_N_SOURCES_BINDING,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
@@ -214,7 +214,7 @@ impl Render {
         let mut resources = Resources::default();
         resources
             .lights
-            .insert(Light::new(&[], &device, &lights_layout));
+            .insert(Light::new(&[], &device, &lights_layout).expect("default light"));
 
         // TODO: Can I create all layouts right in `Layouts`?
         let layouts = Layouts {
@@ -377,10 +377,35 @@ impl Render {
         self.resources.views.remove(handle.0)
     }
 
-    pub fn create_light(&mut self, lights: &[LightModel]) -> LightHandle {
-        let light = Light::new(lights, &self.device, &self.layouts.lights_layout);
+    pub fn create_light(&mut self, srcs: &[SourceModel]) -> Result<LightHandle, Error> {
+        let light = Light::new(srcs, &self.device, &self.layouts.lights_layout)?;
         let id = self.resources.lights.insert(light);
-        LightHandle(id)
+        Ok(LightHandle(id))
+    }
+
+    pub fn update_light(&mut self, handle: LightHandle, srcs: &[SourceModel]) -> Result<(), Error> {
+        let light = self.resources.lights.get_mut(handle.0)?;
+        if !light.update(srcs, &self.queue) {
+            *light = Light::new(srcs, &self.device, &self.layouts.lights_layout)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn update_nth_light(
+        &mut self,
+        handle: LightHandle,
+        n: usize,
+        source: SourceModel,
+    ) -> Result<(), Error> {
+        self.resources
+            .lights
+            .get_mut(handle.0)
+            .and_then(|light| light.update_nth(n, source, &self.queue))
+    }
+
+    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+        self.resources.lights.remove(handle.0)
     }
 
     pub fn screen(&self) -> Screen {
