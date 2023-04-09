@@ -88,7 +88,7 @@ impl<'d> Frame<'d> {
 
             pass.set_pipeline(self.render.post_pipeline().as_ref());
             pass.set_bind_group(
-                shader::POST_TDIFF_GROUP,
+                shader::POST_TEXTURE_GROUP,
                 self.render.render_frame().bind_group(),
                 &[],
             );

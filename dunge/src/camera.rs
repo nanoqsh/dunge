@@ -39,11 +39,6 @@ impl Camera {
             *,
         };
 
-        const BINDING: u32 = {
-            assert!(shader::TEXTURED_CAMERA_BINDING == shader::COLOR_CAMERA_BINDING);
-            shader::TEXTURED_CAMERA_BINDING
-        };
-
         let uniform = CameraUniform::default();
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("camera buffer"),
@@ -54,7 +49,7 @@ impl Camera {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: BINDING,
+                binding: shader::CAMERA_BINDING,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("camera bind group"),

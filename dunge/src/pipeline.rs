@@ -1,8 +1,9 @@
 use {
     crate::{
+        bind_groups::Layouts,
         depth_frame::DepthFrame,
         handles::LayerHandle,
-        render::{Layouts, Render, Shaders},
+        render::{Render, Shaders},
         shader::Shader,
         topology::Topology,
         vertex::Vertex,

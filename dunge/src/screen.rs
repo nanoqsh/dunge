@@ -12,7 +12,7 @@ pub(crate) struct Screen {
 }
 
 impl Screen {
-    pub const MAX_SIZE: u32 = 8192;
+    pub const MAX_SIZE: u32 = 16384;
 
     pub fn physical_size(&self) -> (u32, u32) {
         (self.width.get(), self.height.get())

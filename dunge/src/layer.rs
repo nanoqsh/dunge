@@ -169,7 +169,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
-        self.bind_texture_handle(handle, shader::TEXTURED_SDIFF_GROUP)
+        self.bind_texture_handle(handle, shader::TEXTURED_TEXTURE_GROUP)
     }
 
     /// Binds the [light](crate::handles::LightHandle).
@@ -215,7 +215,7 @@ impl<T> Layer<'_, FlatVertex, T> {
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
-        self.bind_texture_handle(handle, shader::FLAT_SDIFF_GROUP)
+        self.bind_texture_handle(handle, shader::FLAT_TEXTURE_GROUP)
     }
 }
 

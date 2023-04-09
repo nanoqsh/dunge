@@ -1,5 +1,6 @@
 use {
     crate::{
+        bind_groups::Layouts,
         camera::{Camera, Projection, View},
         context::Screenshot,
         depth_frame::DepthFrame,
@@ -11,7 +12,7 @@ use {
         r#loop::Loop,
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
-        shader::{self, Shader},
+        shader::Shader,
         shader_data::{Ambient, Light, PostShaderData, SourceModel},
         storage::Storage,
         texture::{Data as TextureData, Texture},
@@ -20,9 +21,7 @@ use {
         Error,
     },
     once_cell::unsync::OnceCell,
-    wgpu::{
-        BindGroupLayout, Device, Queue, ShaderModule, Surface, SurfaceConfiguration, SurfaceError,
-    },
+    wgpu::{Device, Queue, ShaderModule, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
 
@@ -46,16 +45,6 @@ impl Render {
     pub async fn new(window: &Window) -> Self {
         use wgpu::*;
 
-        const TDIFF_BINDING: u32 = {
-            assert!(shader::TEXTURED_TDIFF_BINDING == shader::FLAT_TDIFF_BINDING);
-            shader::TEXTURED_TDIFF_BINDING
-        };
-
-        const SDIFF_BINDING: u32 = {
-            assert!(shader::TEXTURED_SDIFF_BINDING == shader::FLAT_SDIFF_BINDING);
-            shader::TEXTURED_SDIFF_BINDING
-        };
-
         #[cfg(target_os = "android")]
         {
             Self::wait_for_native_screen();
@@ -67,14 +56,13 @@ impl Render {
         let mut adapter = None;
         for ad in instance.enumerate_adapters(Backends::all()) {
             let info = ad.get_info();
-            if info.backend == Backend::Gl {
+            if info.backend == Backend::Vulkan {
                 adapter = Some(ad);
                 break;
             }
         }
 
-        let adapter = adapter.expect("gl adapter");
-
+        let adapter = adapter.expect("selected adapter");
         let (device, queue) = adapter
             .request_device(
                 &DeviceDescriptor {
@@ -115,117 +103,15 @@ impl Render {
             view_formats: vec![],
         };
 
-        let textured_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
-                BindGroupLayoutEntry {
-                    binding: TDIFF_BINDING,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: TextureViewDimension::D2,
-                        sample_type: TextureSampleType::Float { filterable: true },
-                    },
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: SDIFF_BINDING,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("texture bind group layout"),
-        });
-
-        let camera_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[BindGroupLayoutEntry {
-                binding: shader::TEXTURED_CAMERA_BINDING,
-                visibility: ShaderStages::VERTEX,
-                ty: BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: Some("camera bind group layout"),
-        });
-
-        let post_shader_data_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[BindGroupLayoutEntry {
-                binding: shader::POST_DATA_BINDING,
-                visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                ty: BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: Some("post shader data bind group layout"),
-        });
-
-        let lights_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
-                BindGroupLayoutEntry {
-                    binding: shader::TEXTURED_SOURCES_BINDING,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: shader::TEXTURED_N_SOURCES_BINDING,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-            label: Some("lights bind group layout"),
-        });
-
-        let ambient_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[BindGroupLayoutEntry {
-                binding: shader::TEXTURED_AMBIENT_BINDING,
-                visibility: ShaderStages::FRAGMENT,
-                ty: BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: Some("ambient bind group layout"),
-        });
-
-        let render_frame =
-            RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &textured_layout);
-        let depth_frame = DepthFrame::new((1, 1), &device);
-
-        let post_shader_data = PostShaderData::new(&device, &post_shader_data_layout);
-        let ambient = Ambient::new(&device, &ambient_layout);
+        let layouts = Layouts::new(&device);
+        let post_shader_data = PostShaderData::new(&device, &layouts.post_shader_data);
+        let ambient = Ambient::new(&device, &layouts.ambient);
         let shaders = Shaders::default();
 
         let mut resources = Resources::default();
         resources
             .lights
-            .insert(Light::new(&[], &device, &lights_layout).expect("default light"));
-
-        // TODO: Can I create all layouts right in `Layouts`?
-        let layouts = Layouts {
-            textured_layout,
-            camera_layout,
-            post_shader_data_layout,
-            lights_layout,
-            ambient_layout,
-        };
+            .insert(Light::new(&[], &device, &layouts.lights).expect("default light"));
 
         let post_pipeline = Pipeline::new(
             &device,
@@ -241,6 +127,11 @@ impl Render {
                 ..Default::default()
             },
         );
+
+        let render_frame =
+            RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &layouts.textured);
+
+        let depth_frame = DepthFrame::new((1, 1), &device);
 
         Self {
             device,
@@ -285,13 +176,7 @@ impl Render {
     }
 
     pub fn create_texture(&mut self, data: TextureData) -> TextureHandle {
-        let texture = Texture::new(
-            data,
-            &self.device,
-            &self.queue,
-            &self.layouts.textured_layout,
-        );
-
+        let texture = Texture::new(data, &self.device, &self.queue, &self.layouts.textured);
         let id = self.resources.textures.insert(texture);
         TextureHandle(id)
     }
@@ -362,7 +247,7 @@ impl Render {
     }
 
     pub fn create_view(&mut self, view: View<Projection>) -> ViewHandle {
-        let mut camera = Camera::new(&self.device, &self.layouts.camera_layout);
+        let mut camera = Camera::new(&self.device, &self.layouts.camera);
         camera.set_view(view);
         let id = self.resources.views.insert(camera);
         ViewHandle(id)
@@ -380,7 +265,7 @@ impl Render {
     }
 
     pub fn create_light(&mut self, srcs: &[SourceModel]) -> Result<LightHandle, Error> {
-        let light = Light::new(srcs, &self.device, &self.layouts.lights_layout)?;
+        let light = Light::new(srcs, &self.device, &self.layouts.lights)?;
         let id = self.resources.lights.insert(light);
         Ok(LightHandle(id))
     }
@@ -388,7 +273,7 @@ impl Render {
     pub fn update_light(&mut self, handle: LightHandle, srcs: &[SourceModel]) -> Result<(), Error> {
         let light = self.resources.lights.get_mut(handle.0)?;
         if !light.update(srcs, &self.queue) {
-            *light = Light::new(srcs, &self.device, &self.layouts.lights_layout)?;
+            *light = Light::new(srcs, &self.device, &self.layouts.lights)?;
         }
 
         Ok(())
@@ -433,7 +318,7 @@ impl Render {
             (bw, bh),
             self.screen.filter,
             &self.device,
-            &self.layouts.textured_layout,
+            &self.layouts.textured,
         );
 
         self.depth_frame = DepthFrame::new((bw, bh), &self.device);
@@ -628,54 +513,6 @@ impl Shaders {
                 source: ShaderSource::Wgsl(shader.source().into()),
             })
         })
-    }
-}
-
-pub(crate) struct Layouts {
-    textured_layout: BindGroupLayout,
-    camera_layout: BindGroupLayout,
-    post_shader_data_layout: BindGroupLayout,
-    lights_layout: BindGroupLayout,
-    ambient_layout: BindGroupLayout,
-}
-
-impl Layouts {
-    pub fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
-        match shader {
-            Shader::Color => BindGroupLayouts::N3([
-                &self.camera_layout,
-                &self.lights_layout,
-                &self.ambient_layout,
-            ]),
-            Shader::Flat => BindGroupLayouts::N1([&self.textured_layout]),
-            Shader::Post => {
-                BindGroupLayouts::N2([&self.post_shader_data_layout, &self.textured_layout])
-            }
-            Shader::Textured => BindGroupLayouts::N4([
-                &self.camera_layout,
-                &self.textured_layout,
-                &self.lights_layout,
-                &self.ambient_layout,
-            ]),
-        }
-    }
-}
-
-pub(crate) enum BindGroupLayouts<'a> {
-    N1([&'a BindGroupLayout; 1]),
-    N2([&'a BindGroupLayout; 2]),
-    N3([&'a BindGroupLayout; 3]),
-    N4([&'a BindGroupLayout; 4]),
-}
-
-impl<'a> BindGroupLayouts<'a> {
-    pub fn as_slice(&self) -> &[&'a BindGroupLayout] {
-        match self {
-            Self::N1(b) => b,
-            Self::N2(b) => b,
-            Self::N3(b) => b,
-            Self::N4(b) => b,
-        }
     }
 }
 

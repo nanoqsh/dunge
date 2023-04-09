@@ -27,7 +27,7 @@ impl Ambient {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: shader::TEXTURED_AMBIENT_BINDING,
+                binding: shader::AMBIENT_BINDING,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("ambient bind group"),

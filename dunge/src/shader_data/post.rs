@@ -27,7 +27,7 @@ impl PostShaderData {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: shader::POST_DATA_BINDING,
+                binding: shader::DATA_BINDING,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("post bind group"),

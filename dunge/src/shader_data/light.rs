@@ -72,11 +72,11 @@ impl Light {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::TEXTURED_SOURCES_BINDING,
+                    binding: shader::SOURCES_BINDING,
                     resource: sources_buffer.as_entire_binding(),
                 },
                 BindGroupEntry {
-                    binding: shader::TEXTURED_N_SOURCES_BINDING,
+                    binding: shader::N_SOURCES_BINDING,
                     resource: n_sources_buffer.as_entire_binding(),
                 },
             ],

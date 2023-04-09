@@ -8,34 +8,23 @@ use {
 };
 
 pub(crate) const COLOR_CAMERA_GROUP: u32 = 0;
-pub(crate) const COLOR_CAMERA_BINDING: u32 = 0;
 pub(crate) const COLOR_SOURCES_GROUP: u32 = 1;
 pub(crate) const COLOR_AMBIENT_GROUP: u32 = 2;
-
-pub(crate) const _FLAT_TDIFF_GROUP: u32 = 0;
-pub(crate) const FLAT_TDIFF_BINDING: u32 = 0;
-pub(crate) const FLAT_SDIFF_GROUP: u32 = 0;
-pub(crate) const FLAT_SDIFF_BINDING: u32 = 1;
-
+pub(crate) const FLAT_TEXTURE_GROUP: u32 = 0;
 pub(crate) const POST_DATA_GROUP: u32 = 0;
-pub(crate) const POST_DATA_BINDING: u32 = 0;
-pub(crate) const POST_TDIFF_GROUP: u32 = 1;
-pub(crate) const POST_TDIFF_BINDING: u32 = 0;
-pub(crate) const _POST_SDIFF_GROUP: u32 = 1;
-pub(crate) const POST_SDIFF_BINDING: u32 = 1;
-
+pub(crate) const POST_TEXTURE_GROUP: u32 = 1;
 pub(crate) const TEXTURED_CAMERA_GROUP: u32 = 0;
-pub(crate) const TEXTURED_CAMERA_BINDING: u32 = 0;
-pub(crate) const _TEXTURED_TDIFF_GROUP: u32 = 1;
-pub(crate) const TEXTURED_TDIFF_BINDING: u32 = 0;
-pub(crate) const TEXTURED_SDIFF_GROUP: u32 = 1;
-pub(crate) const TEXTURED_SDIFF_BINDING: u32 = 1;
+pub(crate) const TEXTURED_TEXTURE_GROUP: u32 = 1;
 pub(crate) const TEXTURED_SOURCES_GROUP: u32 = 2;
-pub(crate) const TEXTURED_SOURCES_BINDING: u32 = 0;
-pub(crate) const _TEXTURED_N_SOURCES_GROUP: u32 = 2;
-pub(crate) const TEXTURED_N_SOURCES_BINDING: u32 = 1;
 pub(crate) const TEXTURED_AMBIENT_GROUP: u32 = 3;
-pub(crate) const TEXTURED_AMBIENT_BINDING: u32 = 0;
+
+pub(crate) const CAMERA_BINDING: u32 = 0;
+pub(crate) const TDIFF_BINDING: u32 = 0;
+pub(crate) const SDIFF_BINDING: u32 = 1;
+pub(crate) const DATA_BINDING: u32 = 0;
+pub(crate) const SOURCES_BINDING: u32 = 0;
+pub(crate) const N_SOURCES_BINDING: u32 = 1;
+pub(crate) const AMBIENT_BINDING: u32 = 0;
 
 pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
 pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;

@@ -70,11 +70,11 @@ impl RenderFrame {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::POST_TDIFF_BINDING,
+                    binding: shader::TDIFF_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: shader::POST_SDIFF_BINDING,
+                    binding: shader::SDIFF_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

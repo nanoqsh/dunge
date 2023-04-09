@@ -1,3 +1,4 @@
+mod bind_groups;
 mod camera;
 mod canvas;
 pub mod color;
