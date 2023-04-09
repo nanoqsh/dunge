@@ -8,8 +8,9 @@ use {
         pipeline::Pipeline,
         r#loop::Error,
         render::Resources,
-        shader,
-        vertex::{ColorVertex, FlatVertex, TextureVertex},
+        shader::{self, Shader},
+        shader_data::Ambient,
+        vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
     },
     std::marker::PhantomData,
     wgpu::{Queue, RenderPass},
@@ -23,30 +24,59 @@ pub struct Layer<'l, V, T> {
     queue: &'l Queue,
     resources: &'l Resources,
     instance: Option<&'l Instance>,
+    ambient: &'l Ambient,
     drawn_in_frame: &'l mut bool,
     vertex_type: PhantomData<(V, T)>,
 }
 
-impl<'l, V, T> Layer<'l, V, T> {
+impl<'l, V, T> Layer<'l, V, T>
+where
+    V: Vertex,
+{
     pub(crate) fn new(
         pass: RenderPass<'l>,
         size: (u32, u32),
         queue: &'l Queue,
         resources: &'l Resources,
+        ambient: &'l Ambient,
         drawn_in_frame: &'l mut bool,
     ) -> Self {
-        Self {
+        const DEFAULT_AMBIENT: [f32; 3] = [1.; 3];
+
+        let mut layer = Self {
             pass,
             size,
             queue,
             resources,
             instance: None,
+            ambient,
             drawn_in_frame,
             vertex_type: PhantomData,
+        };
+
+        // Bind default light and set default ambient
+        match V::VALUE.into_inner() {
+            Shader::Color => {
+                layer
+                    .bind_light_handle(LightHandle::DEFAULT, shader::COLOR_SOURCES_GROUP)
+                    .expect("bind default light");
+
+                layer.set_ambient_handle(DEFAULT_AMBIENT, shader::COLOR_AMBIENT_GROUP);
+            }
+            Shader::Textured => {
+                layer
+                    .bind_light_handle(LightHandle::DEFAULT, shader::TEXTURED_SOURCES_GROUP)
+                    .expect("bind default light");
+
+                layer.set_ambient_handle(DEFAULT_AMBIENT, shader::TEXTURED_AMBIENT_GROUP);
+            }
+            _ => {}
         }
+
+        layer
     }
 
-    /// Binds a [instance](crate::handles::InstanceHandle).
+    /// Binds the [instance](crate::handles::InstanceHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given instance handler was deleted.
@@ -57,7 +87,7 @@ impl<'l, V, T> Layer<'l, V, T> {
         Ok(())
     }
 
-    /// Draws a [mesh](crate::handles::MeshHandle).
+    /// Draws the [mesh](crate::handles::MeshHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given mesh handler was deleted.
@@ -110,40 +140,77 @@ impl<'l, V, T> Layer<'l, V, T> {
 
         Ok(())
     }
+
+    fn bind_light_handle(&mut self, handle: LightHandle, group: u32) -> Result<(), Error> {
+        let light = self.resources.lights.get(handle.0)?;
+        self.pass.set_bind_group(group, light.bind_group(), &[]);
+
+        Ok(())
+    }
+
+    fn set_ambient_handle(&mut self, ambient: [f32; 3], group: u32) {
+        self.ambient.set_ambient(ambient, self.queue);
+        self.pass
+            .set_bind_group(group, self.ambient.bind_group(), &[]);
+    }
 }
 
 impl<T> Layer<'_, TextureVertex, T> {
-    /// Binds a [view](crate::handles::ViewHandle).
+    /// Binds the [view](crate::handles::ViewHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.bind_view_handle(handle, shader::TEXTURED_CAMERA_GROUP)
     }
-}
 
-impl<T> Layer<'_, ColorVertex, T> {
-    /// Binds a [view](crate::handles::ViewHandle).
-    ///
-    /// # Errors
-    /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
-    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
-        self.bind_view_handle(handle, shader::COLOR_CAMERA_GROUP)
-    }
-}
-
-impl<T> Layer<'_, TextureVertex, T> {
-    /// Binds a [texture](crate::handles::TextureHandle).
+    /// Binds the [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
         self.bind_texture_handle(handle, shader::TEXTURED_SDIFF_GROUP)
     }
+
+    /// Binds the [light](crate::handles::LightHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given light handler was deleted.
+    pub fn bind_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+        self.bind_light_handle(handle, shader::TEXTURED_SOURCES_GROUP)
+    }
+
+    /// Sets the ambient color.
+    pub fn set_ambient(&mut self, ambient: [f32; 3]) {
+        self.set_ambient_handle(ambient, shader::TEXTURED_AMBIENT_GROUP);
+    }
+}
+
+impl<T> Layer<'_, ColorVertex, T> {
+    /// Binds the [view](crate::handles::ViewHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given view handler was deleted.
+    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+        self.bind_view_handle(handle, shader::COLOR_CAMERA_GROUP)
+    }
+
+    /// Binds the [light](crate::handles::LightHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given light handler was deleted.
+    pub fn bind_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+        self.bind_light_handle(handle, shader::COLOR_SOURCES_GROUP)
+    }
+
+    /// Sets the ambient color.
+    pub fn set_ambient(&mut self, ambient: [f32; 3]) {
+        self.set_ambient_handle(ambient, shader::COLOR_AMBIENT_GROUP);
+    }
 }
 
 impl<T> Layer<'_, FlatVertex, T> {
-    /// Binds a [texture](crate::handles::TextureHandle).
+    /// Binds the [texture](crate::handles::TextureHandle).
     ///
     /// # Errors
     /// Returns [`Error::ResourceNotFound`] if given texture handler was deleted.
@@ -234,7 +301,10 @@ impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
     }
 
     /// Starts draw the layer.
-    pub fn start(self) -> Layer<'l, V, T> {
+    pub fn start(self) -> Layer<'l, V, T>
+    where
+        V: Vertex,
+    {
         self.frame
             .start_layer(self.pipeline, self.clear_color, self.clear_depth)
     }

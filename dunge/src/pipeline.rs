@@ -1,5 +1,6 @@
 use {
     crate::{
+        depth_frame::DepthFrame,
         handles::LayerHandle,
         render::{Layouts, Render, Shaders},
         shader::Shader,
@@ -24,7 +25,7 @@ impl Pipeline {
         shader: Shader,
         params: PipelineParameters,
     ) -> Self {
-        use {crate::depth_frame::DepthFrame, wgpu::*};
+        use wgpu::*;
 
         Self({
             let module = shaders.module(device, shader);

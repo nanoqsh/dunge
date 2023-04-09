@@ -9,7 +9,7 @@ use {
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
         Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, PixelSize, TextureData, View, WindowMode,
+        Orthographic, PixelSize, Source, TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -45,8 +45,11 @@ struct App {
     sprites: TextureHandle,
     models: Vec<Model>,
     cubes: Vec<Cube>,
+    light: LightHandle,
     view: ViewHandle,
     camera: Camera,
+    time: f32,
+    fullscreen: bool,
 }
 
 impl App {
@@ -186,6 +189,11 @@ impl App {
                 .collect()
         };
 
+        let light = {
+            let sources: [Source; 2] = Default::default();
+            context.create_light(sources).expect("create light")
+        };
+
         // Create the view
         let camera = Camera::default();
         let view = context.create_view(camera.view(Orthographic::default()));
@@ -196,8 +204,11 @@ impl App {
             sprites,
             models,
             cubes,
+            light,
             view,
             camera,
+            time: 0.,
+            fullscreen: false,
         }
     }
 }
@@ -206,7 +217,32 @@ impl Loop for App {
     type Error = Error;
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+        use {
+            dunge::winit::window::Fullscreen,
+            std::f32::consts::{PI, TAU},
+        };
+
         const SENSITIVITY: f32 = 0.01;
+        const LIGHTS_DISTANCE: f32 = 3.;
+        const LIGHTS_SPEED: f32 = 1.;
+        const LIGHTS: [(f32, [f32; 3]); 2] = [(0., [2., 0., 0.]), (PI, [0., 0., 2.])];
+
+        self.time += input.delta_time * LIGHTS_SPEED;
+        let make_source = |step, col| Source {
+            pos: {
+                let step: f32 = (self.time + step) % TAU;
+                [
+                    step.sin() * LIGHTS_DISTANCE,
+                    0.,
+                    step.cos() * LIGHTS_DISTANCE,
+                ]
+            },
+            rad: 3.,
+            col,
+            ..Default::default()
+        };
+
+        context.update_light(self.light, LIGHTS.map(|(step, col)| make_source(step, col)))?;
 
         // Handle pressed keys
         for key in input.pressed_keys {
@@ -220,6 +256,12 @@ impl Loop for App {
                     utils::create_image(shot.width, shot.height, shot.data)
                         .save("screen.png")
                         .expect("save screenshot");
+                }
+                Key::F1 => {
+                    self.fullscreen = !self.fullscreen;
+                    context
+                        .window()
+                        .set_fullscreen(self.fullscreen.then_some(Fullscreen::Borderless(None)));
                 }
                 _ => (),
             }
@@ -268,6 +310,9 @@ impl Loop for App {
                 .with_clear_color(CLEAR_COLOR)
                 .with_clear_depth()
                 .start();
+
+            layer.set_ambient([0.5; 3]);
+            layer.bind_light(self.light)?;
 
             layer.bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;

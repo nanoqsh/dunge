@@ -12,7 +12,7 @@ use {
         render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
         shader::{self, Shader},
-        shader_data::PostShaderData,
+        shader_data::{Ambient, Light, PostShaderData, SourceModel},
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -36,6 +36,7 @@ pub(crate) struct Render {
     layouts: Layouts,
     post_pipeline: Pipeline,
     post_shader_data: PostShaderData,
+    ambient: Ambient,
     render_frame: RenderFrame,
     depth_frame: DepthFrame,
     resources: Resources,
@@ -66,9 +67,9 @@ impl Render {
         let mut adapter = None;
         for ad in instance.enumerate_adapters(Backends::all()) {
             let info = ad.get_info();
-            println!("{info:?}");
             if info.backend == Backend::Gl {
                 adapter = Some(ad);
+                break;
             }
         }
 
@@ -164,17 +165,66 @@ impl Render {
             label: Some("post shader data bind group layout"),
         });
 
+        let lights_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: shader::TEXTURED_SOURCES_BINDING,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: shader::TEXTURED_N_SOURCES_BINDING,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+            label: Some("lights bind group layout"),
+        });
+
+        let ambient_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[BindGroupLayoutEntry {
+                binding: shader::TEXTURED_AMBIENT_BINDING,
+                visibility: ShaderStages::FRAGMENT,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("ambient bind group layout"),
+        });
+
         let render_frame =
             RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &textured_layout);
         let depth_frame = DepthFrame::new((1, 1), &device);
 
         let post_shader_data = PostShaderData::new(&device, &post_shader_data_layout);
-
+        let ambient = Ambient::new(&device, &ambient_layout);
         let shaders = Shaders::default();
+
+        let mut resources = Resources::default();
+        resources
+            .lights
+            .insert(Light::new(&[], &device, &lights_layout).expect("default light"));
+
+        // TODO: Can I create all layouts right in `Layouts`?
         let layouts = Layouts {
             textured_layout,
             camera_layout,
             post_shader_data_layout,
+            lights_layout,
+            ambient_layout,
         };
 
         let post_pipeline = Pipeline::new(
@@ -202,9 +252,10 @@ impl Render {
             layouts,
             post_pipeline,
             post_shader_data,
+            ambient,
             render_frame,
             depth_frame,
-            resources: Resources::default(),
+            resources,
         }
     }
 
@@ -326,6 +377,37 @@ impl Render {
 
     pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.resources.views.remove(handle.0)
+    }
+
+    pub fn create_light(&mut self, srcs: &[SourceModel]) -> Result<LightHandle, Error> {
+        let light = Light::new(srcs, &self.device, &self.layouts.lights_layout)?;
+        let id = self.resources.lights.insert(light);
+        Ok(LightHandle(id))
+    }
+
+    pub fn update_light(&mut self, handle: LightHandle, srcs: &[SourceModel]) -> Result<(), Error> {
+        let light = self.resources.lights.get_mut(handle.0)?;
+        if !light.update(srcs, &self.queue) {
+            *light = Light::new(srcs, &self.device, &self.layouts.lights_layout)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn update_nth_light(
+        &mut self,
+        handle: LightHandle,
+        n: usize,
+        source: SourceModel,
+    ) -> Result<(), Error> {
+        self.resources
+            .lights
+            .get_mut(handle.0)
+            .and_then(|light| light.update_nth(n, source, &self.queue))
+    }
+
+    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+        self.resources.lights.remove(handle.0)
     }
 
     pub fn screen(&self) -> Screen {
@@ -487,6 +569,10 @@ impl Render {
         &self.post_shader_data
     }
 
+    pub fn ambient(&self) -> &Ambient {
+        &self.ambient
+    }
+
     pub fn render_frame(&self) -> &RenderFrame {
         &self.render_frame
     }
@@ -545,9 +631,41 @@ impl Shaders {
     }
 }
 
+pub(crate) struct Layouts {
+    textured_layout: BindGroupLayout,
+    camera_layout: BindGroupLayout,
+    post_shader_data_layout: BindGroupLayout,
+    lights_layout: BindGroupLayout,
+    ambient_layout: BindGroupLayout,
+}
+
+impl Layouts {
+    pub fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
+        match shader {
+            Shader::Color => BindGroupLayouts::N3([
+                &self.camera_layout,
+                &self.lights_layout,
+                &self.ambient_layout,
+            ]),
+            Shader::Flat => BindGroupLayouts::N1([&self.textured_layout]),
+            Shader::Post => {
+                BindGroupLayouts::N2([&self.post_shader_data_layout, &self.textured_layout])
+            }
+            Shader::Textured => BindGroupLayouts::N4([
+                &self.camera_layout,
+                &self.textured_layout,
+                &self.lights_layout,
+                &self.ambient_layout,
+            ]),
+        }
+    }
+}
+
 pub(crate) enum BindGroupLayouts<'a> {
     N1([&'a BindGroupLayout; 1]),
     N2([&'a BindGroupLayout; 2]),
+    N3([&'a BindGroupLayout; 3]),
+    N4([&'a BindGroupLayout; 4]),
 }
 
 impl<'a> BindGroupLayouts<'a> {
@@ -555,25 +673,8 @@ impl<'a> BindGroupLayouts<'a> {
         match self {
             Self::N1(b) => b,
             Self::N2(b) => b,
-        }
-    }
-}
-
-pub(crate) struct Layouts {
-    textured_layout: BindGroupLayout,
-    camera_layout: BindGroupLayout,
-    post_shader_data_layout: BindGroupLayout,
-}
-
-impl Layouts {
-    pub fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
-        match shader {
-            Shader::Color => BindGroupLayouts::N1([&self.camera_layout]),
-            Shader::Flat => BindGroupLayouts::N1([&self.textured_layout]),
-            Shader::Post => {
-                BindGroupLayouts::N2([&self.post_shader_data_layout, &self.textured_layout])
-            }
-            Shader::Textured => BindGroupLayouts::N2([&self.camera_layout, &self.textured_layout]),
+            Self::N3(b) => b,
+            Self::N4(b) => b,
         }
     }
 }
@@ -586,4 +687,5 @@ pub(crate) struct Resources {
     pub(crate) instances: Storage<Instance>,
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) views: Storage<Camera>,
+    pub(crate) lights: Storage<Light>,
 }

@@ -9,6 +9,8 @@ use {
 
 pub(crate) const COLOR_CAMERA_GROUP: u32 = 0;
 pub(crate) const COLOR_CAMERA_BINDING: u32 = 0;
+pub(crate) const COLOR_SOURCES_GROUP: u32 = 1;
+pub(crate) const COLOR_AMBIENT_GROUP: u32 = 2;
 
 pub(crate) const _FLAT_TDIFF_GROUP: u32 = 0;
 pub(crate) const FLAT_TDIFF_BINDING: u32 = 0;
@@ -28,6 +30,12 @@ pub(crate) const _TEXTURED_TDIFF_GROUP: u32 = 1;
 pub(crate) const TEXTURED_TDIFF_BINDING: u32 = 0;
 pub(crate) const TEXTURED_SDIFF_GROUP: u32 = 1;
 pub(crate) const TEXTURED_SDIFF_BINDING: u32 = 1;
+pub(crate) const TEXTURED_SOURCES_GROUP: u32 = 2;
+pub(crate) const TEXTURED_SOURCES_BINDING: u32 = 0;
+pub(crate) const _TEXTURED_N_SOURCES_GROUP: u32 = 2;
+pub(crate) const TEXTURED_N_SOURCES_BINDING: u32 = 1;
+pub(crate) const TEXTURED_AMBIENT_GROUP: u32 = 3;
+pub(crate) const TEXTURED_AMBIENT_BINDING: u32 = 0;
 
 pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
 pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;
@@ -43,10 +51,16 @@ pub(crate) enum Shader {
 impl Shader {
     pub const fn source(self) -> &'static str {
         match self {
-            Self::Color => include_str!("shaders/color.wgsl"),
+            Self::Color => concat!(
+                include_str!("shaders/light.wgsl"),
+                include_str!("shaders/color.wgsl"),
+            ),
             Self::Flat => include_str!("shaders/flat.wgsl"),
             Self::Post => include_str!("shaders/post.wgsl"),
-            Self::Textured => include_str!("shaders/textured.wgsl"),
+            Self::Textured => concat!(
+                include_str!("shaders/light.wgsl"),
+                include_str!("shaders/textured.wgsl"),
+            ),
         }
     }
 

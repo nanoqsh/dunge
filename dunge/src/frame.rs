@@ -7,6 +7,7 @@ use {
         r#loop::Error,
         render::Render,
         shader,
+        vertex::Vertex,
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -100,8 +101,7 @@ impl<'d> Frame<'d> {
             pass.draw(0..4, 0..1);
         }
 
-        let encoder = self.encoder.take().expect("encoder");
-        self.render.queue().submit([encoder.finish()]);
+        self.encoder.finish(self.render);
     }
 
     /// Starts a [layer](crate::handles::LayerHandle).
@@ -124,8 +124,14 @@ impl<'d> Frame<'d> {
         pipeline: &'l Pipeline,
         clear_color: Option<Linear<f64>>,
         clear_depth: bool,
-    ) -> Layer<V, T> {
+    ) -> Layer<V, T>
+    where
+        V: Vertex,
+    {
         use wgpu::*;
+
+        // Before start a new layer, finish the previous one if it exists
+        self.encoder.finish(self.render);
 
         let mut pass = self
             .encoder
@@ -166,6 +172,7 @@ impl<'d> Frame<'d> {
             (vw, vh),
             self.render.queue(),
             self.render.resources(),
+            self.render.ambient(),
             &mut self.drawn_in_frame,
         )
     }
@@ -185,7 +192,9 @@ impl Encoder {
         })
     }
 
-    fn take(&mut self) -> Option<CommandEncoder> {
-        self.0.take()
+    fn finish(&mut self, render: &Render) {
+        if let Some(encoder) = self.0.take() {
+            render.queue().submit([encoder.finish()]);
+        }
     }
 }

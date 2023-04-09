@@ -76,6 +76,12 @@ pub enum Error {
     /// Returns when a rendered resourse not found.
     ResourceNotFound,
 
+    /// Returns when a selected light source resourse not found.
+    SourceNotFound,
+
+    /// Returns when trying to create too many light sources.
+    TooManySources,
+
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
 }

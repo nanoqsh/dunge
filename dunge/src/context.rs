@@ -9,6 +9,7 @@ use {
         render::Render,
         render_frame::FrameFilter,
         screen::Screen,
+        shader_data::{Source, SourceModel},
         texture::Data as TextureData,
         topology::Topology,
         transform::IntoMat,
@@ -27,6 +28,7 @@ pub struct Context {
     pub(crate) render: Render,
     limits: Limits,
     models: Vec<InstanceModel>,
+    sources: Vec<SourceModel>,
 }
 
 impl Context {
@@ -39,6 +41,7 @@ impl Context {
             render,
             limits: Limits::default(),
             models: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
+            sources: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
         }
     }
 
@@ -228,6 +231,59 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
         self.render.delete_view(handle)
+    }
+
+    /// Creates new light.
+    ///
+    /// # Errors
+    /// Returns the [`Error::TooManySources`](crate::Error::TooManySources)
+    /// when trying to create too many light sources.
+    pub fn create_light<I>(&mut self, srcs: I) -> Result<LightHandle, Error>
+    where
+        I: IntoIterator<Item = Source>,
+    {
+        self.sources.clear();
+        let models = srcs.into_iter().map(SourceModel::new);
+        self.sources.extend(models);
+        self.render.create_light(&self.sources)
+    }
+
+    /// Updates the light.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_light<I>(&mut self, handle: LightHandle, srcs: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = Source>,
+    {
+        self.sources.clear();
+        let models = srcs.into_iter().map(SourceModel::new);
+        self.sources.extend(models);
+        self.render.update_light(handle, &self.sources)
+    }
+
+    /// Updates nth source in the light.
+    ///
+    /// To update all sources at once, call the [`update_light`](crate::Context::update_light) method.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_nth_light(
+        &mut self,
+        handle: LightHandle,
+        n: usize,
+        src: Source,
+    ) -> Result<(), Error> {
+        self.render
+            .update_nth_light(handle, n, SourceModel::new(src))
+    }
+
+    /// Deletes the light.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+        self.render.delete_light(handle)
     }
 
     /// Takes a screenshot of the current frame.

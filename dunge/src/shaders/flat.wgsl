@@ -25,7 +25,7 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     );
 
     var out: VertexOutput;
-    out.pos = model * vec4<f32>(vert.pos, 0., 1.);
+    out.pos = model * vec4(vert.pos, 0., 1.);
     out.map = vert.map;
     return out;
 }

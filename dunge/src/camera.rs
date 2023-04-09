@@ -4,6 +4,7 @@ use {
     crate::{
         layout::Plain,
         shader,
+        shader_data::CameraUniform,
         transform::{IntoQuat, Quat},
     },
     std::cell::Cell,
@@ -43,10 +44,7 @@ impl Camera {
             shader::TEXTURED_CAMERA_BINDING
         };
 
-        let uniform = CameraUniform {
-            view_proj: IDENTITY,
-        };
-
+        let uniform = CameraUniform::default();
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("camera buffer"),
             contents: uniform.as_bytes(),
@@ -86,9 +84,7 @@ impl Camera {
         }
 
         self.size.set(Some(size));
-        let uniform = CameraUniform {
-            view_proj: self.view.build_mat((width as f32, height as f32)),
-        };
+        let uniform = CameraUniform::new(self.view.build_mat((width as f32, height as f32)));
         queue.write_buffer(&self.buffer, 0, uniform.as_bytes());
     }
 
@@ -268,21 +264,6 @@ impl IntoProjection for Orthographic {
         Projection::Orthographic(self)
     }
 }
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub(crate) struct CameraUniform {
-    view_proj: [[f32; 4]; 4],
-}
-
-unsafe impl Plain for CameraUniform {}
-
-const IDENTITY: [[f32; 4]; 4] = [
-    [1., 0., 0., 0.],
-    [0., 1., 0., 0.],
-    [0., 0., 1., 0.],
-    [0., 0., 0., 1.],
-];
 
 fn normalize([x, y, z]: [f32; 3]) -> [f32; 3] {
     let len = (x * x + y * y + z * z).sqrt();
