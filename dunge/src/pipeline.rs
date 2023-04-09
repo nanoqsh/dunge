@@ -1,7 +1,7 @@
 use {
     crate::{
         bind_groups::Layouts,
-        depth_frame::DepthFrame,
+        framebuffer::Framebuffer,
         handles::LayerHandle,
         render::{Render, Shaders},
         shader::Shader,
@@ -63,7 +63,7 @@ impl Pipeline {
                     conservative: false,
                 },
                 depth_stencil: params.depth_stencil.map(|depth_compare| DepthStencilState {
-                    format: DepthFrame::DEPTH_FORMAT,
+                    format: Framebuffer::DEPTH_FORMAT,
                     depth_write_enabled: true,
                     depth_compare,
                     stencil: StencilState::default(),

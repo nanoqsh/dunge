@@ -3,8 +3,15 @@ mod camera;
 mod canvas;
 pub mod color;
 mod context;
-mod depth_frame;
 mod frame;
+mod framebuffer {
+    mod buffer;
+    mod depth_frame;
+    mod render_frame;
+
+    pub(crate) use self::buffer::Framebuffer;
+    pub use self::render_frame::FrameFilter;
+}
 pub mod handles;
 mod instance;
 mod layer;
@@ -13,7 +20,6 @@ mod r#loop;
 mod mesh;
 mod pipeline;
 mod render;
-mod render_frame;
 mod screen;
 mod shader;
 mod shader_data {
@@ -55,11 +61,11 @@ pub use {
         canvas::{Canvas, InitialState, WindowMode},
         context::{Context, FrameParameters, Limits, PixelSize},
         frame::Frame,
+        framebuffer::FrameFilter,
         layer::{Builder as LayerBuilder, Layer},
         mesh::Data as MeshData,
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::{Error, Loop},
-        render_frame::FrameFilter,
         shader_data::{LightKind, LightMode, Source},
         texture::Data as TextureData,
     },

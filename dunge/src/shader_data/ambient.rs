@@ -1,9 +1,11 @@
 use {
     crate::{layout::Plain, shader},
+    std::cell::Cell,
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
 pub(crate) struct Ambient {
+    col: Cell<[f32; 3]>,
     buffer: Buffer,
     bind_group: BindGroup,
 }
@@ -15,11 +17,11 @@ impl Ambient {
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
+        let col = [0.; 3];
         let buffer = {
-            let uniform: [f32; 3] = [0.; 3];
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("ambient buffer"),
-                contents: uniform.as_bytes(),
+                contents: col.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
@@ -33,11 +35,19 @@ impl Ambient {
             label: Some("ambient bind group"),
         });
 
-        Self { buffer, bind_group }
+        Self {
+            col: Cell::new(col),
+            buffer,
+            bind_group,
+        }
     }
 
-    pub fn set_ambient(&self, ambient: [f32; 3], queue: &Queue) {
-        queue.write_buffer(&self.buffer, 0, ambient.as_bytes());
+    pub fn set_ambient(&self, col: [f32; 3], queue: &Queue) {
+        if self.col.get() == col {
+            return;
+        }
+
+        queue.write_buffer(&self.buffer, 0, col.as_bytes());
     }
 
     pub fn bind_group(&self) -> &BindGroup {

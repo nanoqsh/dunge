@@ -1,5 +1,6 @@
 use {
     crate::shader,
+    std::num::NonZeroU32,
     wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
 
@@ -18,14 +19,14 @@ pub(crate) struct RenderFrame {
 }
 
 impl RenderFrame {
-    pub const RENDER_FORMAT: TextureFormat = if cfg!(target_arch = "wasm32") {
+    pub const FORMAT: TextureFormat = if cfg!(target_arch = "wasm32") {
         TextureFormat::Rgba8UnormSrgb
     } else {
         TextureFormat::Bgra8UnormSrgb
     };
 
     pub fn new(
-        (width, height): (u32, u32),
+        (width, height): (NonZeroU32, NonZeroU32),
         filter: FrameFilter,
         device: &Device,
         layout: &BindGroupLayout,
@@ -35,14 +36,14 @@ impl RenderFrame {
         let texture = device.create_texture(&TextureDescriptor {
             label: None,
             size: Extent3d {
-                width,
-                height,
+                width: width.get(),
+                height: height.get(),
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
-            format: Self::RENDER_FORMAT,
+            format: Self::FORMAT,
             usage: TextureUsages::COPY_SRC
                 | TextureUsages::COPY_DST
                 | TextureUsages::RENDER_ATTACHMENT

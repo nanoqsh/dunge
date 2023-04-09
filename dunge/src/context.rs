@@ -2,12 +2,12 @@ use {
     crate::{
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
+        framebuffer::FrameFilter,
         handles::*,
         instance::InstanceModel,
         mesh::Data as MeshData,
         pipeline::ParametersBuilder,
         render::Render,
-        render_frame::FrameFilter,
         screen::Screen,
         shader_data::{Source, SourceModel},
         texture::Data as TextureData,

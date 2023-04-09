@@ -89,7 +89,7 @@ impl<'d> Frame<'d> {
             pass.set_pipeline(self.render.post_pipeline().as_ref());
             pass.set_bind_group(
                 shader::POST_TEXTURE_GROUP,
-                self.render.render_frame().bind_group(),
+                self.render.framebuffer().render_bind_group(),
                 &[],
             );
             pass.set_bind_group(
@@ -139,7 +139,7 @@ impl<'d> Frame<'d> {
             .begin_render_pass(&RenderPassDescriptor {
                 label: Some("layer render pass"),
                 color_attachments: &[Some(RenderPassColorAttachment {
-                    view: self.render.render_frame().view(),
+                    view: self.render.framebuffer().render_view(),
                     resolve_target: None,
                     ops: Operations {
                         load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
@@ -149,7 +149,7 @@ impl<'d> Frame<'d> {
                     },
                 })],
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: self.render.depth_frame().view(),
+                    view: self.render.framebuffer().depth_view(),
                     depth_ops: Some(Operations {
                         load: if clear_depth {
                             LoadOp::Clear(1.)

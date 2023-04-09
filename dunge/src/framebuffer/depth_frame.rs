@@ -1,4 +1,7 @@
-use wgpu::{Device, Sampler, TextureFormat, TextureView};
+use {
+    std::num::NonZeroU32,
+    wgpu::{Device, Sampler, TextureFormat, TextureView},
+};
 
 pub(crate) struct DepthFrame {
     view: TextureView,
@@ -6,22 +9,22 @@ pub(crate) struct DepthFrame {
 }
 
 impl DepthFrame {
-    pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth24Plus;
+    pub const FORMAT: TextureFormat = TextureFormat::Depth24Plus;
 
-    pub fn new((width, height): (u32, u32), device: &Device) -> Self {
+    pub fn new((width, height): (NonZeroU32, NonZeroU32), device: &Device) -> Self {
         use wgpu::*;
 
         let desc = TextureDescriptor {
             label: None,
             size: Extent3d {
-                width,
-                height,
+                width: width.get(),
+                height: height.get(),
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
-            format: Self::DEPTH_FORMAT,
+            format: Self::FORMAT,
             usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         };

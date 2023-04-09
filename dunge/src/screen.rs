@@ -1,5 +1,5 @@
 use {
-    crate::{context::PixelSize, render_frame::FrameFilter},
+    crate::{context::PixelSize, framebuffer::FrameFilter},
     std::num::NonZeroU32,
 };
 
@@ -12,7 +12,7 @@ pub(crate) struct Screen {
 }
 
 impl Screen {
-    pub const MAX_SIZE: u32 = 16384;
+    pub const MAX_SIZE: u32 = 8192;
 
     pub fn physical_size(&self) -> (u32, u32) {
         (self.width.get(), self.height.get())
@@ -38,14 +38,17 @@ impl Screen {
         (width, height)
     }
 
-    pub fn buffer_size(&self) -> (u32, u32) {
+    pub fn buffer_size(&self) -> (NonZeroU32, NonZeroU32) {
         let (width, height) = self.virtual_size_aligned();
         let (width, height) = match self.pixel_size {
             PixelSize::XHalf => (width + 1, height + 1),
             _ => (width, height),
         };
 
-        (width.min(Self::MAX_SIZE), height.min(Self::MAX_SIZE))
+        (
+            NonZeroU32::new(width.clamp(1, Self::MAX_SIZE)).expect("non zero"),
+            NonZeroU32::new(height.clamp(1, Self::MAX_SIZE)).expect("non zero"),
+        )
     }
 
     pub fn size_factor(&self) -> (f32, f32) {

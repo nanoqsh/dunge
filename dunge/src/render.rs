@@ -3,14 +3,13 @@ use {
         bind_groups::Layouts,
         camera::{Camera, Projection, View},
         context::Screenshot,
-        depth_frame::DepthFrame,
         frame::Frame,
+        framebuffer::Framebuffer,
         handles::*,
         instance::{Instance, InstanceModel},
         mesh::{Data as MeshData, Mesh},
         pipeline::{Pipeline, PipelineParameters},
         r#loop::Loop,
-        render_frame::{FrameFilter, RenderFrame},
         screen::Screen,
         shader::Shader,
         shader_data::{Ambient, Light, PostShaderData, SourceModel},
@@ -21,6 +20,7 @@ use {
         Error,
     },
     once_cell::unsync::OnceCell,
+    std::num::NonZeroU32,
     wgpu::{Device, Queue, ShaderModule, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
@@ -36,8 +36,7 @@ pub(crate) struct Render {
     post_pipeline: Pipeline,
     post_shader_data: PostShaderData,
     ambient: Ambient,
-    render_frame: RenderFrame,
-    depth_frame: DepthFrame,
+    framebuffer: Framebuffer,
     resources: Resources,
 }
 
@@ -95,7 +94,7 @@ impl Render {
 
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
-            format: RenderFrame::RENDER_FORMAT,
+            format: Framebuffer::RENDER_FORMAT,
             width: 1,
             height: 1,
             present_mode: PresentMode::Fifo,
@@ -128,10 +127,7 @@ impl Render {
             },
         );
 
-        let render_frame =
-            RenderFrame::new((1, 1), FrameFilter::Nearest, &device, &layouts.textured);
-
-        let depth_frame = DepthFrame::new((1, 1), &device);
+        let framebuffer = Framebuffer::new_default(&device, &layouts.textured);
 
         Self {
             device,
@@ -144,8 +140,7 @@ impl Render {
             post_pipeline,
             post_shader_data,
             ambient,
-            render_frame,
-            depth_frame,
+            framebuffer,
             resources,
         }
     }
@@ -312,16 +307,14 @@ impl Render {
         let (bw, bh) = self.screen.buffer_size();
         let (fw, fh) = self.screen.size_factor();
         self.post_shader_data
-            .resize([bw as f32, bh as f32], [fw, fh], &self.queue);
+            .resize([bw.get() as f32, bh.get() as f32], [fw, fh], &self.queue);
 
-        self.render_frame = RenderFrame::new(
+        self.framebuffer = Framebuffer::new(
             (bw, bh),
             self.screen.filter,
             &self.device,
             &self.layouts.textured,
         );
-
-        self.depth_frame = DepthFrame::new((bw, bh), &self.device);
     }
 
     pub fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
@@ -351,15 +344,12 @@ impl Render {
     }
 
     pub fn take_screenshot(&self) -> Screenshot {
-        use {
-            std::{num::NonZeroU32, sync::mpsc},
-            wgpu::*,
-        };
+        use {std::sync::mpsc, wgpu::*};
 
         const N_COLOR_CHANNELS: usize = 4;
 
         let image = ImageCopyTexture {
-            texture: self.render_frame.texture(),
+            texture: self.framebuffer.render_texture(),
             mip_level: 0,
             origin: Origin3d::ZERO,
             aspect: TextureAspect::All,
@@ -422,7 +412,7 @@ impl Render {
                 data.extend_from_slice(&row[..virt_row_size]);
             }
 
-            if RenderFrame::RENDER_FORMAT == TextureFormat::Bgra8UnormSrgb {
+            if Framebuffer::RENDER_FORMAT == TextureFormat::Bgra8UnormSrgb {
                 for chunk in data.chunks_mut(N_COLOR_CHANNELS) {
                     chunk.swap(0, 2);
                 }
@@ -458,12 +448,8 @@ impl Render {
         &self.ambient
     }
 
-    pub fn render_frame(&self) -> &RenderFrame {
-        &self.render_frame
-    }
-
-    pub fn depth_frame(&self) -> &DepthFrame {
-        &self.depth_frame
+    pub fn framebuffer(&self) -> &Framebuffer {
+        &self.framebuffer
     }
 
     pub fn resources(&self) -> &Resources {
