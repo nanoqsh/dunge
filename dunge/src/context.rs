@@ -238,12 +238,12 @@ impl Context {
     /// # Errors
     /// Returns the [`Error::TooManySources`](crate::Error::TooManySources)
     /// when trying to create too many light sources.
-    pub fn create_light<I>(&mut self, src: I) -> Result<LightHandle, Error>
+    pub fn create_light<I>(&mut self, srcs: I) -> Result<LightHandle, Error>
     where
         I: IntoIterator<Item = Source>,
     {
         self.sources.clear();
-        let models = src.into_iter().map(SourceModel::new);
+        let models = srcs.into_iter().map(SourceModel::new);
         self.sources.extend(models);
         self.render.create_light(&self.sources)
     }
@@ -252,12 +252,12 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_light<I>(&mut self, handle: LightHandle, src: I) -> Result<(), Error>
+    pub fn update_light<I>(&mut self, handle: LightHandle, srcs: I) -> Result<(), Error>
     where
         I: IntoIterator<Item = Source>,
     {
         self.sources.clear();
-        let models = src.into_iter().map(SourceModel::new);
+        let models = srcs.into_iter().map(SourceModel::new);
         self.sources.extend(models);
         self.render.update_light(handle, &self.sources)
     }

@@ -20,6 +20,7 @@ struct InstanceInput {
 struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
     @location(0) col: vec3<f32>,
+    @location(1) world: vec3<f32>,
 }
 
 @vertex
@@ -32,12 +33,23 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     );
 
     var out: VertexOutput;
-    out.pos = camera.view_proj * model * vec4<f32>(vert.pos, 1.);
+    let world = model * vec4(vert.pos, 1.);
+    out.pos = camera.view_proj * world;
     out.col = vert.col;
+    out.world = world.xyz;
     return out;
 }
 
+@group(1) @binding(0)
+var<uniform> sources: array<Source, 64>;
+@group(1) @binding(1)
+var<uniform> n_sources: u32;
+
+@group(2) @binding(0)
+var<uniform> ambient: vec3<f32>;
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(in.col, 1.);
+    let result = light(in.world) * in.col;
+    return vec4(result, 1.);
 }

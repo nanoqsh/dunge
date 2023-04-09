@@ -644,7 +644,11 @@ pub(crate) struct Layouts {
 impl Layouts {
     pub fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
         match shader {
-            Shader::Color => BindGroupLayouts::N1([&self.camera_layout]),
+            Shader::Color => BindGroupLayouts::N3([
+                &self.camera_layout,
+                &self.lights_layout,
+                &self.ambient_layout,
+            ]),
             Shader::Flat => BindGroupLayouts::N1([&self.textured_layout]),
             Shader::Post => {
                 BindGroupLayouts::N2([&self.post_shader_data_layout, &self.textured_layout])
@@ -662,6 +666,7 @@ impl Layouts {
 pub(crate) enum BindGroupLayouts<'a> {
     N1([&'a BindGroupLayout; 1]),
     N2([&'a BindGroupLayout; 2]),
+    N3([&'a BindGroupLayout; 3]),
     N4([&'a BindGroupLayout; 4]),
 }
 
@@ -670,6 +675,7 @@ impl<'a> BindGroupLayouts<'a> {
         match self {
             Self::N1(b) => b,
             Self::N2(b) => b,
+            Self::N3(b) => b,
             Self::N4(b) => b,
         }
     }

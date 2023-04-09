@@ -7,6 +7,7 @@ use {
         r#loop::Error,
         render::Render,
         shader,
+        vertex::Vertex,
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -123,7 +124,10 @@ impl<'d> Frame<'d> {
         pipeline: &'l Pipeline,
         clear_color: Option<Linear<f64>>,
         clear_depth: bool,
-    ) -> Layer<V, T> {
+    ) -> Layer<V, T>
+    where
+        V: Vertex,
+    {
         use wgpu::*;
 
         // Before start a new layer, finish the previous one if it exists

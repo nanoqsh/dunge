@@ -48,16 +48,19 @@ pub use crate::canvas::make_window;
 #[cfg(target_arch = "wasm32")]
 pub use crate::canvas::from_element;
 
-pub use crate::{
-    camera::{Orthographic, Perspective, View},
-    canvas::{Canvas, InitialState, WindowMode},
-    context::{Context, FrameParameters, Limits, PixelSize},
-    frame::Frame,
-    layer::{Builder as LayerBuilder, Layer},
-    mesh::Data as MeshData,
-    pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
-    r#loop::{Error, Loop},
-    render_frame::FrameFilter,
-    shader_data::{LightKind, LightMode, Source},
-    texture::Data as TextureData,
+pub use {
+    crate::{
+        camera::{Orthographic, Perspective, View},
+        canvas::{Canvas, InitialState, WindowMode},
+        context::{Context, FrameParameters, Limits, PixelSize},
+        frame::Frame,
+        layer::{Builder as LayerBuilder, Layer},
+        mesh::Data as MeshData,
+        pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
+        r#loop::{Error, Loop},
+        render_frame::FrameFilter,
+        shader_data::{LightKind, LightMode, Source},
+        texture::Data as TextureData,
+    },
+    winit,
 };

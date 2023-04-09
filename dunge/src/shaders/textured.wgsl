@@ -33,7 +33,7 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     );
 
     var out: VertexOutput;
-    let world = model * vec4<f32>(vert.pos, 1.);
+    let world = model * vec4(vert.pos, 1.);
     out.pos = camera.view_proj * world;
     out.map = vert.map;
     out.world = world.xyz;
@@ -44,13 +44,6 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
 var tdiff: texture_2d<f32>;
 @group(1) @binding(1)
 var sdiff: sampler;
-
-struct Source {
-    pos: vec3<f32>,
-    rad: f32,
-    col: vec3<f32>,
-    flags: u32,
-}
 
 @group(2) @binding(0)
 var<uniform> sources: array<Source, 64>;
@@ -67,32 +60,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    var diffuse = vec3(0., 0., 0.);
-    for (var i: u32 = 0u; i < n_sources; i++) {
-        let source = sources[i];
-
-        if in.world.x > source.pos.x - source.rad && in.world.x < source.pos.x + source.rad
-        && in.world.y > source.pos.y - source.rad && in.world.y < source.pos.y + source.rad
-        && in.world.z > source.pos.z - source.rad && in.world.z < source.pos.z + source.rad {
-            let len = length(in.world - source.pos);
-            if len < source.rad {
-                var sharp = 1.;
-                if (source.flags & 1u) == 0u {
-                    sharp -= (len / source.rad);
-                }
-
-                var gloom: vec3<f32>;
-                if (source.flags & 2u) == 0u {
-                    gloom = vec3(1.);
-                } else {
-                    gloom = -ambient;
-                }
-
-                diffuse += gloom * sharp * source.col;
-            }
-        }
-    }
-
-    let result = (ambient + diffuse) * out.rgb;
+    let result = light(in.world) * out.rgb;
     return vec4(result, out.a);
 }
