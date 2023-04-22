@@ -36,6 +36,7 @@ impl Canvas {
     /// calls a `make_loop` by passing the context in it.
     /// The `make_loop` needs to return an object which
     /// implements the [`Loop`] trait.
+    #[allow(clippy::too_many_lines)]
     pub async fn run<M, L>(self, make_loop: M) -> !
     where
         M: FnOnce(&mut Context) -> L,

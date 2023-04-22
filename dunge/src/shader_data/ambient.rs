@@ -43,6 +43,7 @@ impl Ambient {
     }
 
     pub fn set_ambient(&self, col: [f32; 3], queue: &Queue) {
+        #[allow(clippy::float_cmp)]
         if self.col.get() == col {
             return;
         }

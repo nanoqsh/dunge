@@ -12,6 +12,12 @@ impl IntoMat for Mat {
     }
 }
 
+impl IntoMat for glam::Mat4 {
+    fn into_mat(self) -> Mat {
+        self.to_cols_array_2d()
+    }
+}
+
 /// An instance position.
 ///
 /// Descibes the position in X, Y, Z coordinates.
@@ -42,41 +48,15 @@ pub struct Transform<Q = Identity> {
 
 impl Transform<Quat> {
     fn mat(self) -> Mat {
-        fn rotation(Quat([x, y, z, w]): Quat) -> [[f32; 3]; 3] {
-            let x2 = x + x;
-            let y2 = y + y;
-            let z2 = z + z;
-            let xx = x * x2;
-            let xy = x * y2;
-            let xz = x * z2;
-            let yy = y * y2;
-            let yz = y * z2;
-            let zz = z * z2;
-            let wx = w * x2;
-            let wy = w * y2;
-            let wz = w * z2;
+        use glam::{Mat4, Quat as Q, Vec3};
 
-            [
-                [1. - yy - zz, xy + wz, xz - wy],
-                [xy - wz, 1. - xx - zz, yz + wx],
-                [xz + wy, yz - wx, 1. - xx - yy],
-            ]
-        }
+        let mat = Mat4::from_scale_rotation_translation(
+            Vec3::from(self.scl),
+            Q::from_array(self.rot.0),
+            Vec3::from(self.pos),
+        );
 
-        let [xt, yt, zt] = self.pos;
-        let [x_axis, y_axis, z_axis] = rotation(self.rot);
-        let [xs, ys, zs] = self.scl;
-
-        let [xx, xy, xz] = x_axis.map(|v| v * xs);
-        let [yx, yy, yz] = y_axis.map(|v| v * ys);
-        let [zx, zy, zz] = z_axis.map(|v| v * zs);
-
-        [
-            [xx, xy, xz, 0.],
-            [yx, yy, yz, 0.],
-            [zx, zy, zz, 0.],
-            [xt, yt, zt, 1.],
-        ]
+        mat.to_cols_array_2d()
     }
 }
 
@@ -118,6 +98,12 @@ pub trait IntoQuat {
     fn into_quat(self) -> Quat;
 }
 
+impl IntoQuat for glam::Quat {
+    fn into_quat(self) -> Quat {
+        Quat(self.to_array())
+    }
+}
+
 /// The identity rotation.
 #[derive(Default)]
 pub struct Identity;
@@ -148,12 +134,11 @@ pub struct AxisAngle(pub [f32; 3], pub f32);
 
 impl IntoQuat for AxisAngle {
     fn into_quat(self) -> Quat {
+        use glam::{Quat as Q, Vec3};
+
         let Self(axis, angle) = self;
-
-        let (sin, cos) = (angle * 0.5).sin_cos();
-        let [x, y, z] = axis.map(|v| v * sin);
-
-        Quat([x, y, z, cos])
+        let quat = Q::from_axis_angle(Vec3::from(axis), angle);
+        Quat(quat.to_array())
     }
 }
 

@@ -53,6 +53,7 @@ struct App {
 }
 
 impl App {
+    #[allow(clippy::too_many_lines)]
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
             pixel_size: PixelSize::X2,

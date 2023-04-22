@@ -7,6 +7,7 @@ use {
         shader_data::CameraUniform,
         transform::{IntoQuat, Quat},
     },
+    glam::{Mat4, Vec3},
     std::cell::Cell,
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -79,7 +80,8 @@ impl Camera {
         }
 
         self.size.set(Some(size));
-        let uniform = CameraUniform::new(self.view.build_mat((width as f32, height as f32)));
+        let mat = self.view.build_mat((width as f32, height as f32));
+        let uniform = CameraUniform::new(mat.to_cols_array_2d());
         queue.write_buffer(&self.buffer, 0, uniform.as_bytes());
     }
 
@@ -115,39 +117,17 @@ impl<P> View<P> {
     }
 
     pub fn rotation_quat(&self) -> Quat {
-        let [xe, ye, ze] = self.eye;
-        let [xl, yl, zl] = self.look;
-        let [sx, sy, sz] = normalize([xe - xl, ye - yl, ze - zl]);
-
-        let pitch = sy.asin();
-        let angle = sx.atan2(sz);
-        let (pitch_sin, pitch_cos) = (pitch * 0.5).sin_cos();
-        let (angle_sin, angle_cos) = (-angle * 0.5).sin_cos();
-
-        Quat([
-            pitch_sin * angle_cos,
-            pitch_cos * angle_sin,
-            pitch_sin * angle_sin,
-            pitch_cos * angle_cos,
-        ])
+        let mat = Mat4::look_at_rh(Vec3::from(self.eye), Vec3::from(self.look), Vec3::Y);
+        let (_, rot, _) = mat.to_scale_rotation_translation();
+        Quat(rot.to_array())
     }
 }
 
 impl View<Projection> {
-    fn build_mat(&self, (width, height): (f32, f32)) -> [[f32; 4]; 4] {
+    fn build_mat(&self, (width, height): (f32, f32)) -> Mat4 {
         let proj = match self.proj {
             Projection::Perspective(Perspective { fovy, znear, zfar }) => {
-                let (sin_fov, cos_fov) = (0.5 * fovy).sin_cos();
-                let h = cos_fov / sin_fov;
-                let w = (h * height) / width;
-                let r = zfar / (znear - zfar);
-
-                [
-                    [w, 0., 0., 0.],
-                    [0., h, 0., 0.],
-                    [0., 0., r, -1.],
-                    [0., 0., r * znear, 0.],
-                ]
+                Mat4::perspective_rh(fovy, width / height, znear, zfar)
             }
             Projection::Orthographic(Orthographic {
                 width_factor,
@@ -155,39 +135,20 @@ impl View<Projection> {
                 near,
                 far,
             }) => {
-                let factor_width = 1. / (width * width_factor);
-                let factor_height = 1. / (height * height_factor);
-                let r = 1. / (near - far);
+                let wh = width * width_factor * 0.5;
+                let left = -wh;
+                let right = wh;
 
-                [
-                    [factor_width + factor_width, 0., 0., 0.],
-                    [0., factor_height + factor_height, 0., 0.],
-                    [0., 0., r, 0.],
-                    [factor_width, factor_height, r * near, 1.],
-                ]
+                let hh = height * height_factor * 0.5;
+                let bottom = -hh;
+                let top = hh;
+
+                Mat4::orthographic_rh(left, right, bottom, top, near, far)
             }
         };
 
-        let view = {
-            let [xe, ye, ze] = self.eye;
-            let [xl, yl, zl] = self.look;
-            let [xf, yf, zf] = normalize([xe - xl, ye - yl, ze - zl]);
-            let [xr, yr, zr] = normalize(cross([0., 1., 0.], [xf, yf, zf]));
-            let [xu, yu, zu] = cross([xf, yf, zf], [xr, yr, zr]);
-
-            let tx = xr * xe + yr * ye + zr * ze;
-            let ty = xu * xe + yu * ye + zu * ze;
-            let tz = xf * xe + yf * ye + zf * ze;
-
-            [
-                [xr, xu, xf, 0.],
-                [yr, yu, yf, 0.],
-                [zr, zu, zf, 0.],
-                [-tx, -ty, -tz, 1.],
-            ]
-        };
-
-        mul_mat4(proj, view)
+        let view = Mat4::look_at_rh(self.eye.into(), self.look.into(), Vec3::Y);
+        proj * view
     }
 }
 
@@ -258,32 +219,4 @@ impl IntoProjection for Orthographic {
     fn into_projection(self) -> Projection {
         Projection::Orthographic(self)
     }
-}
-
-fn normalize([x, y, z]: [f32; 3]) -> [f32; 3] {
-    let len = (x * x + y * y + z * z).sqrt();
-    if len == 0. {
-        [0., 1., 0.]
-    } else {
-        [x / len, y / len, z / len]
-    }
-}
-
-fn cross([xa, ya, za]: [f32; 3], [xb, yb, zb]: [f32; 3]) -> [f32; 3] {
-    [ya * zb - yb * za, za * xb - zb * xa, xa * yb - xb * ya]
-}
-
-fn mul_vector(mat: [[f32; 4]; 4], [x, y, z, w]: [f32; 4]) -> [f32; 4] {
-    let [[xa, ya, za, wa], [xb, yb, zb, wb], [xc, yc, zc, wc], [xd, yd, zd, wd]] = mat;
-
-    [
-        x * xa + y * xb + z * xc + w * xd,
-        x * ya + y * yb + z * yc + w * yd,
-        x * za + y * zb + z * zc + w * zd,
-        x * wa + y * wb + z * wc + w * wd,
-    ]
-}
-
-fn mul_mat4(a: [[f32; 4]; 4], b: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
-    b.map(|v| mul_vector(a, v))
 }
