@@ -1,6 +1,6 @@
 [package]
 name = "dunge"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "Simple and portable 3d render library"
 license = "MIT"

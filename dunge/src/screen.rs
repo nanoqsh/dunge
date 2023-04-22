@@ -12,8 +12,6 @@ pub(crate) struct Screen {
 }
 
 impl Screen {
-    pub const MAX_SIZE: u32 = 8192;
-
     pub fn physical_size(&self) -> (u32, u32) {
         (self.width.get(), self.height.get())
     }
@@ -38,7 +36,7 @@ impl Screen {
         (width, height)
     }
 
-    pub fn buffer_size(&self) -> (NonZeroU32, NonZeroU32) {
+    pub fn buffer_size(&self, max_size: u32) -> (NonZeroU32, NonZeroU32) {
         let (width, height) = self.virtual_size_aligned();
         let (width, height) = match self.pixel_size {
             PixelSize::XHalf => (width + 1, height + 1),
@@ -46,8 +44,8 @@ impl Screen {
         };
 
         (
-            NonZeroU32::new(width.clamp(1, Self::MAX_SIZE)).expect("non zero"),
-            NonZeroU32::new(height.clamp(1, Self::MAX_SIZE)).expect("non zero"),
+            NonZeroU32::new(width.clamp(1, max_size)).expect("non zero"),
+            NonZeroU32::new(height.clamp(1, max_size)).expect("non zero"),
         )
     }
 

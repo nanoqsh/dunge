@@ -31,6 +31,7 @@ pub(crate) struct Render {
     surface: Surface,
     config: SurfaceConfiguration,
     screen: Screen,
+    max_texture_size: u32,
     shaders: Shaders,
     layouts: Layouts,
     post_pipeline: Pipeline,
@@ -67,8 +68,6 @@ impl Render {
                 &DeviceDescriptor {
                     features: Features::empty(),
                     limits: Limits {
-                        max_texture_dimension_1d: Screen::MAX_SIZE,
-                        max_texture_dimension_2d: Screen::MAX_SIZE,
                         max_storage_buffers_per_shader_stage: 0,
                         max_storage_textures_per_shader_stage: 0,
                         max_dynamic_storage_buffers_per_pipeline_layout: 0,
@@ -91,6 +90,8 @@ impl Render {
             )
             .await
             .expect("request device");
+
+        let max_texture_size = device.limits().max_texture_dimension_2d;
 
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
@@ -135,6 +136,7 @@ impl Render {
             surface,
             config,
             screen: Screen::default(),
+            max_texture_size,
             shaders,
             layouts,
             post_pipeline,
@@ -304,7 +306,7 @@ impl Render {
         self.config.height = height;
         self.surface.configure(&self.device, &self.config);
 
-        let (bw, bh) = self.screen.buffer_size();
+        let (bw, bh) = self.screen.buffer_size(self.max_texture_size);
         let (fw, fh) = self.screen.size_factor();
         self.post_shader_data
             .resize([bw.get() as f32, bh.get() as f32], [fw, fh], &self.queue);

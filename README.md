@@ -17,6 +17,9 @@
 * Texture and color vertex modes
 * Primitives for object positioning and camera view out of the box
 
+## Application area
+The library is for personal use only. I use it to create my applications and I make API suitable exclusively for my problems. Perhaps in the future API will settle down and the library will be self-sufficient for other applications.
+
 ## Getting Started
 Let's render a colorful triangle for example. First, we need to add the dependency of dunge in the `Cargo.toml`:
 ```

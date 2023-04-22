@@ -25,7 +25,7 @@ type Proxy = EventLoopProxy<CanvasEvent>;
 pub struct Context {
     pub(crate) window: Window,
     pub(crate) proxy: Proxy,
-    pub(crate) render: Render,
+    pub(crate) render: Box<Render>,
     limits: Limits,
     models: Vec<InstanceModel>,
     sources: Vec<SourceModel>,
@@ -38,7 +38,7 @@ impl Context {
         Self {
             window,
             proxy,
-            render,
+            render: Box::new(render),
             limits: Limits::default(),
             models: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
             sources: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
