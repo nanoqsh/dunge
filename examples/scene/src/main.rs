@@ -190,10 +190,8 @@ impl App {
                 .collect()
         };
 
-        let light = {
-            let sources: [Source; 2] = Default::default();
-            context.create_light(sources).expect("create light")
-        };
+        // Crate the light
+        let light = context.create_light([0.; 3], []).expect("create light");
 
         // Create the view
         let camera = Camera::default();
@@ -218,15 +216,18 @@ impl Loop for App {
     type Error = Error;
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
-        use {
-            dunge::winit::window::Fullscreen,
-            std::f32::consts::{PI, TAU},
-        };
+        use {dunge::winit::window::Fullscreen, std::f32::consts::TAU};
 
         const SENSITIVITY: f32 = 0.01;
-        const LIGHTS_DISTANCE: f32 = 3.;
+        const AMBIENT_COLOR: [f32; 3] = [0.4; 3];
+        const LIGHTS_DISTANCE: f32 = 3.3;
         const LIGHTS_SPEED: f32 = 1.;
-        const LIGHTS: [(f32, [f32; 3]); 2] = [(0., [2., 0., 0.]), (PI, [0., 0., 2.])];
+        const INTENSITY: f32 = 2.;
+        const LIGHTS: [(f32, [f32; 3]); 3] = [
+            (0., [INTENSITY, 0., 0.]),
+            (TAU / 3., [0., INTENSITY, 0.]),
+            (TAU * 2. / 3., [0., 0., INTENSITY]),
+        ];
 
         self.time += input.delta_time * LIGHTS_SPEED;
         let make_source = |step, col| Source {
@@ -243,7 +244,11 @@ impl Loop for App {
             ..Default::default()
         };
 
-        context.update_light(self.light, LIGHTS.map(|(step, col)| make_source(step, col)))?;
+        context.update_light(
+            self.light,
+            AMBIENT_COLOR,
+            LIGHTS.map(|(step, col)| make_source(step, col)),
+        )?;
 
         // Handle pressed keys
         for key in input.pressed_keys {
@@ -312,9 +317,7 @@ impl Loop for App {
                 .with_clear_depth()
                 .start();
 
-            layer.set_ambient([0.5; 3]);
             layer.bind_light(self.light)?;
-
             layer.bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;
             for model in &self.models {

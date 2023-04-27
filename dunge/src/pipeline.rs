@@ -132,7 +132,6 @@ impl<'a, V, T> ParametersBuilder<'a, V, T> {
         self
     }
 
-    #[must_use]
     pub fn build(self) -> LayerHandle<V, T>
     where
         V: Vertex,

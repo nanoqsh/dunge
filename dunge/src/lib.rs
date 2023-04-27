@@ -23,13 +23,11 @@ mod render;
 mod screen;
 mod shader;
 mod shader_data {
-    mod ambient;
     mod camera;
     mod light;
     mod post;
 
     pub(crate) use self::{
-        ambient::Ambient,
         camera::CameraUniform,
         light::{Light, SourceModel},
         post::PostShaderData,

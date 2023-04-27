@@ -41,12 +41,11 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
 }
 
 @group(1) @binding(0)
-var<uniform> sources: array<Source, 64>;
-@group(1) @binding(1)
-var<uniform> n_sources: u32;
-
-@group(2) @binding(0)
 var<uniform> ambient: vec3<f32>;
+@group(1) @binding(1)
+var<uniform> sources: array<Source, 64>;
+@group(1) @binding(2)
+var<uniform> n_sources: u32;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {

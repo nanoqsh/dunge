@@ -12,7 +12,7 @@ use {
         r#loop::Loop,
         screen::Screen,
         shader::Shader,
-        shader_data::{Ambient, Light, PostShaderData, SourceModel},
+        shader_data::{Light, PostShaderData, SourceModel},
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -36,7 +36,6 @@ pub(crate) struct Render {
     layouts: Layouts,
     post_pipeline: Pipeline,
     post_shader_data: PostShaderData,
-    ambient: Ambient,
     framebuffer: Framebuffer,
     resources: Resources,
 }
@@ -105,13 +104,14 @@ impl Render {
 
         let layouts = Layouts::new(&device);
         let post_shader_data = PostShaderData::new(&device, &layouts.post_shader_data);
-        let ambient = Ambient::new(&device, &layouts.ambient);
         let shaders = Shaders::default();
 
         let mut resources = Resources::default();
-        resources
-            .lights
-            .insert(Light::new(&[], &device, &layouts.lights).expect("default light"));
+        resources.lights.insert({
+            const DEFAULT_AMBIENT: [f32; 3] = [1.; 3];
+
+            Light::new(DEFAULT_AMBIENT, &[], &device, &layouts.lights).expect("default light")
+        });
 
         let post_pipeline = Pipeline::new(
             &device,
@@ -141,7 +141,6 @@ impl Render {
             layouts,
             post_pipeline,
             post_shader_data,
-            ambient,
             framebuffer,
             resources,
         }
@@ -261,16 +260,32 @@ impl Render {
         self.resources.views.remove(handle.0)
     }
 
-    pub fn create_light(&mut self, srcs: &[SourceModel]) -> Result<LightHandle, Error> {
-        let light = Light::new(srcs, &self.device, &self.layouts.lights)?;
+    pub fn create_light(
+        &mut self,
+        ambient: [f32; 3],
+        srcs: &[SourceModel],
+    ) -> Result<LightHandle, Error> {
+        let light = Light::new(ambient, srcs, &self.device, &self.layouts.lights)?;
         let id = self.resources.lights.insert(light);
         Ok(LightHandle(id))
     }
 
-    pub fn update_light(&mut self, handle: LightHandle, srcs: &[SourceModel]) -> Result<(), Error> {
+    pub fn update_ambient(&mut self, handle: LightHandle, ambient: [f32; 3]) -> Result<(), Error> {
+        let light = self.resources.lights.get(handle.0)?;
+        light.update_ambient(ambient, &self.queue);
+
+        Ok(())
+    }
+
+    pub fn update_light(
+        &mut self,
+        handle: LightHandle,
+        ambient: [f32; 3],
+        srcs: &[SourceModel],
+    ) -> Result<(), Error> {
         let light = self.resources.lights.get_mut(handle.0)?;
-        if !light.update(srcs, &self.queue) {
-            *light = Light::new(srcs, &self.device, &self.layouts.lights)?;
+        if !light.update_sources(srcs, &self.queue) {
+            *light = Light::new(ambient, srcs, &self.device, &self.layouts.lights)?;
         }
 
         Ok(())
@@ -444,10 +459,6 @@ impl Render {
 
     pub fn post_shader_data(&self) -> &PostShaderData {
         &self.post_shader_data
-    }
-
-    pub fn ambient(&self) -> &Ambient {
-        &self.ambient
     }
 
     pub fn framebuffer(&self) -> &Framebuffer {

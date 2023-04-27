@@ -50,6 +50,7 @@ impl Context {
     }
 
     /// Returns the window.
+    #[must_use]
     pub fn window(&self) -> &Window {
         &self.window
     }
@@ -64,6 +65,7 @@ impl Context {
     }
 
     /// Returns the canvas size.
+    #[must_use]
     pub fn size(&self) -> (u32, u32) {
         self.render.screen().virtual_size()
     }
@@ -238,28 +240,41 @@ impl Context {
     /// # Errors
     /// Returns the [`Error::TooManySources`](crate::Error::TooManySources)
     /// when trying to create too many light sources.
-    pub fn create_light<I>(&mut self, srcs: I) -> Result<LightHandle, Error>
+    pub fn create_light<I>(&mut self, ambient: [f32; 3], srcs: I) -> Result<LightHandle, Error>
     where
         I: IntoIterator<Item = Source>,
     {
         self.sources.clear();
         let models = srcs.into_iter().map(SourceModel::new);
         self.sources.extend(models);
-        self.render.create_light(&self.sources)
+        self.render.create_light(ambient, &self.sources)
+    }
+
+    /// Updates the color of the ambient light.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_ambient(&mut self, handle: LightHandle, ambient: [f32; 3]) -> Result<(), Error> {
+        self.render.update_ambient(handle, ambient)
     }
 
     /// Updates the light.
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_light<I>(&mut self, handle: LightHandle, srcs: I) -> Result<(), Error>
+    pub fn update_light<I>(
+        &mut self,
+        handle: LightHandle,
+        ambient: [f32; 3],
+        srcs: I,
+    ) -> Result<(), Error>
     where
         I: IntoIterator<Item = Source>,
     {
         self.sources.clear();
         let models = srcs.into_iter().map(SourceModel::new);
         self.sources.extend(models);
-        self.render.update_light(handle, &self.sources)
+        self.render.update_light(handle, ambient, &self.sources)
     }
 
     /// Updates nth source in the light.
@@ -290,6 +305,7 @@ impl Context {
     ///
     /// If the buffer cannot be copied for some reason,
     /// this method returns an empty.
+    #[must_use]
     pub fn take_screenshot(&self) -> Screenshot {
         self.render.take_screenshot()
     }

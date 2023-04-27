@@ -27,15 +27,15 @@ pub enum LightKind {
 }
 
 pub(crate) struct Light {
+    ambient_buffer: Buffer,
     sources_buffer: Buffer,
     n_sources: usize,
     bind_group: BindGroup,
 }
 
 impl Light {
-    const MAX_N_SOURCES: usize = 64;
-
     pub fn new(
+        ambient: [f32; 3],
         srcs: &[SourceModel],
         device: &Device,
         layout: &BindGroupLayout,
@@ -45,9 +45,17 @@ impl Light {
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
-        if srcs.len() > Self::MAX_N_SOURCES {
+        if srcs.len() > shader::MAX_N_SOURCES as usize {
             return Err(Error::TooManySources);
         }
+
+        let ambient_buffer = {
+            device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("ambient buffer"),
+                contents: ambient.as_bytes(),
+                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            })
+        };
 
         let sources_buffer = {
             let default = [SourceModel::default()];
@@ -72,6 +80,10 @@ impl Light {
             layout,
             entries: &[
                 BindGroupEntry {
+                    binding: shader::AMBIENT_BINDING,
+                    resource: ambient_buffer.as_entire_binding(),
+                },
+                BindGroupEntry {
                     binding: shader::SOURCES_BINDING,
                     resource: sources_buffer.as_entire_binding(),
                 },
@@ -84,13 +96,18 @@ impl Light {
         });
 
         Ok(Self {
+            ambient_buffer,
             sources_buffer,
             n_sources: srcs.len(),
             bind_group,
         })
     }
 
-    pub fn update(&self, srcs: &[SourceModel], queue: &Queue) -> bool {
+    pub fn update_ambient(&self, col: [f32; 3], queue: &Queue) {
+        queue.write_buffer(&self.ambient_buffer, 0, col.as_bytes());
+    }
+
+    pub fn update_sources(&self, srcs: &[SourceModel], queue: &Queue) -> bool {
         if srcs.is_empty() || self.n_sources != srcs.len() {
             return false;
         }

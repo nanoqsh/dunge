@@ -6,8 +6,8 @@ struct Source {
 }
 
 fn light(world: vec3<f32>) -> vec3<f32> {
-    var diffuse = vec3(0., 0., 0.);
-    for (var i: u32 = 0u; i < n_sources; i++) {
+    var diffuse = vec3(0.);
+    for (var i = 0u; i < n_sources; i++) {
         let source = sources[i];
 
         if world.x > source.pos.x - source.rad && world.x < source.pos.x + source.rad
@@ -17,7 +17,8 @@ fn light(world: vec3<f32>) -> vec3<f32> {
             if len < source.rad {
                 var sharp = 1.;
                 if (source.flags & 1u) == 0u {
-                    sharp -= (len / source.rad);
+                    let e = len / source.rad;
+                    sharp -= e * e;
                 }
 
                 var gloom: vec3<f32>;
@@ -32,5 +33,5 @@ fn light(world: vec3<f32>) -> vec3<f32> {
         }
     }
 
-    return (ambient + diffuse);
+    return ambient + diffuse;
 }
