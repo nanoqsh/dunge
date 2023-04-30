@@ -53,7 +53,7 @@ var<uniform> sources: array<Source, 64>;
 var<uniform> n_sources: u32;
 
 struct Space {
-    loc: mat4x4<f32>,
+    model: mat4x4<f32>,
     col: vec3<f32>,
     flags: u32,
 }
@@ -72,7 +72,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let space_light = textureSampleLevel(space_tdiff, space_sdiff, in.world, 0.0).rgb;
-    let result = (light(in.world) + space_light) * out.rgb;
+    // TODO: Move to vertex level
+    let space_model = space.model * vec4(in.world.xyz, 1.0);
+    let space_light = textureSampleLevel(space_tdiff, space_sdiff, space_model.xzy, 0.0).rgb;
+    let result = (light(in.world) + space_light * 2.5) * out.rgb;
     return vec4(result, out.a);
 }

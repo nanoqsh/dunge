@@ -3,6 +3,32 @@ use {
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture},
 };
 
+/// A data struct for a texture creation.
+#[derive(Clone, Copy)]
+#[must_use]
+pub struct Data<'a> {
+    data: &'a [u8],
+    size: (u8, u8, u8),
+}
+
+impl<'a> Data<'a> {
+    /// Creates a new [`SpaceData`](crate::SpaceData).
+    ///
+    /// Returns `Some` if a data is not empty and matches with a size * 4 bytes,
+    /// otherwise returns `None`.
+    pub const fn new(data: &'a [u8], size @ (width, height, depth): (u8, u8, u8)) -> Option<Self> {
+        if data.is_empty() || data.len() != width as usize * height as usize * depth as usize * 4 {
+            None
+        } else {
+            Some(Self { data, size })
+        }
+    }
+
+    pub(crate) fn size(&self) -> (u8, u8, u8) {
+        self.size
+    }
+}
+
 pub(crate) struct Space {
     space_buffer: Buffer,
     texture: Texture,
@@ -12,8 +38,7 @@ pub(crate) struct Space {
 impl Space {
     pub fn new(
         space: SpaceModel,
-        texture_data: &[u8],
-        texture_size: (u8, u8, u8),
+        data: Data,
         device: &Device,
         queue: &Queue,
         layout: &BindGroupLayout,
@@ -34,7 +59,7 @@ impl Space {
             })
         };
 
-        let (width, height, depth) = texture_size;
+        let (width, height, depth) = data.size;
         let size = Extent3d {
             width: width as u32,
             height: height as u32,
@@ -59,7 +84,7 @@ impl Space {
                 origin: Origin3d::ZERO,
                 aspect: TextureAspect::All,
             },
-            texture_data,
+            data.data,
             ImageDataLayout {
                 offset: 0,
                 bytes_per_row: NonZeroU32::new(4 * width as u32),
@@ -112,15 +137,15 @@ impl Space {
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
 pub(crate) struct SpaceModel {
-    loc: [[f32; 4]; 4],
+    model: [[f32; 4]; 4],
     col: [f32; 3],
     flags: u32,
 }
 
 impl SpaceModel {
-    pub fn new(loc: [[f32; 4]; 4], col: [f32; 3], mono: bool) -> Self {
+    pub fn new(model: [[f32; 4]; 4], col: [f32; 3], mono: bool) -> Self {
         Self {
-            loc,
+            model,
             col,
             flags: mono as u32,
         }

@@ -172,6 +172,14 @@ impl<T> Layer<'_, TextureVertex, T> {
     pub fn bind_light(&mut self, handle: LightHandle) -> Result<(), Error> {
         self.bind_light_handle(handle, shader::TEXTURED_SOURCES_GROUP)
     }
+
+    /// Binds the [space](crate::handles::SpaceHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::ResourceNotFound`] if given space handler was deleted.
+    pub fn bind_space(&mut self, handle: SpaceHandle) -> Result<(), Error> {
+        self.bind_space_handle(handle, shader::TEXTURED_SPACE_GROUP)
+    }
 }
 
 impl<T> Layer<'_, ColorVertex, T> {

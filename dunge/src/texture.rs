@@ -6,6 +6,7 @@ use {
 
 /// A data struct for a texture creation.
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct Data<'a> {
     data: &'a [u8],
     size: (u32, u32),
@@ -14,15 +15,13 @@ pub struct Data<'a> {
 impl<'a> Data<'a> {
     /// Creates a new [`TextureData`](crate::TextureData).
     ///
-    /// Returns `Some` if a data matches with a size * 4 bytes,
+    /// Returns `Some` if a data is not empty and matches with a size * 4 bytes,
     /// otherwise returns `None`.
-    #[must_use]
-    // TODO: Empty data
-    pub fn new(data: &'a [u8], size @ (width, height): (u32, u32)) -> Option<Self> {
-        if data.len() == width as usize * height as usize * 4 {
-            Some(Self { data, size })
-        } else {
+    pub const fn new(data: &'a [u8], size @ (width, height): (u32, u32)) -> Option<Self> {
+        if data.is_empty() || data.len() != width as usize * height as usize * 4 {
             None
+        } else {
+            Some(Self { data, size })
         }
     }
 }

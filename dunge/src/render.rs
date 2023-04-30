@@ -12,7 +12,7 @@ use {
         r#loop::Loop,
         screen::Screen,
         shader::Shader,
-        shader_data::{Light, PostShaderData, SourceModel, Space, SpaceModel},
+        shader_data::{Light, PostShaderData, SourceModel, Space, SpaceData, SpaceModel},
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -119,12 +119,12 @@ impl Render {
 
             const DEFAULT_SIZE: (u8, u8, u8) = (1, 1, 1);
             const DEFAULT_VOXEL: [u8; 4] = [!0, 0, 0, !0];
+            const DEFAULT_DATA: Option<SpaceData> = SpaceData::new(&DEFAULT_VOXEL, DEFAULT_SIZE);
 
             let space = SpaceModel::new(Mat4::IDENTITY.to_cols_array_2d(), [0.; 3], false);
             Space::new(
                 space,
-                &DEFAULT_VOXEL,
-                DEFAULT_SIZE,
+                DEFAULT_DATA.unwrap(),
                 &device,
                 &queue,
                 &layouts.space,
@@ -323,6 +323,12 @@ impl Render {
 
     pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), Error> {
         self.resources.lights.remove(handle.0)
+    }
+
+    pub fn create_space(&mut self, space: SpaceModel, data: SpaceData) -> SpaceHandle {
+        let space = Space::new(space, data, &self.device, &self.queue, &self.layouts.space);
+        let id = self.resources.spaces.insert(space);
+        SpaceHandle(id)
     }
 
     pub fn screen(&self) -> Screen {

@@ -35,7 +35,10 @@ mod shader_data {
         space::{Space, SpaceModel},
     };
 
-    pub use self::light::{LightKind, LightMode, Source};
+    pub use self::{
+        light::{LightKind, LightMode, Source},
+        space::Data as SpaceData,
+    };
 }
 mod storage;
 mod texture;
@@ -66,7 +69,7 @@ pub use {
         mesh::Data as MeshData,
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::{Error, Loop},
-        shader_data::{LightKind, LightMode, Source},
+        shader_data::{LightKind, LightMode, Source, SpaceData},
         texture::Data as TextureData,
     },
     winit,

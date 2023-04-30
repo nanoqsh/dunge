@@ -9,7 +9,7 @@ use {
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
         Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, PixelSize, Source, TextureData, View, WindowMode,
+        Orthographic, PixelSize, Source, SpaceData, TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -46,6 +46,7 @@ struct App {
     models: Vec<Model>,
     cubes: Vec<Cube>,
     light: LightHandle,
+    lightspace: SpaceHandle,
     view: ViewHandle,
     camera: Camera,
     time: f32,
@@ -53,10 +54,9 @@ struct App {
 }
 
 impl App {
-    #[allow(clippy::too_many_lines)]
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X2,
+            pixel_size: PixelSize::X1,
             ..Default::default()
         });
 
@@ -72,6 +72,34 @@ impl App {
             let image = utils::read_png(include_bytes!("sprites.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
             context.create_texture(data)
+        };
+
+        // Create the light space
+        let lightspace = {
+            let layers = [
+                utils::read_png(include_bytes!("lightmap_side.png")),
+                utils::read_png(include_bytes!("lightmap_center.png")),
+                utils::read_png(include_bytes!("lightmap_side.png")),
+            ];
+
+            let mut map = vec![];
+            for layer in &layers {
+                map.extend_from_slice(&layer);
+            }
+
+            let size = {
+                let (width, height) = layers[0].dimensions();
+                (width as u8, height as u8, layers.len() as u8)
+            };
+
+            let model = Transform {
+                pos: [0., 0., 0.],
+                scl: [1.; 3],
+                ..Default::default()
+            };
+
+            let data = SpaceData::new(&map, size).expect("create space");
+            context.create_space(model, data)
         };
 
         // Create models
@@ -204,6 +232,7 @@ impl App {
             models,
             cubes,
             light,
+            lightspace,
             view,
             camera,
             time: 0.,
@@ -279,7 +308,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let sprite_scale = 16.;
+        let sprite_scale = 16. * 2.;
         let view = View {
             proj: Orthographic {
                 width_factor: 1. / sprite_scale,
@@ -318,6 +347,7 @@ impl Loop for App {
                 .start();
 
             layer.bind_light(self.light)?;
+            layer.bind_space(self.lightspace)?;
             layer.bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;
             for model in &self.models {
@@ -331,7 +361,7 @@ impl Loop for App {
             layer.bind_view(self.view)?;
             for cube in &self.cubes {
                 layer.bind_instance(cube.instance)?;
-                layer.draw(cube.mesh)?;
+                // layer.draw(cube.mesh)?;
             }
         }
 

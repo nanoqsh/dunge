@@ -9,7 +9,7 @@ use {
         pipeline::ParametersBuilder,
         render::Render,
         screen::Screen,
-        shader_data::{Source, SourceModel},
+        shader_data::{Source, SourceModel, SpaceData, SpaceModel},
         texture::Data as TextureData,
         topology::Topology,
         transform::IntoMat,
@@ -299,6 +299,29 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), Error> {
         self.render.delete_light(handle)
+    }
+
+    pub fn create_space<M>(&mut self, model: M, data: SpaceData) -> SpaceHandle
+    where
+        M: IntoMat,
+    {
+        use glam::{Mat4, Quat, Vec3};
+
+        // TODO: Encapsulate
+        let (width, height, depth) = data.size();
+        let texture_space = Mat4::from_scale_rotation_translation(
+            Vec3::new(1. / width as f32, 1. / depth as f32, 1. / height as f32),
+            Quat::IDENTITY,
+            Vec3::new(0.5, 0.5, 0.5),
+        );
+
+        let model = Mat4::from_cols_array_2d(&model.into_mat());
+        let model = texture_space * model;
+
+        self.render.create_space(
+            SpaceModel::new(model.to_cols_array_2d(), [0.; 3], false),
+            data,
+        )
     }
 
     /// Takes a screenshot of the current frame.
