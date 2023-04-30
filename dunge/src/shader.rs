@@ -15,6 +15,7 @@ pub(crate) const POST_TEXTURE_GROUP: u32 = 1;
 pub(crate) const TEXTURED_CAMERA_GROUP: u32 = 0;
 pub(crate) const TEXTURED_TEXTURE_GROUP: u32 = 1;
 pub(crate) const TEXTURED_SOURCES_GROUP: u32 = 2;
+pub(crate) const TEXTURED_SPACE_GROUP: u32 = 3;
 
 pub(crate) const CAMERA_BINDING: u32 = 0;
 pub(crate) const TDIFF_BINDING: u32 = 0;
@@ -23,6 +24,9 @@ pub(crate) const DATA_BINDING: u32 = 0;
 pub(crate) const AMBIENT_BINDING: u32 = 0;
 pub(crate) const SOURCES_BINDING: u32 = 1;
 pub(crate) const N_SOURCES_BINDING: u32 = 2;
+pub(crate) const SPACE_BINDING: u32 = 0;
+pub(crate) const SPACE_TDIFF_BINDING: u32 = 1;
+pub(crate) const SPACE_SDIFF_BINDING: u32 = 2;
 
 pub(crate) const MAX_N_SOURCES: u32 = 64;
 

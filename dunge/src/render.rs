@@ -12,7 +12,7 @@ use {
         r#loop::Loop,
         screen::Screen,
         shader::Shader,
-        shader_data::{Light, PostShaderData, SourceModel},
+        shader_data::{Light, PostShaderData, SourceModel, Space, SpaceModel},
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -55,7 +55,7 @@ impl Render {
         let mut adapter = None;
         for ad in instance.enumerate_adapters(Backends::all()) {
             let info = ad.get_info();
-            if info.backend == Backend::Vulkan {
+            if info.backend == Backend::Gl {
                 adapter = Some(ad);
                 break;
             }
@@ -107,10 +107,28 @@ impl Render {
         let shaders = Shaders::default();
 
         let mut resources = Resources::default();
+
         resources.lights.insert({
             const DEFAULT_AMBIENT: [f32; 3] = [1.; 3];
 
             Light::new(DEFAULT_AMBIENT, &[], &device, &layouts.lights).expect("default light")
+        });
+
+        resources.spaces.insert({
+            use glam::Mat4;
+
+            const DEFAULT_SIZE: (u8, u8, u8) = (1, 1, 1);
+            const DEFAULT_VOXEL: [u8; 4] = [!0, 0, 0, !0];
+
+            let space = SpaceModel::new(Mat4::IDENTITY.to_cols_array_2d(), [0.; 3], false);
+            Space::new(
+                space,
+                &DEFAULT_VOXEL,
+                DEFAULT_SIZE,
+                &device,
+                &queue,
+                &layouts.space,
+            )
         });
 
         let post_pipeline = Pipeline::new(
@@ -524,4 +542,5 @@ pub(crate) struct Resources {
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) views: Storage<Camera>,
     pub(crate) lights: Storage<Light>,
+    pub(crate) spaces: Storage<Space>,
 }

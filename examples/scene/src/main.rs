@@ -222,7 +222,7 @@ impl Loop for App {
         const AMBIENT_COLOR: [f32; 3] = [0.4; 3];
         const LIGHTS_DISTANCE: f32 = 3.3;
         const LIGHTS_SPEED: f32 = 1.;
-        const INTENSITY: f32 = 2.;
+        const INTENSITY: f32 = 0.;
         const LIGHTS: [(f32, [f32; 3]); 3] = [
             (0., [INTENSITY, 0., 0.]),
             (TAU / 3., [0., INTENSITY, 0.]),

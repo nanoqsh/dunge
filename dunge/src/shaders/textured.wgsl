@@ -52,6 +52,19 @@ var<uniform> sources: array<Source, 64>;
 @group(2) @binding(2)
 var<uniform> n_sources: u32;
 
+struct Space {
+    loc: mat4x4<f32>,
+    col: vec3<f32>,
+    flags: u32,
+}
+
+@group(3) @binding(0)
+var<uniform> space: Space;
+@group(3) @binding(1)
+var space_tdiff: texture_3d<f32>;
+@group(3) @binding(2)
+var space_sdiff: sampler;
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let out = textureSample(tdiff, sdiff, in.map);
@@ -59,6 +72,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let result = light(in.world) * out.rgb;
+    let space_light = textureSampleLevel(space_tdiff, space_sdiff, in.world, 0.0).rgb;
+    let result = (light(in.world) + space_light) * out.rgb;
     return vec4(result, out.a);
 }

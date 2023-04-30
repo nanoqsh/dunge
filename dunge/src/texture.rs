@@ -17,6 +17,7 @@ impl<'a> Data<'a> {
     /// Returns `Some` if a data matches with a size * 4 bytes,
     /// otherwise returns `None`.
     #[must_use]
+    // TODO: Empty data
     pub fn new(data: &'a [u8], size @ (width, height): (u32, u32)) -> Option<Self> {
         if data.len() == width as usize * height as usize * 4 {
             Some(Self { data, size })
@@ -29,6 +30,7 @@ impl<'a> Data<'a> {
 pub(crate) struct Texture {
     texture: WgpuTexture,
     bind_group: BindGroup,
+    size: (u32, u32),
 }
 
 impl Texture {
@@ -97,11 +99,16 @@ impl Texture {
         Self {
             texture,
             bind_group,
+            size: data.size,
         }
     }
 
     pub fn update_data(&mut self, data: Data, queue: &Queue) {
         use wgpu::*;
+
+        if data.size != self.size {
+            panic!("wrong texture size");
+        }
 
         let (width, height) = data.size;
         let size = Extent3d {

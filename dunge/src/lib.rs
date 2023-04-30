@@ -26,11 +26,13 @@ mod shader_data {
     mod camera;
     mod light;
     mod post;
+    mod space;
 
     pub(crate) use self::{
         camera::CameraUniform,
         light::{Light, SourceModel},
         post::PostShaderData,
+        space::{Space, SpaceModel},
     };
 
     pub use self::light::{LightKind, LightMode, Source};

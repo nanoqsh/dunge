@@ -53,9 +53,15 @@ where
             Shader::Color => layer
                 .bind_light_handle(LightHandle::DEFAULT, shader::COLOR_SOURCES_GROUP)
                 .expect("bind default light"),
-            Shader::Textured => layer
-                .bind_light_handle(LightHandle::DEFAULT, shader::TEXTURED_SOURCES_GROUP)
-                .expect("bind default light"),
+            Shader::Textured => {
+                layer
+                    .bind_light_handle(LightHandle::DEFAULT, shader::TEXTURED_SOURCES_GROUP)
+                    .expect("bind default light");
+
+                layer
+                    .bind_space_handle(SpaceHandle::DEFAULT, shader::TEXTURED_SPACE_GROUP)
+                    .expect("bind default space");
+            }
             _ => {}
         }
 
@@ -130,6 +136,13 @@ where
     fn bind_light_handle(&mut self, handle: LightHandle, group: u32) -> Result<(), Error> {
         let light = self.resources.lights.get(handle.0)?;
         self.pass.set_bind_group(group, light.bind_group(), &[]);
+
+        Ok(())
+    }
+
+    fn bind_space_handle(&mut self, handle: SpaceHandle, group: u32) -> Result<(), Error> {
+        let space = self.resources.spaces.get(handle.0)?;
+        self.pass.set_bind_group(group, space.bind_group(), &[]);
 
         Ok(())
     }

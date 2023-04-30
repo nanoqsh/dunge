@@ -8,6 +8,7 @@ pub(crate) struct Layouts {
     pub camera: BindGroupLayout,
     pub post_shader_data: BindGroupLayout,
     pub lights: BindGroupLayout,
+    pub space: BindGroupLayout,
 }
 
 impl Layouts {
@@ -97,6 +98,37 @@ impl Layouts {
                 ],
                 label: Some("lights bind group layout"),
             }),
+            space: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                entries: &[
+                    BindGroupLayoutEntry {
+                        binding: shader::SPACE_BINDING,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: shader::SPACE_TDIFF_BINDING,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: TextureViewDimension::D3,
+                            sample_type: TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: shader::SPACE_SDIFF_BINDING,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("space bind group layout"),
+            }),
         }
     }
 
@@ -105,7 +137,9 @@ impl Layouts {
             Shader::Color => BindGroupLayouts::N2([&self.camera, &self.lights]),
             Shader::Flat => BindGroupLayouts::N1([&self.textured]),
             Shader::Post => BindGroupLayouts::N2([&self.post_shader_data, &self.textured]),
-            Shader::Textured => BindGroupLayouts::N3([&self.camera, &self.textured, &self.lights]),
+            Shader::Textured => {
+                BindGroupLayouts::N4([&self.camera, &self.textured, &self.lights, &self.space])
+            }
         }
     }
 }
@@ -113,7 +147,7 @@ impl Layouts {
 pub(crate) enum BindGroupLayouts<'a> {
     N1([&'a BindGroupLayout; 1]),
     N2([&'a BindGroupLayout; 2]),
-    N3([&'a BindGroupLayout; 3]),
+    N4([&'a BindGroupLayout; 4]),
 }
 
 impl<'a> BindGroupLayouts<'a> {
@@ -121,7 +155,7 @@ impl<'a> BindGroupLayouts<'a> {
         match self {
             Self::N1(b) => b,
             Self::N2(b) => b,
-            Self::N3(b) => b,
+            Self::N4(b) => b,
         }
     }
 }
