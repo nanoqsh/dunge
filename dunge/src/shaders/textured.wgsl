@@ -21,6 +21,7 @@ struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
     @location(0) map: vec2<f32>,
     @location(1) world: vec3<f32>,
+    @location(2) light_space: vec3<f32>,
 }
 
 @vertex
@@ -37,6 +38,7 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     out.pos = camera.view_proj * world;
     out.map = vert.map;
     out.world = world.xyz;
+    out.light_space = (space.model * world).xyz;
     return out;
 }
 
@@ -72,9 +74,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    // TODO: Move to vertex level
-    let space_model = space.model * vec4(in.world.xyz, 1.0);
-    let space_light = textureSampleLevel(space_tdiff, space_sdiff, space_model.xzy, 0.0).rgb;
-    let result = (light(in.world) + space_light * 2.5) * out.rgb;
+    let space_light = textureSampleLevel(space_tdiff, space_sdiff, in.light_space.xzy, 0.0).rgb;
+    let result = (light(in.world) + space_light * space.col) * out.rgb;
     return vec4(result, out.a);
 }

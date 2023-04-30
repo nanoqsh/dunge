@@ -3,6 +3,7 @@ use {
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
+/// Parameters of a light source.
 #[derive(Clone, Copy, Default)]
 pub struct Source {
     pub pos: [f32; 3],
@@ -12,6 +13,7 @@ pub struct Source {
     pub kind: LightKind,
 }
 
+/// The light mode.
 #[derive(Clone, Copy, Default)]
 pub enum LightMode {
     #[default]
@@ -19,6 +21,7 @@ pub enum LightMode {
     Sharp,
 }
 
+/// The light kind.
 #[derive(Clone, Copy, Default)]
 pub enum LightKind {
     #[default]

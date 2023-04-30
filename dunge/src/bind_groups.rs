@@ -102,7 +102,7 @@ impl Layouts {
                 entries: &[
                     BindGroupLayoutEntry {
                         binding: shader::SPACE_BINDING,
-                        visibility: ShaderStages::FRAGMENT,
+                        visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
                             has_dynamic_offset: false,

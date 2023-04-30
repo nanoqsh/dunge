@@ -1,9 +1,31 @@
 use {
-    crate::{layout::Plain, shader},
+    crate::{layout::Plain, shader, texture::Error, transform::IntoMat},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture},
 };
 
-/// A data struct for a texture creation.
+/// Parameters of a light space.
+pub struct Space<'a, M> {
+    pub data: Data<'a>,
+    pub transform: M,
+    pub col: [f32; 3],
+    pub mono: bool,
+}
+
+impl<'a, M> Space<'a, M> {
+    pub(crate) fn into_mat(self) -> Space<'a, [[f32; 4]; 4]>
+    where
+        M: IntoMat,
+    {
+        Space {
+            data: self.data,
+            transform: self.transform.into_mat(),
+            col: self.col,
+            mono: self.mono,
+        }
+    }
+}
+
+/// A data struct for a light space creation.
 #[derive(Clone, Copy)]
 #[must_use]
 pub struct Data<'a> {
@@ -14,28 +36,29 @@ pub struct Data<'a> {
 impl<'a> Data<'a> {
     /// Creates a new [`SpaceData`](crate::SpaceData).
     ///
-    /// Returns `Some` if a data is not empty and matches with a size * 4 bytes,
-    /// otherwise returns `None`.
-    pub const fn new(data: &'a [u8], size @ (width, height, depth): (u8, u8, u8)) -> Option<Self> {
-        if data.is_empty() || data.len() != width as usize * height as usize * depth as usize * 4 {
-            None
-        } else {
-            Some(Self { data, size })
+    /// # Errors
+    /// See [`TextureError`](crate::TextureError) for detailed info.
+    pub const fn new(data: &'a [u8], size: (u8, u8, u8)) -> Result<Self, Error> {
+        if data.is_empty() {
+            return Err(Error::EmptyData);
         }
-    }
 
-    pub(crate) fn size(&self) -> (u8, u8, u8) {
-        self.size
+        let (width, height, depth) = size;
+        if data.len() != width as usize * height as usize * depth as usize * 4 {
+            return Err(Error::SizeDoesNotMatch);
+        }
+
+        Ok(Self { data, size })
     }
 }
 
-pub(crate) struct Space {
+pub(crate) struct LightSpace {
     space_buffer: Buffer,
     texture: Texture,
     bind_group: BindGroup,
 }
 
-impl Space {
+impl LightSpace {
     pub fn new(
         space: SpaceModel,
         data: Data,
@@ -143,11 +166,23 @@ pub(crate) struct SpaceModel {
 }
 
 impl SpaceModel {
-    pub fn new(model: [[f32; 4]; 4], col: [f32; 3], mono: bool) -> Self {
+    pub fn new(space: &Space<[[f32; 4]; 4]>) -> Self {
+        use glam::{Mat4, Quat, Vec3};
+
+        let (width, height, depth) = space.data.size;
+        let texture_space = Mat4::from_scale_rotation_translation(
+            Vec3::new(1. / width as f32, 1. / depth as f32, 1. / height as f32),
+            Quat::IDENTITY,
+            Vec3::new(0.5, 0.5, 0.5),
+        );
+
+        let model = Mat4::from_cols_array_2d(&space.transform.into_mat());
+        let model = texture_space * model;
+
         Self {
-            model,
-            col,
-            flags: mono as u32,
+            model: model.to_cols_array_2d(),
+            col: space.col,
+            flags: space.mono as u32,
         }
     }
 }

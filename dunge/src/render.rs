@@ -12,7 +12,9 @@ use {
         r#loop::Loop,
         screen::Screen,
         shader::Shader,
-        shader_data::{Light, PostShaderData, SourceModel, Space, SpaceData, SpaceModel},
+        shader_data::{
+            Light, LightSpace, PostShaderData, SourceModel, Space, SpaceData, SpaceModel,
+        },
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -118,17 +120,17 @@ impl Render {
             use glam::Mat4;
 
             const DEFAULT_SIZE: (u8, u8, u8) = (1, 1, 1);
-            const DEFAULT_VOXEL: [u8; 4] = [!0, 0, 0, !0];
-            const DEFAULT_DATA: Option<SpaceData> = SpaceData::new(&DEFAULT_VOXEL, DEFAULT_SIZE);
+            const DEFAULT_VOXEL: [u8; 4] = [!0; 4];
 
-            let space = SpaceModel::new(Mat4::IDENTITY.to_cols_array_2d(), [0.; 3], false);
-            Space::new(
-                space,
-                DEFAULT_DATA.unwrap(),
-                &device,
-                &queue,
-                &layouts.space,
-            )
+            let data = SpaceData::new(&DEFAULT_VOXEL, DEFAULT_SIZE).unwrap();
+            let space = SpaceModel::new(&Space {
+                data,
+                transform: Mat4::IDENTITY.to_cols_array_2d(),
+                col: [0.; 3],
+                mono: false,
+            });
+
+            LightSpace::new(space, data, &device, &queue, &layouts.space)
         });
 
         let post_pipeline = Pipeline::new(
@@ -325,9 +327,17 @@ impl Render {
         self.resources.lights.remove(handle.0)
     }
 
-    pub fn create_space(&mut self, space: SpaceModel, data: SpaceData) -> SpaceHandle {
-        let space = Space::new(space, data, &self.device, &self.queue, &self.layouts.space);
-        let id = self.resources.spaces.insert(space);
+    pub fn create_space(&mut self, space: &Space<[[f32; 4]; 4]>) -> SpaceHandle {
+        let model = SpaceModel::new(space);
+        let light_space = LightSpace::new(
+            model,
+            space.data,
+            &self.device,
+            &self.queue,
+            &self.layouts.space,
+        );
+
+        let id = self.resources.spaces.insert(light_space);
         SpaceHandle(id)
     }
 
@@ -548,5 +558,5 @@ pub(crate) struct Resources {
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) views: Storage<Camera>,
     pub(crate) lights: Storage<Light>,
-    pub(crate) spaces: Storage<Space>,
+    pub(crate) spaces: Storage<LightSpace>,
 }

@@ -9,7 +9,7 @@ use {
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
         Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, PixelSize, Source, SpaceData, TextureData, View, WindowMode,
+        Orthographic, PixelSize, Source, Space, SpaceData, TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -84,7 +84,7 @@ impl App {
 
             let mut map = vec![];
             for layer in &layers {
-                map.extend_from_slice(&layer);
+                map.extend_from_slice(layer);
             }
 
             let size = {
@@ -92,14 +92,20 @@ impl App {
                 (width as u8, height as u8, layers.len() as u8)
             };
 
-            let model = Transform {
+            let transform = Transform {
                 pos: [0., 0., 0.],
                 scl: [1.; 3],
                 ..Default::default()
             };
 
-            let data = SpaceData::new(&map, size).expect("create space");
-            context.create_space(model, data)
+            let space = Space {
+                data: SpaceData::new(&map, size).expect("create space"),
+                transform,
+                col: [2.5; 3],
+                mono: false,
+            };
+
+            context.create_space(space)
         };
 
         // Create models
@@ -121,8 +127,8 @@ impl App {
                 [V, W, L, F, L, F, F, W, W],
                 [0, W, L, W, L, L, L, W, 0],
                 [0, V, L, L, L, F, L, W, 0],
-                [0, V, W, W, F, W, W, V, 0],
-                [0, 0, 0, V, L, V, 0, 0, 0],
+                [0, V, W, W, L, W, W, V, 0],
+                [0, 0, 0, V, F, V, 0, 0, 0],
             ];
 
             let meshes = [
@@ -248,7 +254,7 @@ impl Loop for App {
         use {dunge::winit::window::Fullscreen, std::f32::consts::TAU};
 
         const SENSITIVITY: f32 = 0.01;
-        const AMBIENT_COLOR: [f32; 3] = [0.4; 3];
+        const AMBIENT_COLOR: [f32; 3] = [0.09; 3];
         const LIGHTS_DISTANCE: f32 = 3.3;
         const LIGHTS_SPEED: f32 = 1.;
         const INTENSITY: f32 = 0.;
@@ -268,7 +274,7 @@ impl Loop for App {
                     step.cos() * LIGHTS_DISTANCE,
                 ]
             },
-            rad: 3.,
+            rad: 2.,
             col,
             ..Default::default()
         };

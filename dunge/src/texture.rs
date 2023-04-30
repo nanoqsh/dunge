@@ -15,15 +15,29 @@ pub struct Data<'a> {
 impl<'a> Data<'a> {
     /// Creates a new [`TextureData`](crate::TextureData).
     ///
-    /// Returns `Some` if a data is not empty and matches with a size * 4 bytes,
-    /// otherwise returns `None`.
-    pub const fn new(data: &'a [u8], size @ (width, height): (u32, u32)) -> Option<Self> {
-        if data.is_empty() || data.len() != width as usize * height as usize * 4 {
-            None
-        } else {
-            Some(Self { data, size })
+    /// # Errors
+    /// See [`TextureError`](crate::TextureError) for detailed info.
+    pub const fn new(data: &'a [u8], size: (u32, u32)) -> Result<Self, Error> {
+        if data.is_empty() {
+            return Err(Error::EmptyData);
         }
+
+        let (width, height) = size;
+        if data.len() != width as usize * height as usize * 4 {
+            return Err(Error::SizeDoesNotMatch);
+        }
+
+        Ok(Self { data, size })
     }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    /// Returns when the data is empty.
+    EmptyData,
+
+    /// Returns when the data length doesn't match with size * 4,
+    SizeDoesNotMatch,
 }
 
 pub(crate) struct Texture {
@@ -105,9 +119,7 @@ impl Texture {
     pub fn update_data(&mut self, data: Data, queue: &Queue) {
         use wgpu::*;
 
-        if data.size != self.size {
-            panic!("wrong texture size");
-        }
+        assert_eq!(data.size, self.size, "wrong texture size");
 
         let (width, height) = data.size;
         let size = Extent3d {

@@ -30,6 +30,16 @@ impl From<[f32; 3]> for Position {
     }
 }
 
+impl IntoMat for Position {
+    fn into_mat(self) -> Mat {
+        Transform {
+            pos: self.0,
+            ..Default::default()
+        }
+        .into_mat()
+    }
+}
+
 /// An instance transform.
 ///
 /// It descrides position, rotation and scale.
@@ -67,16 +77,6 @@ impl Default for Transform<Identity> {
             rot: Identity,
             scl: [1., 1., 1.],
         }
-    }
-}
-
-impl IntoMat for Position {
-    fn into_mat(self) -> Mat {
-        Transform {
-            pos: self.0,
-            ..Default::default()
-        }
-        .into_mat()
     }
 }
 

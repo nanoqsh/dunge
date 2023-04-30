@@ -32,12 +32,12 @@ mod shader_data {
         camera::CameraUniform,
         light::{Light, SourceModel},
         post::PostShaderData,
-        space::{Space, SpaceModel},
+        space::{LightSpace, SpaceModel},
     };
 
     pub use self::{
         light::{LightKind, LightMode, Source},
-        space::Data as SpaceData,
+        space::{Data as SpaceData, Space},
     };
 }
 mod storage;
@@ -69,8 +69,8 @@ pub use {
         mesh::Data as MeshData,
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::{Error, Loop},
-        shader_data::{LightKind, LightMode, Source, SpaceData},
-        texture::Data as TextureData,
+        shader_data::{LightKind, LightMode, Source, Space, SpaceData},
+        texture::{Data as TextureData, Error as TextureError},
     },
     winit,
 };
