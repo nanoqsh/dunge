@@ -73,11 +73,8 @@ where
 /// The main loop error.
 #[derive(Debug)]
 pub enum Error {
-    /// Returns when a rendered resourse not found.
-    ResourceNotFound,
-
-    /// Returns when a selected light source resourse not found.
-    SourceNotFound,
+    /// Returns when a rendered resourse or selected object not found.
+    NotFound,
 
     /// Returns when trying to create too many light sources.
     TooManySources,

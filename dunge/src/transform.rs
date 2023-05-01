@@ -18,6 +18,16 @@ impl IntoMat for glam::Mat4 {
     }
 }
 
+pub trait IntoQuat {
+    fn into_quat(self) -> Quat;
+}
+
+impl IntoQuat for glam::Quat {
+    fn into_quat(self) -> Quat {
+        Quat(self.to_array())
+    }
+}
+
 /// An instance position.
 ///
 /// Descibes the position in X, Y, Z coordinates.
@@ -94,16 +104,6 @@ where
     }
 }
 
-pub trait IntoQuat {
-    fn into_quat(self) -> Quat;
-}
-
-impl IntoQuat for glam::Quat {
-    fn into_quat(self) -> Quat {
-        Quat(self.to_array())
-    }
-}
-
 /// The identity rotation.
 #[derive(Clone, Copy, Default)]
 pub struct Identity;
@@ -115,6 +115,7 @@ impl IntoQuat for Identity {
 }
 
 /// Represents a quaternion.
+#[derive(Clone, Copy)]
 pub struct Quat(pub [f32; 4]);
 
 impl Default for Quat {
@@ -130,6 +131,7 @@ impl IntoQuat for Quat {
 }
 
 /// The rotation along an axis by an angle.
+#[derive(Clone, Copy)]
 pub struct AxisAngle(pub [f32; 3], pub f32);
 
 impl IntoQuat for AxisAngle {
@@ -153,7 +155,7 @@ impl IntoQuat for AxisAngle {
 /// // Now it's reversed. The rotation along Y by `-n` radians.
 /// let back = ReverseRotation(axis);
 /// ```
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub struct ReverseRotation<Q>(pub Q);
 
 impl<Q> IntoQuat for ReverseRotation<Q>

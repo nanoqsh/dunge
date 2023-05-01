@@ -107,7 +107,7 @@ impl<'d> Frame<'d> {
     /// Starts a [layer](crate::handles::LayerHandle).
     ///
     /// # Errors
-    /// Returns [`Error::ResourceNotFound`] if given instance handler was deleted.
+    /// Returns [`Error::NotFound`] if given instance handler was deleted.
     pub fn layer<V, T>(
         &mut self,
         handle: LayerHandle<V, T>,

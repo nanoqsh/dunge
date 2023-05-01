@@ -92,37 +92,29 @@ impl App {
                 (width as u8, height as u8, layers.len() as u8)
             };
 
-            let transform = Transform {
-                pos: [0., 0., 0.],
-                scl: [1.; 3],
-                ..Default::default()
-            };
-
-            // let space = ;
-
             context
                 .create_space([
                     Space {
                         data: SpaceData::new(&map, size).expect("create space"),
-                        transform,
+                        transform: Transform::default(),
                         col: [2.5, 0., 0.],
                         mono: false,
                     },
                     Space {
                         data: SpaceData::new(&map, size).expect("create space"),
-                        transform,
+                        transform: Transform::default(),
                         col: [0., 2.5, 0.],
                         mono: false,
                     },
                     Space {
                         data: SpaceData::new(&map, size).expect("create space"),
-                        transform,
+                        transform: Transform::default(),
                         col: [0., 0., 2.5],
                         mono: false,
                     },
                     Space {
                         data: SpaceData::new(&map, size).expect("create space"),
-                        transform,
+                        transform: Transform::default(),
                         col: [0.5; 3],
                         mono: false,
                     },

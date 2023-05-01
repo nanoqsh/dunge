@@ -11,8 +11,7 @@ use {
         pipeline::ParametersBuilder,
         render::Render,
         screen::Screen,
-        shader_data::{Source, SourceModel, Space, SpaceData},
-        texture::Data as TextureData,
+        shader_data::{Source, SourceModel, Space, SpaceData, TextureData},
         topology::Topology,
         transform::IntoMat,
         vertex::Vertex,
@@ -308,6 +307,9 @@ impl Context {
     }
 
     /// Creates new light space.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
     pub fn create_space<'a, I, M>(&mut self, spaces: I) -> Result<SpaceHandle, Error>
     where
         I: IntoIterator<Item = Space<'a, M>>,
@@ -330,6 +332,83 @@ impl Context {
         self.space_data = space_data.into_iter().map(|_| unreachable!()).collect();
 
         space
+    }
+
+    /// Updates the light space.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_space<'a, I, M>(&mut self, handle: SpaceHandle, spaces: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = Space<'a, M>>,
+        M: IntoMat,
+    {
+        use std::mem;
+
+        self.spaces.clear();
+        debug_assert!(self.space_data.is_empty(), "`space_data` is already empty");
+
+        let mut space_data = mem::take(&mut self.space_data);
+        for space in spaces {
+            space_data.push(space.data);
+            self.spaces.push(SpaceModel::new(&space.into_mat()));
+        }
+
+        let updated = self.render.update_space(handle, &self.spaces, &space_data);
+
+        space_data.clear();
+        self.space_data = space_data.into_iter().map(|_| unreachable!()).collect();
+
+        updated
+    }
+
+    /// Updates nth space in the light space.
+    ///
+    /// To update all spaces at once, call the [`update_space`](crate::Context::update_space) method.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_nth_space<M>(
+        &mut self,
+        handle: SpaceHandle,
+        n: usize,
+        space: Space<M>,
+    ) -> Result<(), Error>
+    where
+        M: IntoMat,
+    {
+        self.render
+            .update_nth_space(handle, n, SpaceModel::new(&space.into_mat()))
+    }
+
+    /// Updates nth color in the light space.
+    ///
+    /// To update all spaces at once, call the [`update_space`](crate::Context::update_space) method.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_nth_space_color(
+        &mut self,
+        handle: SpaceHandle,
+        n: usize,
+        col: [f32; 3],
+    ) -> Result<(), Error> {
+        self.render.update_nth_space_color(handle, n, col)
+    }
+
+    /// Updates nth data in the light space.
+    ///
+    /// To update all spaces at once, call the [`update_space`](crate::Context::update_space) method.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn update_nth_space_data(
+        &mut self,
+        handle: SpaceHandle,
+        n: usize,
+        data: SpaceData,
+    ) -> Result<(), Error> {
+        self.render.update_nth_space_data(handle, n, data)
     }
 
     /// Deletes the light space.

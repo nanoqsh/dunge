@@ -27,21 +27,23 @@ mod shader_data {
     mod light;
     mod post;
     mod space;
+    mod texture;
 
     pub(crate) use self::{
         camera::CameraUniform,
         light::{Light, SourceModel},
         post::PostShaderData,
         space::{LightSpace, SpaceModel},
+        texture::Texture,
     };
 
     pub use self::{
         light::{LightKind, LightMode, Source},
         space::{Data as SpaceData, Space},
+        texture::{Data as TextureData, Error as TextureError},
     };
 }
 mod storage;
-mod texture;
 mod time;
 pub mod topology;
 pub mod transform;
@@ -69,8 +71,7 @@ pub use {
         mesh::Data as MeshData,
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::{Error, Loop},
-        shader_data::{LightKind, LightMode, Source, Space, SpaceData},
-        texture::{Data as TextureData, Error as TextureError},
+        shader_data::{LightKind, LightMode, Source, Space, SpaceData, TextureData, TextureError},
     },
     winit,
 };

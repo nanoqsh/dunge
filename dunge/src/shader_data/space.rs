@@ -1,8 +1,5 @@
 use {
-    crate::{
-        layout::Plain, r#loop::Error as LoopError, shader, texture::Error as TextureError,
-        transform::IntoMat,
-    },
+    crate::{layout::Plain, r#loop::Error, shader, shader_data::TextureError, transform::IntoMat},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture, TextureView},
 };
 
@@ -58,7 +55,7 @@ impl<'a> Data<'a> {
 pub(crate) struct LightSpace {
     space_buffer: Buffer,
     n_spaces: usize,
-    textures: Vec<Texture>,
+    textures: Box<[Texture]>,
     bind_group: BindGroup,
 }
 
@@ -69,7 +66,7 @@ impl LightSpace {
         device: &Device,
         queue: &Queue,
         layout: &BindGroupLayout,
-    ) -> Result<Self, LoopError> {
+    ) -> Result<Self, Error> {
         use {
             once_cell::sync::OnceCell,
             std::{array, num::NonZeroU32},
@@ -81,10 +78,16 @@ impl LightSpace {
 
         static FAKE_VIEW: OnceCell<&TextureView> = OnceCell::new();
 
-        assert_eq!(spaces.len(), data.len());
+        debug_assert_eq!(
+            spaces.len(),
+            data.len(),
+            "spaces and data lengths must be equal",
+        );
 
         if spaces.len() > shader::MAX_N_SPACES as usize {
-            return Err(LoopError::TooManySpaces);
+            use crate::r#loop::Error;
+
+            return Err(Error::TooManySpaces);
         }
 
         let space_buffer = {
@@ -235,9 +238,120 @@ impl LightSpace {
         Ok(Self {
             space_buffer,
             n_spaces: spaces.len(),
-            textures,
+            textures: textures.into_boxed_slice(),
             bind_group,
         })
+    }
+
+    pub fn update_spaces(&self, spaces: &[SpaceModel], data: &[Data], queue: &Queue) -> bool {
+        use {std::num::NonZeroU32, wgpu::*};
+
+        if spaces.is_empty() || self.n_spaces != spaces.len() {
+            return false;
+        }
+
+        queue.write_buffer(&self.space_buffer, 0, spaces.as_bytes());
+
+        for (dt, texture) in data.iter().zip(&self.textures[..]) {
+            let (width, height, depth) = dt.size;
+            let size = Extent3d {
+                width: width as u32,
+                height: height as u32,
+                depth_or_array_layers: depth as u32,
+            };
+
+            queue.write_texture(
+                ImageCopyTexture {
+                    texture,
+                    mip_level: 0,
+                    origin: Origin3d::ZERO,
+                    aspect: TextureAspect::All,
+                },
+                dt.data,
+                ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: NonZeroU32::new(4 * width as u32),
+                    rows_per_image: NonZeroU32::new(height as u32),
+                },
+                size,
+            );
+        }
+
+        true
+    }
+
+    pub fn update_nth_space(
+        &self,
+        n: usize,
+        space: SpaceModel,
+        queue: &Queue,
+    ) -> Result<(), Error> {
+        use std::mem;
+
+        if n >= self.n_spaces {
+            return Err(Error::NotFound);
+        }
+
+        queue.write_buffer(
+            &self.space_buffer,
+            (mem::size_of::<SpaceModel>() * n) as _,
+            space.as_bytes(),
+        );
+
+        Ok(())
+    }
+
+    pub fn update_nth_color(&self, n: usize, col: [f32; 3], queue: &Queue) -> Result<(), Error> {
+        use std::mem;
+
+        const COL_OFFSET: usize = mem::size_of::<[[f32; 4]; 4]>();
+
+        if n >= self.n_spaces {
+            return Err(Error::NotFound);
+        }
+
+        queue.write_buffer(
+            &self.space_buffer,
+            (mem::size_of::<SpaceModel>() * n + COL_OFFSET) as _,
+            col.as_bytes(),
+        );
+
+        Ok(())
+    }
+
+    pub fn update_nth_data(&self, n: usize, data: Data, queue: &Queue) -> Result<(), Error> {
+        use {std::num::NonZeroU32, wgpu::*};
+
+        if n >= self.n_spaces {
+            use crate::r#loop::Error;
+
+            return Err(Error::NotFound);
+        }
+
+        let (width, height, depth) = data.size;
+        let size = Extent3d {
+            width: width as u32,
+            height: height as u32,
+            depth_or_array_layers: depth as u32,
+        };
+
+        queue.write_texture(
+            ImageCopyTexture {
+                texture: &self.textures[n],
+                mip_level: 0,
+                origin: Origin3d::ZERO,
+                aspect: TextureAspect::All,
+            },
+            data.data,
+            ImageDataLayout {
+                offset: 0,
+                bytes_per_row: NonZeroU32::new(4 * width as u32),
+                rows_per_image: NonZeroU32::new(height as u32),
+            },
+            size,
+        );
+
+        Ok(())
     }
 
     pub fn bind_group(&self) -> &BindGroup {

@@ -123,7 +123,7 @@ impl Light {
         use std::mem;
 
         if n >= self.n_sources {
-            return Err(Error::SourceNotFound);
+            return Err(Error::NotFound);
         }
 
         queue.write_buffer(

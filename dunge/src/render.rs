@@ -9,15 +9,16 @@ use {
         instance::{Instance, InstanceModel},
         mesh::{Data as MeshData, Mesh},
         pipeline::{Pipeline, PipelineParameters},
-        r#loop::Loop,
+        r#loop::{Error, Loop},
         screen::Screen,
         shader::Shader,
-        shader_data::{Light, LightSpace, PostShaderData, SourceModel, SpaceData, SpaceModel},
+        shader_data::{
+            Light, LightSpace, PostShaderData, SourceModel, SpaceData, SpaceModel, Texture,
+            TextureData,
+        },
         storage::Storage,
-        texture::{Data as TextureData, Texture},
         topology::Topology,
         vertex::Vertex,
-        Error,
     },
     once_cell::unsync::OnceCell,
     std::num::NonZeroU32,
@@ -318,10 +319,59 @@ impl Render {
         spaces: &[SpaceModel],
         data: &[SpaceData],
     ) -> Result<SpaceHandle, Error> {
-        let space = LightSpace::new(spaces, data, &self.device, &self.queue, &self.layouts.space)?;
-
-        let id = self.resources.spaces.insert(space);
+        let ls = LightSpace::new(spaces, data, &self.device, &self.queue, &self.layouts.space)?;
+        let id = self.resources.spaces.insert(ls);
         Ok(SpaceHandle(id))
+    }
+
+    pub fn update_space(
+        &mut self,
+        handle: SpaceHandle,
+        spaces: &[SpaceModel],
+        data: &[SpaceData],
+    ) -> Result<(), Error> {
+        let ls = self.resources.spaces.get_mut(handle.0)?;
+        if !ls.update_spaces(spaces, data, &self.queue) {
+            *ls = LightSpace::new(spaces, data, &self.device, &self.queue, &self.layouts.space)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn update_nth_space(
+        &mut self,
+        handle: SpaceHandle,
+        n: usize,
+        space: SpaceModel,
+    ) -> Result<(), Error> {
+        self.resources
+            .spaces
+            .get_mut(handle.0)
+            .and_then(|ls| ls.update_nth_space(n, space, &self.queue))
+    }
+
+    pub fn update_nth_space_color(
+        &mut self,
+        handle: SpaceHandle,
+        n: usize,
+        col: [f32; 3],
+    ) -> Result<(), Error> {
+        self.resources
+            .spaces
+            .get_mut(handle.0)
+            .and_then(|ls| ls.update_nth_color(n, col, &self.queue))
+    }
+
+    pub fn update_nth_space_data(
+        &mut self,
+        handle: SpaceHandle,
+        n: usize,
+        data: SpaceData,
+    ) -> Result<(), Error> {
+        self.resources
+            .spaces
+            .get_mut(handle.0)
+            .and_then(|ls| ls.update_nth_data(n, data, &self.queue))
     }
 
     pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), Error> {

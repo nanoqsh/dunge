@@ -43,7 +43,6 @@ pub enum Error {
 pub(crate) struct Texture {
     texture: WgpuTexture,
     bind_group: BindGroup,
-    size: (u32, u32),
 }
 
 impl Texture {
@@ -112,14 +111,11 @@ impl Texture {
         Self {
             texture,
             bind_group,
-            size: data.size,
         }
     }
 
     pub fn update_data(&mut self, data: Data, queue: &Queue) {
         use wgpu::*;
-
-        assert_eq!(data.size, self.size, "wrong texture size");
 
         let (width, height) = data.size;
         let size = Extent3d {
