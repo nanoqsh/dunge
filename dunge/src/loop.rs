@@ -82,6 +82,9 @@ pub enum Error {
     /// Returns when trying to create too many light sources.
     TooManySources,
 
+    /// Returns when trying to create too many light spaces.
+    TooManySpaces,
+
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
 }

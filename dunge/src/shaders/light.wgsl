@@ -5,7 +5,7 @@ struct Source {
     flags: u32,
 }
 
-fn light(world: vec3<f32>) -> vec3<f32> {
+fn diffuse_light(world: vec3<f32>) -> vec3<f32> {
     var diffuse = vec3(0.);
     for (var i = 0u; i < n_sources; i++) {
         let source = sources[i];
@@ -33,5 +33,5 @@ fn light(world: vec3<f32>) -> vec3<f32> {
         }
     }
 
-    return ambient + diffuse;
+    return diffuse;
 }

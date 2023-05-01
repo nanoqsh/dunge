@@ -21,7 +21,10 @@ struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
     @location(0) map: vec2<f32>,
     @location(1) world: vec3<f32>,
-    @location(2) light_space: vec3<f32>,
+    @location(2) space0: vec3<f32>,
+    @location(3) space1: vec3<f32>,
+    @location(4) space2: vec3<f32>,
+    @location(5) space3: vec3<f32>,
 }
 
 @vertex
@@ -38,7 +41,30 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     out.pos = camera.view_proj * world;
     out.map = vert.map;
     out.world = world.xyz;
-    out.light_space = (space.model * world).xyz;
+
+    switch n_spaces {
+        case 0u {}
+        case 1u {
+            out.space0 = (spaces[0].model * world).xzy;
+        }
+        case 2u {
+            out.space0 = (spaces[0].model * world).xzy;
+            out.space1 = (spaces[1].model * world).xzy;
+        }
+        case 3u {
+            out.space0 = (spaces[0].model * world).xzy;
+            out.space1 = (spaces[1].model * world).xzy;
+            out.space2 = (spaces[2].model * world).xzy;
+        }
+        case 4u {
+            out.space0 = (spaces[0].model * world).xzy;
+            out.space1 = (spaces[1].model * world).xzy;
+            out.space2 = (spaces[2].model * world).xzy;
+            out.space3 = (spaces[3].model * world).xzy;
+        }
+        default {}
+    }
+
     return out;
 }
 
@@ -61,10 +87,18 @@ struct Space {
 }
 
 @group(3) @binding(0)
-var<uniform> space: Space;
+var<uniform> spaces: array<Space, 4>;
 @group(3) @binding(1)
-var space_tdiff: texture_3d<f32>;
+var<uniform> n_spaces: u32;
 @group(3) @binding(2)
+var space0_tdiff: texture_3d<f32>;
+@group(3) @binding(3)
+var space1_tdiff: texture_3d<f32>;
+@group(3) @binding(4)
+var space2_tdiff: texture_3d<f32>;
+@group(3) @binding(5)
+var space3_tdiff: texture_3d<f32>;
+@group(3) @binding(6)
 var space_sdiff: sampler;
 
 @fragment
@@ -74,7 +108,33 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let space_light = textureSampleLevel(space_tdiff, space_sdiff, in.light_space.xzy, 0.0).rgb;
-    let result = (light(in.world) + space_light * space.col) * out.rgb;
-    return vec4(result, out.a);
+    var space = vec3(0.0);
+    switch n_spaces {
+        case 0u {}
+        case 1u {
+            space = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0).rgb * spaces[0].col;
+        }
+        case 2u {
+            let a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0).rgb * spaces[0].col;
+            let b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.0).rgb * spaces[1].col;
+            space = max(a, b);
+        }
+        case 3u {
+            let a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0).rgb * spaces[0].col;
+            let b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.0).rgb * spaces[1].col;
+            let c = textureSampleLevel(space2_tdiff, space_sdiff, in.space2, 0.0).rgb * spaces[2].col;
+            space = max(a, max(b, c));
+        }
+        case 4u {
+            let a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0).rgb * spaces[0].col;
+            let b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.0).rgb * spaces[1].col;
+            let c = textureSampleLevel(space2_tdiff, space_sdiff, in.space2, 0.0).rgb * spaces[2].col;
+            let d = textureSampleLevel(space3_tdiff, space_sdiff, in.space3, 0.0).rgb * spaces[3].col;
+            space = max(max(a, b), max(c, d));
+        }
+        default {}
+    }
+    
+    let light = ambient + diffuse_light(in.world) + space;
+    return vec4(light * out.rgb, out.a);
 }

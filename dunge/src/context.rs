@@ -1,3 +1,5 @@
+use crate::shader_data::SpaceModel;
+
 use {
     crate::{
         camera::{IntoProjection, View},
@@ -9,7 +11,7 @@ use {
         pipeline::ParametersBuilder,
         render::Render,
         screen::Screen,
-        shader_data::{Source, SourceModel, Space},
+        shader_data::{Source, SourceModel, Space, SpaceData},
         texture::Data as TextureData,
         topology::Topology,
         transform::IntoMat,
@@ -29,19 +31,23 @@ pub struct Context {
     limits: Limits,
     models: Vec<InstanceModel>,
     sources: Vec<SourceModel>,
+    spaces: Vec<SpaceModel>,
+    space_data: Vec<SpaceData<'static>>,
 }
 
 impl Context {
     pub(crate) fn new(window: Window, proxy: Proxy, render: Render) -> Self {
-        const DEFAULT_MODELS_CAPACITY: usize = 8;
+        const DEFAULT_CAPACITY: usize = 8;
 
         Self {
             window,
             proxy,
             render: Box::new(render),
             limits: Limits::default(),
-            models: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
-            sources: Vec::with_capacity(DEFAULT_MODELS_CAPACITY),
+            models: Vec::with_capacity(DEFAULT_CAPACITY),
+            sources: Vec::with_capacity(DEFAULT_CAPACITY),
+            spaces: Vec::with_capacity(DEFAULT_CAPACITY),
+            space_data: Vec::with_capacity(DEFAULT_CAPACITY),
         }
     }
 
@@ -302,11 +308,36 @@ impl Context {
     }
 
     /// Creates new light space.
-    pub fn create_space<M>(&mut self, space: Space<M>) -> SpaceHandle
+    pub fn create_space<'a, I, M>(&mut self, spaces: I) -> Result<SpaceHandle, Error>
     where
+        I: IntoIterator<Item = Space<'a, M>>,
         M: IntoMat,
     {
-        self.render.create_space(&space.into_mat())
+        use std::mem;
+
+        self.spaces.clear();
+        debug_assert!(self.space_data.is_empty(), "`space_data` is already empty");
+
+        let mut space_data = mem::take(&mut self.space_data);
+        for space in spaces {
+            space_data.push(space.data);
+            self.spaces.push(SpaceModel::new(&space.into_mat()));
+        }
+
+        let space = self.render.create_space(&self.spaces, &space_data);
+
+        space_data.clear();
+        self.space_data = space_data.into_iter().map(|_| unreachable!()).collect();
+
+        space
+    }
+
+    /// Deletes the light space.
+    ///
+    /// # Errors
+    /// See [`Error`] for detailed info.
+    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), Error> {
+        self.render.delete_space(handle)
     }
 
     /// Takes a screenshot of the current frame.

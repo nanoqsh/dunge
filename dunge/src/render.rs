@@ -12,9 +12,7 @@ use {
         r#loop::Loop,
         screen::Screen,
         shader::Shader,
-        shader_data::{
-            Light, LightSpace, PostShaderData, SourceModel, Space, SpaceData, SpaceModel,
-        },
+        shader_data::{Light, LightSpace, PostShaderData, SourceModel, SpaceData, SpaceModel},
         storage::Storage,
         texture::{Data as TextureData, Texture},
         topology::Topology,
@@ -116,22 +114,10 @@ impl Render {
             Light::new(DEFAULT_AMBIENT, &[], &device, &layouts.lights).expect("default light")
         });
 
-        resources.spaces.insert({
-            use glam::Mat4;
-
-            const DEFAULT_SIZE: (u8, u8, u8) = (1, 1, 1);
-            const DEFAULT_VOXEL: [u8; 4] = [!0; 4];
-
-            let data = SpaceData::new(&DEFAULT_VOXEL, DEFAULT_SIZE).unwrap();
-            let space = SpaceModel::new(&Space {
-                data,
-                transform: Mat4::IDENTITY.to_cols_array_2d(),
-                col: [0.; 3],
-                mono: false,
-            });
-
-            LightSpace::new(space, data, &device, &queue, &layouts.space)
-        });
+        resources.spaces.insert(
+            LightSpace::new(&[], &[], &device, &queue, &layouts.space)
+                .expect("default light space"),
+        );
 
         let post_pipeline = Pipeline::new(
             &device,
@@ -327,18 +313,19 @@ impl Render {
         self.resources.lights.remove(handle.0)
     }
 
-    pub fn create_space(&mut self, space: &Space<[[f32; 4]; 4]>) -> SpaceHandle {
-        let model = SpaceModel::new(space);
-        let light_space = LightSpace::new(
-            model,
-            space.data,
-            &self.device,
-            &self.queue,
-            &self.layouts.space,
-        );
+    pub fn create_space(
+        &mut self,
+        spaces: &[SpaceModel],
+        data: &[SpaceData],
+    ) -> Result<SpaceHandle, Error> {
+        let space = LightSpace::new(spaces, data, &self.device, &self.queue, &self.layouts.space)?;
 
-        let id = self.resources.spaces.insert(light_space);
-        SpaceHandle(id)
+        let id = self.resources.spaces.insert(space);
+        Ok(SpaceHandle(id))
+    }
+
+    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), Error> {
+        self.resources.spaces.remove(handle.0)
     }
 
     pub fn screen(&self) -> Screen {

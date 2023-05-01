@@ -1,10 +1,13 @@
 use {
-    crate::{layout::Plain, shader, texture::Error, transform::IntoMat},
-    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture},
+    crate::{
+        layout::Plain, r#loop::Error as LoopError, shader, texture::Error as TextureError,
+        transform::IntoMat,
+    },
+    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture, TextureView},
 };
 
 /// Parameters of a light space.
-pub struct Space<'a, M> {
+pub struct Space<'a, M = [[f32; 4]; 4]> {
     pub data: Data<'a>,
     pub transform: M,
     pub col: [f32; 3],
@@ -12,7 +15,7 @@ pub struct Space<'a, M> {
 }
 
 impl<'a, M> Space<'a, M> {
-    pub(crate) fn into_mat(self) -> Space<'a, [[f32; 4]; 4]>
+    pub(crate) fn into_mat(self) -> Space<'a>
     where
         M: IntoMat,
     {
@@ -38,14 +41,14 @@ impl<'a> Data<'a> {
     ///
     /// # Errors
     /// See [`TextureError`](crate::TextureError) for detailed info.
-    pub const fn new(data: &'a [u8], size: (u8, u8, u8)) -> Result<Self, Error> {
+    pub const fn new(data: &'a [u8], size: (u8, u8, u8)) -> Result<Self, TextureError> {
         if data.is_empty() {
-            return Err(Error::EmptyData);
+            return Err(TextureError::EmptyData);
         }
 
         let (width, height, depth) = size;
         if data.len() != width as usize * height as usize * depth as usize * 4 {
-            return Err(Error::SizeDoesNotMatch);
+            return Err(TextureError::SizeDoesNotMatch);
         }
 
         Ok(Self { data, size })
@@ -54,69 +57,137 @@ impl<'a> Data<'a> {
 
 pub(crate) struct LightSpace {
     space_buffer: Buffer,
-    texture: Texture,
+    n_spaces: usize,
+    textures: Vec<Texture>,
     bind_group: BindGroup,
 }
 
 impl LightSpace {
     pub fn new(
-        space: SpaceModel,
-        data: Data,
+        spaces: &[SpaceModel],
+        data: &[Data],
         device: &Device,
         queue: &Queue,
         layout: &BindGroupLayout,
-    ) -> Self {
+    ) -> Result<Self, LoopError> {
         use {
-            std::num::NonZeroU32,
+            once_cell::sync::OnceCell,
+            std::{array, num::NonZeroU32},
             wgpu::{
                 util::{BufferInitDescriptor, DeviceExt},
                 *,
             },
         };
 
+        static FAKE_VIEW: OnceCell<&TextureView> = OnceCell::new();
+
+        assert_eq!(spaces.len(), data.len());
+
+        if spaces.len() > shader::MAX_N_SPACES as usize {
+            return Err(LoopError::TooManySpaces);
+        }
+
         let space_buffer = {
+            let mut buf = [SpaceModel::default(); shader::MAX_N_SPACES as usize];
+            buf[..spaces.len()].copy_from_slice(spaces);
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("space buffer"),
-                contents: space.as_bytes(),
+                contents: buf.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
 
-        let (width, height, depth) = data.size;
-        let size = Extent3d {
-            width: width as u32,
-            height: height as u32,
-            depth_or_array_layers: depth as u32,
+        let n_spaces_buffer = {
+            let len = spaces.len() as u32;
+            device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("n spaces buffer"),
+                contents: len.as_bytes(),
+                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            })
         };
 
-        let texture = device.create_texture(&TextureDescriptor {
-            label: None,
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D3,
-            format: TextureFormat::Rgba8UnormSrgb,
-            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
+        let init_view = || -> &TextureView {
+            const DATA: [u8; 4] = [0; 4];
+            const SIZE: Extent3d = Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            };
 
-        queue.write_texture(
-            ImageCopyTexture {
-                texture: &texture,
-                mip_level: 0,
-                origin: Origin3d::ZERO,
-                aspect: TextureAspect::All,
-            },
-            data.data,
-            ImageDataLayout {
-                offset: 0,
-                bytes_per_row: NonZeroU32::new(4 * width as u32),
-                rows_per_image: NonZeroU32::new(height as u32),
-            },
-            size,
-        );
+            let texture = device.create_texture(&TextureDescriptor {
+                label: None,
+                size: SIZE,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: TextureDimension::D3,
+                format: TextureFormat::Rgba8UnormSrgb,
+                usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
 
-        let view = texture.create_view(&TextureViewDescriptor::default());
+            queue.write_texture(
+                ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: Origin3d::ZERO,
+                    aspect: TextureAspect::All,
+                },
+                &DATA,
+                ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: NonZeroU32::new(4),
+                    rows_per_image: NonZeroU32::new(1),
+                },
+                SIZE,
+            );
+
+            let view = texture.create_view(&TextureViewDescriptor::default());
+            Box::leak(view.into())
+        };
+
+        let mut views: [View; shader::MAX_N_SPACES as usize] =
+            array::from_fn(|_| View::Fake(FAKE_VIEW.get_or_init(init_view)));
+
+        let mut textures = Vec::with_capacity(data.len());
+        for (dt, vo) in data.iter().zip(&mut views) {
+            let (width, height, depth) = dt.size;
+            let size = Extent3d {
+                width: width as u32,
+                height: height as u32,
+                depth_or_array_layers: depth as u32,
+            };
+
+            let texture = device.create_texture(&TextureDescriptor {
+                label: None,
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: TextureDimension::D3,
+                format: TextureFormat::Rgba8UnormSrgb,
+                usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+
+            queue.write_texture(
+                ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: Origin3d::ZERO,
+                    aspect: TextureAspect::All,
+                },
+                dt.data,
+                ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: NonZeroU32::new(4 * width as u32),
+                    rows_per_image: NonZeroU32::new(height as u32),
+                },
+                size,
+            );
+
+            *vo = View::Faithful(texture.create_view(&TextureViewDescriptor::default()));
+            textures.push(texture);
+        }
+
         let sampler = device.create_sampler(&SamplerDescriptor {
             address_mode_u: AddressMode::ClampToEdge,
             address_mode_v: AddressMode::ClampToEdge,
@@ -130,12 +201,28 @@ impl LightSpace {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::SPACE_BINDING,
+                    binding: shader::SPACES_BINDING,
                     resource: space_buffer.as_entire_binding(),
                 },
                 BindGroupEntry {
-                    binding: shader::SPACE_TDIFF_BINDING,
-                    resource: BindingResource::TextureView(&view),
+                    binding: shader::N_SPACES_BINDING,
+                    resource: n_spaces_buffer.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: shader::SPACE0_TDIFF_BINDING,
+                    resource: BindingResource::TextureView(views[0].as_ref()),
+                },
+                BindGroupEntry {
+                    binding: shader::SPACE1_TDIFF_BINDING,
+                    resource: BindingResource::TextureView(views[1].as_ref()),
+                },
+                BindGroupEntry {
+                    binding: shader::SPACE2_TDIFF_BINDING,
+                    resource: BindingResource::TextureView(views[2].as_ref()),
+                },
+                BindGroupEntry {
+                    binding: shader::SPACE3_TDIFF_BINDING,
+                    resource: BindingResource::TextureView(views[3].as_ref()),
                 },
                 BindGroupEntry {
                     binding: shader::SPACE_SDIFF_BINDING,
@@ -145,15 +232,30 @@ impl LightSpace {
             label: Some("space bind group"),
         });
 
-        Self {
+        Ok(Self {
             space_buffer,
-            texture,
+            n_spaces: spaces.len(),
+            textures,
             bind_group,
-        }
+        })
     }
 
     pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
+    }
+}
+
+enum View {
+    Fake(&'static TextureView),
+    Faithful(TextureView),
+}
+
+impl View {
+    fn as_ref(&self) -> &TextureView {
+        match self {
+            Self::Fake(v) => v,
+            Self::Faithful(v) => v,
+        }
     }
 }
 
@@ -166,7 +268,7 @@ pub(crate) struct SpaceModel {
 }
 
 impl SpaceModel {
-    pub fn new(space: &Space<[[f32; 4]; 4]>) -> Self {
+    pub fn new(space: &Space) -> Self {
         use glam::{Mat4, Quat, Vec3};
 
         let (width, height, depth) = space.data.size;

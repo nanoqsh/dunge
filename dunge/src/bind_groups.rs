@@ -101,7 +101,7 @@ impl Layouts {
             space: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[
                     BindGroupLayoutEntry {
-                        binding: shader::SPACE_BINDING,
+                        binding: shader::SPACES_BINDING,
                         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
@@ -111,7 +111,47 @@ impl Layouts {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SPACE_TDIFF_BINDING,
+                        binding: shader::N_SPACES_BINDING,
+                        visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: shader::SPACE0_TDIFF_BINDING,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: TextureViewDimension::D3,
+                            sample_type: TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: shader::SPACE1_TDIFF_BINDING,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: TextureViewDimension::D3,
+                            sample_type: TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: shader::SPACE2_TDIFF_BINDING,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: TextureViewDimension::D3,
+                            sample_type: TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: shader::SPACE3_TDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Texture {
                             multisampled: false,

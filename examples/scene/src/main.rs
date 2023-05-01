@@ -98,14 +98,36 @@ impl App {
                 ..Default::default()
             };
 
-            let space = Space {
-                data: SpaceData::new(&map, size).expect("create space"),
-                transform,
-                col: [2.5; 3],
-                mono: false,
-            };
+            // let space = ;
 
-            context.create_space(space)
+            context
+                .create_space([
+                    Space {
+                        data: SpaceData::new(&map, size).expect("create space"),
+                        transform,
+                        col: [2.5, 0., 0.],
+                        mono: false,
+                    },
+                    Space {
+                        data: SpaceData::new(&map, size).expect("create space"),
+                        transform,
+                        col: [0., 2.5, 0.],
+                        mono: false,
+                    },
+                    Space {
+                        data: SpaceData::new(&map, size).expect("create space"),
+                        transform,
+                        col: [0., 0., 2.5],
+                        mono: false,
+                    },
+                    Space {
+                        data: SpaceData::new(&map, size).expect("create space"),
+                        transform,
+                        col: [0.5; 3],
+                        mono: false,
+                    },
+                ])
+                .expect("create space")
         };
 
         // Create models
@@ -314,7 +336,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let sprite_scale = 16. * 2.;
+        let sprite_scale = 8. * 6.;
         let view = View {
             proj: Orthographic {
                 width_factor: 1. / sprite_scale,

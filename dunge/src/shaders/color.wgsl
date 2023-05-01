@@ -49,6 +49,6 @@ var<uniform> n_sources: u32;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let result = light(in.world) * in.col;
-    return vec4(result, 1.);
+    let light = ambient + diffuse_light(in.world);
+    return vec4(light * in.col, 1.);
 }

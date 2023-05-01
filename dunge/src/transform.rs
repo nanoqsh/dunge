@@ -105,7 +105,7 @@ impl IntoQuat for glam::Quat {
 }
 
 /// The identity rotation.
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub struct Identity;
 
 impl IntoQuat for Identity {
