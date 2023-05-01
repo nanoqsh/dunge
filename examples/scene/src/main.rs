@@ -9,7 +9,8 @@ use {
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
         Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, PixelSize, Source, Space, SpaceData, TextureData, View, WindowMode,
+        Orthographic, PixelSize, Source, Space, SpaceData, SpaceFormat, TextureData, View,
+        WindowMode,
     },
     utils::Camera,
 };
@@ -92,31 +93,29 @@ impl App {
                 (width as u8, height as u8, layers.len() as u8)
             };
 
+            let data = SpaceData::new(&map, size, SpaceFormat::Rgba).expect("create space");
+
             context
                 .create_space([
                     Space {
-                        data: SpaceData::new(&map, size).expect("create space"),
+                        data,
                         transform: Transform::default(),
                         col: [2.5, 0., 0.],
-                        mono: false,
                     },
                     Space {
-                        data: SpaceData::new(&map, size).expect("create space"),
+                        data,
                         transform: Transform::default(),
                         col: [0., 2.5, 0.],
-                        mono: false,
                     },
                     Space {
-                        data: SpaceData::new(&map, size).expect("create space"),
+                        data,
                         transform: Transform::default(),
                         col: [0., 0., 2.5],
-                        mono: false,
                     },
                     Space {
-                        data: SpaceData::new(&map, size).expect("create space"),
+                        data,
                         transform: Transform::default(),
                         col: [0.5; 3],
-                        mono: false,
                     },
                 ])
                 .expect("create space")

@@ -1,4 +1,4 @@
-use {crate::r#loop::Error, ahash::AHashMap as Map};
+use {crate::error::ResourceNotFound, ahash::AHashMap as Map};
 
 pub(crate) struct Storage<T> {
     map: Map<u32, T>,
@@ -20,16 +20,16 @@ impl<T> Storage<T> {
         }
     }
 
-    pub fn get(&self, index: u32) -> Result<&T, Error> {
-        self.map.get(&index).ok_or(Error::NotFound)
+    pub fn get(&self, index: u32) -> Result<&T, ResourceNotFound> {
+        self.map.get(&index).ok_or(ResourceNotFound)
     }
 
-    pub fn get_mut(&mut self, index: u32) -> Result<&mut T, Error> {
-        self.map.get_mut(&index).ok_or(Error::NotFound)
+    pub fn get_mut(&mut self, index: u32) -> Result<&mut T, ResourceNotFound> {
+        self.map.get_mut(&index).ok_or(ResourceNotFound)
     }
 
-    pub fn remove(&mut self, index: u32) -> Result<(), Error> {
-        self.map.remove(&index).map(drop).ok_or(Error::NotFound)
+    pub fn remove(&mut self, index: u32) -> Result<(), ResourceNotFound> {
+        self.map.remove(&index).map(drop).ok_or(ResourceNotFound)
     }
 }
 

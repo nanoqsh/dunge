@@ -1,9 +1,8 @@
-use crate::shader_data::SpaceModel;
-
 use {
     crate::{
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
+        error::*,
         framebuffer::FrameFilter,
         handles::*,
         instance::InstanceModel,
@@ -11,11 +10,10 @@ use {
         pipeline::ParametersBuilder,
         render::Render,
         screen::Screen,
-        shader_data::{Source, SourceModel, Space, SpaceData, TextureData},
+        shader_data::{Source, SourceModel, Space, SpaceData, SpaceModel, TextureData},
         topology::Topology,
         transform::IntoMat,
         vertex::Vertex,
-        Error,
     },
     winit::{event_loop::EventLoopProxy, window::Window},
 };
@@ -109,8 +107,11 @@ impl Context {
     /// Deletes the layer.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn delete_layer<V, T>(&mut self, handle: LayerHandle<V, T>) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn delete_layer<V, T>(
+        &mut self,
+        handle: LayerHandle<V, T>,
+    ) -> Result<(), ResourceNotFound> {
         self.render.delete_layer(handle)
     }
 
@@ -122,20 +123,20 @@ impl Context {
     /// Updates the texture.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
+    /// See [`ResourceNotFound`] for detailed info.
     pub fn update_texture(
         &mut self,
         handle: TextureHandle,
         data: TextureData,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ResourceNotFound> {
         self.render.update_texture(handle, data)
     }
 
     /// Deletes the texture.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
         self.render.delete_texture(handle)
     }
 
@@ -157,8 +158,12 @@ impl Context {
     /// Updates instances.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_instances<I>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn update_instances<I>(
+        &mut self,
+        handle: InstanceHandle,
+        data: I,
+    ) -> Result<(), ResourceNotFound>
     where
         I: IntoIterator,
         I::Item: IntoMat,
@@ -175,8 +180,8 @@ impl Context {
     /// Deletes instances.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
         self.render.delete_instances(handle)
     }
 
@@ -192,12 +197,12 @@ impl Context {
     /// Updates the mesh.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
+    /// See [`ResourceNotFound`] for detailed info.
     pub fn update_mesh<V, T>(
         &mut self,
         handle: MeshHandle<V, T>,
         data: &MeshData<V, T>,
-    ) -> Result<(), Error>
+    ) -> Result<(), ResourceNotFound>
     where
         V: Vertex,
         T: Topology,
@@ -208,8 +213,8 @@ impl Context {
     /// Deletes the mesh.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
         self.render.delete_mesh(handle)
     }
 
@@ -224,8 +229,12 @@ impl Context {
     /// Updates the view.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_view<P>(&mut self, handle: ViewHandle, view: View<P>) -> Result<(), Error>
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn update_view<P>(
+        &mut self,
+        handle: ViewHandle,
+        view: View<P>,
+    ) -> Result<(), ResourceNotFound>
     where
         P: IntoProjection,
     {
@@ -235,17 +244,20 @@ impl Context {
     /// Deletes the view.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
         self.render.delete_view(handle)
     }
 
     /// Creates new light.
     ///
     /// # Errors
-    /// Returns the [`Error::TooManySources`](crate::Error::TooManySources)
-    /// when trying to create too many light sources.
-    pub fn create_light<I>(&mut self, ambient: [f32; 3], srcs: I) -> Result<LightHandle, Error>
+    /// Returns the [`TooManySources`] when trying to create too many light sources.
+    pub fn create_light<I>(
+        &mut self,
+        ambient: [f32; 3],
+        srcs: I,
+    ) -> Result<LightHandle, TooManySources>
     where
         I: IntoIterator<Item = Source>,
     {
@@ -258,8 +270,12 @@ impl Context {
     /// Updates the color of the ambient light.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_ambient(&mut self, handle: LightHandle, ambient: [f32; 3]) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn update_ambient(
+        &mut self,
+        handle: LightHandle,
+        ambient: [f32; 3],
+    ) -> Result<(), ResourceNotFound> {
         self.render.update_ambient(handle, ambient)
     }
 
@@ -301,16 +317,16 @@ impl Context {
     /// Deletes the light.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), ResourceNotFound> {
         self.render.delete_light(handle)
     }
 
     /// Creates new light space.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn create_space<'a, I, M>(&mut self, spaces: I) -> Result<SpaceHandle, Error>
+    /// Returns the [`TooManySpaces`] when trying to create too many light sources.
+    pub fn create_space<'a, I, M>(&mut self, spaces: I) -> Result<SpaceHandle, TooManySpaces>
     where
         I: IntoIterator<Item = Space<'a, M>>,
         M: IntoMat,
@@ -414,8 +430,8 @@ impl Context {
     /// Deletes the light space.
     ///
     /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), Error> {
+    /// See [`ResourceNotFound`] for detailed info.
+    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), ResourceNotFound> {
         self.render.delete_space(handle)
     }
 

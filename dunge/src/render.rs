@@ -3,13 +3,14 @@ use {
         bind_groups::Layouts,
         camera::{Camera, Projection, View},
         context::Screenshot,
+        error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
         frame::Frame,
         framebuffer::Framebuffer,
         handles::*,
         instance::{Instance, InstanceModel},
         mesh::{Data as MeshData, Mesh},
         pipeline::{Pipeline, PipelineParameters},
-        r#loop::{Error, Loop},
+        r#loop::Loop,
         screen::Screen,
         shader::Shader,
         shader_data::{
@@ -174,7 +175,10 @@ impl Render {
         LayerHandle::new(id)
     }
 
-    pub fn delete_layer<V, T>(&mut self, handle: LayerHandle<V, T>) -> Result<(), Error> {
+    pub fn delete_layer<V, T>(
+        &mut self,
+        handle: LayerHandle<V, T>,
+    ) -> Result<(), ResourceNotFound> {
         self.resources.layers.remove(handle.id())
     }
 
@@ -188,14 +192,14 @@ impl Render {
         &mut self,
         handle: TextureHandle,
         data: TextureData,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ResourceNotFound> {
         self.resources
             .textures
             .get_mut(handle.0)
             .map(|texture| texture.update_data(data, &self.queue))
     }
 
-    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), Error> {
+    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
         self.resources.textures.remove(handle.0)
     }
 
@@ -209,14 +213,14 @@ impl Render {
         &mut self,
         handle: InstanceHandle,
         models: &[InstanceModel],
-    ) -> Result<(), Error> {
+    ) -> Result<(), ResourceNotFound> {
         self.resources
             .instances
             .get_mut(handle.0)
             .map(|instances| instances.update_models(models, &self.queue))
     }
 
-    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), Error> {
+    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
         self.resources.instances.remove(handle.0)
     }
 
@@ -234,7 +238,7 @@ impl Render {
         &mut self,
         handle: MeshHandle<V, T>,
         data: &MeshData<V, T>,
-    ) -> Result<(), Error>
+    ) -> Result<(), ResourceNotFound>
     where
         V: Vertex,
         T: Topology,
@@ -245,7 +249,7 @@ impl Render {
             .map(|mesh| mesh.update_data(data, &self.device, &self.queue))
     }
 
-    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), Error> {
+    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
         self.resources.meshes.remove(handle.id())
     }
 
@@ -256,14 +260,18 @@ impl Render {
         ViewHandle(id)
     }
 
-    pub fn update_view(&mut self, handle: ViewHandle, view: View<Projection>) -> Result<(), Error> {
+    pub fn update_view(
+        &mut self,
+        handle: ViewHandle,
+        view: View<Projection>,
+    ) -> Result<(), ResourceNotFound> {
         self.resources
             .views
             .get_mut(handle.0)
             .map(|camera| camera.set_view(view))
     }
 
-    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), Error> {
+    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
         self.resources.views.remove(handle.0)
     }
 
@@ -271,13 +279,17 @@ impl Render {
         &mut self,
         ambient: [f32; 3],
         srcs: &[SourceModel],
-    ) -> Result<LightHandle, Error> {
+    ) -> Result<LightHandle, TooManySources> {
         let light = Light::new(ambient, srcs, &self.device, &self.layouts.lights)?;
         let id = self.resources.lights.insert(light);
         Ok(LightHandle(id))
     }
 
-    pub fn update_ambient(&mut self, handle: LightHandle, ambient: [f32; 3]) -> Result<(), Error> {
+    pub fn update_ambient(
+        &mut self,
+        handle: LightHandle,
+        ambient: [f32; 3],
+    ) -> Result<(), ResourceNotFound> {
         let light = self.resources.lights.get(handle.0)?;
         light.update_ambient(ambient, &self.queue);
 
@@ -304,13 +316,13 @@ impl Render {
         n: usize,
         source: SourceModel,
     ) -> Result<(), Error> {
-        self.resources
-            .lights
-            .get_mut(handle.0)
-            .and_then(|light| light.update_nth(n, source, &self.queue))
+        let light = self.resources.lights.get_mut(handle.0)?;
+        light.update_nth(n, source, &self.queue)?;
+
+        Ok(())
     }
 
-    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), Error> {
+    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), ResourceNotFound> {
         self.resources.lights.remove(handle.0)
     }
 
@@ -318,7 +330,7 @@ impl Render {
         &mut self,
         spaces: &[SpaceModel],
         data: &[SpaceData],
-    ) -> Result<SpaceHandle, Error> {
+    ) -> Result<SpaceHandle, TooManySpaces> {
         let ls = LightSpace::new(spaces, data, &self.device, &self.queue, &self.layouts.space)?;
         let id = self.resources.spaces.insert(ls);
         Ok(SpaceHandle(id))
@@ -344,10 +356,10 @@ impl Render {
         n: usize,
         space: SpaceModel,
     ) -> Result<(), Error> {
-        self.resources
-            .spaces
-            .get_mut(handle.0)
-            .and_then(|ls| ls.update_nth_space(n, space, &self.queue))
+        let ls = self.resources.spaces.get_mut(handle.0)?;
+        ls.update_nth_space(n, space, &self.queue)?;
+
+        Ok(())
     }
 
     pub fn update_nth_space_color(
@@ -356,10 +368,10 @@ impl Render {
         n: usize,
         col: [f32; 3],
     ) -> Result<(), Error> {
-        self.resources
-            .spaces
-            .get_mut(handle.0)
-            .and_then(|ls| ls.update_nth_color(n, col, &self.queue))
+        let ls = self.resources.spaces.get_mut(handle.0)?;
+        ls.update_nth_color(n, col, &self.queue)?;
+
+        Ok(())
     }
 
     pub fn update_nth_space_data(
@@ -368,13 +380,13 @@ impl Render {
         n: usize,
         data: SpaceData,
     ) -> Result<(), Error> {
-        self.resources
-            .spaces
-            .get_mut(handle.0)
-            .and_then(|ls| ls.update_nth_data(n, data, &self.queue))
+        let ls = self.resources.spaces.get_mut(handle.0)?;
+        ls.update_nth_data(n, data, &self.queue)?;
+
+        Ok(())
     }
 
-    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), Error> {
+    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), ResourceNotFound> {
         self.resources.spaces.remove(handle.0)
     }
 

@@ -1,14 +1,21 @@
 use {
-    crate::{layout::Plain, r#loop::Error, shader, shader_data::TextureError, transform::IntoMat},
+    crate::{
+        error::{SpaceNotFound, TooManySpaces},
+        layout::Plain,
+        shader,
+        shader_data::TextureError,
+        transform::IntoMat,
+    },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture, TextureView},
 };
 
-/// Parameters of a light space.
-pub struct Space<'a, M = [[f32; 4]; 4]> {
+type Mat = [[f32; 4]; 4];
+
+/// Parameters of the light space.
+pub struct Space<'a, M = Mat> {
     pub data: Data<'a>,
     pub transform: M,
     pub col: [f32; 3],
-    pub mono: bool,
 }
 
 impl<'a, M> Space<'a, M> {
@@ -20,7 +27,6 @@ impl<'a, M> Space<'a, M> {
             data: self.data,
             transform: self.transform.into_mat(),
             col: self.col,
-            mono: self.mono,
         }
     }
 }
@@ -31,6 +37,7 @@ impl<'a, M> Space<'a, M> {
 pub struct Data<'a> {
     data: &'a [u8],
     size: (u8, u8, u8),
+    format: Format,
 }
 
 impl<'a> Data<'a> {
@@ -38,17 +45,37 @@ impl<'a> Data<'a> {
     ///
     /// # Errors
     /// See [`TextureError`](crate::TextureError) for detailed info.
-    pub const fn new(data: &'a [u8], size: (u8, u8, u8)) -> Result<Self, TextureError> {
+    pub const fn new(
+        data: &'a [u8],
+        size: (u8, u8, u8),
+        format: Format,
+    ) -> Result<Self, TextureError> {
         if data.is_empty() {
             return Err(TextureError::EmptyData);
         }
 
         let (width, height, depth) = size;
-        if data.len() != width as usize * height as usize * depth as usize * 4 {
+        if data.len() != width as usize * height as usize * depth as usize * format.n_channels() {
             return Err(TextureError::SizeDoesNotMatch);
         }
 
-        Ok(Self { data, size })
+        Ok(Self { data, size, format })
+    }
+}
+
+/// The light space data format.
+#[derive(Clone, Copy)]
+pub enum Format {
+    Rgba,
+    Gray,
+}
+
+impl Format {
+    const fn n_channels(self) -> usize {
+        match self {
+            Self::Rgba => 4,
+            Self::Gray => 1,
+        }
     }
 }
 
@@ -66,7 +93,7 @@ impl LightSpace {
         device: &Device,
         queue: &Queue,
         layout: &BindGroupLayout,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, TooManySpaces> {
         use {
             once_cell::sync::OnceCell,
             std::{array, num::NonZeroU32},
@@ -85,9 +112,7 @@ impl LightSpace {
         );
 
         if spaces.len() > shader::MAX_N_SPACES as usize {
-            use crate::r#loop::Error;
-
-            return Err(Error::TooManySpaces);
+            return Err(TooManySpaces);
         }
 
         let space_buffer = {
@@ -285,11 +310,11 @@ impl LightSpace {
         n: usize,
         space: SpaceModel,
         queue: &Queue,
-    ) -> Result<(), Error> {
+    ) -> Result<(), SpaceNotFound> {
         use std::mem;
 
         if n >= self.n_spaces {
-            return Err(Error::NotFound);
+            return Err(SpaceNotFound);
         }
 
         queue.write_buffer(
@@ -301,13 +326,18 @@ impl LightSpace {
         Ok(())
     }
 
-    pub fn update_nth_color(&self, n: usize, col: [f32; 3], queue: &Queue) -> Result<(), Error> {
+    pub fn update_nth_color(
+        &self,
+        n: usize,
+        col: [f32; 3],
+        queue: &Queue,
+    ) -> Result<(), SpaceNotFound> {
         use std::mem;
 
-        const COL_OFFSET: usize = mem::size_of::<[[f32; 4]; 4]>();
+        const COL_OFFSET: usize = mem::size_of::<Mat>();
 
         if n >= self.n_spaces {
-            return Err(Error::NotFound);
+            return Err(SpaceNotFound);
         }
 
         queue.write_buffer(
@@ -319,13 +349,16 @@ impl LightSpace {
         Ok(())
     }
 
-    pub fn update_nth_data(&self, n: usize, data: Data, queue: &Queue) -> Result<(), Error> {
+    pub fn update_nth_data(
+        &self,
+        n: usize,
+        data: Data,
+        queue: &Queue,
+    ) -> Result<(), SpaceNotFound> {
         use {std::num::NonZeroU32, wgpu::*};
 
         if n >= self.n_spaces {
-            use crate::r#loop::Error;
-
-            return Err(Error::NotFound);
+            return Err(SpaceNotFound);
         }
 
         let (width, height, depth) = data.size;
@@ -376,29 +409,36 @@ impl View {
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
 pub(crate) struct SpaceModel {
-    model: [[f32; 4]; 4],
+    model: Mat,
     col: [f32; 3],
     flags: u32,
 }
 
 impl SpaceModel {
     pub fn new(space: &Space) -> Self {
-        use glam::{Mat4, Quat, Vec3};
-
-        let (width, height, depth) = space.data.size;
-        let texture_space = Mat4::from_scale_rotation_translation(
-            Vec3::new(1. / width as f32, 1. / depth as f32, 1. / height as f32),
-            Quat::IDENTITY,
-            Vec3::new(0.5, 0.5, 0.5),
-        );
-
-        let model = Mat4::from_cols_array_2d(&space.transform.into_mat());
-        let model = texture_space * model;
-
         Self {
-            model: model.to_cols_array_2d(),
+            model: {
+                use glam::{Mat4, Quat, Vec3};
+
+                let texture_space = {
+                    let (width, height, depth) = space.data.size;
+                    Mat4::from_scale_rotation_translation(
+                        Vec3::new(1. / width as f32, 1. / depth as f32, 1. / height as f32),
+                        Quat::IDENTITY,
+                        Vec3::new(0.5, 0.5, 0.5),
+                    )
+                };
+
+                let model = Mat4::from_cols_array_2d(&space.transform);
+                let model = texture_space * model;
+
+                model.to_cols_array_2d()
+            },
             col: space.col,
-            flags: space.mono as u32,
+            flags: match space.data.format {
+                Format::Rgba => 0,
+                Format::Gray => 1,
+            },
         }
     }
 }

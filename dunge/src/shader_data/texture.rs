@@ -36,7 +36,7 @@ pub enum Error {
     /// Returns when the data is empty.
     EmptyData,
 
-    /// Returns when the data length doesn't match with size * 4,
+    /// Returns when the data length doesn't match with size * number of channels,
     SizeDoesNotMatch,
 }
 

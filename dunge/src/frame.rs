@@ -1,10 +1,10 @@
 use {
     crate::{
         color::Linear,
+        error::ResourceNotFound,
         handles::LayerHandle,
         layer::{Builder, Layer},
         pipeline::Pipeline,
-        r#loop::Error,
         render::Render,
         shader,
         vertex::Vertex,
@@ -111,7 +111,7 @@ impl<'d> Frame<'d> {
     pub fn layer<V, T>(
         &mut self,
         handle: LayerHandle<V, T>,
-    ) -> Result<Builder<'_, 'd, V, T>, Error> {
+    ) -> Result<Builder<'_, 'd, V, T>, ResourceNotFound> {
         Ok(Builder::new(
             self,
             self.render.resources().layers.get(handle.id())?,

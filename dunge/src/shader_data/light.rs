@@ -1,5 +1,9 @@
 use {
-    crate::{layout::Plain, r#loop::Error, shader},
+    crate::{
+        error::{SourceNotFound, TooManySources},
+        layout::Plain,
+        shader,
+    },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
@@ -42,14 +46,14 @@ impl Light {
         srcs: &[SourceModel],
         device: &Device,
         layout: &BindGroupLayout,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, TooManySources> {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
         if srcs.len() > shader::MAX_N_SOURCES as usize {
-            return Err(Error::TooManySources);
+            return Err(TooManySources);
         }
 
         let ambient_buffer = {
@@ -119,11 +123,16 @@ impl Light {
         true
     }
 
-    pub fn update_nth(&self, n: usize, source: SourceModel, queue: &Queue) -> Result<(), Error> {
+    pub fn update_nth(
+        &self,
+        n: usize,
+        source: SourceModel,
+        queue: &Queue,
+    ) -> Result<(), SourceNotFound> {
         use std::mem;
 
         if n >= self.n_sources {
-            return Err(Error::NotFound);
+            return Err(SourceNotFound);
         }
 
         queue.write_buffer(
