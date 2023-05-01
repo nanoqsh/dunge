@@ -1,20 +1,26 @@
 //! Color types and traits.
 
-/// A linear rgb color with an alpha channel.
+/// A linear RGB(A) color.
 #[derive(Clone, Copy)]
-pub struct Linear<C>(pub [C; 4]);
+pub struct Linear<C, const N: usize = 4>(pub [C; N]);
 
-/// A srgb color with an alpha channel.
-#[derive(Clone, Copy)]
-pub struct Srgba<C>(pub [C; 4]);
-
-/// The trait for color conversion.
-pub trait IntoLinear {
-    fn into_linear(self) -> Linear<f64>;
+impl<const N: usize> Linear<f64, N> {
+    pub(crate) fn into_f32(self) -> Linear<f32, N> {
+        Linear(self.0.map(|v| v as f32))
+    }
 }
 
-impl IntoLinear for Srgba<f64> {
-    fn into_linear(self) -> Linear<f64> {
+/// A sRGB(A) color.
+#[derive(Clone, Copy)]
+pub struct Standard<C, const N: usize = 4>(pub [C; N]);
+
+/// The trait for color conversion.
+pub trait IntoLinear<const N: usize = 4> {
+    fn into_linear(self) -> Linear<f64, N>;
+}
+
+impl<const N: usize> IntoLinear<N> for Standard<f64, N> {
+    fn into_linear(self) -> Linear<f64, N> {
         fn to_linear(c: f64) -> f64 {
             if c > 0.04045 {
                 ((c + 0.055) / 1.055).powf(2.4)
@@ -27,40 +33,42 @@ impl IntoLinear for Srgba<f64> {
     }
 }
 
-impl IntoLinear for Srgba<f32> {
-    fn into_linear(self) -> Linear<f64> {
-        Srgba(self.0.map(f64::from)).into_linear()
+impl<const N: usize> IntoLinear<N> for Standard<f32, N> {
+    fn into_linear(self) -> Linear<f64, N> {
+        Standard(self.0.map(f64::from)).into_linear()
     }
 }
 
-impl IntoLinear for Linear<f64> {
+impl<const N: usize> IntoLinear<N> for Linear<f64, N> {
     fn into_linear(self) -> Self {
         self
     }
 }
 
-impl IntoLinear for Linear<f32> {
-    fn into_linear(self) -> Linear<f64> {
+impl<const N: usize> IntoLinear<N> for Linear<f32, N> {
+    fn into_linear(self) -> Linear<f64, N> {
         Linear(self.0.map(f64::from))
     }
 }
 
-impl IntoLinear for Srgba<u8> {
-    fn into_linear(self) -> Linear<f64> {
-        Srgba(self.0.map(to_f64_color)).into_linear()
+impl<const N: usize> IntoLinear<N> for Standard<u8, N> {
+    fn into_linear(self) -> Linear<f64, N> {
+        Standard(self.0.map(to_f64_color)).into_linear()
     }
 }
 
-impl IntoLinear for Linear<u8> {
-    fn into_linear(self) -> Linear<f64> {
+impl<const N: usize> IntoLinear<N> for Linear<u8, N> {
+    fn into_linear(self) -> Linear<f64, N> {
         Linear(self.0.map(to_f64_color))
     }
 }
 
 /// All color channels are zero.
-impl IntoLinear for () {
-    fn into_linear(self) -> Linear<f64> {
-        Linear([0., 0., 0., 0.])
+impl<const N: usize> IntoLinear<N> for () {
+    fn into_linear(self) -> Linear<f64, N> {
+        use std::array;
+
+        Linear(array::from_fn(|_| 0.))
     }
 }
 

@@ -2,15 +2,15 @@ mod models;
 
 use {
     dunge::{
-        color::Srgba,
+        color::{Linear, Standard},
         handles::*,
         input::{Input, Key},
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
-        Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, PixelSize, Source, Space, SpaceData, SpaceFormat, TextureData, View,
-        WindowMode,
+        Compare, Context, Error, Frame, FrameParameters, InitialState, LightKind, LightMode, Loop,
+        MeshData, Orthographic, PixelSize, Source, Space, SpaceData, SpaceFormat, TextureData,
+        View, WindowMode,
     },
     utils::Camera,
 };
@@ -93,32 +93,13 @@ impl App {
                 (width as u8, height as u8, layers.len() as u8)
             };
 
-            let data = SpaceData::new(&map, size, SpaceFormat::Rgba).expect("create space");
+            let space = Space {
+                data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
+                transform: Transform::default(),
+                col: Linear([2.5; 3]),
+            };
 
-            context
-                .create_space([
-                    Space {
-                        data,
-                        transform: Transform::default(),
-                        col: [2.5, 0., 0.],
-                    },
-                    Space {
-                        data,
-                        transform: Transform::default(),
-                        col: [0., 2.5, 0.],
-                    },
-                    Space {
-                        data,
-                        transform: Transform::default(),
-                        col: [0., 0., 2.5],
-                    },
-                    Space {
-                        data,
-                        transform: Transform::default(),
-                        col: [0.5; 3],
-                    },
-                ])
-                .expect("create space")
+            context.create_space([space]).expect("create space")
         };
 
         // Create models
@@ -238,7 +219,11 @@ impl App {
         };
 
         // Crate the light
-        let light = context.create_light([0.; 3], []).expect("create light");
+        let light = {
+            const EMPTY: [Source; 0] = [];
+
+            context.create_light((), EMPTY).expect("create light")
+        };
 
         // Create the view
         let camera = Camera::default();
@@ -267,10 +252,10 @@ impl Loop for App {
         use {dunge::winit::window::Fullscreen, std::f32::consts::TAU};
 
         const SENSITIVITY: f32 = 0.01;
-        const AMBIENT_COLOR: [f32; 3] = [0.09; 3];
+        const AMBIENT_COLOR: Linear<f32, 3> = Linear([0.09; 3]);
         const LIGHTS_DISTANCE: f32 = 3.3;
         const LIGHTS_SPEED: f32 = 1.;
-        const INTENSITY: f32 = 0.;
+        const INTENSITY: f32 = 1.;
         const LIGHTS: [(f32, [f32; 3]); 3] = [
             (0., [INTENSITY, 0., 0.]),
             (TAU / 3., [0., INTENSITY, 0.]),
@@ -288,8 +273,9 @@ impl Loop for App {
                 ]
             },
             rad: 2.,
-            col,
-            ..Default::default()
+            col: Linear(col),
+            mode: LightMode::default(),
+            kind: LightKind::default(),
         };
 
         context.update_light(
@@ -356,7 +342,7 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        const CLEAR_COLOR: Srgba<u8> = Srgba([46, 34, 47, 255]);
+        const CLEAR_COLOR: Standard<u8> = Standard([46, 34, 47, 255]);
 
         {
             let mut layer = frame
@@ -380,7 +366,7 @@ impl Loop for App {
             layer.bind_view(self.view)?;
             for cube in &self.cubes {
                 layer.bind_instance(cube.instance)?;
-                // layer.draw(cube.mesh)?;
+                layer.draw(cube.mesh)?;
             }
         }
 

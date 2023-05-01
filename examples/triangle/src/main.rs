@@ -1,5 +1,5 @@
 use dunge::{
-    color::Srgba,
+    color::Standard,
     handles::*,
     input::{Input, Key},
     transform::Position,
@@ -89,7 +89,7 @@ impl Loop for App {
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         let mut layer = frame
             .layer(self.layer)?
-            .with_clear_color(Srgba([0, 0, 0, 255]))
+            .with_clear_color(Standard([0, 0, 0, 255]))
             .with_clear_depth()
             .start();
 

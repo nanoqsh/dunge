@@ -1,5 +1,6 @@
 use {
     crate::{
+        color::{IntoLinear, Linear},
         error::{SpaceNotFound, TooManySpaces},
         layout::Plain,
         shader,
@@ -12,21 +13,23 @@ use {
 type Mat = [[f32; 4]; 4];
 
 /// Parameters of the light space.
-pub struct Space<'a, M = Mat> {
+#[derive(Clone, Copy)]
+pub struct Space<'a, M = Mat, C = Linear<f32, 3>> {
     pub data: Data<'a>,
     pub transform: M,
-    pub col: [f32; 3],
+    pub col: C,
 }
 
-impl<'a, M> Space<'a, M> {
-    pub(crate) fn into_mat(self) -> Space<'a>
+impl<'a, M, C> Space<'a, M, C> {
+    pub(crate) fn into_mat_and_linear_f32(self) -> Space<'a>
     where
         M: IntoMat,
+        C: IntoLinear<3>,
     {
         Space {
             data: self.data,
             transform: self.transform.into_mat(),
-            col: self.col,
+            col: self.col.into_linear().into_f32(),
         }
     }
 }
@@ -66,6 +69,7 @@ impl<'a> Data<'a> {
 /// The light space data format.
 #[derive(Clone, Copy)]
 pub enum Format {
+    Srgba,
     Rgba,
     Gray,
 }
@@ -73,7 +77,7 @@ pub enum Format {
 impl Format {
     const fn n_channels(self) -> usize {
         match self {
-            Self::Rgba => 4,
+            Self::Srgba | Self::Rgba => 4,
             Self::Gray => 1,
         }
     }
@@ -191,7 +195,11 @@ impl LightSpace {
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: TextureDimension::D3,
-                format: TextureFormat::Rgba8UnormSrgb,
+                format: match dt.format {
+                    Format::Srgba => TextureFormat::Rgba8UnormSrgb,
+                    Format::Rgba => TextureFormat::Rgba8Unorm,
+                    Format::Gray => TextureFormat::R8Unorm,
+                },
                 usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
                 view_formats: &[],
             });
@@ -206,7 +214,7 @@ impl LightSpace {
                 dt.data,
                 ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: NonZeroU32::new(4 * width as u32),
+                    bytes_per_row: NonZeroU32::new(dt.format.n_channels() as u32 * width as u32),
                     rows_per_image: NonZeroU32::new(height as u32),
                 },
                 size,
@@ -295,7 +303,7 @@ impl LightSpace {
                 dt.data,
                 ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: NonZeroU32::new(4 * width as u32),
+                    bytes_per_row: NonZeroU32::new(dt.format.n_channels() as u32 * width as u32),
                     rows_per_image: NonZeroU32::new(height as u32),
                 },
                 size,
@@ -378,7 +386,7 @@ impl LightSpace {
             data.data,
             ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(4 * width as u32),
+                bytes_per_row: NonZeroU32::new(data.format.n_channels() as u32 * width as u32),
                 rows_per_image: NonZeroU32::new(height as u32),
             },
             size,
@@ -434,9 +442,9 @@ impl SpaceModel {
 
                 model.to_cols_array_2d()
             },
-            col: space.col,
+            col: space.col.0,
             flags: match space.data.format {
-                Format::Rgba => 0,
+                Format::Srgba | Format::Rgba => 0,
                 Format::Gray => 1,
             },
         }

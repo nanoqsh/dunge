@@ -2,6 +2,7 @@ use {
     crate::{
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
+        color::IntoLinear,
         error::*,
         framebuffer::FrameFilter,
         handles::*,
@@ -253,49 +254,65 @@ impl Context {
     ///
     /// # Errors
     /// Returns the [`TooManySources`] when trying to create too many light sources.
-    pub fn create_light<I>(
+    pub fn create_light<C, I, S>(
         &mut self,
-        ambient: [f32; 3],
+        ambient: C,
         srcs: I,
     ) -> Result<LightHandle, TooManySources>
     where
-        I: IntoIterator<Item = Source>,
+        C: IntoLinear<3>,
+        I: IntoIterator<Item = Source<S>>,
+        S: IntoLinear<3>,
     {
         self.sources.clear();
-        let models = srcs.into_iter().map(SourceModel::new);
+        let models = srcs
+            .into_iter()
+            .map(|src| SourceModel::new(src.into_linear_f32()));
+
         self.sources.extend(models);
-        self.render.create_light(ambient, &self.sources)
+        self.render
+            .create_light(ambient.into_linear().into_f32(), &self.sources)
     }
 
     /// Updates the color of the ambient light.
     ///
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
-    pub fn update_ambient(
+    pub fn update_ambient<C>(
         &mut self,
         handle: LightHandle,
-        ambient: [f32; 3],
-    ) -> Result<(), ResourceNotFound> {
-        self.render.update_ambient(handle, ambient)
+        ambient: C,
+    ) -> Result<(), ResourceNotFound>
+    where
+        C: IntoLinear<3>,
+    {
+        self.render
+            .update_ambient(handle, ambient.into_linear().into_f32())
     }
 
     /// Updates the light.
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_light<I>(
+    pub fn update_light<C, I, S>(
         &mut self,
         handle: LightHandle,
-        ambient: [f32; 3],
+        ambient: C,
         srcs: I,
     ) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Source>,
+        C: IntoLinear<3>,
+        I: IntoIterator<Item = Source<S>>,
+        S: IntoLinear<3>,
     {
         self.sources.clear();
-        let models = srcs.into_iter().map(SourceModel::new);
+        let models = srcs
+            .into_iter()
+            .map(|src| SourceModel::new(src.into_linear_f32()));
+
         self.sources.extend(models);
-        self.render.update_light(handle, ambient, &self.sources)
+        self.render
+            .update_light(handle, ambient.into_linear().into_f32(), &self.sources)
     }
 
     /// Updates nth source in the light.
@@ -304,14 +321,17 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_nth_light(
+    pub fn update_nth_light<S>(
         &mut self,
         handle: LightHandle,
         n: usize,
-        src: Source,
-    ) -> Result<(), Error> {
+        src: Source<S>,
+    ) -> Result<(), Error>
+    where
+        S: IntoLinear<3>,
+    {
         self.render
-            .update_nth_light(handle, n, SourceModel::new(src))
+            .update_nth_light(handle, n, SourceModel::new(src.into_linear_f32()))
     }
 
     /// Deletes the light.
@@ -326,10 +346,11 @@ impl Context {
     ///
     /// # Errors
     /// Returns the [`TooManySpaces`] when trying to create too many light sources.
-    pub fn create_space<'a, I, M>(&mut self, spaces: I) -> Result<SpaceHandle, TooManySpaces>
+    pub fn create_space<'a, I, M, C>(&mut self, spaces: I) -> Result<SpaceHandle, TooManySpaces>
     where
-        I: IntoIterator<Item = Space<'a, M>>,
+        I: IntoIterator<Item = Space<'a, M, C>>,
         M: IntoMat,
+        C: IntoLinear<3>,
     {
         use std::mem;
 
@@ -339,7 +360,8 @@ impl Context {
         let mut space_data = mem::take(&mut self.space_data);
         for space in spaces {
             space_data.push(space.data);
-            self.spaces.push(SpaceModel::new(&space.into_mat()));
+            self.spaces
+                .push(SpaceModel::new(&space.into_mat_and_linear_f32()));
         }
 
         let space = self.render.create_space(&self.spaces, &space_data);
@@ -354,10 +376,11 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_space<'a, I, M>(&mut self, handle: SpaceHandle, spaces: I) -> Result<(), Error>
+    pub fn update_space<'a, I, M, C>(&mut self, handle: SpaceHandle, spaces: I) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Space<'a, M>>,
+        I: IntoIterator<Item = Space<'a, M, C>>,
         M: IntoMat,
+        C: IntoLinear<3>,
     {
         use std::mem;
 
@@ -367,7 +390,8 @@ impl Context {
         let mut space_data = mem::take(&mut self.space_data);
         for space in spaces {
             space_data.push(space.data);
-            self.spaces.push(SpaceModel::new(&space.into_mat()));
+            self.spaces
+                .push(SpaceModel::new(&space.into_mat_and_linear_f32()));
         }
 
         let updated = self.render.update_space(handle, &self.spaces, &space_data);
@@ -384,17 +408,18 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_nth_space<M>(
+    pub fn update_nth_space<M, C>(
         &mut self,
         handle: SpaceHandle,
         n: usize,
-        space: Space<M>,
+        space: Space<M, C>,
     ) -> Result<(), Error>
     where
         M: IntoMat,
+        C: IntoLinear<3>,
     {
         self.render
-            .update_nth_space(handle, n, SpaceModel::new(&space.into_mat()))
+            .update_nth_space(handle, n, SpaceModel::new(&space.into_mat_and_linear_f32()))
     }
 
     /// Updates nth color in the light space.
@@ -403,13 +428,17 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_nth_space_color(
+    pub fn update_nth_space_color<C>(
         &mut self,
         handle: SpaceHandle,
         n: usize,
-        col: [f32; 3],
-    ) -> Result<(), Error> {
-        self.render.update_nth_space_color(handle, n, col)
+        color: C,
+    ) -> Result<(), Error>
+    where
+        C: IntoLinear<3>,
+    {
+        self.render
+            .update_nth_space_color(handle, n, color.into_linear().into_f32())
     }
 
     /// Updates nth data in the light space.

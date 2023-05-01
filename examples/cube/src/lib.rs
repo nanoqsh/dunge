@@ -1,6 +1,6 @@
 use {
     dunge::{
-        color::Srgba,
+        color::Standard,
         handles::*,
         input::{Input, Key},
         transform::Position,
@@ -114,7 +114,7 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        let color = Srgba([46, 34, 47, 255]);
+        let color = Standard([46, 34, 47, 255]);
 
         match self.state {
             State::Texture => {

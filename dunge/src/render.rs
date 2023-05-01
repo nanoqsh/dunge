@@ -2,6 +2,7 @@ use {
     crate::{
         bind_groups::Layouts,
         camera::{Camera, Projection, View},
+        color::Linear,
         context::Screenshot,
         error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
         frame::Frame,
@@ -277,10 +278,10 @@ impl Render {
 
     pub fn create_light(
         &mut self,
-        ambient: [f32; 3],
+        ambient: Linear<f32, 3>,
         srcs: &[SourceModel],
     ) -> Result<LightHandle, TooManySources> {
-        let light = Light::new(ambient, srcs, &self.device, &self.layouts.lights)?;
+        let light = Light::new(ambient.0, srcs, &self.device, &self.layouts.lights)?;
         let id = self.resources.lights.insert(light);
         Ok(LightHandle(id))
     }
@@ -288,10 +289,10 @@ impl Render {
     pub fn update_ambient(
         &mut self,
         handle: LightHandle,
-        ambient: [f32; 3],
+        ambient: Linear<f32, 3>,
     ) -> Result<(), ResourceNotFound> {
         let light = self.resources.lights.get(handle.0)?;
-        light.update_ambient(ambient, &self.queue);
+        light.update_ambient(ambient.0, &self.queue);
 
         Ok(())
     }
@@ -299,12 +300,14 @@ impl Render {
     pub fn update_light(
         &mut self,
         handle: LightHandle,
-        ambient: [f32; 3],
+        ambient: Linear<f32, 3>,
         srcs: &[SourceModel],
     ) -> Result<(), Error> {
         let light = self.resources.lights.get_mut(handle.0)?;
-        if !light.update_sources(srcs, &self.queue) {
-            *light = Light::new(ambient, srcs, &self.device, &self.layouts.lights)?;
+        if light.update_sources(srcs, &self.queue) {
+            light.update_ambient(ambient.0, &self.queue);
+        } else {
+            *light = Light::new(ambient.0, srcs, &self.device, &self.layouts.lights)?;
         }
 
         Ok(())
@@ -366,10 +369,10 @@ impl Render {
         &mut self,
         handle: SpaceHandle,
         n: usize,
-        col: [f32; 3],
+        color: Linear<f32, 3>,
     ) -> Result<(), Error> {
         let ls = self.resources.spaces.get_mut(handle.0)?;
-        ls.update_nth_color(n, col, &self.queue)?;
+        ls.update_nth_color(n, color.0, &self.queue)?;
 
         Ok(())
     }

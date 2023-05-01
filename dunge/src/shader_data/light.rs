@@ -1,5 +1,6 @@
 use {
     crate::{
+        color::{IntoLinear, Linear},
         error::{SourceNotFound, TooManySources},
         layout::Plain,
         shader,
@@ -8,13 +9,28 @@ use {
 };
 
 /// Parameters of a light source.
-#[derive(Clone, Copy, Default)]
-pub struct Source {
+#[derive(Clone, Copy)]
+pub struct Source<C = Linear<f32, 3>> {
     pub pos: [f32; 3],
     pub rad: f32,
-    pub col: [f32; 3],
+    pub col: C,
     pub mode: LightMode,
     pub kind: LightKind,
+}
+
+impl<C> Source<C> {
+    pub(crate) fn into_linear_f32(self) -> Source
+    where
+        C: IntoLinear<3>,
+    {
+        Source {
+            pos: self.pos,
+            rad: self.rad,
+            col: self.col.into_linear().into_f32(),
+            mode: self.mode,
+            kind: self.kind,
+        }
+    }
 }
 
 /// The light mode.
@@ -163,7 +179,7 @@ impl SourceModel {
         Self {
             pos: src.pos,
             rad: src.rad,
-            col: src.col,
+            col: src.col.0,
             flags: {
                 let sharp = match src.mode {
                     LightMode::Smooth => 0,
