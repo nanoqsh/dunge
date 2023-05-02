@@ -2,14 +2,15 @@ mod models;
 
 use {
     dunge::{
-        color::Srgba,
+        color::{Linear, Standard},
         handles::*,
         input::{Input, Key},
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
-        Compare, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        Orthographic, PixelSize, Source, TextureData, View, WindowMode,
+        Compare, Context, Error, Frame, FrameParameters, InitialState, LightKind, LightMode, Loop,
+        MeshData, Orthographic, PixelSize, Source, Space, SpaceData, SpaceFormat, TextureData,
+        View, WindowMode,
     },
     utils::Camera,
 };
@@ -46,6 +47,7 @@ struct App {
     models: Vec<Model>,
     cubes: Vec<Cube>,
     light: LightHandle,
+    lightspace: SpaceHandle,
     view: ViewHandle,
     camera: Camera,
     time: f32,
@@ -53,10 +55,9 @@ struct App {
 }
 
 impl App {
-    #[allow(clippy::too_many_lines)]
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X2,
+            pixel_size: PixelSize::X1,
             ..Default::default()
         });
 
@@ -72,6 +73,33 @@ impl App {
             let image = utils::read_png(include_bytes!("sprites.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
             context.create_texture(data)
+        };
+
+        // Create the light space
+        let lightspace = {
+            let layers = [
+                utils::read_png(include_bytes!("lightmap_side.png")),
+                utils::read_png(include_bytes!("lightmap_center.png")),
+                utils::read_png(include_bytes!("lightmap_side.png")),
+            ];
+
+            let mut map = vec![];
+            for layer in &layers {
+                map.extend_from_slice(layer);
+            }
+
+            let size = {
+                let (width, height) = layers[0].dimensions();
+                (width as u8, height as u8, layers.len() as u8)
+            };
+
+            let space = Space {
+                data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
+                transform: Transform::default(),
+                col: Linear([2.5; 3]),
+            };
+
+            context.create_space([space]).expect("create space")
         };
 
         // Create models
@@ -93,8 +121,8 @@ impl App {
                 [V, W, L, F, L, F, F, W, W],
                 [0, W, L, W, L, L, L, W, 0],
                 [0, V, L, L, L, F, L, W, 0],
-                [0, V, W, W, F, W, W, V, 0],
-                [0, 0, 0, V, L, V, 0, 0, 0],
+                [0, V, W, W, L, W, W, V, 0],
+                [0, 0, 0, V, F, V, 0, 0, 0],
             ];
 
             let meshes = [
@@ -191,7 +219,11 @@ impl App {
         };
 
         // Crate the light
-        let light = context.create_light([0.; 3], []).expect("create light");
+        let light = {
+            const EMPTY: [Source; 0] = [];
+
+            context.create_light((), EMPTY).expect("create light")
+        };
 
         // Create the view
         let camera = Camera::default();
@@ -204,6 +236,7 @@ impl App {
             models,
             cubes,
             light,
+            lightspace,
             view,
             camera,
             time: 0.,
@@ -219,10 +252,10 @@ impl Loop for App {
         use {dunge::winit::window::Fullscreen, std::f32::consts::TAU};
 
         const SENSITIVITY: f32 = 0.01;
-        const AMBIENT_COLOR: [f32; 3] = [0.4; 3];
+        const AMBIENT_COLOR: Linear<f32, 3> = Linear([0.09; 3]);
         const LIGHTS_DISTANCE: f32 = 3.3;
         const LIGHTS_SPEED: f32 = 1.;
-        const INTENSITY: f32 = 2.;
+        const INTENSITY: f32 = 1.;
         const LIGHTS: [(f32, [f32; 3]); 3] = [
             (0., [INTENSITY, 0., 0.]),
             (TAU / 3., [0., INTENSITY, 0.]),
@@ -239,9 +272,10 @@ impl Loop for App {
                     step.cos() * LIGHTS_DISTANCE,
                 ]
             },
-            rad: 3.,
-            col,
-            ..Default::default()
+            rad: 2.,
+            col: Linear(col),
+            mode: LightMode::default(),
+            kind: LightKind::default(),
         };
 
         context.update_light(
@@ -279,7 +313,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let sprite_scale = 16.;
+        let sprite_scale = 8. * 6.;
         let view = View {
             proj: Orthographic {
                 width_factor: 1. / sprite_scale,
@@ -308,7 +342,7 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        const CLEAR_COLOR: Srgba<u8> = Srgba([46, 34, 47, 255]);
+        const CLEAR_COLOR: Standard<u8> = Standard([46, 34, 47, 255]);
 
         {
             let mut layer = frame
@@ -318,6 +352,7 @@ impl Loop for App {
                 .start();
 
             layer.bind_light(self.light)?;
+            layer.bind_space(self.lightspace)?;
             layer.bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;
             for model in &self.models {

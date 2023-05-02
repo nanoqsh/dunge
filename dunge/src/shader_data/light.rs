@@ -1,17 +1,39 @@
 use {
-    crate::{layout::Plain, r#loop::Error, shader},
+    crate::{
+        color::{IntoLinear, Linear},
+        error::{SourceNotFound, TooManySources},
+        layout::Plain,
+        shader,
+    },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
-#[derive(Clone, Copy, Default)]
-pub struct Source {
+/// Parameters of a light source.
+#[derive(Clone, Copy)]
+pub struct Source<C = Linear<f32, 3>> {
     pub pos: [f32; 3],
     pub rad: f32,
-    pub col: [f32; 3],
+    pub col: C,
     pub mode: LightMode,
     pub kind: LightKind,
 }
 
+impl<C> Source<C> {
+    pub(crate) fn into_linear(self) -> Source
+    where
+        C: IntoLinear<3>,
+    {
+        Source {
+            pos: self.pos,
+            rad: self.rad,
+            col: self.col.into_linear(),
+            mode: self.mode,
+            kind: self.kind,
+        }
+    }
+}
+
+/// The light mode.
 #[derive(Clone, Copy, Default)]
 pub enum LightMode {
     #[default]
@@ -19,6 +41,7 @@ pub enum LightMode {
     Sharp,
 }
 
+/// The light kind.
 #[derive(Clone, Copy, Default)]
 pub enum LightKind {
     #[default]
@@ -39,14 +62,14 @@ impl Light {
         srcs: &[SourceModel],
         device: &Device,
         layout: &BindGroupLayout,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, TooManySources> {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
         if srcs.len() > shader::MAX_N_SOURCES as usize {
-            return Err(Error::TooManySources);
+            return Err(TooManySources);
         }
 
         let ambient_buffer = {
@@ -116,11 +139,16 @@ impl Light {
         true
     }
 
-    pub fn update_nth(&self, n: usize, source: SourceModel, queue: &Queue) -> Result<(), Error> {
+    pub fn update_nth(
+        &self,
+        n: usize,
+        source: SourceModel,
+        queue: &Queue,
+    ) -> Result<(), SourceNotFound> {
         use std::mem;
 
         if n >= self.n_sources {
-            return Err(Error::SourceNotFound);
+            return Err(SourceNotFound);
         }
 
         queue.write_buffer(
@@ -151,7 +179,7 @@ impl SourceModel {
         Self {
             pos: src.pos,
             rad: src.rad,
-            col: src.col,
+            col: src.col.0,
             flags: {
                 let sharp = match src.mode {
                     LightMode::Smooth => 0,

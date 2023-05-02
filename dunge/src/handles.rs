@@ -53,5 +53,15 @@ pub struct ViewHandle(pub(crate) u32);
 pub struct LightHandle(pub(crate) u32);
 
 impl LightHandle {
+    // TODO: Maybe derive Default trait?
+    pub(crate) const DEFAULT: Self = Self(0);
+}
+
+/// A space handle. May be obtained from the [`create_space`](crate::Context::create_space) method.
+#[derive(Clone, Copy)]
+#[must_use]
+pub struct SpaceHandle(pub(crate) u32);
+
+impl SpaceHandle {
     pub(crate) const DEFAULT: Self = Self(0);
 }

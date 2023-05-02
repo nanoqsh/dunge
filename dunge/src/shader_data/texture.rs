@@ -6,6 +6,7 @@ use {
 
 /// A data struct for a texture creation.
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct Data<'a> {
     data: &'a [u8],
     size: (u32, u32),
@@ -14,16 +15,29 @@ pub struct Data<'a> {
 impl<'a> Data<'a> {
     /// Creates a new [`TextureData`](crate::TextureData).
     ///
-    /// Returns `Some` if a data matches with a size * 4 bytes,
-    /// otherwise returns `None`.
-    #[must_use]
-    pub fn new(data: &'a [u8], size @ (width, height): (u32, u32)) -> Option<Self> {
-        if data.len() == width as usize * height as usize * 4 {
-            Some(Self { data, size })
-        } else {
-            None
+    /// # Errors
+    /// See [`TextureError`](crate::TextureError) for detailed info.
+    pub const fn new(data: &'a [u8], size: (u32, u32)) -> Result<Self, Error> {
+        if data.is_empty() {
+            return Err(Error::EmptyData);
         }
+
+        let (width, height) = size;
+        if data.len() != width as usize * height as usize * 4 {
+            return Err(Error::SizeDoesNotMatch);
+        }
+
+        Ok(Self { data, size })
     }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    /// Returns when the data is empty.
+    EmptyData,
+
+    /// Returns when the data length doesn't match with size * number of channels,
+    SizeDoesNotMatch,
 }
 
 pub(crate) struct Texture {

@@ -1,10 +1,10 @@
 use {
     crate::{
         color::Linear,
+        error::ResourceNotFound,
         handles::LayerHandle,
         layer::{Builder, Layer},
         pipeline::Pipeline,
-        r#loop::Error,
         render::Render,
         shader,
         vertex::Vertex,
@@ -107,11 +107,11 @@ impl<'d> Frame<'d> {
     /// Starts a [layer](crate::handles::LayerHandle).
     ///
     /// # Errors
-    /// Returns [`Error::ResourceNotFound`] if given instance handler was deleted.
+    /// Returns [`Error::NotFound`] if given instance handler was deleted.
     pub fn layer<V, T>(
         &mut self,
         handle: LayerHandle<V, T>,
-    ) -> Result<Builder<'_, 'd, V, T>, Error> {
+    ) -> Result<Builder<'_, 'd, V, T>, ResourceNotFound> {
         Ok(Builder::new(
             self,
             self.render.resources().layers.get(handle.id())?,
@@ -122,7 +122,7 @@ impl<'d> Frame<'d> {
     pub(crate) fn start_layer<'l, V, T>(
         &'l mut self,
         pipeline: &'l Pipeline,
-        clear_color: Option<Linear<f64>>,
+        clear_color: Option<Linear<f32>>,
         clear_depth: bool,
     ) -> Layer<V, T>
     where
@@ -143,7 +143,12 @@ impl<'d> Frame<'d> {
                     resolve_target: None,
                     ops: Operations {
                         load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
-                            LoadOp::Clear(Color { r, g, b, a })
+                            LoadOp::Clear(Color {
+                                r: r as f64,
+                                g: g as f64,
+                                b: b as f64,
+                                a: a as f64,
+                            })
                         }),
                         store: true,
                     },

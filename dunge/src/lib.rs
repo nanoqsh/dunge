@@ -12,6 +12,7 @@ mod framebuffer {
     pub(crate) use self::buffer::Framebuffer;
     pub use self::render_frame::FrameFilter;
 }
+pub mod error;
 pub mod handles;
 mod instance;
 mod layer;
@@ -26,17 +27,24 @@ mod shader_data {
     mod camera;
     mod light;
     mod post;
+    mod space;
+    mod texture;
 
     pub(crate) use self::{
         camera::CameraUniform,
         light::{Light, SourceModel},
         post::PostShaderData,
+        space::{LightSpace, SpaceModel},
+        texture::Texture,
     };
 
-    pub use self::light::{LightKind, LightMode, Source};
+    pub use self::{
+        light::{LightKind, LightMode, Source},
+        space::{Data as SpaceData, Format as SpaceFormat, Space},
+        texture::{Data as TextureData, Error as TextureError},
+    };
 }
 mod storage;
-mod texture;
 mod time;
 pub mod topology;
 pub mod transform;
@@ -58,14 +66,16 @@ pub use {
         camera::{Orthographic, Perspective, View},
         canvas::{Canvas, InitialState, WindowMode},
         context::{Context, FrameParameters, Limits, PixelSize},
+        error::Error,
         frame::Frame,
         framebuffer::FrameFilter,
         layer::{Builder as LayerBuilder, Layer},
         mesh::Data as MeshData,
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
-        r#loop::{Error, Loop},
-        shader_data::{LightKind, LightMode, Source},
-        texture::Data as TextureData,
+        r#loop::Loop,
+        shader_data::{
+            LightKind, LightMode, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
+        },
     },
     winit,
 };

@@ -1,7 +1,7 @@
 pub use winit::event::VirtualKeyCode as Key;
 
 use {
-    crate::{context::Context, frame::Frame},
+    crate::{context::Context, error::Error, frame::Frame},
     std::{fmt, iter, slice},
 };
 
@@ -68,22 +68,6 @@ where
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         self.as_ref().render(frame)
     }
-}
-
-/// The main loop error.
-#[derive(Debug)]
-pub enum Error {
-    /// Returns when a rendered resourse not found.
-    ResourceNotFound,
-
-    /// Returns when a selected light source resourse not found.
-    SourceNotFound,
-
-    /// Returns when trying to create too many light sources.
-    TooManySources,
-
-    /// Returns when an instance of rendered resourse is not set.
-    InstanceNotSet,
 }
 
 /// The user input data.
