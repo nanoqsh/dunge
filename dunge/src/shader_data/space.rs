@@ -21,7 +21,7 @@ pub struct Space<'a, M = Mat, C = Linear<f32, 3>> {
 }
 
 impl<'a, M, C> Space<'a, M, C> {
-    pub(crate) fn into_mat_and_linear_f32(self) -> Space<'a>
+    pub(crate) fn into_mat_and_linear(self) -> Space<'a>
     where
         M: IntoMat,
         C: IntoLinear<3>,
@@ -29,7 +29,7 @@ impl<'a, M, C> Space<'a, M, C> {
         Space {
             data: self.data,
             transform: self.transform.into_mat(),
-            col: self.col.into_linear().into_f32(),
+            col: self.col.into_linear(),
         }
     }
 }

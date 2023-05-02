@@ -19,14 +19,14 @@ pub struct Source<C = Linear<f32, 3>> {
 }
 
 impl<C> Source<C> {
-    pub(crate) fn into_linear_f32(self) -> Source
+    pub(crate) fn into_linear(self) -> Source
     where
         C: IntoLinear<3>,
     {
         Source {
             pos: self.pos,
             rad: self.rad,
-            col: self.col.into_linear().into_f32(),
+            col: self.col.into_linear(),
             mode: self.mode,
             kind: self.kind,
         }

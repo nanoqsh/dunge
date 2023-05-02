@@ -234,7 +234,7 @@ impl<T> Layer<'_, FlatVertex, T> {
 pub struct Builder<'l, 'd, V, T> {
     frame: &'l mut Frame<'d>,
     pipeline: &'d Pipeline,
-    clear_color: Option<Linear<f64>>,
+    clear_color: Option<Linear<f32>>,
     clear_depth: bool,
     vertex_type: PhantomData<(V, T)>,
 }

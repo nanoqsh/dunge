@@ -122,7 +122,7 @@ impl<'d> Frame<'d> {
     pub(crate) fn start_layer<'l, V, T>(
         &'l mut self,
         pipeline: &'l Pipeline,
-        clear_color: Option<Linear<f64>>,
+        clear_color: Option<Linear<f32>>,
         clear_depth: bool,
     ) -> Layer<V, T>
     where
@@ -143,7 +143,12 @@ impl<'d> Frame<'d> {
                     resolve_target: None,
                     ops: Operations {
                         load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
-                            LoadOp::Clear(Color { r, g, b, a })
+                            LoadOp::Clear(Color {
+                                r: r as f64,
+                                g: g as f64,
+                                b: b as f64,
+                                a: a as f64,
+                            })
                         }),
                         store: true,
                     },

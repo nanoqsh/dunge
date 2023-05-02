@@ -267,11 +267,11 @@ impl Context {
         self.sources.clear();
         let models = srcs
             .into_iter()
-            .map(|src| SourceModel::new(src.into_linear_f32()));
+            .map(|src| SourceModel::new(src.into_linear()));
 
         self.sources.extend(models);
         self.render
-            .create_light(ambient.into_linear().into_f32(), &self.sources)
+            .create_light(ambient.into_linear(), &self.sources)
     }
 
     /// Updates the color of the ambient light.
@@ -286,8 +286,7 @@ impl Context {
     where
         C: IntoLinear<3>,
     {
-        self.render
-            .update_ambient(handle, ambient.into_linear().into_f32())
+        self.render.update_ambient(handle, ambient.into_linear())
     }
 
     /// Updates the light.
@@ -308,11 +307,11 @@ impl Context {
         self.sources.clear();
         let models = srcs
             .into_iter()
-            .map(|src| SourceModel::new(src.into_linear_f32()));
+            .map(|src| SourceModel::new(src.into_linear()));
 
         self.sources.extend(models);
         self.render
-            .update_light(handle, ambient.into_linear().into_f32(), &self.sources)
+            .update_light(handle, ambient.into_linear(), &self.sources)
     }
 
     /// Updates nth source in the light.
@@ -331,7 +330,7 @@ impl Context {
         S: IntoLinear<3>,
     {
         self.render
-            .update_nth_light(handle, n, SourceModel::new(src.into_linear_f32()))
+            .update_nth_light(handle, n, SourceModel::new(src.into_linear()))
     }
 
     /// Deletes the light.
@@ -361,7 +360,7 @@ impl Context {
         for space in spaces {
             space_data.push(space.data);
             self.spaces
-                .push(SpaceModel::new(&space.into_mat_and_linear_f32()));
+                .push(SpaceModel::new(&space.into_mat_and_linear()));
         }
 
         let space = self.render.create_space(&self.spaces, &space_data);
@@ -391,7 +390,7 @@ impl Context {
         for space in spaces {
             space_data.push(space.data);
             self.spaces
-                .push(SpaceModel::new(&space.into_mat_and_linear_f32()));
+                .push(SpaceModel::new(&space.into_mat_and_linear()));
         }
 
         let updated = self.render.update_space(handle, &self.spaces, &space_data);
@@ -419,7 +418,7 @@ impl Context {
         C: IntoLinear<3>,
     {
         self.render
-            .update_nth_space(handle, n, SpaceModel::new(&space.into_mat_and_linear_f32()))
+            .update_nth_space(handle, n, SpaceModel::new(&space.into_mat_and_linear()))
     }
 
     /// Updates nth color in the light space.
@@ -438,7 +437,7 @@ impl Context {
         C: IntoLinear<3>,
     {
         self.render
-            .update_nth_space_color(handle, n, color.into_linear().into_f32())
+            .update_nth_space_color(handle, n, color.into_linear())
     }
 
     /// Updates nth data in the light space.
