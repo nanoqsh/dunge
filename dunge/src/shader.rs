@@ -50,12 +50,14 @@ impl Shader {
     pub const fn source(self) -> &'static str {
         match self {
             Self::Color => concat!(
+                include_str!("shaders/size.wgsl"),
                 include_str!("shaders/light.wgsl"),
                 include_str!("shaders/color.wgsl"),
             ),
             Self::Flat => include_str!("shaders/flat.wgsl"),
             Self::Post => include_str!("shaders/post.wgsl"),
             Self::Textured => concat!(
+                include_str!("shaders/size.wgsl"),
                 include_str!("shaders/light.wgsl"),
                 include_str!("shaders/textured.wgsl"),
             ),

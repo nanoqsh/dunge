@@ -8,9 +8,9 @@ use {
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
-        Compare, Context, Error, Frame, FrameParameters, InitialState, LightKind, LightMode, Loop,
-        MeshData, Orthographic, PixelSize, Source, Space, SpaceData, SpaceFormat, TextureData,
-        View, WindowMode,
+        CanvasConfig, Compare, Context, Error, Frame, FrameParameters, InitialState, LightKind,
+        LightMode, Loop, MeshData, Orthographic, PixelSize, Source, Space, SpaceData, SpaceFormat,
+        TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -25,7 +25,8 @@ fn main() {
         show_cursor: false,
         ..Default::default()
     })
-    .run_blocking(App::new);
+    .run_blocking(CanvasConfig::default(), App::new)
+    .expect("create canvas");
 }
 
 struct Model {

@@ -41,14 +41,14 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
 }
 
 @group(1) @binding(0)
-var<uniform> ambient: vec3<f32>;
+var<uniform> ambient: vec4<f32>;
 @group(1) @binding(1)
 var<uniform> sources: array<Source, 64>;
 @group(1) @binding(2)
-var<uniform> n_sources: u32;
+var<uniform> n_sources: Size;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let light = ambient + diffuse_light(in.world);
+    let light = ambient.rgb + diffuse_light(in.world);
     return vec4(light * in.col, 1.);
 }

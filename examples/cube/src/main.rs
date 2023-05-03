@@ -1,7 +1,7 @@
 fn main() {
     use {
         cube::App,
-        dunge::{InitialState, WindowMode},
+        dunge::{CanvasConfig, InitialState, WindowMode},
     };
 
     env_logger::init();
@@ -12,5 +12,6 @@ fn main() {
         },
         ..Default::default()
     })
-    .run_blocking(App::new);
+    .run_blocking(CanvasConfig::default(), App::new)
+    .expect("create canvas");
 }

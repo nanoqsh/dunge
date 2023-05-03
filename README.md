@@ -30,17 +30,19 @@ Then, let's create a new window to draw something in it:
 ```rust
 // Import some types
 use dunge::{
-    color::Srgba,
+    color::Standard,
     handles::*,
     input::{Input, Key},
     transform::Position,
     vertex::ColorVertex,
-    Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View, WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View,
+    WindowMode,
 };
 
 fn main() {
     dunge::make_window(InitialState::default())
-        .run_blocking(App::new);
+        .run_blocking(CanvasConfig::default(), App::new)
+        .expect("create canvas");
 }
 ```
 

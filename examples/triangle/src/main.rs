@@ -4,7 +4,8 @@ use dunge::{
     input::{Input, Key},
     transform::Position,
     vertex::ColorVertex,
-    Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View, WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View,
+    WindowMode,
 };
 
 fn main() {
@@ -17,7 +18,8 @@ fn main() {
         },
         ..Default::default()
     })
-    .run_blocking(App::new);
+    .run_blocking(CanvasConfig::default(), App::new)
+    .expect("create canvas");
 }
 
 struct App {

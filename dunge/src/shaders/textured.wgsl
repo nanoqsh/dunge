@@ -42,7 +42,7 @@ fn vs_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
     out.map = vert.map;
     out.world = world.xyz;
 
-    switch n_spaces {
+    switch n_spaces.n {
         case 0u {}
         case 1u {
             out.space0 = (spaces[0].model * world).xzy;
@@ -74,11 +74,11 @@ var tdiff: texture_2d<f32>;
 var sdiff: sampler;
 
 @group(2) @binding(0)
-var<uniform> ambient: vec3<f32>;
+var<uniform> ambient: vec4<f32>;
 @group(2) @binding(1)
 var<uniform> sources: array<Source, 64>;
 @group(2) @binding(2)
-var<uniform> n_sources: u32;
+var<uniform> n_sources: Size;
 
 struct Space {
     model: mat4x4<f32>,
@@ -89,7 +89,7 @@ struct Space {
 @group(3) @binding(0)
 var<uniform> spaces: array<Space, 4>;
 @group(3) @binding(1)
-var<uniform> n_spaces: u32;
+var<uniform> n_spaces: Size;
 @group(3) @binding(2)
 var space0_tdiff: texture_3d<f32>;
 @group(3) @binding(3)
@@ -109,7 +109,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     var space = vec3(0.0);
-    switch n_spaces {
+    switch n_spaces.n {
         case 0u {}
         case 1u {
             var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0);
@@ -188,6 +188,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         default {}
     }
     
-    let light = ambient + diffuse_light(in.world) + space;
+    let light = ambient.rgb + diffuse_light(in.world) + space;
     return vec4(light * out.rgb, out.a);
 }

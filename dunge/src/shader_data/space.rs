@@ -130,10 +130,10 @@ impl LightSpace {
         };
 
         let n_spaces_buffer = {
-            let len = spaces.len() as u32;
+            let len_buffer = [spaces.len() as u32, 0, 0, 0, 0, 0, 0, 0];
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("n spaces buffer"),
-                contents: len.as_bytes(),
+                contents: len_buffer.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };

@@ -64,7 +64,10 @@ pub use crate::canvas::from_element;
 pub use {
     crate::{
         camera::{Orthographic, Perspective, View},
-        canvas::{Canvas, InitialState, WindowMode},
+        canvas::{
+            Backend, BackendSelector, Canvas, CanvasConfig, Device, Error as CanvasError,
+            InitialState, WindowMode,
+        },
         context::{Context, FrameParameters, Limits, PixelSize},
         error::Error,
         frame::Frame,

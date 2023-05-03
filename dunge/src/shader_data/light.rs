@@ -73,28 +73,30 @@ impl Light {
         }
 
         let ambient_buffer = {
+            let [r, g, b] = ambient;
+            let ambient_buffer = [r, g, b, 0.];
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("ambient buffer"),
-                contents: ambient.as_bytes(),
+                contents: ambient_buffer.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
 
         let sources_buffer = {
-            let default = [SourceModel::default()];
-            let uniform = if srcs.is_empty() { &default } else { srcs };
+            let mut buf = Box::new([SourceModel::default(); 64]);
+            buf[..srcs.len()].copy_from_slice(srcs);
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("sources buffer"),
-                contents: uniform.as_bytes(),
+                contents: buf.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
 
         let n_sources_buffer = {
-            let len = srcs.len() as u32;
+            let len_buffer = [srcs.len() as u32, 0, 0, 0, 0, 0, 0, 0];
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("n sources buffer"),
-                contents: len.as_bytes(),
+                contents: len_buffer.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };

@@ -6,7 +6,7 @@ use {
         screen::Screen,
         time::Time,
     },
-    std::{num::NonZeroU32, time::Duration},
+    std::{convert::Infallible, num::NonZeroU32, time::Duration},
     winit::{
         event_loop::EventLoop,
         window::{Window, WindowBuilder},
@@ -22,12 +22,12 @@ pub struct Canvas {
 impl Canvas {
     /// Calls [`run`](crate::Canvas::run) but blocking instead of async.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn run_blocking<M, L>(self, make_loop: M) -> !
+    pub fn run_blocking<M, L>(self, config: CanvasConfig, make_loop: M) -> Result<Infallible, Error>
     where
         M: FnOnce(&mut Context) -> L,
         L: Loop + 'static,
     {
-        pollster::block_on(self.run(make_loop))
+        pollster::block_on(self.run(config, make_loop))
     }
 
     /// Runs the main loop.
@@ -37,7 +37,11 @@ impl Canvas {
     /// The `make_loop` needs to return an object which
     /// implements the [`Loop`] trait.
     #[allow(clippy::too_many_lines)]
-    pub async fn run<M, L>(self, make_loop: M) -> !
+    pub async fn run<M, L>(
+        self,
+        config: CanvasConfig<'_>,
+        make_loop: M,
+    ) -> Result<Infallible, Error>
     where
         M: FnOnce(&mut Context) -> L,
         L: Loop + 'static,
@@ -45,7 +49,7 @@ impl Canvas {
         let Self { event_loop, window } = self;
 
         // Create the render
-        let mut render = Render::new(&window).await;
+        let mut render = Render::new(&window, config.backend_selector).await?;
 
         // Initial resize
         render.set_screen({
@@ -220,6 +224,11 @@ impl Canvas {
     }
 }
 
+#[derive(Debug)]
+pub enum Error {
+    FailedBackendSelection,
+}
+
 pub(crate) enum CanvasEvent {
     Close,
 }
@@ -315,4 +324,38 @@ pub fn from_element(id: &str) -> Canvas {
     el.append_child(&canvas).expect("append child");
 
     Canvas { event_loop, window }
+}
+
+#[derive(Default)]
+pub struct CanvasConfig<'a> {
+    pub backend_selector: BackendSelector<'a>,
+}
+
+#[derive(Default)]
+pub enum BackendSelector<'a> {
+    #[default]
+    Auto,
+    Callback(&'a mut dyn FnMut(Vec<SelectorEntry>) -> usize),
+}
+
+pub struct SelectorEntry {
+    pub name: String,
+    pub backend: Backend,
+    pub device: Device,
+}
+
+pub enum Backend {
+    Gl,
+    Vulkan,
+    Dx12,
+    Dx11,
+    Metal,
+    WebGpu,
+}
+
+pub enum Device {
+    IntegratedGpu,
+    DiscreteGpu,
+    VirtualGpu,
+    Cpu,
 }

@@ -2,7 +2,7 @@
 members = [
     "dunge",
     "examples/cube",
-    # "examples/cube_wasm",
+    "examples/cube_wasm",
     "examples/scene",
     "examples/triangle",
 ]
