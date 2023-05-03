@@ -5,16 +5,15 @@ struct Source {
     flags: u32,
 }
 
-// TODO: Refactor to this type:
-// struct Sources {
-//     len: u32,
-//     sources: array<Source, 64>,
-// }
+struct Sources {
+    data: array<Source, 64>,
+    len: u32,
+}
 
 fn diffuse_light(world: vec3<f32>) -> vec3<f32> {
     var diffuse = vec3(0.);
-    for (var i = 0u; i < n_sources.n; i++) {
-        let source = sources[i];
+    for (var i = 0u; i < sources.len; i++) {
+        let source = sources.data[i];
 
         if world.x > source.pos.x - source.rad && world.x < source.pos.x + source.rad
         && world.y > source.pos.y - source.rad && world.y < source.pos.y + source.rad

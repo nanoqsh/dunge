@@ -120,20 +120,10 @@ impl LightSpace {
         }
 
         let space_buffer = {
-            let mut buf = [SpaceModel::default(); shader::MAX_N_SPACES as usize];
-            buf[..spaces.len()].copy_from_slice(spaces);
+            let buf = Spaces::from_slice(spaces);
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("space buffer"),
                 contents: buf.as_bytes(),
-                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            })
-        };
-
-        let n_spaces_buffer = {
-            let len_buffer = [spaces.len() as u32, 0, 0, 0, 0, 0, 0, 0];
-            device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("n spaces buffer"),
-                contents: len_buffer.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
@@ -239,10 +229,6 @@ impl LightSpace {
                 BindGroupEntry {
                     binding: shader::SPACES_BINDING,
                     resource: space_buffer.as_entire_binding(),
-                },
-                BindGroupEntry {
-                    binding: shader::N_SPACES_BINDING,
-                    resource: n_spaces_buffer.as_entire_binding(),
                 },
                 BindGroupEntry {
                     binding: shader::SPACE0_TDIFF_BINDING,
@@ -452,3 +438,22 @@ impl SpaceModel {
 }
 
 unsafe impl Plain for SpaceModel {}
+
+#[repr(C)]
+#[derive(Copy, Clone, Default)]
+pub(crate) struct Spaces {
+    data: [SpaceModel; 4],
+    len: u32,
+    pad: [u32; 3],
+}
+
+impl Spaces {
+    fn from_slice(slice: &[SpaceModel]) -> Self {
+        let mut spaces = Self::default();
+        spaces.data[..slice.len()].copy_from_slice(slice);
+        spaces.len = slice.len() as u32;
+        spaces
+    }
+}
+
+unsafe impl Plain for Spaces {}

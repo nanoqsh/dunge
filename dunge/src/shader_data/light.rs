@@ -83,20 +83,10 @@ impl Light {
         };
 
         let sources_buffer = {
-            let mut buf = Box::new([SourceModel::default(); 64]);
-            buf[..srcs.len()].copy_from_slice(srcs);
+            let buf = Box::new(Sources::from_slice(srcs));
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("sources buffer"),
                 contents: buf.as_bytes(),
-                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            })
-        };
-
-        let n_sources_buffer = {
-            let len_buffer = [srcs.len() as u32, 0, 0, 0, 0, 0, 0, 0];
-            device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("n sources buffer"),
-                contents: len_buffer.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
@@ -111,10 +101,6 @@ impl Light {
                 BindGroupEntry {
                     binding: shader::SOURCES_BINDING,
                     resource: sources_buffer.as_entire_binding(),
-                },
-                BindGroupEntry {
-                    binding: shader::N_SOURCES_BINDING,
-                    resource: n_sources_buffer.as_entire_binding(),
                 },
             ],
             label: Some("lights bind group"),
@@ -200,3 +186,32 @@ impl SourceModel {
 }
 
 unsafe impl Plain for SourceModel {}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub(crate) struct Sources {
+    data: [SourceModel; 64],
+    len: u32,
+    pad: [u32; 3],
+}
+
+impl Sources {
+    fn from_slice(slice: &[SourceModel]) -> Self {
+        let mut sources = Self::default();
+        sources.data[..slice.len()].copy_from_slice(slice);
+        sources.len = slice.len() as u32;
+        sources
+    }
+}
+
+impl Default for Sources {
+    fn default() -> Self {
+        Self {
+            data: [SourceModel::default(); 64],
+            len: 0,
+            pad: [0; 3],
+        }
+    }
+}
+
+unsafe impl Plain for Sources {}

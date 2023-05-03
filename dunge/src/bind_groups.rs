@@ -85,16 +85,6 @@ impl Layouts {
                         },
                         count: None,
                     },
-                    BindGroupLayoutEntry {
-                        binding: shader::N_SOURCES_BINDING,
-                        visibility: ShaderStages::FRAGMENT,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
                 ],
                 label: Some("lights bind group layout"),
             }),
@@ -102,16 +92,6 @@ impl Layouts {
                 entries: &[
                     BindGroupLayoutEntry {
                         binding: shader::SPACES_BINDING,
-                        visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    BindGroupLayoutEntry {
-                        binding: shader::N_SPACES_BINDING,
                         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
