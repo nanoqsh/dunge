@@ -7,6 +7,9 @@ pub enum Error {
     /// Returns when trying to create too many objects.
     TooManyObjects,
 
+    /// Returned when too large buffer is passed.
+    TooLargeSize,
+
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
 }
@@ -58,5 +61,15 @@ pub struct SpaceNotFound;
 impl From<SpaceNotFound> for Error {
     fn from(_: SpaceNotFound) -> Self {
         Self::NotFound
+    }
+}
+
+/// Returned when too large buffer is passed.
+#[derive(Debug)]
+pub struct TooLargeSize;
+
+impl From<TooLargeSize> for Error {
+    fn from(_: TooLargeSize) -> Self {
+        Self::TooLargeSize
     }
 }

@@ -1,7 +1,7 @@
 use {
     crate::{
         color::{IntoLinear, Linear},
-        error::{SpaceNotFound, TooManySpaces},
+        error::{Error, SpaceNotFound, TooLargeSize, TooManySpaces},
         layout::Plain,
         shader,
         shader_data::TextureError,
@@ -86,7 +86,7 @@ impl Format {
 pub(crate) struct LightSpace {
     space_buffer: Buffer,
     n_spaces: usize,
-    textures: Box<[Texture]>,
+    textures: Box<[SpaceTexture]>,
     bind_group: BindGroup,
 }
 
@@ -211,7 +211,11 @@ impl LightSpace {
             );
 
             *vo = View::Faithful(texture.create_view(&TextureViewDescriptor::default()));
-            textures.push(texture);
+
+            textures.push(SpaceTexture {
+                texture,
+                buf_size: dt.size,
+            });
         }
 
         let sampler = device.create_sampler(&SamplerDescriptor {
@@ -262,41 +266,44 @@ impl LightSpace {
         })
     }
 
-    pub fn update_spaces(&self, spaces: &[SpaceModel], data: &[Data], queue: &Queue) -> bool {
-        use {std::num::NonZeroU32, wgpu::*};
+    pub fn update_spaces(
+        &mut self,
+        spaces: &[SpaceModel],
+        data: &[Data],
+        queue: &Queue,
+    ) -> Result<(), Error> {
+        use std::mem;
 
-        if spaces.is_empty() || self.n_spaces != spaces.len() {
-            return false;
+        debug_assert_eq!(
+            spaces.len(),
+            data.len(),
+            "spaces and data lengths must be equal",
+        );
+
+        if spaces.len() > shader::MAX_N_SPACES as usize {
+            return Err(TooManySpaces.into());
         }
 
-        queue.write_buffer(&self.space_buffer, 0, spaces.as_bytes());
+        if !spaces.is_empty() {
+            queue.write_buffer(&self.space_buffer, 0, spaces.as_bytes());
+        }
 
-        for (dt, texture) in data.iter().zip(&self.textures[..]) {
-            let (width, height, depth) = dt.size;
-            let size = Extent3d {
-                width: width as u32,
-                height: height as u32,
-                depth_or_array_layers: depth as u32,
-            };
-
-            queue.write_texture(
-                ImageCopyTexture {
-                    texture,
-                    mip_level: 0,
-                    origin: Origin3d::ZERO,
-                    aspect: TextureAspect::All,
-                },
-                dt.data,
-                ImageDataLayout {
-                    offset: 0,
-                    bytes_per_row: NonZeroU32::new(dt.format.n_channels() as u32 * width as u32),
-                    rows_per_image: NonZeroU32::new(height as u32),
-                },
-                size,
+        if self.n_spaces != spaces.len() {
+            let len = spaces.len() as u32;
+            queue.write_buffer(
+                &self.space_buffer,
+                mem::size_of::<[SpaceModel; 4]>() as _,
+                len.as_bytes(),
             );
+
+            self.n_spaces = spaces.len();
         }
 
-        true
+        for (n, &dt) in (0..).zip(data) {
+            self.update_nth_data(n, dt, queue)?;
+        }
+
+        Ok(())
     }
 
     pub fn update_nth_space(
@@ -343,28 +350,22 @@ impl LightSpace {
         Ok(())
     }
 
-    pub fn update_nth_data(
-        &self,
-        n: usize,
-        data: Data,
-        queue: &Queue,
-    ) -> Result<(), SpaceNotFound> {
+    pub fn update_nth_data(&self, n: usize, data: Data, queue: &Queue) -> Result<(), Error> {
         use {std::num::NonZeroU32, wgpu::*};
 
-        if n >= self.n_spaces {
-            return Err(SpaceNotFound);
-        }
+        let Some(texture) = self.textures.get(n) else {
+            return Err(SpaceNotFound.into());
+        };
 
         let (width, height, depth) = data.size;
-        let size = Extent3d {
-            width: width as u32,
-            height: height as u32,
-            depth_or_array_layers: depth as u32,
-        };
+        let (buf_width, buf_height, buf_depth) = texture.buf_size;
+        if width > buf_width || height > buf_height || depth > buf_depth {
+            return Err(TooLargeSize.into());
+        }
 
         queue.write_texture(
             ImageCopyTexture {
-                texture: &self.textures[n],
+                texture: &texture.texture,
                 mip_level: 0,
                 origin: Origin3d::ZERO,
                 aspect: TextureAspect::All,
@@ -375,7 +376,11 @@ impl LightSpace {
                 bytes_per_row: NonZeroU32::new(data.format.n_channels() as u32 * width as u32),
                 rows_per_image: NonZeroU32::new(height as u32),
             },
-            size,
+            Extent3d {
+                width: width as u32,
+                height: height as u32,
+                depth_or_array_layers: depth as u32,
+            },
         );
 
         Ok(())
@@ -384,6 +389,11 @@ impl LightSpace {
     pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
+}
+
+struct SpaceTexture {
+    texture: Texture,
+    buf_size: (u8, u8, u8),
 }
 
 enum View {

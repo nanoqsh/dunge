@@ -20,20 +20,17 @@ fn diffuse_light(world: vec3<f32>) -> vec3<f32> {
         && world.z > source.pos.z - source.rad && world.z < source.pos.z + source.rad {
             let len = length(world - source.pos);
             if len < source.rad {
-                var sharp = 1.;
-                if (source.flags & 1u) == 0u {
-                    let e = len / source.rad;
-                    sharp -= e * e;
-                }
+                let e = 1. - (len / source.rad);
+                let intensity = e * e;
 
                 var gloom: vec3<f32>;
-                if (source.flags & 2u) == 0u {
+                if (source.flags & 1u) == 0u {
                     gloom = vec3(1.);
                 } else {
                     gloom = -ambient.rgb;
                 }
 
-                diffuse += gloom * sharp * source.col;
+                diffuse += intensity * gloom * source.col;
             }
         }
     }

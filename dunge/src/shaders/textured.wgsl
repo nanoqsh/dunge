@@ -109,11 +109,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    var space = vec3(0.0);
+    var space = vec3(0.);
     switch spaces.len {
         case 0u {}
         case 1u {
-            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0);
+            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.);
             if (spaces.data[0].flags & 1u) == 0u {
                 space = a.rgb * spaces.data[0].col;
             } else {
@@ -121,14 +121,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             }
         }
         case 2u {
-            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0);
+            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.);
             if (spaces.data[0].flags & 1u) == 0u {
                 space = a.rgb * spaces.data[0].col;
             } else {
                 space = a.rrr * spaces.data[0].col;
             }
 
-            var b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.0);
+            var b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.);
             if (spaces.data[1].flags & 1u) == 0u {
                 space = max(space, b.rgb * spaces.data[1].col);
             } else {
@@ -136,21 +136,21 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             }
         }
         case 3u {
-            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0);
+            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.);
             if (spaces.data[0].flags & 1u) == 0u {
                 space = a.rgb * spaces.data[0].col;
             } else {
                 space = a.rrr * spaces.data[0].col;
             }
 
-            var b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.0);
+            var b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.);
             if (spaces.data[1].flags & 1u) == 0u {
                 space = max(space, b.rgb * spaces.data[1].col);
             } else {
                 space = max(space, b.rrr * spaces.data[1].col);
             }
 
-            var c = textureSampleLevel(space2_tdiff, space_sdiff, in.space2, 0.0);
+            var c = textureSampleLevel(space2_tdiff, space_sdiff, in.space2, 0.);
             if (spaces.data[2].flags & 1u) == 0u {
                 space = max(space, c.rgb * spaces.data[2].col);
             } else {
@@ -158,28 +158,28 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             }
         }
         case 4u {
-            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.0);
+            var a = textureSampleLevel(space0_tdiff, space_sdiff, in.space0, 0.);
             if (spaces.data[0].flags & 1u) == 0u {
                 space = a.rgb * spaces.data[0].col;
             } else {
                 space = a.rrr * spaces.data[0].col;
             }
 
-            var b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.0);
+            var b = textureSampleLevel(space1_tdiff, space_sdiff, in.space1, 0.);
             if (spaces.data[1].flags & 1u) == 0u {
                 space = max(space, b.rgb * spaces.data[1].col);
             } else {
                 space = max(space, b.rrr * spaces.data[1].col);
             }
 
-            var c = textureSampleLevel(space2_tdiff, space_sdiff, in.space2, 0.0);
+            var c = textureSampleLevel(space2_tdiff, space_sdiff, in.space2, 0.);
             if (spaces.data[2].flags & 1u) == 0u {
                 space = max(space, c.rgb * spaces.data[2].col);
             } else {
                 space = max(space, c.rrr * spaces.data[2].col);
             }
 
-            var d = textureSampleLevel(space3_tdiff, space_sdiff, in.space3, 0.0);
+            var d = textureSampleLevel(space3_tdiff, space_sdiff, in.space3, 0.);
             if (spaces.data[3].flags & 1u) == 0u {
                 space = max(space, d.rgb * spaces.data[3].col);
             } else {

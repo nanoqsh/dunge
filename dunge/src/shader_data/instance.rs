@@ -1,5 +1,8 @@
 use {
-    crate::layout::{Layout, Plain},
+    crate::{
+        error::TooLargeSize,
+        layout::{Layout, Plain},
+    },
     wgpu::{Buffer, Device, Queue, VertexAttribute, VertexStepMode},
 };
 
@@ -25,9 +28,17 @@ impl Instance {
         }
     }
 
-    pub fn update_models(&mut self, models: &[InstanceModel], queue: &Queue) {
+    pub fn update_models(
+        &self,
+        models: &[InstanceModel],
+        queue: &Queue,
+    ) -> Result<(), TooLargeSize> {
+        if self.n_instances as usize != models.len() {
+            return Err(TooLargeSize);
+        }
+
         queue.write_buffer(&self.buffer, 0, models.as_bytes());
-        self.n_instances = models.len().try_into().expect("convert instances len");
+        Ok(())
     }
 
     pub fn buffer(&self) -> &Buffer {

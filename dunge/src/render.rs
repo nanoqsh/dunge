@@ -9,15 +9,14 @@ use {
         frame::Frame,
         framebuffer::Framebuffer,
         handles::*,
-        instance::{Instance, InstanceModel},
         mesh::{Data as MeshData, Mesh},
         pipeline::{Pipeline, PipelineParameters},
         r#loop::Loop,
         screen::Screen,
         shader::Shader,
         shader_data::{
-            Light, LightSpace, PostShaderData, SourceModel, SpaceData, SpaceModel, Texture,
-            TextureData,
+            Instance, InstanceModel, Light, LightSpace, PostShaderData, SourceModel, SpaceData,
+            SpaceModel, Texture, TextureData,
         },
         storage::Storage,
         topology::Topology,
@@ -187,15 +186,11 @@ impl Render {
         TextureHandle(id)
     }
 
-    pub fn update_texture(
-        &mut self,
-        handle: TextureHandle,
-        data: TextureData,
-    ) -> Result<(), ResourceNotFound> {
-        self.resources
-            .textures
-            .get_mut(handle.0)
-            .map(|texture| texture.update_data(data, &self.queue))
+    pub fn update_texture(&self, handle: TextureHandle, data: TextureData) -> Result<(), Error> {
+        let texture = self.resources.textures.get(handle.0)?;
+        texture.update_data(data, &self.queue)?;
+
+        Ok(())
     }
 
     pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
@@ -209,14 +204,14 @@ impl Render {
     }
 
     pub fn update_instances(
-        &mut self,
+        &self,
         handle: InstanceHandle,
         models: &[InstanceModel],
-    ) -> Result<(), ResourceNotFound> {
-        self.resources
-            .instances
-            .get_mut(handle.0)
-            .map(|instances| instances.update_models(models, &self.queue))
+    ) -> Result<(), Error> {
+        let instances = self.resources.instances.get(handle.0)?;
+        instances.update_models(models, &self.queue)?;
+
+        Ok(())
     }
 
     pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
@@ -231,21 +226,6 @@ impl Render {
         let mesh = Mesh::new(data, &self.device);
         let id = self.resources.meshes.insert(mesh);
         MeshHandle::new(id)
-    }
-
-    pub fn update_mesh<V, T>(
-        &mut self,
-        handle: MeshHandle<V, T>,
-        data: &MeshData<V, T>,
-    ) -> Result<(), ResourceNotFound>
-    where
-        V: Vertex,
-        T: Topology,
-    {
-        self.resources
-            .meshes
-            .get_mut(handle.id())
-            .map(|mesh| mesh.update_data(data, &self.device, &self.queue))
     }
 
     pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
@@ -284,17 +264,6 @@ impl Render {
         Ok(LightHandle(id))
     }
 
-    pub fn update_ambient(
-        &mut self,
-        handle: LightHandle,
-        ambient: Linear<f32, 3>,
-    ) -> Result<(), ResourceNotFound> {
-        let light = self.resources.lights.get(handle.0)?;
-        light.update_ambient(ambient.0, &self.queue);
-
-        Ok(())
-    }
-
     pub fn update_light(
         &mut self,
         handle: LightHandle,
@@ -302,22 +271,18 @@ impl Render {
         srcs: &[SourceModel],
     ) -> Result<(), Error> {
         let light = self.resources.lights.get_mut(handle.0)?;
-        if light.update_sources(srcs, &self.queue) {
-            light.update_ambient(ambient.0, &self.queue);
-        } else {
-            *light = Light::new(ambient.0, srcs, &self.device, &self.layouts.lights)?;
-        }
+        light.update_sources(ambient.0, srcs, &self.queue)?;
 
         Ok(())
     }
 
     pub fn update_nth_light(
-        &mut self,
+        &self,
         handle: LightHandle,
         n: usize,
         source: SourceModel,
     ) -> Result<(), Error> {
-        let light = self.resources.lights.get_mut(handle.0)?;
+        let light = self.resources.lights.get(handle.0)?;
         light.update_nth(n, source, &self.queue)?;
 
         Ok(())
@@ -344,44 +309,42 @@ impl Render {
         data: &[SpaceData],
     ) -> Result<(), Error> {
         let ls = self.resources.spaces.get_mut(handle.0)?;
-        if !ls.update_spaces(spaces, data, &self.queue) {
-            *ls = LightSpace::new(spaces, data, &self.device, &self.queue, &self.layouts.space)?;
-        }
+        ls.update_spaces(spaces, data, &self.queue)?;
 
         Ok(())
     }
 
     pub fn update_nth_space(
-        &mut self,
+        &self,
         handle: SpaceHandle,
         n: usize,
         space: SpaceModel,
     ) -> Result<(), Error> {
-        let ls = self.resources.spaces.get_mut(handle.0)?;
+        let ls = self.resources.spaces.get(handle.0)?;
         ls.update_nth_space(n, space, &self.queue)?;
 
         Ok(())
     }
 
     pub fn update_nth_space_color(
-        &mut self,
+        &self,
         handle: SpaceHandle,
         n: usize,
         color: Linear<f32, 3>,
     ) -> Result<(), Error> {
-        let ls = self.resources.spaces.get_mut(handle.0)?;
+        let ls = self.resources.spaces.get(handle.0)?;
         ls.update_nth_color(n, color.0, &self.queue)?;
 
         Ok(())
     }
 
     pub fn update_nth_space_data(
-        &mut self,
+        &self,
         handle: SpaceHandle,
         n: usize,
         data: SpaceData,
     ) -> Result<(), Error> {
-        let ls = self.resources.spaces.get_mut(handle.0)?;
+        let ls = self.resources.spaces.get(handle.0)?;
         ls.update_nth_data(n, data, &self.queue)?;
 
         Ok(())
@@ -613,14 +576,14 @@ impl Render {
                                 WgpuBackend::Dx11 => Backend::Dx11,
                                 WgpuBackend::Gl => Backend::Gl,
                                 WgpuBackend::BrowserWebGpu => Backend::WebGpu,
-                                _ => panic!("undefined backend"),
+                                WgpuBackend::Empty => panic!("undefined backend"),
                             },
                             device: match info.device_type {
                                 DeviceType::IntegratedGpu => Device::IntegratedGpu,
                                 DeviceType::DiscreteGpu => Device::DiscreteGpu,
                                 DeviceType::VirtualGpu => Device::VirtualGpu,
                                 DeviceType::Cpu => Device::Cpu,
-                                _ => panic!("undefined device type"),
+                                DeviceType::Other => panic!("undefined device type"),
                             },
                         };
 

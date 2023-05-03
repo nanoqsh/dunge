@@ -6,12 +6,13 @@ use {
         error::*,
         framebuffer::FrameFilter,
         handles::*,
-        instance::InstanceModel,
         mesh::Data as MeshData,
         pipeline::ParametersBuilder,
         render::Render,
         screen::Screen,
-        shader_data::{Source, SourceModel, Space, SpaceData, SpaceModel, TextureData},
+        shader_data::{
+            InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel, TextureData,
+        },
         topology::Topology,
         transform::IntoMat,
         vertex::Vertex,
@@ -124,12 +125,12 @@ impl Context {
     /// Updates the texture.
     ///
     /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
+    /// See [`Error`] for detailed info.
     pub fn update_texture(
         &mut self,
         handle: TextureHandle,
         data: TextureData,
-    ) -> Result<(), ResourceNotFound> {
+    ) -> Result<(), Error> {
         self.render.update_texture(handle, data)
     }
 
@@ -159,12 +160,8 @@ impl Context {
     /// Updates instances.
     ///
     /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn update_instances<I>(
-        &mut self,
-        handle: InstanceHandle,
-        data: I,
-    ) -> Result<(), ResourceNotFound>
+    /// See [`Error`] for detailed info.
+    pub fn update_instances<I>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
     where
         I: IntoIterator,
         I::Item: IntoMat,
@@ -193,22 +190,6 @@ impl Context {
         T: Topology,
     {
         self.render.create_mesh(data)
-    }
-
-    /// Updates the mesh.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn update_mesh<V, T>(
-        &mut self,
-        handle: MeshHandle<V, T>,
-        data: &MeshData<V, T>,
-    ) -> Result<(), ResourceNotFound>
-    where
-        V: Vertex,
-        T: Topology,
-    {
-        self.render.update_mesh(handle, data)
     }
 
     /// Deletes the mesh.
@@ -272,21 +253,6 @@ impl Context {
         self.sources.extend(models);
         self.render
             .create_light(ambient.into_linear(), &self.sources)
-    }
-
-    /// Updates the color of the ambient light.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn update_ambient<C>(
-        &mut self,
-        handle: LightHandle,
-        ambient: C,
-    ) -> Result<(), ResourceNotFound>
-    where
-        C: IntoLinear<3>,
-    {
-        self.render.update_ambient(handle, ambient.into_linear())
     }
 
     /// Updates the light.

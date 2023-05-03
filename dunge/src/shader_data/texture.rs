@@ -1,5 +1,5 @@
 use {
-    crate::shader,
+    crate::{error::TooLargeSize, shader},
     std::num::NonZeroU32,
     wgpu::{BindGroup, BindGroupLayout, Device, Queue, Texture as WgpuTexture},
 };
@@ -41,6 +41,7 @@ pub enum Error {
 }
 
 pub(crate) struct Texture {
+    buf_size: (u32, u32),
     texture: WgpuTexture,
     bind_group: BindGroup,
 }
@@ -109,20 +110,20 @@ impl Texture {
         });
 
         Self {
+            buf_size: data.size,
             texture,
             bind_group,
         }
     }
 
-    pub fn update_data(&mut self, data: Data, queue: &Queue) {
+    pub fn update_data(&self, data: Data, queue: &Queue) -> Result<(), TooLargeSize> {
         use wgpu::*;
 
         let (width, height) = data.size;
-        let size = Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        };
+        let (buf_width, buf_height) = self.buf_size;
+        if width > buf_width || height > buf_height {
+            return Err(TooLargeSize);
+        }
 
         queue.write_texture(
             ImageCopyTexture {
@@ -137,8 +138,14 @@ impl Texture {
                 bytes_per_row: NonZeroU32::new(4 * width),
                 rows_per_image: NonZeroU32::new(height),
             },
-            size,
+            Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
         );
+
+        Ok(())
     }
 
     pub fn bind_group(&self) -> &BindGroup {

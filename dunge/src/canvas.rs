@@ -21,6 +21,10 @@ pub struct Canvas {
 
 impl Canvas {
     /// Calls [`run`](crate::Canvas::run) but blocking instead of async.
+    ///
+    /// # Errors
+    /// Returns [`CanvasError::FailedBackendSelection`](crate::CanvasError::FailedBackendSelection)
+    /// if backend selection failed.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_blocking<M, L>(self, config: CanvasConfig, make_loop: M) -> Result<Infallible, Error>
     where
@@ -36,6 +40,10 @@ impl Canvas {
     /// calls a `make_loop` by passing the context in it.
     /// The `make_loop` needs to return an object which
     /// implements the [`Loop`] trait.
+    ///
+    /// # Errors
+    /// Returns [`CanvasError::FailedBackendSelection`](crate::CanvasError::FailedBackendSelection)
+    /// if backend selection failed.
     #[allow(clippy::too_many_lines)]
     pub async fn run<M, L>(
         self,
@@ -344,6 +352,7 @@ pub struct SelectorEntry {
     pub device: Device,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Backend {
     Gl,
     Vulkan,
@@ -353,6 +362,7 @@ pub enum Backend {
     WebGpu,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Device {
     IntegratedGpu,
     DiscreteGpu,

@@ -5,7 +5,7 @@ use {
         vertex::Vertex,
     },
     std::{borrow::Cow, slice},
-    wgpu::{Buffer, Device, Queue},
+    wgpu::{Buffer, Device},
 };
 
 /// A data struct for a mesh creation.
@@ -89,36 +89,6 @@ impl Mesh {
                     device,
                 ),
                 None => Type::sequential(data.verts),
-            },
-        }
-    }
-
-    pub fn update_data<V, T>(&mut self, data: &Data<V, T>, device: &Device, queue: &Queue)
-    where
-        V: Vertex,
-        T: Topology,
-    {
-        queue.write_buffer(&self.vertex_buffer, 0, data.verts.as_bytes());
-
-        match &mut self.ty {
-            Type::Indexed {
-                index_buffer,
-                n_indices,
-            } => match &data.indxs {
-                Some(indxs) => {
-                    queue.write_buffer(index_buffer, 0, indxs.as_ref().as_bytes());
-                    *n_indices = (indxs.len() * 3).try_into().expect("too many indexes");
-                }
-                None => self.ty = Type::sequential(data.verts),
-            },
-            Type::Sequential { .. } => match &data.indxs {
-                Some(indxs) => {
-                    self.ty = Type::indexed(
-                        unsafe { slice::from_raw_parts(indxs.as_ptr().cast(), indxs.len() * 3) },
-                        device,
-                    );
-                }
-                None => self.ty = Type::sequential(data.verts),
             },
         }
     }

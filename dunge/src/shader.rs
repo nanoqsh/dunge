@@ -1,7 +1,7 @@
 use {
     crate::{
-        instance::InstanceModel,
         layout::Layout,
+        shader_data::InstanceModel,
         vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     wgpu::VertexBufferLayout,

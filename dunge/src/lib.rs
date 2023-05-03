@@ -14,7 +14,6 @@ mod framebuffer {
 }
 pub mod error;
 pub mod handles;
-mod instance;
 mod layer;
 mod layout;
 mod r#loop;
@@ -25,6 +24,7 @@ mod screen;
 mod shader;
 mod shader_data {
     mod camera;
+    mod instance;
     mod light;
     mod post;
     mod space;
@@ -32,6 +32,7 @@ mod shader_data {
 
     pub(crate) use self::{
         camera::CameraUniform,
+        instance::{Instance, InstanceModel},
         light::{Light, SourceModel},
         post::PostShaderData,
         space::{LightSpace, SpaceModel},
@@ -39,7 +40,7 @@ mod shader_data {
     };
 
     pub use self::{
-        light::{LightKind, LightMode, Source},
+        light::{LightKind, Source},
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         texture::{Data as TextureData, Error as TextureError},
     };
@@ -77,7 +78,7 @@ pub use {
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
         shader_data::{
-            LightKind, LightMode, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
+            LightKind, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
         },
     },
     winit,

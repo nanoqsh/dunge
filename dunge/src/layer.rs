@@ -4,11 +4,11 @@ use {
         error::{Error, ResourceNotFound},
         frame::Frame,
         handles::*,
-        instance::Instance,
         mesh::Mesh,
         pipeline::Pipeline,
         render::Resources,
         shader::{self, Shader},
+        shader_data::Instance,
         vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
     },
     std::marker::PhantomData,
@@ -261,15 +261,15 @@ impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
     ///
     /// # Example
     /// ```
-    /// # use dunge::color::Srgba;
+    /// # use dunge::color::Standard;
     /// # struct Frame;
     /// # impl Frame {
     /// #     fn texture_layer(self) -> Self { self }
-    /// #     fn with_clear_color(self, _: Srgba<u8>) -> Self { self }
+    /// #     fn with_clear_color(self, _: Standard<u8>) -> Self { self }
     /// #     fn start(self) {}
     /// # }
     /// # let frame = Frame;
-    /// let color = Srgba([20, 30, 40, 255]);
+    /// let color = Standard([20, 30, 40, 255]);
     /// let mut layer = frame
     ///     .texture_layer()
     ///     .with_clear_color(color)

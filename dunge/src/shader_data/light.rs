@@ -14,7 +14,6 @@ pub struct Source<C = Linear<f32, 3>> {
     pub pos: [f32; 3],
     pub rad: f32,
     pub col: C,
-    pub mode: LightMode,
     pub kind: LightKind,
 }
 
@@ -27,18 +26,9 @@ impl<C> Source<C> {
             pos: self.pos,
             rad: self.rad,
             col: self.col.into_linear(),
-            mode: self.mode,
             kind: self.kind,
         }
     }
-}
-
-/// The light mode.
-#[derive(Clone, Copy, Default)]
-pub enum LightMode {
-    #[default]
-    Smooth,
-    Sharp,
 }
 
 /// The light kind.
@@ -114,17 +104,35 @@ impl Light {
         })
     }
 
-    pub fn update_ambient(&self, col: [f32; 3], queue: &Queue) {
-        queue.write_buffer(&self.ambient_buffer, 0, col.as_bytes());
-    }
+    pub fn update_sources(
+        &mut self,
+        ambient: [f32; 3],
+        srcs: &[SourceModel],
+        queue: &Queue,
+    ) -> Result<(), TooManySources> {
+        use std::mem;
 
-    pub fn update_sources(&self, srcs: &[SourceModel], queue: &Queue) -> bool {
-        if srcs.is_empty() || self.n_sources != srcs.len() {
-            return false;
+        if srcs.len() > shader::MAX_N_SOURCES as usize {
+            return Err(TooManySources);
         }
 
-        queue.write_buffer(&self.sources_buffer, 0, srcs.as_bytes());
-        true
+        if !srcs.is_empty() {
+            queue.write_buffer(&self.sources_buffer, 0, srcs.as_bytes());
+        }
+
+        if self.n_sources != srcs.len() {
+            let len = srcs.len() as u32;
+            queue.write_buffer(
+                &self.sources_buffer,
+                mem::size_of::<[SourceModel; 64]>() as _,
+                len.as_bytes(),
+            );
+
+            self.n_sources = srcs.len();
+        }
+
+        queue.write_buffer(&self.ambient_buffer, 0, ambient.as_bytes());
+        Ok(())
     }
 
     pub fn update_nth(
@@ -168,18 +176,9 @@ impl SourceModel {
             pos: src.pos,
             rad: src.rad,
             col: src.col.0,
-            flags: {
-                let sharp = match src.mode {
-                    LightMode::Smooth => 0,
-                    LightMode::Sharp => 1,
-                };
-
-                let gloom = match src.kind {
-                    LightKind::Glow => 0,
-                    LightKind::Gloom => 1,
-                };
-
-                sharp | gloom << 1
+            flags: match src.kind {
+                LightKind::Glow => 0,
+                LightKind::Gloom => 1,
             },
         }
     }
