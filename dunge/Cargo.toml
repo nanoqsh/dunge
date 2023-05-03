@@ -1,6 +1,6 @@
 [package]
 name = "dunge"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 description = "Simple and portable 3d render library"
 license = "MIT"
@@ -12,19 +12,19 @@ rust-version = "1.67"
 
 [dependencies]
 ahash = "0.8"
-glam = "0.23"
+glam = "0.24"
 log = "0.4"
 once_cell = "1.17"
-wgpu = "0.15"
+wgpu = "0.16"
 winit = { version = "0.28", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
-wgpu = { version = "0.15", features = ["webgl"] }
+wgpu = { version = "0.16", features = ["webgl"] }
 web-sys = { version = "0.3", features = ["Document", "Window", "Element", "Performance"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-pollster = "0.2"
+pollster = "0.3"
 
 [target.'cfg(target_os = "android")'.dependencies]
 ndk-glue = { version = "0.7", features = ["logger"] }

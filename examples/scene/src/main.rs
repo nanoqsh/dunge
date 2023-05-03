@@ -8,9 +8,9 @@ use {
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
         vertex::{ColorVertex, TextureVertex},
-        Backend, BackendSelector, CanvasConfig, Compare, Context, Error, Frame, FrameParameters,
-        InitialState, LightKind, Loop, MeshData, Orthographic, PixelSize, Source, Space, SpaceData,
-        SpaceFormat, TextureData, View, WindowMode,
+        CanvasConfig, Compare, Context, Error, Frame, FrameParameters, InitialState, LightKind,
+        Loop, MeshData, Orthographic, PixelSize, Source, Space, SpaceData, SpaceFormat,
+        TextureData, View, WindowMode,
     },
     utils::Camera,
 };
@@ -25,17 +25,7 @@ fn main() {
         show_cursor: false,
         ..Default::default()
     })
-    .run_blocking(
-        CanvasConfig {
-            backend_selector: BackendSelector::Callback(&mut |entries| {
-                entries
-                    .iter()
-                    .position(|entry| entry.backend == Backend::Gl)
-                    .unwrap_or_default()
-            }),
-        },
-        App::new,
-    )
+    .run_blocking(CanvasConfig::default(), App::new)
     .expect("create canvas");
 }
 

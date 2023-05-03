@@ -1,6 +1,5 @@
 use {
     crate::{error::TooLargeSize, shader},
-    std::num::NonZeroU32,
     wgpu::{BindGroup, BindGroupLayout, Device, Queue, Texture as WgpuTexture},
 };
 
@@ -78,8 +77,8 @@ impl Texture {
             data.data,
             ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(4 * width),
-                rows_per_image: NonZeroU32::new(height),
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
             },
             size,
         );
@@ -135,8 +134,8 @@ impl Texture {
             data.data,
             ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(4 * width),
-                rows_per_image: NonZeroU32::new(height),
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
             },
             Extent3d {
                 width,

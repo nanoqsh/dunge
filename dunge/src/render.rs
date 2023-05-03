@@ -23,7 +23,6 @@ use {
         vertex::Vertex,
     },
     once_cell::unsync::OnceCell,
-    std::num::NonZeroU32,
     wgpu::{
         Adapter, Device, Instance as WgpuInstance, Queue, ShaderModule, Surface,
         SurfaceConfiguration, SurfaceError,
@@ -431,8 +430,8 @@ impl Render {
             buffer: &buffer,
             layout: ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(width * N_COLOR_CHANNELS as u32),
-                rows_per_image: NonZeroU32::new(height),
+                bytes_per_row: Some(width * N_COLOR_CHANNELS as u32),
+                rows_per_image: Some(height),
             },
         };
 

@@ -100,7 +100,7 @@ impl LightSpace {
     ) -> Result<Self, TooManySpaces> {
         use {
             once_cell::sync::OnceCell,
-            std::{array, num::NonZeroU32},
+            std::array,
             wgpu::{
                 util::{BufferInitDescriptor, DeviceExt},
                 *,
@@ -157,8 +157,8 @@ impl LightSpace {
                 &DATA,
                 ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: NonZeroU32::new(4),
-                    rows_per_image: NonZeroU32::new(1),
+                    bytes_per_row: Some(4),
+                    rows_per_image: Some(1),
                 },
                 SIZE,
             );
@@ -204,8 +204,8 @@ impl LightSpace {
                 dt.data,
                 ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: NonZeroU32::new(dt.format.n_channels() as u32 * width as u32),
-                    rows_per_image: NonZeroU32::new(height as u32),
+                    bytes_per_row: Some(dt.format.n_channels() as u32 * width as u32),
+                    rows_per_image: Some(height as u32),
                 },
                 size,
             );
@@ -351,7 +351,7 @@ impl LightSpace {
     }
 
     pub fn update_nth_data(&self, n: usize, data: Data, queue: &Queue) -> Result<(), Error> {
-        use {std::num::NonZeroU32, wgpu::*};
+        use wgpu::*;
 
         let Some(texture) = self.textures.get(n) else {
             return Err(SpaceNotFound.into());
@@ -373,8 +373,8 @@ impl LightSpace {
             data.data,
             ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(data.format.n_channels() as u32 * width as u32),
-                rows_per_image: NonZeroU32::new(height as u32),
+                bytes_per_row: Some(data.format.n_channels() as u32 * width as u32),
+                rows_per_image: Some(height as u32),
             },
             Extent3d {
                 width: width as u32,
