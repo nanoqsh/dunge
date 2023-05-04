@@ -10,6 +10,7 @@ use dunge::{
 
 fn main() {
     env_logger::init();
+
     dunge::make_window(InitialState {
         title: "Triangle",
         mode: WindowMode::Windowed {
@@ -19,7 +20,7 @@ fn main() {
         ..Default::default()
     })
     .run_blocking(CanvasConfig::default(), App::new)
-    .expect("create canvas");
+    .log_error();
 }
 
 struct App {

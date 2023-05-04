@@ -4,6 +4,18 @@ members = [
     "examples/cube",
     "examples/cube_wasm",
     "examples/scene",
+    "examples/scene_wasm",
     "examples/triangle",
 ]
+default-members = ["dunge"]
 resolver = "2"
+
+[profile.dev]
+panic = "abort"
+split-debuginfo = "unpacked"
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true

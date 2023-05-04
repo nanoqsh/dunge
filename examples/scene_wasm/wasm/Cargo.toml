@@ -1,5 +1,5 @@
 [package]
-name = "cube_wasm"
+name = "scene_wasm"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-cube = { path = "../../cube" }
+scene = { path = "../../scene" }
 dunge = { path = "../../../dunge" }
 console_error_panic_hook = "0.1"
 wasm-bindgen = "0.2"

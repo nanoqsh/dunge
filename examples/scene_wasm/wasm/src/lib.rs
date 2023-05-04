@@ -1,4 +1,4 @@
-use {cube::App, wasm_bindgen::prelude::*};
+use {scene::App, wasm_bindgen::prelude::*};
 
 #[wasm_bindgen(start)]
 pub async fn run() {

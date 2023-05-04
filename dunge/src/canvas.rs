@@ -6,7 +6,7 @@ use {
         screen::Screen,
         time::Time,
     },
-    std::{convert::Infallible, num::NonZeroU32, time::Duration},
+    std::{num::NonZeroU32, time::Duration},
     winit::{
         event_loop::EventLoop,
         window::{Window, WindowBuilder},
@@ -26,7 +26,7 @@ impl Canvas {
     /// Returns [`CanvasError::FailedBackendSelection`](crate::CanvasError::FailedBackendSelection)
     /// if backend selection failed.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn run_blocking<M, L>(self, config: CanvasConfig, make_loop: M) -> Result<Infallible, Error>
+    pub fn run_blocking<M, L>(self, config: CanvasConfig, make_loop: M) -> Error
     where
         M: FnOnce(&mut Context) -> L,
         L: Loop + 'static,
@@ -45,7 +45,7 @@ impl Canvas {
     /// Returns [`CanvasError::FailedBackendSelection`](crate::CanvasError::FailedBackendSelection)
     /// if backend selection failed.
     #[allow(clippy::too_many_lines)]
-    pub async fn run<M, L>(self, config: CanvasConfig, make_loop: M) -> Result<Infallible, Error>
+    pub async fn run<M, L>(self, config: CanvasConfig, make_loop: M) -> Error
     where
         M: FnOnce(&mut Context) -> L,
         L: Loop + 'static,
@@ -53,7 +53,10 @@ impl Canvas {
         let Self { event_loop, window } = self;
 
         // Create the render
-        let mut render = Render::new(&window, config.backend_selector).await?;
+        let mut render = match Render::new(&window, config.backend_selector).await {
+            Ok(render) => render,
+            Err(err) => return err,
+        };
 
         // Initial resize
         render.set_screen({
@@ -74,6 +77,7 @@ impl Canvas {
         // Set an initial state
         let mut time = Time::new();
         let mut cursor_position = None;
+        let mut last_touch = None;
         let mut mouse = Mouse::default();
         let mut pressed_keys = vec![];
         let mut released_keys = vec![];
@@ -85,7 +89,7 @@ impl Canvas {
                     dpi::PhysicalPosition,
                     event::{
                         DeviceEvent, ElementState, Event, KeyboardInput, MouseButton,
-                        MouseScrollDelta, StartCause, WindowEvent,
+                        MouseScrollDelta, StartCause, Touch, TouchPhase, WindowEvent,
                     },
                 },
             };
@@ -152,6 +156,23 @@ impl Canvas {
                                 mouse.pressed_middle = state == ElementState::Pressed;
                             }
                             MouseButton::Other(_) => {}
+                        },
+                        WindowEvent::Touch(Touch {
+                            phase,
+                            location: PhysicalPosition { x, y },
+                            ..
+                        }) => match phase {
+                            TouchPhase::Started => {}
+                            TouchPhase::Moved => {
+                                let (nx, ny) = (x as f32, y as f32);
+                                if let Some((lx, ly)) = last_touch {
+                                    mouse.motion_delta.0 = lx - nx;
+                                    mouse.motion_delta.1 = ly - ny;
+                                }
+
+                                last_touch = Some((nx, ny));
+                            }
+                            TouchPhase::Ended | TouchPhase::Cancelled => last_touch = None,
                         },
                         _ => {}
                     }
@@ -228,9 +249,27 @@ impl Canvas {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
+#[must_use]
 pub enum Error {
     FailedBackendSelection,
+}
+
+impl Error {
+    pub fn log_error(self) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            use web_sys::console;
+
+            let out = format!("{self:?}");
+            console::error_1(&out.into());
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            eprintln!("{self:?}");
+        }
+    }
 }
 
 pub(crate) enum CanvasEvent {
