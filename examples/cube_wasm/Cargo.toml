@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 serve = { path = "../serve" }
+
+[build-dependencies]
+utils_build = { path = "../utils_build" }

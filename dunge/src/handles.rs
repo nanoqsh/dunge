@@ -53,7 +53,6 @@ pub struct ViewHandle(pub(crate) u32);
 pub struct LightHandle(pub(crate) u32);
 
 impl LightHandle {
-    // TODO: Maybe derive Default trait?
     pub(crate) const DEFAULT: Self = Self(0);
 }
 

@@ -45,11 +45,7 @@ impl Canvas {
     /// Returns [`CanvasError::FailedBackendSelection`](crate::CanvasError::FailedBackendSelection)
     /// if backend selection failed.
     #[allow(clippy::too_many_lines)]
-    pub async fn run<M, L>(
-        self,
-        config: CanvasConfig<'_>,
-        make_loop: M,
-    ) -> Result<Infallible, Error>
+    pub async fn run<M, L>(self, config: CanvasConfig, make_loop: M) -> Result<Infallible, Error>
     where
         M: FnOnce(&mut Context) -> L,
         L: Loop + 'static,
@@ -335,15 +331,16 @@ pub fn from_element(id: &str) -> Canvas {
 }
 
 #[derive(Default)]
-pub struct CanvasConfig<'a> {
-    pub backend_selector: BackendSelector<'a>,
+pub struct CanvasConfig {
+    pub backend_selector: BackendSelector,
 }
 
 #[derive(Default)]
-pub enum BackendSelector<'a> {
+pub enum BackendSelector {
     #[default]
     Auto,
-    Callback(&'a mut dyn FnMut(Vec<SelectorEntry>) -> usize),
+    #[cfg(not(target_arch = "wasm32"))]
+    Callback(Box<dyn FnMut(Vec<SelectorEntry>) -> usize>),
 }
 
 pub struct SelectorEntry {

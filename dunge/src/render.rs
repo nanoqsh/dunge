@@ -46,7 +46,7 @@ pub(crate) struct Render {
 }
 
 impl Render {
-    pub async fn new(window: &Window, selector: BackendSelector<'_>) -> Result<Self, CanvasError> {
+    pub async fn new(window: &Window, selector: BackendSelector) -> Result<Self, CanvasError> {
         use wgpu::*;
 
         #[cfg(target_os = "android")]
@@ -527,7 +527,7 @@ impl Render {
     }
 
     async fn select_adapter(
-        mut selector: BackendSelector<'_>,
+        selector: BackendSelector,
         instance: &WgpuInstance,
         surface: &Surface,
     ) -> Option<Adapter> {
@@ -539,10 +539,6 @@ impl Render {
             },
         };
 
-        if cfg!(target_arch = "wasm32") {
-            selector = BackendSelector::Auto;
-        }
-
         match selector {
             BackendSelector::Auto => {
                 instance
@@ -553,49 +549,41 @@ impl Render {
                     })
                     .await
             }
-            BackendSelector::Callback(callback) => {
-                #[cfg(target_arch = "wasm32")]
-                {
-                    return None;
+            #[cfg(not(target_arch = "wasm32"))]
+            BackendSelector::Callback(mut callback) => {
+                let mut adapters = vec![];
+                let mut entries = vec![];
+                for adapter in instance.enumerate_adapters(Backends::all()) {
+                    let info = adapter.get_info();
+                    let entry = SelectorEntry {
+                        name: info.name,
+                        backend: match info.backend {
+                            WgpuBackend::Vulkan => Backend::Vulkan,
+                            WgpuBackend::Metal => Backend::Metal,
+                            WgpuBackend::Dx12 => Backend::Dx12,
+                            WgpuBackend::Dx11 => Backend::Dx11,
+                            WgpuBackend::Gl => Backend::Gl,
+                            WgpuBackend::BrowserWebGpu => Backend::WebGpu,
+                            WgpuBackend::Empty => panic!("undefined backend"),
+                        },
+                        device: match info.device_type {
+                            DeviceType::IntegratedGpu => Device::IntegratedGpu,
+                            DeviceType::DiscreteGpu => Device::DiscreteGpu,
+                            DeviceType::VirtualGpu => Device::VirtualGpu,
+                            DeviceType::Cpu => Device::Cpu,
+                            DeviceType::Other => panic!("undefined device type"),
+                        },
+                    };
+
+                    adapters.push(adapter);
+                    entries.push(entry);
                 }
 
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    let mut adapters = vec![];
-                    let mut entries = vec![];
-
-                    for adapter in instance.enumerate_adapters(Backends::all()) {
-                        let info = adapter.get_info();
-                        let entry = SelectorEntry {
-                            name: info.name,
-                            backend: match info.backend {
-                                WgpuBackend::Vulkan => Backend::Vulkan,
-                                WgpuBackend::Metal => Backend::Metal,
-                                WgpuBackend::Dx12 => Backend::Dx12,
-                                WgpuBackend::Dx11 => Backend::Dx11,
-                                WgpuBackend::Gl => Backend::Gl,
-                                WgpuBackend::BrowserWebGpu => Backend::WebGpu,
-                                WgpuBackend::Empty => panic!("undefined backend"),
-                            },
-                            device: match info.device_type {
-                                DeviceType::IntegratedGpu => Device::IntegratedGpu,
-                                DeviceType::DiscreteGpu => Device::DiscreteGpu,
-                                DeviceType::VirtualGpu => Device::VirtualGpu,
-                                DeviceType::Cpu => Device::Cpu,
-                                DeviceType::Other => panic!("undefined device type"),
-                            },
-                        };
-
-                        adapters.push(adapter);
-                        entries.push(entry);
-                    }
-
-                    let selected = callback(entries);
-                    if selected < adapters.len() {
-                        Some(adapters.swap_remove(selected))
-                    } else {
-                        None
-                    }
+                let selected = callback(entries);
+                if selected < adapters.len() {
+                    Some(adapters.swap_remove(selected))
+                } else {
+                    None
                 }
             }
         }

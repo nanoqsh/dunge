@@ -55,6 +55,7 @@ impl Shader {
             Self::Post => include_str!("shaders/post.wgsl"),
             Self::Textured => concat!(
                 include_str!("shaders/light.wgsl"),
+                include_str!("shaders/space.wgsl"),
                 include_str!("shaders/textured.wgsl"),
             ),
         }
