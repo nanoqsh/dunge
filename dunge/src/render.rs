@@ -57,37 +57,43 @@ impl Render {
         let instance = Instance::default();
         let surface = unsafe { instance.create_surface(window).expect("create surface") };
 
-        let adapter = Self::select_adapter(selector, &instance, &surface)
-            .await
-            .ok_or(CanvasError::FailedBackendSelection)?;
+        let (device, queue) = {
+            let adapter = Self::select_adapter(selector, &instance, &surface)
+                .await
+                .ok_or(CanvasError::BackendSelection)?;
 
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    features: Features::empty(),
-                    limits: Limits {
-                        max_storage_buffers_per_shader_stage: 0,
-                        max_storage_textures_per_shader_stage: 0,
-                        max_dynamic_storage_buffers_per_pipeline_layout: 0,
-                        max_storage_buffer_binding_size: 0,
-                        max_compute_workgroup_storage_size: 0,
-                        max_compute_invocations_per_workgroup: 0,
-                        max_compute_workgroup_size_x: 0,
-                        max_compute_workgroup_size_y: 0,
-                        max_compute_workgroup_size_z: 0,
-                        max_compute_workgroups_per_dimension: 0,
-                        ..if cfg!(target_arch = "wasm32") {
-                            Limits::downlevel_webgl2_defaults()
-                        } else {
-                            Limits::downlevel_defaults()
-                        }
-                    },
-                    label: None,
+            let backend = adapter.get_info().backend;
+            log::info!("selected backend: {backend:?}");
+
+            let desc = DeviceDescriptor {
+                features: Features::empty(),
+                limits: Limits {
+                    max_bind_groups: 8,
+                    max_storage_buffers_per_shader_stage: 0,
+                    max_storage_textures_per_shader_stage: 0,
+                    max_dynamic_storage_buffers_per_pipeline_layout: 0,
+                    max_storage_buffer_binding_size: 0,
+                    max_compute_workgroup_storage_size: 0,
+                    max_compute_invocations_per_workgroup: 0,
+                    max_compute_workgroup_size_x: 0,
+                    max_compute_workgroup_size_y: 0,
+                    max_compute_workgroup_size_z: 0,
+                    max_compute_workgroups_per_dimension: 0,
+                    ..if cfg!(target_arch = "wasm32") {
+                        Limits::downlevel_webgl2_defaults()
+                    } else {
+                        Limits::downlevel_defaults()
+                    }
                 },
-                None,
-            )
-            .await
-            .expect("request device");
+                label: None,
+            };
+
+            let Ok(dev) = adapter.request_device(&desc, None).await else {
+                return Err(CanvasError::RequestDevice);
+            };
+
+            dev
+        };
 
         let max_texture_size = device.limits().max_texture_dimension_2d;
 
@@ -579,7 +585,7 @@ impl Render {
                     entries.push(entry);
                 }
 
-                let selected = callback(entries);
+                let selected = callback(entries)?;
                 if selected < adapters.len() {
                     Some(adapters.swap_remove(selected))
                 } else {

@@ -23,8 +23,7 @@ impl Canvas {
     /// Calls [`run`](crate::Canvas::run) but blocking instead of async.
     ///
     /// # Errors
-    /// Returns [`CanvasError::FailedBackendSelection`](crate::CanvasError::FailedBackendSelection)
-    /// if backend selection failed.
+    /// Returns [`CanvasError`](crate::CanvasError) if backend selection or request device failed.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_blocking<M, L>(self, config: CanvasConfig, make_loop: M) -> Error
     where
@@ -42,8 +41,7 @@ impl Canvas {
     /// implements the [`Loop`] trait.
     ///
     /// # Errors
-    /// Returns [`CanvasError::FailedBackendSelection`](crate::CanvasError::FailedBackendSelection)
-    /// if backend selection failed.
+    /// Returns [`CanvasError`](crate::CanvasError) if backend selection or request device failed.
     #[allow(clippy::too_many_lines)]
     pub async fn run<M, L>(self, config: CanvasConfig, make_loop: M) -> Error
     where
@@ -249,26 +247,17 @@ impl Canvas {
     }
 }
 
+/// The error type of the [`Context`] creation.
 #[derive(Clone, Copy, Debug)]
 #[must_use]
 pub enum Error {
-    FailedBackendSelection,
+    BackendSelection,
+    RequestDevice,
 }
 
 impl Error {
     pub fn log_error(self) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            use web_sys::console;
-
-            let out = format!("{self:?}");
-            console::error_1(&out.into());
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            eprintln!("{self:?}");
-        }
+        log::error!("{self:?}");
     }
 }
 
@@ -369,17 +358,30 @@ pub fn from_element(id: &str) -> Canvas {
     Canvas { event_loop, window }
 }
 
+/// The [`Canvas`] creation config.
 #[derive(Default)]
 pub struct CanvasConfig {
     pub backend_selector: BackendSelector,
 }
 
+/// Description of backend selection behavior.
 #[derive(Default)]
 pub enum BackendSelector {
     #[default]
     Auto,
     #[cfg(not(target_arch = "wasm32"))]
-    Callback(Box<dyn FnMut(Vec<SelectorEntry>) -> usize>),
+    Callback(Box<dyn FnMut(Vec<SelectorEntry>) -> Option<usize>>),
+}
+
+impl BackendSelector {
+    /// Selects a specific backend.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[must_use]
+    pub fn select_backend(backend: Backend) -> Self {
+        Self::Callback(Box::new(move |entries| {
+            entries.iter().position(|entry| entry.backend == backend)
+        }))
+    }
 }
 
 pub struct SelectorEntry {
