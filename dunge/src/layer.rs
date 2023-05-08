@@ -167,7 +167,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
-        self.bind_view_handle(handle, shader::TEXTURED_CAMERA_GROUP)
+        self.bind_view_handle(handle, shader::TEXTURED_GLOBALS_GROUP)
     }
 
     /// Binds the [texture](crate::handles::TextureHandle).
@@ -205,7 +205,7 @@ impl<T> Layer<'_, ColorVertex, T> {
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
     pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
-        self.bind_view_handle(handle, shader::COLOR_CAMERA_GROUP)
+        self.bind_view_handle(handle, shader::COLOR_GLOBALS_GROUP)
     }
 
     /// Binds the [light](crate::handles::LightHandle).

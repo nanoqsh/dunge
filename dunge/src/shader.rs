@@ -7,12 +7,12 @@ use {
     wgpu::VertexBufferLayout,
 };
 
-pub(crate) const COLOR_CAMERA_GROUP: u32 = 0;
+pub(crate) const COLOR_GLOBALS_GROUP: u32 = 0;
 pub(crate) const COLOR_SOURCES_GROUP: u32 = 1;
 pub(crate) const FLAT_TEXTURE_GROUP: u32 = 0;
 pub(crate) const POST_DATA_GROUP: u32 = 0;
 pub(crate) const POST_TEXTURE_GROUP: u32 = 1;
-pub(crate) const TEXTURED_CAMERA_GROUP: u32 = 0;
+pub(crate) const TEXTURED_GLOBALS_GROUP: u32 = 0;
 pub(crate) const TEXTURED_TEXTURE_GROUP: u32 = 1;
 pub(crate) const TEXTURED_SOURCES_GROUP: u32 = 2;
 pub(crate) const TEXTURED_SPACE_GROUP: u32 = 3;

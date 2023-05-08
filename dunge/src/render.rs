@@ -238,7 +238,7 @@ impl Render {
     }
 
     pub fn create_view(&mut self, view: View<Projection>) -> ViewHandle {
-        let mut camera = Camera::new(&self.device, &self.layouts.camera);
+        let mut camera = Camera::new(&self.device, &self.layouts.globals);
         camera.set_view(view);
         let id = self.resources.views.insert(camera);
         ViewHandle(id)

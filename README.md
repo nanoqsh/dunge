@@ -42,7 +42,7 @@ use dunge::{
 fn main() {
     dunge::make_window(InitialState::default())
         .run_blocking(CanvasConfig::default(), App::new)
-        .expect("create canvas");
+        .log_error();
 }
 ```
 
@@ -101,7 +101,7 @@ impl Loop for App {
         // Draw a new layer
         let mut layer = frame
             .layer(self.layer)?
-            .with_clear_color(Srgba([0, 0, 0, 255]))
+            .with_clear_color(Standard([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start();
 

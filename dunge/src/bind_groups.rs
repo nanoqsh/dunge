@@ -5,7 +5,7 @@ use {
 
 pub(crate) struct Layouts {
     pub textured: BindGroupLayout,
-    pub camera: BindGroupLayout,
+    pub globals: BindGroupLayout,
     pub post_shader_data: BindGroupLayout,
     pub lights: BindGroupLayout,
     pub space: BindGroupLayout,
@@ -37,7 +37,7 @@ impl Layouts {
                 ],
                 label: Some("texture bind group layout"),
             }),
-            camera: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            globals: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[BindGroupLayoutEntry {
                     binding: shader::CAMERA_BINDING,
                     visibility: ShaderStages::VERTEX,
@@ -48,7 +48,7 @@ impl Layouts {
                     },
                     count: None,
                 }],
-                label: Some("camera bind group layout"),
+                label: Some("globals bind group layout"),
             }),
             post_shader_data: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[BindGroupLayoutEntry {
@@ -154,11 +154,11 @@ impl Layouts {
 
     pub fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
         match shader {
-            Shader::Color => BindGroupLayouts::N2([&self.camera, &self.lights]),
+            Shader::Color => BindGroupLayouts::N2([&self.globals, &self.lights]),
             Shader::Flat => BindGroupLayouts::N1([&self.textured]),
             Shader::Post => BindGroupLayouts::N2([&self.post_shader_data, &self.textured]),
             Shader::Textured => {
-                BindGroupLayouts::N4([&self.camera, &self.textured, &self.lights, &self.space])
+                BindGroupLayouts::N4([&self.globals, &self.textured, &self.lights, &self.space])
             }
         }
     }

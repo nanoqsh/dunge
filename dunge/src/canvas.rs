@@ -50,24 +50,26 @@ impl Canvas {
     {
         let Self { event_loop, window } = self;
 
-        // Create the render
-        let mut render = match Render::new(&window, config.backend_selector).await {
-            Ok(render) => render,
-            Err(err) => return err,
-        };
-
-        // Initial resize
-        render.set_screen({
-            let (width, height): (u32, u32) = window.inner_size().into();
-            Some(Screen {
-                width: width.max(1).try_into().expect("non zero"),
-                height: height.max(1).try_into().expect("non zero"),
-                ..Default::default()
-            })
-        });
-
         // Create the context
-        let mut context = Context::new(window, event_loop.create_proxy(), render);
+        let mut context = {
+            // Create the render
+            let mut render = match Render::new(&window, config.backend_selector).await {
+                Ok(render) => render,
+                Err(err) => return err,
+            };
+
+            // Initial resize
+            render.set_screen({
+                let (width, height): (u32, u32) = window.inner_size().into();
+                Some(Screen {
+                    width: width.max(1).try_into().expect("non zero"),
+                    height: height.max(1).try_into().expect("non zero"),
+                    ..Default::default()
+                })
+            });
+
+            Box::new(Context::new(window, event_loop.create_proxy(), render))
+        };
 
         // Create the loop object
         let mut lp = make_loop(&mut context);
