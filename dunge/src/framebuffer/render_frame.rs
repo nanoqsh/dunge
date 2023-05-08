@@ -19,10 +19,10 @@ pub(crate) struct RenderFrame {
 }
 
 impl RenderFrame {
-    pub const FORMAT: TextureFormat = if cfg!(target_arch = "wasm32") {
-        TextureFormat::Rgba8UnormSrgb
-    } else {
+    pub const FORMAT: TextureFormat = if cfg!(target_os = "linux") {
         TextureFormat::Bgra8UnormSrgb
+    } else {
+        TextureFormat::Rgba8UnormSrgb
     };
 
     pub fn new(

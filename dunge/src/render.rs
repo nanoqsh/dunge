@@ -15,8 +15,8 @@ use {
         screen::Screen,
         shader::Shader,
         shader_data::{
-            Instance, InstanceModel, Light, LightSpace, PostShaderData, SourceModel, SpaceData,
-            SpaceModel, Texture, TextureData,
+            Instance as Inst, InstanceModel, Light, LightSpace, PostShaderData, SourceModel,
+            SpaceData, SpaceModel, Texture, TextureData,
         },
         storage::Storage,
         topology::Topology,
@@ -24,16 +24,16 @@ use {
     },
     once_cell::unsync::OnceCell,
     wgpu::{
-        Adapter, Device, Instance as WgpuInstance, Queue, ShaderModule, Surface,
-        SurfaceConfiguration, SurfaceError,
+        Adapter, Device, Instance, Queue, ShaderModule, Surface, SurfaceConfiguration, SurfaceError,
     },
     winit::window::Window,
 };
 
 pub(crate) struct Render {
+    instance: Instance,
     device: Device,
     queue: Queue,
-    surface: Surface,
+    surface: Option<Surface>,
     surface_config: SurfaceConfiguration,
     screen: Screen,
     max_texture_size: u32,
@@ -46,19 +46,12 @@ pub(crate) struct Render {
 }
 
 impl Render {
-    pub async fn new(window: &Window, selector: BackendSelector) -> Result<Self, CanvasError> {
+    pub async fn new(selector: BackendSelector) -> Result<Self, CanvasError> {
         use wgpu::*;
 
-        #[cfg(target_os = "android")]
-        {
-            Self::wait_for_native_screen();
-        }
-
         let instance = Instance::default();
-        let surface = unsafe { instance.create_surface(window).expect("create surface") };
-
         let (device, queue) = {
-            let adapter = Self::select_adapter(selector, &instance, &surface)
+            let adapter = Self::select_adapter(selector, &instance)
                 .await
                 .ok_or(CanvasError::BackendSelection)?;
 
@@ -68,7 +61,6 @@ impl Render {
             let desc = DeviceDescriptor {
                 features: Features::empty(),
                 limits: Limits {
-                    max_bind_groups: 8,
                     max_storage_buffers_per_shader_stage: 0,
                     max_storage_textures_per_shader_stage: 0,
                     max_dynamic_storage_buffers_per_pipeline_layout: 0,
@@ -79,7 +71,7 @@ impl Render {
                     max_compute_workgroup_size_y: 0,
                     max_compute_workgroup_size_z: 0,
                     max_compute_workgroups_per_dimension: 0,
-                    ..if cfg!(target_arch = "wasm32") {
+                    ..if cfg!(target_arch = "wasm32") || cfg!(target_os = "android") {
                         Limits::downlevel_webgl2_defaults()
                     } else {
                         Limits::downlevel_defaults()
@@ -142,9 +134,10 @@ impl Render {
         let framebuffer = Framebuffer::new_default(&device, &layouts.textured);
 
         Ok(Self {
+            instance,
             device,
             queue,
-            surface,
+            surface: None,
             surface_config,
             screen: Screen::default(),
             max_texture_size,
@@ -203,7 +196,7 @@ impl Render {
     }
 
     pub fn create_instances(&mut self, models: &[InstanceModel]) -> InstanceHandle {
-        let instance = Instance::new(models, &self.device);
+        let instance = Inst::new(models, &self.device);
         let id = self.resources.instances.insert(instance);
         InstanceHandle(id)
     }
@@ -363,6 +356,18 @@ impl Render {
         self.screen
     }
 
+    pub fn drop_surface(&mut self) {
+        self.surface.take();
+    }
+
+    pub fn recreate_surface(&mut self, window: &Window) {
+        self.surface.get_or_insert_with(|| unsafe {
+            self.instance
+                .create_surface(&window)
+                .expect("create surface")
+        });
+    }
+
     pub fn set_screen(&mut self, screen: Option<Screen>) {
         if let Some(screen) = screen {
             self.screen = screen;
@@ -371,7 +376,10 @@ impl Render {
         let (width, height) = self.screen.physical_size();
         self.surface_config.width = width;
         self.surface_config.height = height;
-        self.surface.configure(&self.device, &self.surface_config);
+        self.surface
+            .as_mut()
+            .expect("surface")
+            .configure(&self.device, &self.surface_config);
 
         let (bw, bh) = self.screen.buffer_size(self.max_texture_size);
         let (fw, fh) = self.screen.size_factor();
@@ -392,7 +400,12 @@ impl Render {
     {
         use wgpu::*;
 
-        let output = match self.surface.get_current_texture() {
+        let output = match self
+            .surface
+            .as_ref()
+            .expect("surface")
+            .get_current_texture()
+        {
             Ok(output) => output,
             Err(err) => return RenderResult::SurfaceError(err),
         };
@@ -521,22 +534,7 @@ impl Render {
         &self.resources
     }
 
-    #[cfg(target_os = "android")]
-    fn wait_for_native_screen() {
-        loop {
-            log::info!("waiting for native screen");
-            if let Some(window) = ndk_glue::native_window().as_ref() {
-                log::info!("native screen found:{:?}", window);
-                break;
-            }
-        }
-    }
-
-    async fn select_adapter(
-        selector: BackendSelector,
-        instance: &WgpuInstance,
-        surface: &Surface,
-    ) -> Option<Adapter> {
+    async fn select_adapter(selector: BackendSelector, instance: &Instance) -> Option<Adapter> {
         use {
             crate::canvas::{Backend, Device, SelectorEntry},
             wgpu::{
@@ -550,8 +548,8 @@ impl Render {
                 instance
                     .request_adapter(&RequestAdapterOptions {
                         power_preference: PowerPreference::HighPerformance,
-                        compatible_surface: Some(surface),
                         force_fallback_adapter: false,
+                        compatible_surface: None,
                     })
                     .await
             }
@@ -635,7 +633,7 @@ impl Shaders {
 pub(crate) struct Resources {
     pub(crate) layers: Storage<Pipeline>,
     pub(crate) textures: Storage<Texture>,
-    pub(crate) instances: Storage<Instance>,
+    pub(crate) instances: Storage<Inst>,
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) views: Storage<Camera>,
     pub(crate) lights: Storage<Light>,

@@ -2,6 +2,7 @@
 members = [
     "dunge",
     "examples/cube",
+    "examples/cube_android",
     "examples/cube_wasm",
     "examples/scene",
     "examples/scene_wasm",

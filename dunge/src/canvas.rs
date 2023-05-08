@@ -8,7 +8,7 @@ use {
     },
     std::{num::NonZeroU32, time::Duration},
     winit::{
-        event_loop::EventLoop,
+        event_loop::{EventLoop, EventLoopBuilder},
         window::{Window, WindowBuilder},
     },
 };
@@ -53,20 +53,10 @@ impl Canvas {
         // Create the context
         let mut context = {
             // Create the render
-            let mut render = match Render::new(&window, config.backend_selector).await {
+            let render = match Render::new(config.backend_selector).await {
                 Ok(render) => render,
                 Err(err) => return err,
             };
-
-            // Initial resize
-            render.set_screen({
-                let (width, height): (u32, u32) = window.inner_size().into();
-                Some(Screen {
-                    width: width.max(1).try_into().expect("non zero"),
-                    height: height.max(1).try_into().expect("non zero"),
-                    ..Default::default()
-                })
-            });
 
             Box::new(Context::new(window, event_loop.create_proxy(), render))
         };
@@ -81,6 +71,8 @@ impl Canvas {
         let mut mouse = Mouse::default();
         let mut pressed_keys = vec![];
         let mut released_keys = vec![];
+
+        let mut active = false;
 
         event_loop.run(move |ev, _, flow| {
             use {
@@ -178,6 +170,12 @@ impl Canvas {
                     }
                 }
                 Event::RedrawRequested(window_id) if window_id == context.window.id() => {
+                    if !active {
+                        // Wait a while to become active
+                        flow.set_wait_timeout(Duration::from_secs_f32(0.1));
+                        return;
+                    }
+
                     // Measure the delta time
                     let delta_time = time.delta();
 
@@ -243,6 +241,25 @@ impl Canvas {
                     mouse.motion_delta.1 += y as f32;
                 }
                 Event::UserEvent(CanvasEvent::Close) if lp.close_requested() => flow.set_exit(),
+                Event::Suspended => {
+                    context.render.drop_surface();
+                    active = false;
+                }
+                Event::Resumed => {
+                    context.render.recreate_surface(&context.window);
+
+                    // Set render screen on application start and resume
+                    context.render.set_screen({
+                        let (width, height): (u32, u32) = context.window.inner_size().into();
+                        Some(Screen {
+                            width: width.max(1).try_into().expect("non zero"),
+                            height: height.max(1).try_into().expect("non zero"),
+                            ..Default::default()
+                        })
+                    });
+
+                    active = true;
+                }
                 _ => {}
             }
         })
@@ -267,61 +284,65 @@ pub(crate) enum CanvasEvent {
     Close,
 }
 
-/// Creates a canvas in a window with given initial state.
 #[cfg(not(target_arch = "wasm32"))]
-#[must_use]
-pub fn make_window(state: InitialState) -> Canvas {
-    use winit::{dpi::PhysicalSize, event_loop::EventLoopBuilder, window::Fullscreen};
+pub(crate) mod window {
+    use super::*;
 
-    let mut builder = EventLoopBuilder::with_user_event();
+    /// Creates a canvas in a window with given initial state.
+    #[must_use]
+    pub fn make_window(state: InitialState) -> Canvas {
+        use winit::{dpi::PhysicalSize, window::Fullscreen};
 
-    #[cfg(target_os = "linux")]
-    {
-        use {std::env, winit::platform::x11::EventLoopBuilderExtX11};
+        let mut builder = EventLoopBuilder::with_user_event();
 
-        builder.with_x11();
-        env::remove_var("WAYLAND_DISPLAY"); // Temporary force x11
+        #[cfg(target_os = "linux")]
+        {
+            use {std::env, winit::platform::x11::EventLoopBuilderExtX11};
+
+            builder.with_x11();
+            env::remove_var("WAYLAND_DISPLAY"); // Temporary force x11
+        }
+
+        let event_loop = builder.build();
+
+        let builder = WindowBuilder::new().with_title(state.title);
+        let builder = match state.mode {
+            WindowMode::Fullscreen => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
+            WindowMode::Windowed { width, height } => {
+                builder.with_inner_size(PhysicalSize::new(width.max(1), height.max(1)))
+            }
+        };
+
+        let window = builder.build(&event_loop).expect("build window");
+        window.set_cursor_visible(state.show_cursor);
+
+        Canvas { event_loop, window }
     }
 
-    let event_loop = builder.build();
+    /// The initial window state.
+    #[derive(Clone, Copy)]
+    pub struct InitialState<'a> {
+        pub title: &'a str,
+        pub mode: WindowMode,
+        pub show_cursor: bool,
+    }
 
-    let builder = WindowBuilder::new().with_title(state.title);
-    let builder = match state.mode {
-        WindowMode::Fullscreen => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
-        WindowMode::Windowed { width, height } => {
-            builder.with_inner_size(PhysicalSize::new(width.max(1), height.max(1)))
-        }
-    };
-
-    let window = builder.build(&event_loop).expect("build window");
-    window.set_cursor_visible(state.show_cursor);
-
-    Canvas { event_loop, window }
-}
-
-/// The initial window state.
-#[derive(Clone, Copy)]
-pub struct InitialState<'a> {
-    pub title: &'a str,
-    pub mode: WindowMode,
-    pub show_cursor: bool,
-}
-
-impl Default for InitialState<'static> {
-    fn default() -> Self {
-        Self {
-            title: "Dunge",
-            mode: WindowMode::Fullscreen,
-            show_cursor: true,
+    impl Default for InitialState<'static> {
+        fn default() -> Self {
+            Self {
+                title: "Dunge",
+                mode: WindowMode::Fullscreen,
+                show_cursor: true,
+            }
         }
     }
-}
 
-/// The window mode.
-#[derive(Clone, Copy)]
-pub enum WindowMode {
-    Fullscreen,
-    Windowed { width: u32, height: u32 },
+    /// The window mode.
+    #[derive(Clone, Copy)]
+    pub enum WindowMode {
+        Fullscreen,
+        Windowed { width: u32, height: u32 },
+    }
 }
 
 /// Creates a canvas in the HTML element by its id.
@@ -330,7 +351,7 @@ pub enum WindowMode {
 pub fn from_element(id: &str) -> Canvas {
     use {
         web_sys::Window,
-        winit::{dpi::PhysicalSize, event_loop::EventLoopBuilder, platform::web::WindowExtWebSys},
+        winit::{dpi::PhysicalSize, platform::web::WindowExtWebSys},
     };
 
     let event_loop = EventLoopBuilder::with_user_event().build();
@@ -360,7 +381,28 @@ pub fn from_element(id: &str) -> Canvas {
     Canvas { event_loop, window }
 }
 
-/// The [`Canvas`] creation config.
+#[cfg(target_os = "android")]
+pub(crate) mod android {
+    use super::*;
+    use winit::platform::android::activity::AndroidApp;
+
+    /// Creates a canvas from the `AndroidApp` class.
+    pub fn from_app(app: AndroidApp) -> Canvas {
+        use winit::platform::android::EventLoopBuilderExtAndroid;
+
+        let event_loop = EventLoopBuilder::with_user_event()
+            .with_android_app(app)
+            .build();
+
+        let window = WindowBuilder::new()
+            .build(&event_loop)
+            .expect("build window");
+
+        Canvas { event_loop, window }
+    }
+}
+
+/// The [`Canvas`] config.
 #[derive(Default)]
 pub struct CanvasConfig {
     pub backend_selector: BackendSelector,
