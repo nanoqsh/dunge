@@ -1,0 +1,39 @@
+name: Rust
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+env:
+    CARGO_INCREMENTAL: false
+    CARGO_TERM_COLOR: always
+    RUSTFLAGS: -Dwarnings
+    RUST_BACKTRACE: full
+    MSRV: 1.69
+    RUSTDOCFLAGS: -Dwarnings
+    CACHE_SUFFIX: c
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v3
+          - name: Build
+            run: cargo build --verbose
+          - name: Clippy
+            run: >
+                cargo clippy --
+                -W clippy::use_self
+                -W clippy::unwrap_used
+                -W clippy::perf
+                -W clippy::pedantic
+                -A clippy::cast_precision_loss
+                -A clippy::cast_sign_loss
+                -A clippy::cast_possible_truncation
+                -A clippy::cast_lossless
+                -A clippy::wildcard_imports
+                -A clippy::module_name_repetitions
+                -A clippy::many_single_char_names
+                -A clippy::too_many_lines
+
+          - name: Tests
+            run: cargo test --verbose
