@@ -53,7 +53,7 @@ impl Canvas {
         // Create the context
         let mut context = {
             // Create the render
-            let render = match Render::new(config.backend_selector).await {
+            let render = match Render::new(config, &window).await {
                 Ok(render) => render,
                 Err(err) => return err,
             };
@@ -88,19 +88,20 @@ impl Canvas {
 
             match ev {
                 Event::NewEvents(StartCause::Init) => {
+                    log::info!("new events: init");
+
                     // Reset the timer before start the loop
                     time.reset();
                 }
                 Event::NewEvents(StartCause::ResumeTimeReached { .. }) => {
+                    log::info!("new events: resume time reached");
                     context.window.request_redraw();
                 }
                 Event::WindowEvent { event, window_id } if window_id == context.window.id() => {
+                    log::info!("window event: {event:?}");
+
                     match event {
-                        WindowEvent::Resized(size)
-                        | WindowEvent::ScaleFactorChanged {
-                            new_inner_size: &mut size,
-                            ..
-                        } => context.render.set_screen({
+                        WindowEvent::Resized(size) => context.render.set_screen({
                             let (width, height): (u32, u32) = size.into();
                             let screen = context.render.screen();
                             Some(Screen {
@@ -170,6 +171,8 @@ impl Canvas {
                     }
                 }
                 Event::RedrawRequested(window_id) if window_id == context.window.id() => {
+                    log::info!("redraw requested");
+
                     if !active {
                         // Wait a while to become active
                         flow.set_wait_timeout(Duration::from_secs_f32(0.1));
@@ -237,15 +240,22 @@ impl Canvas {
                     event: DeviceEvent::MouseMotion { delta: (x, y) },
                     ..
                 } => {
+                    log::info!("device event: mouse motion");
+
                     mouse.motion_delta.0 += x as f32;
                     mouse.motion_delta.1 += y as f32;
                 }
-                Event::UserEvent(CanvasEvent::Close) if lp.close_requested() => flow.set_exit(),
+                Event::UserEvent(CanvasEvent::Close) if lp.close_requested() => {
+                    log::info!("user event: close");
+                    flow.set_exit();
+                }
                 Event::Suspended => {
+                    log::info!("suspended");
                     context.render.drop_surface();
                     active = false;
                 }
                 Event::Resumed => {
+                    log::info!("resumed");
                     context.render.recreate_surface(&context.window);
 
                     // Set render screen on application start and resume
@@ -276,7 +286,7 @@ pub enum Error {
 
 impl Error {
     pub fn log_error(self) {
-        log::error!("{self:?}");
+        panic!("{self:?}");
     }
 }
 
@@ -405,46 +415,38 @@ pub(crate) mod android {
 /// The [`Canvas`] config.
 #[derive(Default)]
 pub struct CanvasConfig {
-    pub backend_selector: BackendSelector,
+    pub backend: Backend,
+    pub selector: Selector,
 }
 
 /// Description of backend selection behavior.
 #[derive(Default)]
-pub enum BackendSelector {
+pub enum Selector {
     #[default]
     Auto,
     #[cfg(not(target_arch = "wasm32"))]
     Callback(Box<dyn FnMut(Vec<SelectorEntry>) -> Option<usize>>),
 }
 
-impl BackendSelector {
-    /// Selects a specific backend.
-    #[cfg(not(target_arch = "wasm32"))]
-    #[must_use]
-    pub fn select_backend(backend: Backend) -> Self {
-        Self::Callback(Box::new(move |entries| {
-            entries.iter().position(|entry| entry.backend == backend)
-        }))
-    }
-}
-
-pub struct SelectorEntry {
-    pub name: String,
-    pub backend: Backend,
-    pub device: Device,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Backend {
-    Gl,
+    #[cfg_attr(not(target_arch = "wasm32"), default)]
     Vulkan,
+    #[cfg_attr(target_arch = "wasm32", default)]
+    Gl,
     Dx12,
     Dx11,
     Metal,
     WebGpu,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug)]
+pub struct SelectorEntry {
+    pub name: String,
+    pub device: Device,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Device {
     IntegratedGpu,
     DiscreteGpu,

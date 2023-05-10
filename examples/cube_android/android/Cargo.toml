@@ -9,9 +9,10 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-cube = { path = "../cube" }
-dunge = { path = "../../dunge" }
+cube = { path = "../../cube" }
+dunge = { path = "../../../dunge" }
 android_logger = "0.13"
+# TODO: do I need this?
 log = "0.4"
 
 [package.metadata.android]

@@ -2,7 +2,7 @@ use {
     crate::{
         bind_groups::Layouts,
         camera::{Camera, Projection, View},
-        canvas::{BackendSelector, Error as CanvasError},
+        canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
         color::Linear,
         context::Screenshot,
         error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
@@ -33,10 +33,10 @@ pub(crate) struct Render {
     instance: Instance,
     device: Device,
     queue: Queue,
+    surface_conf: SurfaceConfiguration,
     surface: Option<Surface>,
-    surface_config: SurfaceConfiguration,
+    limits: RenderLimits,
     screen: Screen,
-    max_texture_size: u32,
     shaders: Shaders,
     layouts: Layouts,
     post_pipeline: Pipeline,
@@ -46,12 +46,32 @@ pub(crate) struct Render {
 }
 
 impl Render {
-    pub async fn new(selector: BackendSelector) -> Result<Self, CanvasError> {
+    pub async fn new(conf: CanvasConfig, window: &Window) -> Result<Self, CanvasError> {
         use wgpu::*;
 
-        let instance = Instance::default();
+        let backends = match conf.backend {
+            CanvasBackend::Vulkan => Backends::VULKAN,
+            CanvasBackend::Gl => Backends::GL,
+            CanvasBackend::Dx12 => Backends::DX12,
+            CanvasBackend::Dx11 => Backends::DX11,
+            CanvasBackend::Metal => Backends::METAL,
+            CanvasBackend::WebGpu => Backends::BROWSER_WEBGPU,
+        };
+
+        let instance = Instance::new(InstanceDescriptor {
+            backends,
+            dx12_shader_compiler: Dx12Compiler::default(),
+        });
+
+        // In Android a surface will be created later
+        let surface = if cfg!(target_os = "android") {
+            None
+        } else {
+            Some(unsafe { instance.create_surface(window).expect("create surface") })
+        };
+
         let (device, queue) = {
-            let adapter = Self::select_adapter(selector, &instance)
+            let adapter = Self::select_adapter(conf.selector, &instance, surface.as_ref())
                 .await
                 .ok_or(CanvasError::BackendSelection)?;
 
@@ -71,7 +91,7 @@ impl Render {
                     max_compute_workgroup_size_y: 0,
                     max_compute_workgroup_size_z: 0,
                     max_compute_workgroups_per_dimension: 0,
-                    ..if cfg!(target_arch = "wasm32") || cfg!(target_os = "android") {
+                    ..if cfg!(target_arch = "wasm32") {
                         Limits::downlevel_webgl2_defaults()
                     } else {
                         Limits::downlevel_defaults()
@@ -87,9 +107,7 @@ impl Render {
             dev
         };
 
-        let max_texture_size = device.limits().max_texture_dimension_2d;
-
-        let surface_config = SurfaceConfiguration {
+        let surface_conf = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format: Framebuffer::RENDER_FORMAT,
             width: 1,
@@ -97,6 +115,10 @@ impl Render {
             present_mode: PresentMode::Fifo,
             alpha_mode: CompositeAlphaMode::Auto,
             view_formats: vec![],
+        };
+
+        let limits = RenderLimits {
+            max_texture_size: device.limits().max_texture_dimension_2d,
         };
 
         let layouts = Layouts::new(&device);
@@ -120,7 +142,7 @@ impl Render {
             &device,
             &shaders,
             &layouts,
-            surface_config.format,
+            surface_conf.format,
             Shader::Post,
             PipelineParameters {
                 blend: BlendState::ALPHA_BLENDING,
@@ -137,10 +159,10 @@ impl Render {
             instance,
             device,
             queue,
-            surface: None,
-            surface_config,
+            surface_conf,
+            surface,
+            limits,
             screen: Screen::default(),
-            max_texture_size,
             shaders,
             layouts,
             post_pipeline,
@@ -159,7 +181,7 @@ impl Render {
             &self.device,
             &self.shaders,
             &self.layouts,
-            self.surface_config.format,
+            self.surface_conf.format,
             V::VALUE.into_inner(),
             PipelineParameters {
                 topology: T::VALUE.into_inner(),
@@ -370,18 +392,23 @@ impl Render {
 
     pub fn set_screen(&mut self, screen: Option<Screen>) {
         if let Some(screen) = screen {
+            let (width, height) = screen.physical_size();
+            if self.surface_conf.width == width && self.surface_conf.height == height {
+                return;
+            }
+
             self.screen = screen;
         }
 
         let (width, height) = self.screen.physical_size();
-        self.surface_config.width = width;
-        self.surface_config.height = height;
+        self.surface_conf.width = width;
+        self.surface_conf.height = height;
         self.surface
             .as_mut()
             .expect("surface")
-            .configure(&self.device, &self.surface_config);
+            .configure(&self.device, &self.surface_conf);
 
-        let (bw, bh) = self.screen.buffer_size(self.max_texture_size);
+        let (bw, bh) = self.screen.buffer_size(self.limits.max_texture_size);
         let (fw, fh) = self.screen.size_factor();
         self.post_shader_data
             .resize([bw.get() as f32, bh.get() as f32], [fw, fh], &self.queue);
@@ -534,42 +561,35 @@ impl Render {
         &self.resources
     }
 
-    async fn select_adapter(selector: BackendSelector, instance: &Instance) -> Option<Adapter> {
+    async fn select_adapter(
+        selector: Selector,
+        instance: &Instance,
+        surface: Option<&Surface>,
+    ) -> Option<Adapter> {
+        #[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
         use {
-            crate::canvas::{Backend, Device, SelectorEntry},
-            wgpu::{
-                Backend as WgpuBackend, Backends, DeviceType, PowerPreference,
-                RequestAdapterOptions,
-            },
+            crate::canvas::{Device, SelectorEntry},
+            wgpu::{Backends, DeviceType, PowerPreference, RequestAdapterOptions},
         };
 
         match selector {
-            BackendSelector::Auto => {
+            Selector::Auto => {
                 instance
                     .request_adapter(&RequestAdapterOptions {
                         power_preference: PowerPreference::HighPerformance,
                         force_fallback_adapter: false,
-                        compatible_surface: None,
+                        compatible_surface: surface,
                     })
                     .await
             }
             #[cfg(not(target_arch = "wasm32"))]
-            BackendSelector::Callback(mut callback) => {
+            Selector::Callback(mut callback) => {
                 let mut adapters = vec![];
                 let mut entries = vec![];
                 for adapter in instance.enumerate_adapters(Backends::all()) {
                     let info = adapter.get_info();
                     let entry = SelectorEntry {
                         name: info.name,
-                        backend: match info.backend {
-                            WgpuBackend::Vulkan => Backend::Vulkan,
-                            WgpuBackend::Metal => Backend::Metal,
-                            WgpuBackend::Dx12 => Backend::Dx12,
-                            WgpuBackend::Dx11 => Backend::Dx11,
-                            WgpuBackend::Gl => Backend::Gl,
-                            WgpuBackend::BrowserWebGpu => Backend::WebGpu,
-                            WgpuBackend::Empty => panic!("undefined backend"),
-                        },
                         device: match info.device_type {
                             DeviceType::IntegratedGpu => Device::IntegratedGpu,
                             DeviceType::DiscreteGpu => Device::DiscreteGpu,
@@ -584,14 +604,14 @@ impl Render {
                 }
 
                 let selected = callback(entries)?;
-                if selected < adapters.len() {
-                    Some(adapters.swap_remove(selected))
-                } else {
-                    None
-                }
+                (selected < adapters.len()).then(|| adapters.swap_remove(selected))
             }
         }
     }
+}
+
+struct RenderLimits {
+    max_texture_size: u32,
 }
 
 pub(crate) enum RenderResult<E> {

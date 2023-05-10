@@ -68,7 +68,7 @@ pub use crate::canvas::android::from_app;
 pub use {
     crate::{
         camera::{Orthographic, Perspective, View},
-        canvas::{Backend, BackendSelector, Canvas, CanvasConfig, Device, Error as CanvasError},
+        canvas::{Backend, Canvas, CanvasConfig, Device, Error as CanvasError, Selector},
         context::{Context, FrameParameters, Limits, PixelSize},
         error::Error,
         frame::Frame,
