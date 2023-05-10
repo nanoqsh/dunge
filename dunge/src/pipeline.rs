@@ -1,6 +1,6 @@
 use {
     crate::{
-        bind_groups::Layouts,
+        bind_groups::Groups,
         framebuffer::Framebuffer,
         handles::LayerHandle,
         render::{Render, Shaders},
@@ -22,7 +22,7 @@ impl Pipeline {
     pub fn new(
         device: &Device,
         shaders: &Shaders,
-        layouts: &Layouts,
+        groups: &Groups,
         format: TextureFormat,
         shader: Shader,
         params: PipelineParameters,
@@ -33,7 +33,7 @@ impl Pipeline {
             let module = shaders.module(device, shader);
             let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: layouts.bind_group_layouts(shader).as_slice(),
+                bind_group_layouts: groups.bind_group_layouts(shader).as_slice(),
                 push_constant_ranges: &[],
             });
 

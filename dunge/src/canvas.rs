@@ -3,10 +3,9 @@ use {
         context::Context,
         r#loop::{Input, Keys, Loop, Mouse},
         render::{RenderContext, RenderResult},
-        screen::Screen,
         time::Time,
     },
-    std::{num::NonZeroU32, time::Duration},
+    std::time::Duration,
     winit::{
         event_loop::{EventLoop, EventLoopBuilder},
         window::{Window, WindowBuilder},
@@ -105,15 +104,11 @@ impl Canvas {
                     log::info!("window event: {event:?}");
 
                     match event {
-                        WindowEvent::Resized(size) => context.render.set_screen({
-                            let (width, height): (u32, u32) = size.into();
-                            let screen = context.render.screen();
-                            Some(Screen {
-                                width: NonZeroU32::new(width.max(1)).expect("non zero"),
-                                height: NonZeroU32::new(height.max(1)).expect("non zero"),
-                                ..screen
-                            })
-                        }),
+                        WindowEvent::Resized(size)
+                        | WindowEvent::ScaleFactorChanged {
+                            new_inner_size: &mut size,
+                            ..
+                        } => context.render.resize(size.into()),
                         WindowEvent::CloseRequested if lp.close_requested() => flow.set_exit(),
                         WindowEvent::KeyboardInput {
                             input:
@@ -138,9 +133,7 @@ impl Canvas {
                                 mouse.wheel_delta.0 += x;
                                 mouse.wheel_delta.1 += y;
                             }
-                            MouseScrollDelta::PixelDelta(PhysicalPosition { .. }) => {
-                                // TODO
-                            }
+                            MouseScrollDelta::PixelDelta(PhysicalPosition { .. }) => {}
                         },
                         WindowEvent::MouseInput { state, button, .. } => match button {
                             MouseButton::Left => {
@@ -263,14 +256,7 @@ impl Canvas {
                     context.render.recreate_surface(&context.window);
 
                     // Set render screen on application start and resume
-                    context.render.set_screen({
-                        let (width, height): (u32, u32) = context.window.inner_size().into();
-                        Some(Screen {
-                            width: width.max(1).try_into().expect("non zero"),
-                            height: height.max(1).try_into().expect("non zero"),
-                            ..Default::default()
-                        })
-                    });
+                    context.render.resize(context.window.inner_size().into());
 
                     active = true;
                 }

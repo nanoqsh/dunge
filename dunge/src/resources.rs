@@ -61,7 +61,7 @@ impl Resources {
             data,
             render.context().device(),
             render.context().queue(),
-            &render.layouts().textured,
+            &render.groups().textured,
         );
 
         let id = self.textures.insert(texture);
@@ -125,7 +125,7 @@ impl Resources {
     }
 
     pub fn create_view(&mut self, render: &Render, view: View<Projection>) -> ViewHandle {
-        let mut camera = Camera::new(render.context().device(), &render.layouts().globals);
+        let mut camera = Camera::new(render.context().device(), &render.groups().globals);
         camera.set_view(view);
         let id = self.views.insert(camera);
         ViewHandle(id)
@@ -155,7 +155,7 @@ impl Resources {
             ambient.0,
             srcs,
             render.context().device(),
-            &render.layouts().lights,
+            &render.groups().lights,
         )?;
 
         let id = self.lights.insert(light);
@@ -203,7 +203,7 @@ impl Resources {
             data,
             render.context().device(),
             render.context().queue(),
-            &render.layouts().space,
+            &render.groups().space,
         )?;
 
         let id = self.spaces.insert(ls);

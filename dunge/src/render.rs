@@ -1,6 +1,6 @@
 use {
     crate::{
-        bind_groups::Layouts,
+        bind_groups::Groups,
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
         context::Screenshot,
         frame::Frame,
@@ -25,7 +25,7 @@ pub(crate) struct Render {
     limits: RenderLimits,
     screen: Screen,
     shaders: Shaders,
-    layouts: Layouts,
+    groups: Groups,
     post_pipeline: Pipeline,
     post_shader_data: PostShaderData,
     framebuffer: Framebuffer,
@@ -49,26 +49,26 @@ impl Render {
             max_texture_size: context.device.limits().max_texture_dimension_2d,
         };
 
-        let layouts = Layouts::new(&context.device);
-        let post_shader_data = PostShaderData::new(&context.device, &layouts.post_shader_data);
+        let groups = Groups::new(&context.device);
+        let post_shader_data = PostShaderData::new(&context.device, &groups.post_shader_data);
         let shaders = Shaders::default();
 
         resources.lights.insert({
             const DEFAULT_AMBIENT: [f32; 3] = [1.; 3];
 
-            Light::new(DEFAULT_AMBIENT, &[], &context.device, &layouts.lights)
+            Light::new(DEFAULT_AMBIENT, &[], &context.device, &groups.lights)
                 .expect("default light")
         });
 
         resources.spaces.insert(
-            LightSpace::new(&[], &[], &context.device, &context.queue, &layouts.space)
+            LightSpace::new(&[], &[], &context.device, &context.queue, &groups.space)
                 .expect("default light space"),
         );
 
         let post_pipeline = Pipeline::new(
             &context.device,
             &shaders,
-            &layouts,
+            &groups,
             surface_conf.format,
             Shader::Post,
             PipelineParameters {
@@ -80,7 +80,7 @@ impl Render {
             },
         );
 
-        let framebuffer = Framebuffer::new_default(&context.device, &layouts.textured);
+        let framebuffer = Framebuffer::new_default(&context.device, &groups.textured);
 
         Self {
             context,
@@ -88,7 +88,7 @@ impl Render {
             limits,
             screen: Screen::default(),
             shaders,
-            layouts,
+            groups,
             post_pipeline,
             post_shader_data,
             framebuffer,
@@ -101,10 +101,14 @@ impl Render {
 
     pub fn recreate_surface(&mut self, window: &Window) {
         self.context.surface.get_or_insert_with(|| unsafe {
-            self.context
+            let surface = self
+                .context
                 .instance
                 .create_surface(&window)
-                .expect("create surface")
+                .expect("create surface");
+
+            surface.configure(&self.context.device, &self.surface_conf);
+            surface
         });
     }
 
@@ -112,7 +116,7 @@ impl Render {
         Pipeline::new(
             &self.context.device,
             &self.shaders,
-            &self.layouts,
+            &self.groups,
             self.surface_conf.format,
             shader,
             params,
@@ -121,6 +125,20 @@ impl Render {
 
     pub fn screen(&self) -> Screen {
         self.screen
+    }
+
+    pub fn resize(&mut self, size: (u32, u32)) {
+        use std::num::NonZeroU32;
+
+        self.set_screen({
+            let (width, height) = size;
+            let screen = self.screen();
+            Some(Screen {
+                width: NonZeroU32::new(width.max(1)).expect("non zero"),
+                height: NonZeroU32::new(height.max(1)).expect("non zero"),
+                ..screen
+            })
+        });
     }
 
     pub fn set_screen(&mut self, screen: Option<Screen>) {
@@ -154,7 +172,7 @@ impl Render {
             (bw, bh),
             self.screen.filter,
             &self.context.device,
-            &self.layouts.textured,
+            &self.groups.textured,
         );
     }
 
@@ -280,8 +298,8 @@ impl Render {
         &self.context
     }
 
-    pub fn layouts(&self) -> &Layouts {
-        &self.layouts
+    pub fn groups(&self) -> &Groups {
+        &self.groups
     }
 
     pub fn post_pipeline(&self) -> &Pipeline {
