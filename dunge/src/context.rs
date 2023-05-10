@@ -8,7 +8,8 @@ use {
         handles::*,
         mesh::Data as MeshData,
         pipeline::ParametersBuilder,
-        render::Render,
+        render::{Render, RenderContext},
+        resources::Resources,
         screen::Screen,
         shader_data::{
             InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel, TextureData,
@@ -27,6 +28,7 @@ pub struct Context {
     pub(crate) window: Window,
     pub(crate) proxy: Proxy,
     pub(crate) render: Render,
+    pub(crate) resources: Resources,
     limits: Limits,
     models: Vec<InstanceModel>,
     sources: Vec<SourceModel>,
@@ -35,13 +37,16 @@ pub struct Context {
 }
 
 impl Context {
-    pub(crate) fn new(window: Window, proxy: Proxy, render: Render) -> Self {
+    pub(crate) fn new(window: Window, proxy: Proxy, render_context: RenderContext) -> Self {
         const DEFAULT_CAPACITY: usize = 8;
+
+        let mut resources = Resources::default();
 
         Self {
             window,
             proxy,
-            render,
+            render: Render::new(render_context, &mut resources),
+            resources,
             limits: Limits::default(),
             models: Vec::with_capacity(DEFAULT_CAPACITY),
             sources: Vec::with_capacity(DEFAULT_CAPACITY),
@@ -103,7 +108,7 @@ impl Context {
 
     /// Creates a layer [builder](ParametersBuilder) with custom parameters.
     pub fn create_layer_with_parameters<V, T>(&mut self) -> ParametersBuilder<V, T> {
-        ParametersBuilder::new(&mut self.render)
+        ParametersBuilder::new(&self.render, &mut self.resources)
     }
 
     /// Deletes the layer.
@@ -114,12 +119,12 @@ impl Context {
         &mut self,
         handle: LayerHandle<V, T>,
     ) -> Result<(), ResourceNotFound> {
-        self.render.delete_layer(handle)
+        self.resources.delete_layer(handle)
     }
 
     /// Creates a new texture.
     pub fn create_texture(&mut self, data: TextureData) -> TextureHandle {
-        self.render.create_texture(data)
+        self.resources.create_texture(&self.render, data)
     }
 
     /// Updates the texture.
@@ -131,7 +136,7 @@ impl Context {
         handle: TextureHandle,
         data: TextureData,
     ) -> Result<(), Error> {
-        self.render.update_texture(handle, data)
+        self.resources.update_texture(&self.render, handle, data)
     }
 
     /// Deletes the texture.
@@ -139,7 +144,7 @@ impl Context {
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
     pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
-        self.render.delete_texture(handle)
+        self.resources.delete_texture(handle)
     }
 
     /// Creates new instances.
@@ -154,7 +159,7 @@ impl Context {
             .map(|transform| InstanceModel::from(transform.into_mat()));
 
         self.models.extend(models);
-        self.render.create_instances(&self.models)
+        self.resources.create_instances(&self.render, &self.models)
     }
 
     /// Updates instances.
@@ -172,7 +177,8 @@ impl Context {
             .map(|transform| InstanceModel::from(transform.into_mat()));
 
         self.models.extend(models);
-        self.render.update_instances(handle, &self.models)
+        self.resources
+            .update_instances(&self.render, handle, &self.models)
     }
 
     /// Deletes instances.
@@ -180,7 +186,7 @@ impl Context {
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
     pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
-        self.render.delete_instances(handle)
+        self.resources.delete_instances(handle)
     }
 
     /// Creates a new mesh.
@@ -189,7 +195,7 @@ impl Context {
         V: Vertex,
         T: Topology,
     {
-        self.render.create_mesh(data)
+        self.resources.create_mesh(&self.render, data)
     }
 
     /// Deletes the mesh.
@@ -197,7 +203,7 @@ impl Context {
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
     pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
-        self.render.delete_mesh(handle)
+        self.resources.delete_mesh(handle)
     }
 
     /// Creates a new view.
@@ -205,7 +211,8 @@ impl Context {
     where
         P: IntoProjection,
     {
-        self.render.create_view(view.into_projection_view())
+        self.resources
+            .create_view(&self.render, view.into_projection_view())
     }
 
     /// Updates the view.
@@ -220,7 +227,8 @@ impl Context {
     where
         P: IntoProjection,
     {
-        self.render.update_view(handle, view.into_projection_view())
+        self.resources
+            .update_view(handle, view.into_projection_view())
     }
 
     /// Deletes the view.
@@ -228,7 +236,7 @@ impl Context {
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
     pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
-        self.render.delete_view(handle)
+        self.resources.delete_view(handle)
     }
 
     /// Creates new light.
@@ -251,8 +259,8 @@ impl Context {
             .map(|src| SourceModel::new(src.into_linear()));
 
         self.sources.extend(models);
-        self.render
-            .create_light(ambient.into_linear(), &self.sources)
+        self.resources
+            .create_light(&self.render, ambient.into_linear(), &self.sources)
     }
 
     /// Updates the light.
@@ -276,8 +284,8 @@ impl Context {
             .map(|src| SourceModel::new(src.into_linear()));
 
         self.sources.extend(models);
-        self.render
-            .update_light(handle, ambient.into_linear(), &self.sources)
+        self.resources
+            .update_light(&self.render, handle, ambient.into_linear(), &self.sources)
     }
 
     /// Updates nth source in the light.
@@ -295,8 +303,12 @@ impl Context {
     where
         S: IntoLinear<3>,
     {
-        self.render
-            .update_nth_light(handle, n, SourceModel::new(src.into_linear()))
+        self.resources.update_nth_light(
+            &self.render,
+            handle,
+            n,
+            SourceModel::new(src.into_linear()),
+        )
     }
 
     /// Deletes the light.
@@ -304,7 +316,7 @@ impl Context {
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
     pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), ResourceNotFound> {
-        self.render.delete_light(handle)
+        self.resources.delete_light(handle)
     }
 
     /// Creates new light space.
@@ -329,7 +341,9 @@ impl Context {
                 .push(SpaceModel::new(&space.into_mat_and_linear()));
         }
 
-        let space = self.render.create_space(&self.spaces, &space_data);
+        let space = self
+            .resources
+            .create_space(&self.render, &self.spaces, &space_data);
 
         space_data.clear();
         self.space_data = space_data.into_iter().map(|_| unreachable!()).collect();
@@ -359,7 +373,9 @@ impl Context {
                 .push(SpaceModel::new(&space.into_mat_and_linear()));
         }
 
-        let updated = self.render.update_space(handle, &self.spaces, &space_data);
+        let updated = self
+            .resources
+            .update_space(&self.render, handle, &self.spaces, &space_data);
 
         space_data.clear();
         self.space_data = space_data.into_iter().map(|_| unreachable!()).collect();
@@ -383,8 +399,12 @@ impl Context {
         M: IntoMat,
         C: IntoLinear<3>,
     {
-        self.render
-            .update_nth_space(handle, n, SpaceModel::new(&space.into_mat_and_linear()))
+        self.resources.update_nth_space(
+            &self.render,
+            handle,
+            n,
+            SpaceModel::new(&space.into_mat_and_linear()),
+        )
     }
 
     /// Updates nth color in the light space.
@@ -402,8 +422,8 @@ impl Context {
     where
         C: IntoLinear<3>,
     {
-        self.render
-            .update_nth_space_color(handle, n, color.into_linear())
+        self.resources
+            .update_nth_space_color(&self.render, handle, n, color.into_linear())
     }
 
     /// Updates nth data in the light space.
@@ -418,7 +438,8 @@ impl Context {
         n: usize,
         data: SpaceData,
     ) -> Result<(), Error> {
-        self.render.update_nth_space_data(handle, n, data)
+        self.resources
+            .update_nth_space_data(&self.render, handle, n, data)
     }
 
     /// Deletes the light space.
@@ -426,7 +447,7 @@ impl Context {
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
     pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), ResourceNotFound> {
-        self.render.delete_space(handle)
+        self.resources.delete_space(handle)
     }
 
     /// Takes a screenshot of the current frame.

@@ -7,5 +7,5 @@ fn android_main(app: AndroidApp) {
     android_logger::init_once(Config::default().with_max_level(LevelFilter::Trace));
     dunge::from_app(app)
         .run_blocking(CanvasConfig::default(), App::new)
-        .log_error();
+        .into_panic();
 }

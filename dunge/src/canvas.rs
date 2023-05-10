@@ -2,7 +2,7 @@ use {
     crate::{
         context::Context,
         r#loop::{Input, Keys, Loop, Mouse},
-        render::{Render, RenderResult},
+        render::{RenderContext, RenderResult},
         screen::Screen,
         time::Time,
     },
@@ -53,12 +53,16 @@ impl Canvas {
         // Create the context
         let mut context = {
             // Create the render
-            let render = match Render::new(config, &window).await {
+            let render_context = match RenderContext::new(config, &window).await {
                 Ok(render) => render,
                 Err(err) => return err,
             };
 
-            Box::new(Context::new(window, event_loop.create_proxy(), render))
+            Box::new(Context::new(
+                window,
+                event_loop.create_proxy(),
+                render_context,
+            ))
         };
 
         // Create the loop object
@@ -218,7 +222,7 @@ impl Canvas {
                     pressed_keys.clear();
                     released_keys.clear();
 
-                    match context.render.draw_frame(&lp) {
+                    match context.render.draw_frame(&lp, &context.resources) {
                         RenderResult::Ok => {}
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
                             log::error!("suface error: timeout");
@@ -285,7 +289,11 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn log_error(self) {
+    /// Turns the error into panic.
+    ///
+    /// # Panics
+    /// Yes.
+    pub fn into_panic(self) {
         panic!("{self:?}");
     }
 }

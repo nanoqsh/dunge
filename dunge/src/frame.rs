@@ -6,6 +6,7 @@ use {
         layer::{Builder, Layer},
         pipeline::Pipeline,
         render::Render,
+        resources::Resources,
         shader,
         vertex::Vertex,
     },
@@ -16,15 +17,21 @@ use {
 /// and creates new [layers](crate::Layer).
 pub struct Frame<'d> {
     render: &'d Render,
+    resources: &'d Resources,
     encoder: Encoder,
     frame_view: TextureView,
     drawn_in_frame: bool,
 }
 
 impl<'d> Frame<'d> {
-    pub(crate) fn new(render: &'d Render, frame_view: TextureView) -> Self {
+    pub(crate) fn new(
+        render: &'d Render,
+        resources: &'d Resources,
+        frame_view: TextureView,
+    ) -> Self {
         Self {
             render,
+            resources,
             encoder: Encoder::default(),
             frame_view,
             drawn_in_frame: false,
@@ -112,10 +119,7 @@ impl<'d> Frame<'d> {
         &mut self,
         handle: LayerHandle<V, T>,
     ) -> Result<Builder<'_, 'd, V, T>, ResourceNotFound> {
-        Ok(Builder::new(
-            self,
-            self.render.resources().layers.get(handle.id())?,
-        ))
+        Ok(Builder::new(self, self.resources.layers.get(handle.id())?))
     }
 
     /// Creates a new [layer](crate::Layer).
@@ -175,8 +179,8 @@ impl<'d> Frame<'d> {
         Layer::new(
             pass,
             (vw, vh),
-            self.render.queue(),
-            self.render.resources(),
+            self.render.context().queue(),
+            self.resources,
             &mut self.drawn_in_frame,
         )
     }
@@ -191,6 +195,7 @@ impl Encoder {
 
         self.0.get_or_insert_with(|| {
             render
+                .context()
                 .device()
                 .create_command_encoder(&CommandEncoderDescriptor::default())
         })
@@ -198,7 +203,7 @@ impl Encoder {
 
     fn finish(&mut self, render: &Render) {
         if let Some(encoder) = self.0.take() {
-            render.queue().submit([encoder.finish()]);
+            render.context().queue().submit([encoder.finish()]);
         }
     }
 }

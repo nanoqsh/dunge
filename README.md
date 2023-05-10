@@ -42,7 +42,7 @@ use dunge::{
 fn main() {
     dunge::make_window(InitialState::default())
         .run_blocking(CanvasConfig::default(), App::new)
-        .log_error();
+        .into_panic();
 }
 ```
 

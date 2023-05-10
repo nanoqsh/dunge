@@ -20,6 +20,7 @@ mod r#loop;
 mod mesh;
 mod pipeline;
 mod render;
+mod resources;
 mod screen;
 mod shader;
 mod shader_data {

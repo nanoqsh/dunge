@@ -8,5 +8,5 @@ pub async fn run() {
     dunge::from_element("root")
         .run(CanvasConfig::default(), App::new)
         .await
-        .log_error();
+        .into_panic();
 }
