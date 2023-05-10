@@ -1,9 +1,11 @@
+use std::process::{Command, Output};
+
 /// Runs `wasm-pack` and builds the crate.
 ///
 /// # Panics
 /// If the build fails, the function panics with error messages.
 pub fn run_wasm_pack() {
-    use std::{env, process::Command};
+    use std::env;
 
     let debug = env::var("DEBUG")
         .map(|var| var == "true")
@@ -29,6 +31,30 @@ pub fn run_wasm_pack() {
         .output()
         .expect("build wasm");
 
+    report(&output);
+}
+
+/// Runs `cargo apk` to build the crate.
+///
+/// # Panics
+/// If the build fails, the function panics with error messages.
+pub fn run_cargo_apk() {
+    use std::env;
+
+    let debug = env::var("DEBUG")
+        .map(|var| var == "true")
+        .unwrap_or_default();
+
+    let output = Command::new("cargo")
+        .args(["apk", "build", "--manifest-path", "./android/Cargo.toml"])
+        .args((!debug).then_some("--release"))
+        .output()
+        .expect("build apk");
+
+    report(&output);
+}
+
+fn report(output: &Output) {
     let code = output.status.code().unwrap_or_default();
 
     if code != 0 {

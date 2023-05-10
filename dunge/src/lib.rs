@@ -20,6 +20,7 @@ mod r#loop;
 mod mesh;
 mod pipeline;
 mod render;
+mod resources;
 mod screen;
 mod shader;
 mod shader_data {
@@ -57,18 +58,18 @@ pub mod input {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use crate::canvas::make_window;
+pub use crate::canvas::window::{make_window, InitialState, WindowMode};
 
 #[cfg(target_arch = "wasm32")]
 pub use crate::canvas::from_element;
 
+#[cfg(target_os = "android")]
+pub use crate::canvas::android::from_app;
+
 pub use {
     crate::{
         camera::{Orthographic, Perspective, View},
-        canvas::{
-            Backend, BackendSelector, Canvas, CanvasConfig, Device, Error as CanvasError,
-            InitialState, WindowMode,
-        },
+        canvas::{Backend, Canvas, CanvasConfig, Device, Error as CanvasError, Selector},
         context::{Context, FrameParameters, Limits, PixelSize},
         error::Error,
         frame::Frame,

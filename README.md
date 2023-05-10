@@ -12,7 +12,7 @@
 
 ## Features
 * Simple but flexible API
-* Desktop, WASM and Android (WIP) support
+* Desktop, WASM and Android support
 * Pixel perfect render with custom layers
 * Texture and color vertex modes
 * Primitives for object positioning and camera view out of the box
@@ -42,7 +42,7 @@ use dunge::{
 fn main() {
     dunge::make_window(InitialState::default())
         .run_blocking(CanvasConfig::default(), App::new)
-        .log_error();
+        .into_panic();
 }
 ```
 

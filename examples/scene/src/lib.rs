@@ -289,7 +289,7 @@ impl Loop for App {
                         .window()
                         .set_fullscreen(self.fullscreen.then_some(Fullscreen::Borderless(None)));
                 }
-                _ => (),
+                _ => {}
             }
         }
 

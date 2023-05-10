@@ -1,0 +1,20 @@
+[package]
+name = "cube_android"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cube = { path = "../../cube" }
+dunge = { path = "../../../dunge" }
+android_logger = "0.13"
+log = "0.4"
+
+[package.metadata.android]
+build_targets = ["armv7-linux-androideabi"]
+target_sdk_version = 29
+min_sdk_version = 23

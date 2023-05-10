@@ -20,7 +20,7 @@ fn main() {
         ..Default::default()
     })
     .run_blocking(CanvasConfig::default(), App::new)
-    .log_error();
+    .into_panic();
 }
 
 struct App {

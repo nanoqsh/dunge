@@ -6,7 +6,7 @@ use {
         handles::*,
         mesh::Mesh,
         pipeline::Pipeline,
-        render::Resources,
+        resources::Resources,
         shader::{self, Shader},
         shader_data::Instance,
         vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},

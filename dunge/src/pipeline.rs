@@ -1,9 +1,10 @@
 use {
     crate::{
-        bind_groups::Layouts,
+        bind_groups::Groups,
         framebuffer::Framebuffer,
         handles::LayerHandle,
         render::{Render, Shaders},
+        resources::Resources,
         shader::Shader,
         topology::Topology,
         vertex::Vertex,
@@ -21,7 +22,7 @@ impl Pipeline {
     pub fn new(
         device: &Device,
         shaders: &Shaders,
-        layouts: &Layouts,
+        groups: &Groups,
         format: TextureFormat,
         shader: Shader,
         params: PipelineParameters,
@@ -32,7 +33,7 @@ impl Pipeline {
             let module = shaders.module(device, shader);
             let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: layouts.bind_group_layouts(shader).as_slice(),
+                bind_group_layouts: groups.bind_group_layouts(shader).as_slice(),
                 push_constant_ranges: &[],
             });
 
@@ -83,15 +84,17 @@ impl Pipeline {
 /// Builds new layer with specific parameters.
 #[must_use]
 pub struct ParametersBuilder<'a, V, T> {
-    render: &'a mut Render,
+    render: &'a Render,
+    resources: &'a mut Resources,
     params: PipelineParameters,
     vertex_type: PhantomData<(V, T)>,
 }
 
 impl<'a, V, T> ParametersBuilder<'a, V, T> {
-    pub(crate) fn new(render: &'a mut Render) -> Self {
+    pub(crate) fn new(render: &'a Render, resources: &'a mut Resources) -> Self {
         Self {
             render,
+            resources,
             params: PipelineParameters::default(),
             vertex_type: PhantomData,
         }
@@ -137,7 +140,7 @@ impl<'a, V, T> ParametersBuilder<'a, V, T> {
         V: Vertex,
         T: Topology,
     {
-        self.render.create_layer(self.params)
+        self.resources.create_layer(self.render, self.params)
     }
 }
 
