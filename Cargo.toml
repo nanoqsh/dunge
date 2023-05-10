@@ -5,6 +5,7 @@ members = [
     "examples/cube_android",
     "examples/cube_wasm",
     "examples/scene",
+    "examples/scene_android",
     "examples/scene_wasm",
     "examples/triangle",
 ]

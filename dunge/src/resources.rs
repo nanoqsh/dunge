@@ -15,7 +15,7 @@ use crate::{
     vertex::Vertex,
 };
 
-/// A container of drawable resources.
+/// A container of resources for render.
 #[derive(Default)]
 pub(crate) struct Resources {
     pub(crate) layers: Storage<Pipeline>,

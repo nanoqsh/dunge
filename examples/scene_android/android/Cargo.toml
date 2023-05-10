@@ -1,5 +1,5 @@
 [package]
-name = "cube_android"
+name = "scene_android"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-cube = { path = "../../cube" }
+scene = { path = "../../scene" }
 dunge = { path = "../../../dunge" }
 android_logger = "0.13"
 log = "0.4"
