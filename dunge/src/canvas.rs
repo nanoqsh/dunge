@@ -41,7 +41,6 @@ impl Canvas {
     ///
     /// # Errors
     /// Returns [`CanvasError`](crate::CanvasError) if backend selection or request device failed.
-    #[allow(clippy::too_many_lines)]
     pub async fn run<M, L>(self, config: CanvasConfig, make_loop: M) -> Error
     where
         M: FnOnce(&mut Context) -> L,
@@ -51,7 +50,7 @@ impl Canvas {
 
         // Create the context
         let mut context = {
-            // Create the render
+            // Create the render context
             let render_context = match RenderContext::new(config, &window).await {
                 Ok(render) => render,
                 Err(err) => return err,
@@ -68,14 +67,13 @@ impl Canvas {
         let mut lp = make_loop(&mut context);
 
         // Set an initial state
+        let mut active = false;
         let mut time = Time::new();
         let mut cursor_position = None;
         let mut last_touch = None;
         let mut mouse = Mouse::default();
         let mut pressed_keys = vec![];
         let mut released_keys = vec![];
-
-        let mut active = false;
 
         event_loop.run(move |ev, _, flow| {
             use {
@@ -90,16 +88,25 @@ impl Canvas {
             };
 
             match ev {
-                Event::NewEvents(StartCause::Init) => {
-                    log::info!("new events: init");
-
-                    // Reset the timer before start the loop
-                    time.reset();
-                }
-                Event::NewEvents(StartCause::ResumeTimeReached { .. }) => {
-                    log::info!("new events: resume time reached");
-                    context.window.request_redraw();
-                }
+                Event::NewEvents(cause) => match cause {
+                    StartCause::ResumeTimeReached { .. } => {
+                        log::info!("resume time reached");
+                        context.window.request_redraw();
+                    }
+                    StartCause::WaitCancelled {
+                        requested_resume, ..
+                    } => {
+                        log::info!("wait cancelled");
+                        if let Some(resume) = requested_resume {
+                            flow.set_wait_until(resume);
+                        }
+                    }
+                    StartCause::Poll => {
+                        log::info!("poll");
+                        flow.set_wait_timeout(Duration::from_secs_f32(0.1));
+                    }
+                    StartCause::Init => log::info!("init"),
+                },
                 Event::WindowEvent { event, window_id } if window_id == context.window.id() => {
                     log::info!("window event: {event:?}");
 
@@ -110,6 +117,7 @@ impl Canvas {
                             ..
                         } => context.render.resize(size.into()),
                         WindowEvent::CloseRequested if lp.close_requested() => flow.set_exit(),
+                        WindowEvent::Focused(true) => context.window.request_redraw(),
                         WindowEvent::KeyboardInput {
                             input:
                                 KeyboardInput {
@@ -168,7 +176,7 @@ impl Canvas {
                     }
                 }
                 Event::RedrawRequested(window_id) if window_id == context.window.id() => {
-                    log::info!("redraw requested");
+                    log::info!("redraw requested (active: {active})");
 
                     if !active {
                         // Wait a while to become active
@@ -259,6 +267,10 @@ impl Canvas {
                     context.render.resize(context.window.inner_size().into());
 
                     active = true;
+                    context.window.request_redraw();
+
+                    // Reset the timer before start the loop
+                    time.reset();
                 }
                 _ => {}
             }
