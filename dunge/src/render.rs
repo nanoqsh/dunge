@@ -1,10 +1,10 @@
 use {
     crate::{
-        bind_groups::Groups,
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
         context::Screenshot,
         frame::Frame,
         framebuffer::Framebuffer,
+        groups::Groups,
         pipeline::{Pipeline, PipelineParameters},
         r#loop::Loop,
         resources::Resources,

@@ -1,4 +1,3 @@
-mod bind_groups;
 mod camera;
 mod canvas;
 pub mod color;
@@ -13,6 +12,7 @@ mod framebuffer {
     pub use self::render_frame::FrameFilter;
 }
 pub mod error;
+mod groups;
 pub mod handles;
 mod layer;
 mod layout;

@@ -14,6 +14,19 @@ dunge = { path = "../../../dunge" }
 android_logger = "0.13"
 log = "0.4"
 
+[profile.dev]
+panic = "abort"
+split-debuginfo = "unpacked"
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-Os']
+
 [package.metadata.android]
 build_targets = ["armv7-linux-androideabi"]
 target_sdk_version = 29

@@ -1,7 +1,7 @@
 use {
     crate::{
-        bind_groups::Groups,
         framebuffer::Framebuffer,
+        groups::Groups,
         handles::LayerHandle,
         render::{Render, Shaders},
         resources::Resources,

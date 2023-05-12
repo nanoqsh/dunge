@@ -5,7 +5,6 @@ use {
         render::{RenderContext, RenderResult},
         time::Time,
     },
-    std::time::Duration,
     winit::{
         event_loop::{EventLoop, EventLoopBuilder},
         window::{Window, WindowBuilder},
@@ -77,6 +76,7 @@ impl Canvas {
 
         event_loop.run(move |ev, _, flow| {
             use {
+                std::time::Duration,
                 wgpu::SurfaceError,
                 winit::{
                     dpi::PhysicalPosition,
@@ -86,6 +86,8 @@ impl Canvas {
                     },
                 },
             };
+
+            const WAIT_TIME: f32 = 0.1;
 
             match ev {
                 Event::NewEvents(cause) => match cause {
@@ -103,7 +105,7 @@ impl Canvas {
                     }
                     StartCause::Poll => {
                         log::info!("poll");
-                        flow.set_wait_timeout(Duration::from_secs_f32(0.1));
+                        flow.set_wait_timeout(Duration::from_secs_f32(WAIT_TIME));
                     }
                     StartCause::Init => log::info!("init"),
                 },
@@ -176,11 +178,14 @@ impl Canvas {
                     }
                 }
                 Event::RedrawRequested(window_id) if window_id == context.window.id() => {
-                    log::info!("redraw requested (active: {active})");
+                    log::info!(
+                        "redraw requested {active}",
+                        active = if active { "(active)" } else { "" },
+                    );
 
                     if !active {
                         // Wait a while to become active
-                        flow.set_wait_timeout(Duration::from_secs_f32(0.1));
+                        flow.set_wait_timeout(Duration::from_secs_f32(WAIT_TIME));
                         return;
                     }
 
