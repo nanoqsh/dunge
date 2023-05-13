@@ -7,6 +7,7 @@
     <p>
         <a href="https://crates.io/crates/dunge"><img src="https://img.shields.io/crates/v/dunge.svg"></img></a>
         <a href="https://docs.rs/dunge"><img src="https://docs.rs/dunge/badge.svg"></img></a>
+        <a href="https://github.com/nanoqsh/dunge/actions"><img src="https://github.com/nanoqsh/dunge/workflows/ci/badge.svg"></img></a>
     </p>
 </div>
 
