@@ -1,9 +1,9 @@
 use dunge::{
+    _vertex::ColorVertex,
     color::Standard,
     handles::*,
     input::{Input, Key},
     transform::Position,
-    vertex::ColorVertex,
     CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View,
     WindowMode,
 };

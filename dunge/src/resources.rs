@@ -1,4 +1,5 @@
 use crate::{
+    _vertex::Vertex,
     camera::{Camera, Projection, View},
     color::Linear,
     error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
@@ -12,7 +13,6 @@ use crate::{
     },
     storage::Storage,
     topology::Topology,
-    vertex::Vertex,
 };
 
 /// A container of resources for render.

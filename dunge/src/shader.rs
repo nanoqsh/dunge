@@ -1,8 +1,8 @@
 use {
     crate::{
+        _vertex::{ColorVertex, FlatVertex, TextureVertex},
         layout::Layout,
         shader_data::InstanceModel,
-        vertex::{ColorVertex, FlatVertex, TextureVertex},
     },
     wgpu::VertexBufferLayout,
 };

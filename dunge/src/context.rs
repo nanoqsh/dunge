@@ -1,5 +1,6 @@
 use {
     crate::{
+        _vertex::Vertex,
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
         color::IntoLinear,
@@ -16,7 +17,6 @@ use {
         },
         topology::Topology,
         transform::IntoMat,
-        vertex::Vertex,
     },
     winit::{event_loop::EventLoopProxy, window::Window},
 };

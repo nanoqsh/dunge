@@ -2,14 +2,15 @@ mod models;
 
 use {
     dunge::{
+        FrameParameters, LightKind, Loop, MeshData, Orthographic, PixelSize, Source, Space,
+        SpaceData, SpaceFormat, TextureData, View,
+        _vertex::{ColorVertex, TextureVertex},
         color::{Linear, Standard},
         handles::*,
         input::{Input, Key},
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
-        vertex::{ColorVertex, TextureVertex},
-        Compare, Context, Error, Frame, FrameParameters, LightKind, Loop, MeshData, Orthographic,
-        PixelSize, Source, Space, SpaceData, SpaceFormat, TextureData, View,
+        Compare, Context, Error, Frame,
     },
     utils::Camera,
 };

@@ -1,5 +1,6 @@
 use {
     crate::{
+        _vertex::Vertex,
         color::Linear,
         error::ResourceNotFound,
         handles::LayerHandle,
@@ -8,7 +9,6 @@ use {
         render::Render,
         resources::Resources,
         shader,
-        vertex::Vertex,
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -114,7 +114,7 @@ impl<'d> Frame<'d> {
     /// Starts a [layer](crate::handles::LayerHandle).
     ///
     /// # Errors
-    /// Returns [`Error::NotFound`] if given instance handler was deleted.
+    /// Returns [`ResourceNotFound`] if given instance handler was deleted.
     pub fn layer<V, T>(
         &mut self,
         handle: LayerHandle<V, T>,

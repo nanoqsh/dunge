@@ -1,5 +1,6 @@
 use {
     crate::{
+        _vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
         color::{IntoLinear, Linear},
         error::{Error, ResourceNotFound},
         frame::Frame,
@@ -9,7 +10,6 @@ use {
         resources::Resources,
         shader::{self, Shader},
         shader_data::Instance,
-        vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
     },
     std::marker::PhantomData,
     wgpu::{Queue, RenderPass},

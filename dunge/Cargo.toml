@@ -11,6 +11,7 @@ repository = "https://github.com/nanoqsh/dunge"
 rust-version = "1.67"
 
 [dependencies]
+dunge_derive = { path = "dunge_derive" }
 ahash = "0.8"
 glam = "0.24"
 log = "0.4"

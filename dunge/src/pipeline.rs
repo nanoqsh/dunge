@@ -1,5 +1,6 @@
 use {
     crate::{
+        _vertex::Vertex,
         framebuffer::Framebuffer,
         groups::Groups,
         handles::LayerHandle,
@@ -7,7 +8,6 @@ use {
         resources::Resources,
         shader::Shader,
         topology::Topology,
-        vertex::Vertex,
     },
     std::marker::PhantomData,
     wgpu::{

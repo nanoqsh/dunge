@@ -1,8 +1,8 @@
 use {
     crate::{
+        _vertex::Vertex,
         layout::Plain,
         topology::{Topology, TriangleList},
-        vertex::Vertex,
     },
     std::{borrow::Cow, slice},
     wgpu::{Buffer, Device},

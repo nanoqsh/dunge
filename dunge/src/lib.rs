@@ -1,3 +1,4 @@
+pub mod _vertex;
 mod camera;
 mod canvas;
 pub mod color;
@@ -81,6 +82,8 @@ pub use {
         shader_data::{
             LightKind, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
         },
+        vertex::Vertex,
     },
+    dunge_derive::*,
     winit,
 };
