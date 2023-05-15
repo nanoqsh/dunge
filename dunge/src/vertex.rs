@@ -1,8 +1,68 @@
 /// Vertex type description.
 ///
+/// To use a vertex type, you need to describe its fields.
+/// This implementation also requires some safety invariant, so the trait is `unsafe`.
+/// You can safely implement the trait for your type using [deriving](derive@crate::Vertex).
+///
 /// # Safety
+/// * The fields of `Self` must be ordered, so the struct must have the `#[repr(C)]` attribute.
 /// * The `FIELDS` const must describe correct [kinds](Kind) and [formats](Format).
 /// * The [`check_format`](Field::check_format) must be true for every field.
+///
+/// # Example
+/// Let's say we want to create a `Vert` type with a position and a texture map.
+/// Then the [`Vertex`] implementation for the type would be:
+/// ```rust
+/// use dunge::{
+///     vertex::{self, Field, Kind},
+///     Vertex,
+/// };
+///
+/// #[repr(C)]
+/// struct Vert {
+///     pos: [f32; 3],
+///     map: [f32; 2],
+/// }
+///
+/// unsafe impl Vertex for Vert {
+///     const FIELDS: &'static [Field] = &[
+///         {   // `pos` field
+///             let f = Field {
+///                 kind: Kind::Position,
+///                 format: vertex::component_format::<[f32; 3]>(),
+///             };
+///
+///             assert!(f.check_format());
+///             f
+///         },
+///         {   // `map` field
+///             let f = Field {
+///                 kind: Kind::Color,
+///                 format: vertex::component_format::<[f32; 2]>(),
+///             };
+///
+///             assert!(f.check_format());
+///             f
+///         },
+///     ];
+/// }
+/// ```
+///
+/// Note that the implementation of the trait requires `unsafe` code,
+/// so instead of writing this yourself you can use [deriving](derive@crate::Vertex):
+/// ```rust
+/// use dunge::Vertex;
+///
+/// #[repr(C)]
+/// #[derive(Vertex)]
+/// struct Vert {
+///     #[position]
+///     pos: [f32; 3],
+///     #[texture_map]
+///     map: [f32; 2],
+/// }
+/// ```
+///
 pub unsafe trait Vertex {
     const FIELDS: &'static [Field];
 }

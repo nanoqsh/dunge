@@ -19,31 +19,6 @@ struct Vert {
     map: [f32; 2],
 }
 
-// unsafe impl Vertex for Vert {
-//     const FIELDS: &'static [Field] = &[
-//         // `pos` field
-//         {
-//             let f = Field {
-//                 kind: Kind::Position,
-//                 format: vertex::component_format::<[f32; 3]>(),
-//             };
-
-//             assert!(f.check_format());
-//             f
-//         },
-//         // `map` field
-//         {
-//             let f = Field {
-//                 kind: Kind::Color,
-//                 format: vertex::component_format::<[f32; 2]>(),
-//             };
-
-//             assert!(f.check_format());
-//             f
-//         },
-//     ];
-// }
-
 enum State {
     Texture,
     Color,
