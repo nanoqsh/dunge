@@ -1,3 +1,5 @@
+mod data;
+
 use {
     dunge::{
         _vertex::{ColorVertex, TextureVertex},
@@ -5,19 +7,10 @@ use {
         handles::*,
         input::{Input, Key},
         transform::Position,
-        Context, Error, Frame, Loop, MeshData, Perspective, TextureData, Vertex,
+        Context, Error, Frame, Loop, MeshData, Perspective, TextureData,
     },
     utils::Camera,
 };
-
-#[repr(C)]
-#[derive(Vertex)]
-struct Vert {
-    #[position]
-    pos: [f32; 3],
-    #[texture_map]
-    map: [f32; 2],
-}
 
 enum State {
     Texture,
@@ -57,17 +50,19 @@ impl App {
 
         // Create meshes
         let texture_mesh = {
-            let verts = VERTICES.map(|(pos, map)| TextureVertex { pos, map });
-            let data = MeshData::new(&verts, &INDICES).expect("create mesh");
+            let verts = data::VERTICES.map(|(pos, map)| TextureVertex { pos, map });
+
+            let data = MeshData::new(&verts, &data::INDICES).expect("create mesh");
             context.create_mesh(&data)
         };
 
         let color_mesh = {
-            let verts = VERTICES.map(|(pos, [a, b])| ColorVertex {
+            let verts = data::VERTICES.map(|(pos, [a, b])| ColorVertex {
                 pos,
                 col: [a, b, 1.],
             });
-            let data = MeshData::new(&verts, &INDICES).expect("create mesh");
+
+            let data = MeshData::new(&verts, &data::INDICES).expect("create mesh");
             context.create_mesh(&data)
         };
 
@@ -154,43 +149,3 @@ impl Loop for App {
         Ok(())
     }
 }
-
-const VERTICES: [([f32; 3], [f32; 2]); 22] = [
-    ([1.0, 1.0, -1.0], [1.0, 0.0]),
-    ([1.0, -1.0, 1.0], [0.5, 0.5]),
-    ([1.0, -1.0, -1.0], [1.0, 0.5]),
-    ([1.0, 1.0, 1.0], [1.0, 0.0]),
-    ([-1.0, -1.0, 1.0], [0.5, 0.5]),
-    ([1.0, -1.0, 1.0], [1.0, 0.5]),
-    ([-1.0, 1.0, 1.0], [1.0, 0.0]),
-    ([-1.0, -1.0, -1.0], [0.5, 0.5]),
-    ([-1.0, -1.0, 1.0], [1.0, 0.5]),
-    ([-1.0, 1.0, -1.0], [1.0, 0.0]),
-    ([1.0, -1.0, -1.0], [0.5, 0.5]),
-    ([-1.0, -1.0, -1.0], [1.0, 0.5]),
-    ([-1.0, -1.0, 1.0], [0.5, 1.0]),
-    ([1.0, -1.0, -1.0], [0.0, 0.5]),
-    ([1.0, -1.0, 1.0], [0.0, 1.0]),
-    ([1.0, 1.0, 1.0], [0.5, 0.5]),
-    ([-1.0, 1.0, -1.0], [0.0, 0.0]),
-    ([-1.0, 1.0, 1.0], [0.0, 0.5]),
-    ([1.0, 1.0, 1.0], [0.5, 0.0]),
-    ([-1.0, 1.0, 1.0], [0.5, 0.0]),
-    ([-1.0, 1.0, -1.0], [0.5, 0.0]),
-    ([1.0, 1.0, -1.0], [0.5, 0.0]),
-];
-
-const INDICES: [[u16; 3]; 12] = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [9, 10, 11],
-    [12, 13, 14],
-    [15, 16, 17],
-    [0, 18, 1],
-    [3, 19, 4],
-    [6, 20, 7],
-    [9, 21, 10],
-    [12, 7, 13],
-    [15, 21, 16],
-];

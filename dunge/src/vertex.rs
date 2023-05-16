@@ -90,8 +90,13 @@ impl Field {
 /// Field kind.
 #[derive(Clone, Copy)]
 pub enum Kind {
+    /// Position of the vertex in 2D or 3D space.
     Position,
+
+    /// Color of the vertex.
     Color,
+
+    /// Texture map of the vertex.
     TextureMap,
 }
 
@@ -102,10 +107,23 @@ pub enum Format {
     FloatX3,
 }
 
+/// The component is something that a [vertex](Vertex) can consist of.
+///
+/// Available componets are:
+///
+/// | Type                 | Possible [kind](Kind)                                          |
+/// | -------------------- | -------------------------------------------------------------- |
+/// | `(f32, f32)`         | [`Position`](Kind::Position), [`TextureMap`](Kind::TextureMap) |
+/// | `(f32, f32, f32)`    | [`Position`](Kind::Position), [`Color`](Kind::Color)           |
+/// | `[f32; 2]`           | [`Position`](Kind::Position), [`TextureMap`](Kind::TextureMap) |
+/// | `[f32; 3]`           | [`Position`](Kind::Position), [`Color`](Kind::Color)           |
+/// | [`Vec2`](glam::Vec2) | [`Position`](Kind::Position), [`TextureMap`](Kind::TextureMap) |
+/// | [`Vec3`](glam::Vec3) | [`Position`](Kind::Position), [`Color`](Kind::Color)           |
+///
 pub trait Component: private::Component {}
 impl<T> Component for T where T: private::Component {}
 
-/// Takes [format](Format) from component.
+/// Takes a [format](Format) from the [component](Component).
 #[must_use]
 pub const fn component_format<T>() -> Format
 where

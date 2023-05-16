@@ -101,7 +101,7 @@ where
 
         match mesh.mesh_type() {
             Type::Indexed {
-                index_buffer,
+                buffer: index_buffer,
                 n_indices,
             } => {
                 self.pass

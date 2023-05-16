@@ -76,7 +76,7 @@ pub use {
         frame::Frame,
         framebuffer::FrameFilter,
         layer::{Builder as LayerBuilder, Layer},
-        mesh::Data as MeshData,
+        mesh::{Data as MeshData, Error as MeshError},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
         shader_data::{

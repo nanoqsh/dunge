@@ -53,6 +53,14 @@ where
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         (**self).render(frame)
     }
+
+    fn error_occurred(&mut self, err: Self::Error) {
+        (**self).error_occurred(err);
+    }
+
+    fn close_requested(&mut self) -> bool {
+        (**self).close_requested()
+    }
 }
 
 impl<L> Loop for Box<L>
@@ -67,6 +75,14 @@ where
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         self.as_ref().render(frame)
+    }
+
+    fn error_occurred(&mut self, err: Self::Error) {
+        self.as_mut().error_occurred(err);
+    }
+
+    fn close_requested(&mut self) -> bool {
+        self.as_mut().close_requested()
     }
 }
 

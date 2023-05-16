@@ -4,7 +4,7 @@ use {
         layout::Plain,
         topology::{Topology, TriangleList},
     },
-    std::{borrow::Cow, slice},
+    std::borrow::Cow,
     wgpu::{Buffer, Device},
 };
 
@@ -31,38 +31,54 @@ where
 impl<'a, V> Data<'a, V> {
     /// Creates a new [`MeshData`](crate::MeshData) from given vertices and indices.
     ///
-    /// Returns `Some` if a data length fits in `u16` and all indices point to the data,
-    /// otherwise returns `None`.
-    pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Option<Self> {
-        let len: u16 = verts.len().try_into().ok()?;
-        indxs.iter().flatten().all(|&i| i < len).then_some(Self {
+    /// # Errors
+    /// See [`MeshError`](crate::MeshError) for detailed info.
+    pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Result<Self, Error> {
+        let len: u16 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
+
+        if indxs.iter().flatten().any(|&i| i >= len) {
+            return Err(Error::WrongIndex);
+        }
+
+        Ok(Self {
             verts,
-            indxs: Some(indxs.into()),
+            indxs: Some(Cow::Borrowed(indxs)),
         })
     }
 
     /// Creates a new [`MeshData`](crate::MeshData) from given quadrangles.
     ///
-    /// Returns `Some` if a data length fits in `u16` and is multiple by 4,
-    /// otherwise returns `None`.
-    pub fn from_quads(verts: &'a [V]) -> Option<Self> {
-        let len: u16 = verts.len().try_into().ok()?;
-        (len % 4 == 0).then_some({
-            Self {
-                verts,
-                indxs: Some(
-                    (0..len)
-                        .step_by(4)
-                        .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
-                        .collect(),
-                ),
-            }
+    /// # Errors
+    /// See [`MeshError`](crate::MeshError) for detailed info.
+    pub fn from_quads(verts: &'a [[V; 4]]) -> Result<Self, Error> {
+        use std::slice;
+
+        let new_len = verts.len() * 4;
+        let len: u16 = new_len.try_into().map_err(|_| Error::TooManyVertices)?;
+
+        Ok(Self {
+            verts: unsafe { slice::from_raw_parts(verts.as_ptr().cast(), new_len) },
+            indxs: Some(
+                (0..len)
+                    .step_by(4)
+                    .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
+                    .collect(),
+            ),
         })
     }
 }
 
+#[derive(Debug)]
+pub enum Error {
+    /// Returns when the vertices length too big and doesn't fit in `u16`.
+    TooManyVertices,
+
+    /// Returns when the vertex index is out of bounds of the vertex slice.
+    WrongIndex,
+}
+
 pub(crate) struct Mesh {
-    vertex_buffer: Buffer,
+    buffer: Buffer,
     ty: Type,
 }
 
@@ -72,13 +88,16 @@ impl Mesh {
         V: Vertex,
         T: Topology,
     {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            BufferUsages,
+        use {
+            std::slice,
+            wgpu::{
+                util::{BufferInitDescriptor, DeviceExt},
+                BufferUsages,
+            },
         };
 
         Self {
-            vertex_buffer: device.create_buffer_init(&BufferInitDescriptor {
+            buffer: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("vertex buffer"),
                 contents: data.verts.as_bytes(),
                 usage: BufferUsages::VERTEX,
@@ -94,7 +113,7 @@ impl Mesh {
     }
 
     pub fn vertex_buffer(&self) -> &Buffer {
-        &self.vertex_buffer
+        &self.buffer
     }
 
     pub fn mesh_type(&self) -> &Type {
@@ -103,13 +122,8 @@ impl Mesh {
 }
 
 pub(crate) enum Type {
-    Indexed {
-        index_buffer: Buffer,
-        n_indices: u32,
-    },
-    Sequential {
-        n_vertices: u32,
-    },
+    Indexed { buffer: Buffer, n_indices: u32 },
+    Sequential { n_vertices: u32 },
 }
 
 impl Type {
@@ -120,7 +134,7 @@ impl Type {
         };
 
         Self::Indexed {
-            index_buffer: device.create_buffer_init(&BufferInitDescriptor {
+            buffer: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("index buffer"),
                 contents: indxs.as_ref().as_bytes(),
                 usage: BufferUsages::INDEX,
@@ -133,5 +147,23 @@ impl Type {
         Self::Sequential {
             n_vertices: verts.len().try_into().expect("too many vertices"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_quads() {
+        let verts = [[0, 1, 2, 3], [4, 5, 6, 7]];
+        let data = Data::from_quads(&verts).expect("mesh data");
+        let indxs = data.indxs.expect("indices");
+        assert_eq!(data.verts.len(), 8);
+        assert_eq!(indxs.len(), 4);
+        assert_eq!([data.verts[0], data.verts[1], data.verts[2]], indxs[0]);
+        assert_eq!([data.verts[2], data.verts[1], data.verts[3]], indxs[1]);
+        assert_eq!([data.verts[4], data.verts[5], data.verts[6]], indxs[2]);
+        assert_eq!([data.verts[6], data.verts[5], data.verts[7]], indxs[3]);
     }
 }
