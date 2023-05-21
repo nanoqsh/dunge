@@ -12,6 +12,7 @@ rust-version = "1.67"
 
 [dependencies]
 dunge_derive = { path = "dunge_derive" }
+dunge_shader = { path = "dunge_shader" }
 ahash = "0.8"
 glam = "0.24"
 log = "0.4"

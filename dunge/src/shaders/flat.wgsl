@@ -8,7 +8,7 @@ struct InstanceInput {
     @location(3) row1: vec4<f32>,
     @location(4) row2: vec4<f32>,
     @location(5) row3: vec4<f32>,
-};
+}
 
 struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
