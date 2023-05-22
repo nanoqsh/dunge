@@ -28,12 +28,12 @@ impl InstanceInput {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct VertexInput {
+pub(crate) struct VertexInput<'a> {
+    pub fragment: &'a Fragment,
     pub pos: Dimension,
-    pub col: Color,
 }
 
-impl VertexInput {
+impl VertexInput<'_> {
     pub fn define_type(self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: location.next(),
@@ -44,7 +44,7 @@ impl VertexInput {
             },
         }];
 
-        if self.col.has_color_in_vertex() {
+        if self.fragment.vertex_color {
             fields.push(Field {
                 location: location.next(),
                 name: "col",
@@ -67,24 +67,12 @@ impl VertexInput {
 }
 
 #[derive(Clone, Copy)]
-pub enum Color {
-    Fixed { r: f32, g: f32, b: f32 },
-    FromVertex,
-}
-
-impl Color {
-    pub(crate) fn has_color_in_vertex(self) -> bool {
-        matches!(self, Self::FromVertex)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct VertexOutput {
-    pub col: Color,
+pub(crate) struct VertexOutput<'a> {
+    pub fragment: &'a Fragment,
     pub world: bool,
 }
 
-impl VertexOutput {
+impl VertexOutput<'_> {
     pub fn define_type(self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: Location::Position,
@@ -92,7 +80,7 @@ impl VertexOutput {
             ty: Type::VEC4,
         }];
 
-        if self.col.has_color_in_vertex() {
+        if self.fragment.vertex_color {
             fields.push(Field {
                 location: location.next(),
                 name: "col",
@@ -123,7 +111,7 @@ impl VertexOutput {
         camera.calc_view(o);
         o.write_str(";\n");
 
-        if self.col.has_color_in_vertex() {
+        if self.fragment.vertex_color {
             o.write_str("    out.col = input.col;\n");
         }
 
@@ -133,21 +121,71 @@ impl VertexOutput {
     }
 
     pub fn calc_fragment(self, o: &mut Out) {
-        o.write_str("col = ");
-        match self.col {
-            Color::Fixed { r, g, b } => {
-                o.write_str("vec3(");
-                o.write(r);
-                o.write_str(", ");
-                o.write(g);
-                o.write_str(", ");
-                o.write(b);
-                o.write_str(")");
-            }
-            Color::FromVertex => o.write_str("out.col"),
+        if self.fragment.vertex_texture {
+            o.write_str(
+                "let tex = textureSample(tdiff, sdiff, out.map); \n    \
+                if tex.w < 0.95 { \
+                    discard; \
+                } \n    ",
+            );
         }
 
+        let mut mult = o.write_str("col = ").separated(" * ");
+        if let Some(Color { r, g, b }) = self.fragment.fixed_color {
+            mult.out()
+                .write_str("vec3(")
+                .write(r)
+                .write_str(", ")
+                .write(g)
+                .write_str(", ")
+                .write(b)
+                .write_str(")");
+        }
+
+        if self.fragment.vertex_color {
+            mult.out().write_str("out.col");
+        }
+
+        if self.fragment.vertex_texture {
+            mult.out().write_str("tex.rgb");
+        }
+
+        mult.write_default("vec3(0.)");
         o.write_str(";\n");
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Fragment {
+    pub fixed_color: Option<Color>,
+    pub vertex_color: bool,
+    pub vertex_texture: bool,
+}
+
+#[derive(Clone, Copy)]
+pub struct Color {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Texture;
+
+impl Texture {
+    pub fn declare_group(binding: &mut Binding, o: &mut Out) {
+        o.write(Var {
+            binding: binding.next(),
+            uniform: false,
+            name: "tdiff",
+            ty: Type::TEXTURE2D,
+        })
+        .write(Var {
+            binding: binding.next(),
+            uniform: false,
+            name: "sdiff",
+            ty: Type::SAMPLER,
+        });
     }
 }
 
@@ -173,8 +211,9 @@ impl Camera {
 
     pub(crate) fn declare_group(self, binding: &mut Binding, o: &mut Out) {
         if let Self::View = self {
-            o.write(Uniform {
+            o.write(Var {
                 binding: binding.next(),
+                uniform: true,
                 name: "camera",
                 ty: Type("Camera"),
             });

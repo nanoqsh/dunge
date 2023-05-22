@@ -87,23 +87,26 @@ impl Binding {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct Uniform {
+pub(crate) struct Var {
     pub binding: Binding,
+    pub uniform: bool,
     pub name: &'static str,
     pub ty: Type,
 }
 
-impl fmt::Display for Uniform {
+impl fmt::Display for Var {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let &Self {
             binding: Binding { group, binding },
+            uniform,
             name,
             ty: Type(ty),
         } = self;
 
-        write!(
+        writeln!(
             f,
-            "@group({group}) @binding({binding}) var<uniform> {name}: {ty};",
+            "@group({group}) @binding({binding}) var{spec} {name}: {ty};",
+            spec = if uniform { "<uniform>" } else { "" },
         )
     }
 }
@@ -116,4 +119,6 @@ impl Type {
     pub const VEC3: Self = Self("vec3<f32>");
     pub const VEC4: Self = Self("vec4<f32>");
     pub const MAT4: Self = Self("mat4x4<f32>");
+    pub const TEXTURE2D: Self = Self("texture_2d<f32>");
+    pub const SAMPLER: Self = Self("sampler");
 }

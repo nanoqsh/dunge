@@ -84,6 +84,6 @@ pub use {
         },
         vertex::Vertex,
     },
-    dunge_derive::*,
+    dunge_macros::Vertex,
     winit,
 };
