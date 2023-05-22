@@ -34,6 +34,7 @@ jobs:
                 -A clippy::module_name_repetitions
                 -A clippy::many_single_char_names
                 -A clippy::too_many_lines
+                -A clippy::similar_names
 
           - name: Tests
             run: cargo test --verbose

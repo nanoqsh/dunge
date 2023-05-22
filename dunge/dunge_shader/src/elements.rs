@@ -173,20 +173,33 @@ pub struct Color {
 pub(crate) struct Texture;
 
 impl Texture {
-    pub fn declare_group(binding: &mut Binding, o: &mut Out) {
+    pub fn declare_group(binding: &mut Binding, o: &mut Out) -> TextureBindings {
+        let tdiff = binding.next();
+        let sdiff = binding.next();
+
         o.write(Var {
-            binding: binding.next(),
+            binding: tdiff,
             uniform: false,
             name: "tdiff",
             ty: Type::TEXTURE2D,
         })
         .write(Var {
-            binding: binding.next(),
+            binding: sdiff,
             uniform: false,
             name: "sdiff",
             ty: Type::SAMPLER,
         });
+
+        TextureBindings {
+            tdiff: tdiff.get(),
+            sdiff: sdiff.get(),
+        }
     }
+}
+
+pub struct TextureBindings {
+    pub tdiff: u32,
+    pub sdiff: u32,
 }
 
 #[derive(Clone, Copy)]
@@ -209,14 +222,20 @@ impl Camera {
         }
     }
 
-    pub(crate) fn declare_group(self, binding: &mut Binding, o: &mut Out) {
-        if let Self::View = self {
-            o.write(Var {
-                binding: binding.next(),
-                uniform: true,
-                name: "camera",
-                ty: Type("Camera"),
-            });
+    pub(crate) fn declare_group(self, binding: &mut Binding, o: &mut Out) -> Option<u32> {
+        match self {
+            Self::None => None,
+            Self::View => {
+                let binding = binding.next();
+                o.write(Var {
+                    binding,
+                    uniform: true,
+                    name: "camera",
+                    ty: Type("Camera"),
+                });
+
+                Some(binding.get())
+            }
         }
     }
 

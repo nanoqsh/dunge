@@ -18,14 +18,11 @@ impl<'a> Templater<'a> {
             match state.next() {
                 Entry::Str(s) => out.push_str(s),
                 Entry::Key(key) => {
-                    let Some(value) = self.subs.get(key) else {
-                        break Err(Error::KeyNotFound(key));
-                    };
-
+                    let value = self.subs.get(key).ok_or(Error::KeyNotFound(key))?;
                     out.push_str(value);
                 }
-                Entry::Fail => break Err(Error::Parse),
-                Entry::End => break Ok(out),
+                Entry::Fail => return Err(Error::Parse),
+                Entry::End => return Ok(out),
             }
         }
     }

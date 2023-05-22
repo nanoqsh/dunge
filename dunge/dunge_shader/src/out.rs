@@ -1,4 +1,7 @@
-use std::fmt::{self, Write};
+use std::{
+    fmt::{Display, Write},
+    ops,
+};
 
 pub(crate) struct Out {
     buf: String,
@@ -13,7 +16,7 @@ impl Out {
 
     pub fn write<D>(&mut self, d: D) -> &mut Self
     where
-        D: fmt::Display,
+        D: Display,
     {
         _ = write!(self.buf, "{d}");
         self
@@ -24,15 +27,19 @@ impl Out {
         self
     }
 
-    pub fn separated<'a>(&'a mut self, sep: &'a str) -> Separated {
+    pub fn separated<'a>(&'a mut self, sep: &'a str) -> Separated<'a> {
         Separated {
             out: self,
             sep,
             add: false,
         }
     }
+}
 
-    pub fn buf(&self) -> &str {
+impl ops::Deref for Out {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
         &self.buf
     }
 }

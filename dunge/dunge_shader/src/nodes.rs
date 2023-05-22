@@ -70,12 +70,12 @@ impl fmt::Display for Location {
 
 #[derive(Clone, Copy)]
 pub(crate) struct Binding {
-    group: u8,
-    binding: u8,
+    group: u32,
+    binding: u32,
 }
 
 impl Binding {
-    pub fn with_group(group: u8) -> Self {
+    pub fn with_group(group: u32) -> Self {
         Self { group, binding: 0 }
     }
 
@@ -83,6 +83,10 @@ impl Binding {
         let old = *self;
         self.binding += 1;
         old
+    }
+
+    pub fn get(self) -> u32 {
+        self.binding
     }
 }
 

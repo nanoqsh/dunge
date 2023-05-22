@@ -41,7 +41,6 @@ impl Context {
         const DEFAULT_CAPACITY: usize = 8;
 
         let mut resources = Resources::default();
-
         Self {
             window,
             proxy,
