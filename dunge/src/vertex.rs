@@ -67,6 +67,15 @@ pub unsafe trait Vertex {
     const FIELDS: &'static [Field];
 }
 
+pub(crate) fn verts_as_bytes<V>(verts: &[V]) -> &[u8]
+where
+    V: Vertex,
+{
+    use std::{mem, slice};
+
+    unsafe { slice::from_raw_parts(verts.as_ptr().cast(), verts.len() * mem::size_of::<V>()) }
+}
+
 /// Field description.
 #[derive(Clone, Copy)]
 pub struct Field {

@@ -9,7 +9,7 @@ use {
         r#loop::Loop,
         resources::Resources,
         screen::Screen,
-        shader::Shader,
+        shader::_Shader,
         shader_data::{Light, LightSpace, PostShaderData},
     },
     once_cell::unsync::OnceCell,
@@ -65,12 +65,12 @@ impl Render {
                 .expect("default light space"),
         );
 
-        let post_pipeline = Pipeline::new(
+        let post_pipeline = Pipeline::_new(
             &context.device,
             &shaders,
             &groups,
             surface_conf.format,
-            Shader::Post,
+            _Shader::Post,
             PipelineParameters {
                 blend: BlendState::ALPHA_BLENDING,
                 topology: PrimitiveTopology::TriangleStrip,
@@ -112,8 +112,8 @@ impl Render {
         });
     }
 
-    pub fn create_pipeline(&self, shader: Shader, params: PipelineParameters) -> Pipeline {
-        Pipeline::new(
+    pub fn create_pipeline(&self, shader: _Shader, params: PipelineParameters) -> Pipeline {
+        Pipeline::_new(
             &self.context.device,
             &self.shaders,
             &self.groups,
@@ -467,14 +467,14 @@ pub(crate) struct Shaders {
 }
 
 impl Shaders {
-    pub fn module(&self, device: &Device, shader: Shader) -> &ShaderModule {
+    pub fn module(&self, device: &Device, shader: _Shader) -> &ShaderModule {
         use wgpu::{ShaderModuleDescriptor, ShaderSource};
 
         let cell = match shader {
-            Shader::Color => &self.color,
-            Shader::Flat => &self.flat,
-            Shader::Post => &self.post,
-            Shader::Textured => &self.textured,
+            _Shader::Color => &self.color,
+            _Shader::Flat => &self.flat,
+            _Shader::Post => &self.post,
+            _Shader::Textured => &self.textured,
         };
 
         cell.get_or_init(|| {

@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex},
+        _vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex as _Vertex},
         color::{IntoLinear, Linear},
         error::{Error, ResourceNotFound},
         frame::Frame,
@@ -8,7 +8,7 @@ use {
         mesh::Mesh,
         pipeline::Pipeline,
         resources::Resources,
-        shader::{self, Shader},
+        shader::{self, _Shader},
         shader_data::Instance,
     },
     std::marker::PhantomData,
@@ -29,7 +29,7 @@ pub struct Layer<'l, V, T> {
 
 impl<'l, V, T> Layer<'l, V, T>
 where
-    V: Vertex,
+    V: _Vertex,
 {
     pub(crate) fn new(
         pass: RenderPass<'l>,
@@ -50,10 +50,10 @@ where
 
         // Bind default light and set default ambient
         match V::VALUE.into_inner() {
-            Shader::Color => layer
+            _Shader::Color => layer
                 .bind_light_handle(LightHandle::DEFAULT, shader::COLOR_SOURCES_GROUP)
                 .expect("bind default light"),
-            Shader::Textured => {
+            _Shader::Textured => {
                 layer
                     .bind_light_handle(LightHandle::DEFAULT, shader::TEXTURED_SOURCES_GROUP)
                     .expect("bind default light");
@@ -262,35 +262,43 @@ impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
     /// # Example
     /// ```
     /// # use dunge::color::Standard;
+    /// # #[derive(Debug)]
+    /// # struct Error;
     /// # struct Frame;
     /// # impl Frame {
-    /// #     fn texture_layer(self) -> Self { self }
+    /// #     fn layer(self, _: ()) -> Result<Self, Error> { Ok(self) }
     /// #     fn with_clear_color(self, _: Standard<u8>) -> Self { self }
     /// #     fn start(self) {}
     /// # }
     /// # let frame = Frame;
-    /// let color = Standard([20, 30, 40, 255]);
+    /// # let layer_handle = ();
+    /// let color = Standard([20, 30, 40, !0]);
     /// let mut layer = frame
-    ///     .texture_layer()
+    ///     .layer(layer_handle)?
     ///     .with_clear_color(color)
     ///     .start();
+    /// # Ok::<(), Error>(())
     /// ```
     ///
     /// To clear a layer with a transparent color, it is enough to pass `()` as a parameter.
     ///
     /// # Example
     /// ```
+    /// # #[derive(Debug)]
+    /// # struct Error;
     /// # struct Frame;
     /// # impl Frame {
-    /// #     fn texture_layer(self) -> Self { self }
+    /// #     fn layer(self, _: ()) -> Result<Self, Error> { Ok(self) }
     /// #     fn with_clear_color(self, _: ()) -> Self { self }
     /// #     fn start(self) {}
     /// # }
     /// # let frame = Frame;
+    /// # let layer_handle = ();
     /// let mut layer = frame
-    ///     .texture_layer()
+    ///     .layer(layer_handle)?
     ///     .with_clear_color(())
     ///     .start();
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn with_clear_color<C>(self, color: C) -> Self
     where
@@ -313,7 +321,7 @@ impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
     /// Starts draw the layer.
     pub fn start(self) -> Layer<'l, V, T>
     where
-        V: Vertex,
+        V: _Vertex,
     {
         self.frame
             .start_layer(self.pipeline, self.clear_color, self.clear_depth)

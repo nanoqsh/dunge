@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::Vertex,
+        _vertex::Vertex as _Vertex,
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
         color::IntoLinear,
@@ -17,6 +17,7 @@ use {
         },
         topology::Topology,
         transform::IntoMat,
+        vertex::Vertex,
     },
     winit::{event_loop::EventLoopProxy, window::Window},
 };
@@ -99,7 +100,7 @@ impl Context {
     /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
     pub fn create_layer<V, T>(&mut self) -> LayerHandle<V, T>
     where
-        V: Vertex,
+        V: _Vertex,
         T: Topology,
     {
         self.create_layer_with_parameters().build()
@@ -195,6 +196,15 @@ impl Context {
         T: Topology,
     {
         self.resources.create_mesh(&self.render, data)
+    }
+
+    /// Creates a new mesh.
+    pub fn _create_mesh<V, T>(&mut self, data: &MeshData<V, T>) -> MeshHandle<V, T>
+    where
+        V: _Vertex,
+        T: Topology,
+    {
+        self.resources._create_mesh(&self.render, data)
     }
 
     /// Deletes the mesh.

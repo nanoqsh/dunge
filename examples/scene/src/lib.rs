@@ -132,7 +132,7 @@ impl App {
                     let indxs = indxs.to_vec();
 
                     let data = MeshData::new(&verts, &indxs).expect("create mesh");
-                    context.create_mesh(&data)
+                    context._create_mesh(&data)
                 })
                 .collect();
 
@@ -199,7 +199,7 @@ impl App {
                             .collect();
 
                         let data = MeshData::from_verts(&verts);
-                        context.create_mesh(&data)
+                        context._create_mesh(&data)
                     },
                 })
                 .collect()

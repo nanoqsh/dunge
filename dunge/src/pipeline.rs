@@ -6,9 +6,10 @@ use {
         handles::LayerHandle,
         render::{Render, Shaders},
         resources::Resources,
-        shader::Shader,
+        shader::_Shader,
         topology::Topology,
     },
+    dunge_shader::Shader,
     std::marker::PhantomData,
     wgpu::{
         BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology, RenderPipeline,
@@ -21,10 +22,69 @@ pub(crate) struct Pipeline(RenderPipeline);
 impl Pipeline {
     pub fn new(
         device: &Device,
+        shader: Shader,
+        params: PipelineParameters,
+        format: TextureFormat,
+    ) -> Self {
+        use wgpu::*;
+
+        Self({
+            let module = device.create_shader_module(ShaderModuleDescriptor {
+                label: None,
+                source: ShaderSource::Wgsl(shader.source),
+            });
+
+            let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: todo!(),
+                push_constant_ranges: &[],
+            });
+
+            device.create_render_pipeline(&RenderPipelineDescriptor {
+                label: None,
+                layout: Some(&layout),
+                vertex: VertexState {
+                    module: &module,
+                    entry_point: "vs_main",
+                    buffers: todo!(),
+                },
+                fragment: Some(FragmentState {
+                    module: &module,
+                    entry_point: "fs_main",
+                    targets: &[Some(ColorTargetState {
+                        format,
+                        blend: Some(params.blend),
+                        write_mask: ColorWrites::ALL,
+                    })],
+                }),
+                primitive: PrimitiveState {
+                    topology: params.topology,
+                    strip_index_format: None,
+                    front_face: FrontFace::Ccw,
+                    cull_mode: params.cull_faces.then_some(Face::Back),
+                    polygon_mode: params.mode,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
+                depth_stencil: params.depth_stencil.map(|depth_compare| DepthStencilState {
+                    format: Framebuffer::DEPTH_FORMAT,
+                    depth_write_enabled: true,
+                    depth_compare,
+                    stencil: StencilState::default(),
+                    bias: DepthBiasState::default(),
+                }),
+                multisample: MultisampleState::default(),
+                multiview: None,
+            })
+        })
+    }
+
+    pub fn _new(
+        device: &Device,
         shaders: &Shaders,
         groups: &Groups,
         format: TextureFormat,
-        shader: Shader,
+        shader: _Shader,
         params: PipelineParameters,
     ) -> Self {
         use wgpu::*;

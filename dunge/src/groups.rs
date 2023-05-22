@@ -1,5 +1,5 @@
 use {
-    crate::shader::{self, Shader},
+    crate::shader::{self, _Shader},
     wgpu::{BindGroupLayout, Device},
 };
 
@@ -152,12 +152,12 @@ impl Groups {
         }
     }
 
-    pub fn bind_group_layouts(&self, shader: Shader) -> BindGroupLayouts {
+    pub fn bind_group_layouts(&self, shader: _Shader) -> BindGroupLayouts {
         match shader {
-            Shader::Color => BindGroupLayouts::N2([&self.globals, &self.lights]),
-            Shader::Flat => BindGroupLayouts::N1([&self.textured]),
-            Shader::Post => BindGroupLayouts::N2([&self.post_shader_data, &self.textured]),
-            Shader::Textured => {
+            _Shader::Color => BindGroupLayouts::N2([&self.globals, &self.lights]),
+            _Shader::Flat => BindGroupLayouts::N1([&self.textured]),
+            _Shader::Post => BindGroupLayouts::N2([&self.post_shader_data, &self.textured]),
+            _Shader::Textured => {
                 BindGroupLayouts::N4([&self.globals, &self.textured, &self.lights, &self.space])
             }
         }

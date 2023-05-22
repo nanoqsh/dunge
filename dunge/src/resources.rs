@@ -1,5 +1,5 @@
 use crate::{
-    _vertex::Vertex,
+    _vertex::Vertex as _Vertex,
     camera::{Camera, Projection, View},
     color::Linear,
     error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
@@ -13,6 +13,7 @@ use crate::{
     },
     storage::Storage,
     topology::Topology,
+    vertex::Vertex,
 };
 
 /// A container of resources for render.
@@ -34,7 +35,7 @@ impl Resources {
         params: PipelineParameters,
     ) -> LayerHandle<V, T>
     where
-        V: Vertex,
+        V: _Vertex,
         T: Topology,
     {
         let pipeline = render.create_pipeline(
@@ -116,6 +117,16 @@ impl Resources {
         T: Topology,
     {
         let mesh = Mesh::new(data, render.context().device());
+        let id = self.meshes.insert(mesh);
+        MeshHandle::new(id)
+    }
+
+    pub fn _create_mesh<V, T>(&mut self, render: &Render, data: &MeshData<V, T>) -> MeshHandle<V, T>
+    where
+        V: _Vertex,
+        T: Topology,
+    {
+        let mesh = Mesh::_new(data, render.context().device());
         let id = self.meshes.insert(mesh);
         MeshHandle::new(id)
     }

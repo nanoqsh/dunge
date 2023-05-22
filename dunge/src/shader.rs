@@ -37,14 +37,14 @@ pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
 pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;
 
 #[derive(Clone, Copy)]
-pub(crate) enum Shader {
+pub(crate) enum _Shader {
     Color,
     Flat,
     Post,
     Textured,
 }
 
-impl Shader {
+impl _Shader {
     pub const fn source(self) -> &'static str {
         match self {
             Self::Color => concat!(
@@ -82,10 +82,10 @@ impl Shader {
         [layout::<TextureVertex>(), layout::<InstanceModel>()];
 }
 
-pub struct ShaderValue(Shader);
+pub struct ShaderValue(_Shader);
 
 impl ShaderValue {
-    pub(crate) fn into_inner(self) -> Shader {
+    pub(crate) fn into_inner(self) -> _Shader {
         let Self(value) = self;
         value
     }
@@ -97,15 +97,15 @@ pub trait ShaderType {
 }
 
 impl ShaderType for ColorVertex {
-    const VALUE: ShaderValue = ShaderValue(Shader::Color);
+    const VALUE: ShaderValue = ShaderValue(_Shader::Color);
 }
 
 impl ShaderType for FlatVertex {
-    const VALUE: ShaderValue = ShaderValue(Shader::Flat);
+    const VALUE: ShaderValue = ShaderValue(_Shader::Flat);
 }
 
 impl ShaderType for TextureVertex {
-    const VALUE: ShaderValue = ShaderValue(Shader::Textured);
+    const VALUE: ShaderValue = ShaderValue(_Shader::Textured);
 }
 
 const fn layout<V>() -> VertexBufferLayout<'static>

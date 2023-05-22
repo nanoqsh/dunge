@@ -1,8 +1,9 @@
 use {
     crate::{
-        _vertex::Vertex,
+        _vertex::Vertex as _Vertex,
         layout::Plain,
         topology::{Topology, TriangleList},
+        vertex::{self, Vertex},
     },
     std::borrow::Cow,
     wgpu::{Buffer, Device},
@@ -86,6 +87,35 @@ impl Mesh {
     pub fn new<V, T>(data: &Data<V, T>, device: &Device) -> Self
     where
         V: Vertex,
+        T: Topology,
+    {
+        use {
+            std::slice,
+            wgpu::{
+                util::{BufferInitDescriptor, DeviceExt},
+                BufferUsages,
+            },
+        };
+
+        Self {
+            buffer: device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("vertex buffer"),
+                contents: vertex::verts_as_bytes(data.verts),
+                usage: BufferUsages::VERTEX,
+            }),
+            ty: match &data.indxs {
+                Some(indxs) => Type::indexed(
+                    unsafe { slice::from_raw_parts(indxs.as_ptr().cast(), indxs.len() * 3) },
+                    device,
+                ),
+                None => Type::sequential(data.verts),
+            },
+        }
+    }
+
+    pub fn _new<V, T>(data: &Data<V, T>, device: &Device) -> Self
+    where
+        V: _Vertex,
         T: Topology,
     {
         use {

@@ -59,7 +59,7 @@ impl App {
             ];
 
             let data = MeshData::from_verts(&VERTICES);
-            context.create_mesh(&data)
+            context._create_mesh(&data)
         };
 
         // Create the view
