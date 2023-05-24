@@ -1,5 +1,6 @@
 use {
     crate::{
+        _shader::_Shader,
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
         context::Screenshot,
         frame::Frame,
@@ -9,7 +10,6 @@ use {
         r#loop::Loop,
         resources::Resources,
         screen::Screen,
-        shader::_Shader,
         shader_data::{Light, LightSpace, PostShaderData},
     },
     once_cell::unsync::OnceCell,

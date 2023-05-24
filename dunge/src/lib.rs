@@ -1,3 +1,4 @@
+mod _shader;
 pub mod _vertex;
 mod camera;
 mod canvas;
@@ -23,7 +24,6 @@ mod pipeline;
 mod render;
 mod resources;
 mod screen;
-mod shader;
 mod shader_data {
     mod camera;
     mod instance;
@@ -47,6 +47,7 @@ mod shader_data {
         texture::{Data as TextureData, Error as TextureError},
     };
 }
+mod shader;
 mod storage;
 mod time;
 pub mod topology;
@@ -79,6 +80,7 @@ pub use {
         mesh::{Data as MeshData, Error as MeshError},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
+        shader::Shader,
         shader_data::{
             LightKind, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
         },

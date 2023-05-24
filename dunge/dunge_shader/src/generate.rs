@@ -6,14 +6,21 @@ use crate::{
 };
 
 #[must_use]
-pub fn generate(Scheme { vert, camera }: Scheme) -> Shader {
+pub fn generate(scheme: Scheme) -> Shader {
+    let Scheme {
+        vert,
+        color,
+        camera,
+    } = scheme;
+
     let vert_input = VertexInput {
-        fragment: &vert.fragment,
+        fragment: vert.fragment,
         pos: vert.dimension,
     };
 
     let vert_output = VertexOutput {
-        fragment: &vert.fragment,
+        fragment: vert.fragment,
+        color,
         world: true,
     };
 
@@ -80,6 +87,7 @@ pub fn generate(Scheme { vert, camera }: Scheme) -> Shader {
 #[derive(Clone, Copy)]
 pub struct Scheme {
     pub vert: Vertex,
+    pub color: Option<Color>,
     pub camera: Camera,
 }
 

@@ -1,5 +1,6 @@
 use {
     crate::{
+        _shader,
         _vertex::_Vertex,
         color::Linear,
         error::ResourceNotFound,
@@ -8,7 +9,6 @@ use {
         pipeline::Pipeline,
         render::Render,
         resources::Resources,
-        shader,
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -95,12 +95,12 @@ impl<'d> Frame<'d> {
 
             pass.set_pipeline(self.render.post_pipeline().as_ref());
             pass.set_bind_group(
-                shader::POST_TEXTURE_GROUP,
+                _shader::POST_TEXTURE_GROUP,
                 self.render.framebuffer().render_bind_group(),
                 &[],
             );
             pass.set_bind_group(
-                shader::POST_DATA_GROUP,
+                _shader::POST_DATA_GROUP,
                 self.render.post_shader_data().bind_group(),
                 &[],
             );

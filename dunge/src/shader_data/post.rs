@@ -1,5 +1,5 @@
 use {
-    crate::{layout::Plain, shader},
+    crate::{_shader, layout::Plain},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
@@ -27,7 +27,7 @@ impl PostShaderData {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: shader::DATA_BINDING,
+                binding: _shader::DATA_BINDING,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("post bind group"),

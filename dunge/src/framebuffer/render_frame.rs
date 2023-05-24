@@ -1,5 +1,5 @@
 use {
-    crate::shader,
+    crate::_shader,
     std::num::NonZeroU32,
     wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
@@ -71,11 +71,11 @@ impl RenderFrame {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::TDIFF_BINDING,
+                    binding: _shader::TDIFF_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: shader::SDIFF_BINDING,
+                    binding: _shader::SDIFF_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

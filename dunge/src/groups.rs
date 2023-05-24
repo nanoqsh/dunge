@@ -1,5 +1,5 @@
 use {
-    crate::shader::{self, _Shader},
+    crate::_shader::{self, _Shader},
     wgpu::{BindGroupLayout, Device},
 };
 
@@ -19,7 +19,7 @@ impl _Groups {
             textured: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[
                     BindGroupLayoutEntry {
-                        binding: shader::TDIFF_BINDING,
+                        binding: _shader::TDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Texture {
                             multisampled: false,
@@ -29,7 +29,7 @@ impl _Groups {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SDIFF_BINDING,
+                        binding: _shader::SDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Sampler(SamplerBindingType::Filtering),
                         count: None,
@@ -39,7 +39,7 @@ impl _Groups {
             }),
             globals: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[BindGroupLayoutEntry {
-                    binding: shader::CAMERA_BINDING,
+                    binding: _shader::CAMERA_BINDING,
                     visibility: ShaderStages::VERTEX,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
@@ -52,7 +52,7 @@ impl _Groups {
             }),
             post_shader_data: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[BindGroupLayoutEntry {
-                    binding: shader::DATA_BINDING,
+                    binding: _shader::DATA_BINDING,
                     visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
@@ -66,7 +66,7 @@ impl _Groups {
             lights: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[
                     BindGroupLayoutEntry {
-                        binding: shader::AMBIENT_BINDING,
+                        binding: _shader::AMBIENT_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
@@ -76,7 +76,7 @@ impl _Groups {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SOURCES_BINDING,
+                        binding: _shader::SOURCES_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
@@ -91,7 +91,7 @@ impl _Groups {
             space: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: &[
                     BindGroupLayoutEntry {
-                        binding: shader::SPACES_BINDING,
+                        binding: _shader::SPACES_BINDING,
                         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
@@ -101,7 +101,7 @@ impl _Groups {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SPACE0_TDIFF_BINDING,
+                        binding: _shader::SPACE0_TDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Texture {
                             multisampled: false,
@@ -111,7 +111,7 @@ impl _Groups {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SPACE1_TDIFF_BINDING,
+                        binding: _shader::SPACE1_TDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Texture {
                             multisampled: false,
@@ -121,7 +121,7 @@ impl _Groups {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SPACE2_TDIFF_BINDING,
+                        binding: _shader::SPACE2_TDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Texture {
                             multisampled: false,
@@ -131,7 +131,7 @@ impl _Groups {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SPACE3_TDIFF_BINDING,
+                        binding: _shader::SPACE3_TDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Texture {
                             multisampled: false,
@@ -141,7 +141,7 @@ impl _Groups {
                         count: None,
                     },
                     BindGroupLayoutEntry {
-                        binding: shader::SPACE_SDIFF_BINDING,
+                        binding: _shader::SPACE_SDIFF_BINDING,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Sampler(SamplerBindingType::Filtering),
                         count: None,

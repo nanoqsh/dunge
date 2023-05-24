@@ -1,9 +1,9 @@
 use {
     crate::{
+        _shader,
         color::{IntoLinear, Linear},
         error::{Error, SpaceNotFound, TooLargeSize, TooManySpaces},
         layout::Plain,
-        shader,
         shader_data::TextureError,
         transform::IntoMat,
     },
@@ -115,7 +115,7 @@ impl LightSpace {
             "spaces and data lengths must be equal",
         );
 
-        if spaces.len() > shader::MAX_N_SPACES as usize {
+        if spaces.len() > _shader::MAX_N_SPACES as usize {
             return Err(TooManySpaces);
         }
 
@@ -167,7 +167,7 @@ impl LightSpace {
             Box::leak(view.into())
         };
 
-        let mut views: [View; shader::MAX_N_SPACES as usize] =
+        let mut views: [View; _shader::MAX_N_SPACES as usize] =
             array::from_fn(|_| View::Fake(FAKE_VIEW.get_or_init(init_view)));
 
         let mut textures = Vec::with_capacity(data.len());
@@ -231,27 +231,27 @@ impl LightSpace {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::SPACES_BINDING,
+                    binding: _shader::SPACES_BINDING,
                     resource: space_buffer.as_entire_binding(),
                 },
                 BindGroupEntry {
-                    binding: shader::SPACE0_TDIFF_BINDING,
+                    binding: _shader::SPACE0_TDIFF_BINDING,
                     resource: BindingResource::TextureView(views[0].as_ref()),
                 },
                 BindGroupEntry {
-                    binding: shader::SPACE1_TDIFF_BINDING,
+                    binding: _shader::SPACE1_TDIFF_BINDING,
                     resource: BindingResource::TextureView(views[1].as_ref()),
                 },
                 BindGroupEntry {
-                    binding: shader::SPACE2_TDIFF_BINDING,
+                    binding: _shader::SPACE2_TDIFF_BINDING,
                     resource: BindingResource::TextureView(views[2].as_ref()),
                 },
                 BindGroupEntry {
-                    binding: shader::SPACE3_TDIFF_BINDING,
+                    binding: _shader::SPACE3_TDIFF_BINDING,
                     resource: BindingResource::TextureView(views[3].as_ref()),
                 },
                 BindGroupEntry {
-                    binding: shader::SPACE_SDIFF_BINDING,
+                    binding: _shader::SPACE_SDIFF_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
@@ -280,7 +280,7 @@ impl LightSpace {
             "spaces and data lengths must be equal",
         );
 
-        if spaces.len() > shader::MAX_N_SPACES as usize {
+        if spaces.len() > _shader::MAX_N_SPACES as usize {
             return Err(TooManySpaces.into());
         }
 

@@ -35,17 +35,21 @@ impl App {
     fn new(context: &mut Context) -> Self {
         // Create a shader and layer
         let layer = {
-            use dunge_shader::{Camera, Dimension, Fragment, Scheme, Vertex};
+            use dunge_shader::{Camera, Color, Dimension, Fragment, Scheme, Vertex};
 
             let shader = context.create_shader(Scheme {
                 vert: Vertex {
                     dimension: Dimension::D2,
                     fragment: Fragment {
-                        fixed_color: None,
                         vertex_color: true,
                         vertex_texture: false,
                     },
                 },
+                color: Some(Color {
+                    r: 1.,
+                    g: 1.,
+                    b: 1.,
+                }),
                 camera: Camera::None,
             });
 

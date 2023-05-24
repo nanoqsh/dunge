@@ -5,6 +5,7 @@
 /// You can safely implement the trait for your type using [deriving](derive@crate::Vertex).
 ///
 /// # Safety
+/// * One of the fields must be of [`Kind::Position`].
 /// * The fields of `Self` must be ordered, so the struct must have the `#[repr(C)]` attribute.
 /// * The `FIELDS` const must describe correct [kinds](Kind) and [formats](Format).
 /// * The [`check_format`](Field::check_format) must be true for every field.

@@ -1,9 +1,9 @@
 use {
     crate::{
+        _shader,
         color::{IntoLinear, Linear},
         error::{SourceNotFound, TooManySources},
         layout::Plain,
-        shader,
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -58,7 +58,7 @@ impl Light {
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
-        if srcs.len() > shader::MAX_N_SOURCES as usize {
+        if srcs.len() > _shader::MAX_N_SOURCES as usize {
             return Err(TooManySources);
         }
 
@@ -85,11 +85,11 @@ impl Light {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::AMBIENT_BINDING,
+                    binding: _shader::AMBIENT_BINDING,
                     resource: ambient_buffer.as_entire_binding(),
                 },
                 BindGroupEntry {
-                    binding: shader::SOURCES_BINDING,
+                    binding: _shader::SOURCES_BINDING,
                     resource: sources_buffer.as_entire_binding(),
                 },
             ],
@@ -112,7 +112,7 @@ impl Light {
     ) -> Result<(), TooManySources> {
         use std::mem;
 
-        if srcs.len() > shader::MAX_N_SOURCES as usize {
+        if srcs.len() > _shader::MAX_N_SOURCES as usize {
             return Err(TooManySources);
         }
 

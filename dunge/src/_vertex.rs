@@ -2,8 +2,8 @@
 
 use {
     crate::{
+        _shader::ShaderType,
         layout::{Plain, _Layout},
-        shader::ShaderType,
     },
     wgpu::{VertexAttribute, VertexStepMode},
 };

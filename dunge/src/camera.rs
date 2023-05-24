@@ -2,8 +2,8 @@ pub(crate) use self::proj::{IntoProjection, Projection};
 
 use {
     crate::{
+        _shader,
         layout::Plain,
-        shader,
         shader_data::CameraUniform,
         transform::{IntoQuat, Quat},
     },
@@ -50,7 +50,7 @@ impl Camera {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: shader::CAMERA_BINDING,
+                binding: _shader::CAMERA_BINDING,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("camera bind group"),

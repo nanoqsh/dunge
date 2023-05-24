@@ -1,5 +1,5 @@
 use {
-    crate::{error::TooLargeSize, shader},
+    crate::{_shader, error::TooLargeSize},
     wgpu::{BindGroup, BindGroupLayout, Device, Queue, Texture as WgpuTexture},
 };
 
@@ -97,11 +97,11 @@ impl Texture {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: shader::TDIFF_BINDING,
+                    binding: _shader::TDIFF_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: shader::SDIFF_BINDING,
+                    binding: _shader::SDIFF_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

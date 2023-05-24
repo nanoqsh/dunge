@@ -28,12 +28,12 @@ impl InstanceInput {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct VertexInput<'a> {
-    pub fragment: &'a Fragment,
+pub(crate) struct VertexInput {
+    pub fragment: Fragment,
     pub pos: Dimension,
 }
 
-impl VertexInput<'_> {
+impl VertexInput {
     pub fn define_type(self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: location.next(),
@@ -67,12 +67,13 @@ impl VertexInput<'_> {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct VertexOutput<'a> {
-    pub fragment: &'a Fragment,
+pub(crate) struct VertexOutput {
+    pub fragment: Fragment,
+    pub color: Option<Color>,
     pub world: bool,
 }
 
-impl VertexOutput<'_> {
+impl VertexOutput {
     pub fn define_type(self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: Location::Position,
@@ -131,14 +132,14 @@ impl VertexOutput<'_> {
         }
 
         let mut mult = o.write_str("col = ").separated(" * ");
-        if let Some(Color { r, g, b }) = self.fragment.fixed_color {
+        if let Some(Color { r, g, b }) = self.color {
             mult.out()
                 .write_str("vec3(")
-                .write(r)
+                .write_f32(r)
                 .write_str(", ")
-                .write(g)
+                .write_f32(g)
                 .write_str(", ")
-                .write(b)
+                .write_f32(b)
                 .write_str(")");
         }
 
@@ -157,7 +158,6 @@ impl VertexOutput<'_> {
 
 #[derive(Clone, Copy)]
 pub struct Fragment {
-    pub fixed_color: Option<Color>,
     pub vertex_color: bool,
     pub vertex_texture: bool,
 }
