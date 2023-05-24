@@ -4,8 +4,8 @@ use {
         context::Screenshot,
         frame::Frame,
         framebuffer::Framebuffer,
-        groups::Groups,
-        pipeline::{Pipeline, PipelineParameters},
+        groups::_Groups,
+        pipeline::{Parameters as PipelineParameters, Pipeline},
         r#loop::Loop,
         resources::Resources,
         screen::Screen,
@@ -25,7 +25,7 @@ pub(crate) struct Render {
     limits: RenderLimits,
     screen: Screen,
     shaders: Shaders,
-    groups: Groups,
+    groups: _Groups,
     post_pipeline: Pipeline,
     post_shader_data: PostShaderData,
     framebuffer: Framebuffer,
@@ -49,7 +49,7 @@ impl Render {
             max_texture_size: context.device.limits().max_texture_dimension_2d,
         };
 
-        let groups = Groups::new(&context.device);
+        let groups = _Groups::new(&context.device);
         let post_shader_data = PostShaderData::new(&context.device, &groups.post_shader_data);
         let shaders = Shaders::default();
 
@@ -112,7 +112,7 @@ impl Render {
         });
     }
 
-    pub fn create_pipeline(&self, shader: _Shader, params: PipelineParameters) -> Pipeline {
+    pub fn _create_pipeline(&self, shader: _Shader, params: PipelineParameters) -> Pipeline {
         Pipeline::_new(
             &self.context.device,
             &self.shaders,
@@ -298,7 +298,7 @@ impl Render {
         &self.context
     }
 
-    pub fn groups(&self) -> &Groups {
+    pub fn groups(&self) -> &_Groups {
         &self.groups
     }
 

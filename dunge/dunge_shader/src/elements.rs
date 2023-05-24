@@ -197,6 +197,7 @@ impl Texture {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct TextureBindings {
     pub tdiff: u32,
     pub sdiff: u32,

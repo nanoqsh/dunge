@@ -1,9 +1,9 @@
 use {
     crate::{
         error::TooLargeSize,
-        layout::{Layout, Plain},
+        layout::{Plain, _Layout},
     },
-    wgpu::{Buffer, Device, Queue, VertexAttribute, VertexStepMode},
+    wgpu::{Buffer, Device, Queue, VertexAttribute, VertexBufferLayout, VertexStepMode},
 };
 
 pub(crate) struct Instance {
@@ -56,9 +56,26 @@ pub(crate) struct InstanceModel {
     pub(crate) mat: [[f32; 4]; 4],
 }
 
+impl InstanceModel {
+    pub const LAYOUT: VertexBufferLayout<'_> = {
+        use std::mem;
+
+        VertexBufferLayout {
+            array_stride: mem::size_of::<Self>() as _,
+            step_mode: VertexStepMode::Instance,
+            attributes: &wgpu::vertex_attr_array![
+                0 => Float32x4,
+                1 => Float32x4,
+                2 => Float32x4,
+                3 => Float32x4,
+            ],
+        }
+    };
+}
+
 unsafe impl Plain for InstanceModel {}
 
-impl Layout for InstanceModel {
+impl _Layout for InstanceModel {
     const ATTRIBS: &'static [VertexAttribute] =
         &wgpu::vertex_attr_array![2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4];
 

@@ -3,7 +3,7 @@ use {
     wgpu::{BindGroupLayout, Device},
 };
 
-pub(crate) struct Groups {
+pub(crate) struct _Groups {
     pub textured: BindGroupLayout,
     pub globals: BindGroupLayout,
     pub post_shader_data: BindGroupLayout,
@@ -11,7 +11,7 @@ pub(crate) struct Groups {
     pub space: BindGroupLayout,
 }
 
-impl Groups {
+impl _Groups {
     pub fn new(device: &Device) -> Self {
         use wgpu::*;
 

@@ -1,42 +1,169 @@
 use {
     crate::{
-        _vertex::Vertex,
+        _vertex::Vertex as _Vertex,
+        error::ResourceNotFound,
         framebuffer::Framebuffer,
-        groups::Groups,
-        handles::LayerHandle,
+        groups::_Groups,
+        handles::{LayerHandle, ShaderHandle},
         render::{Render, Shaders},
         resources::Resources,
         shader::_Shader,
+        shader_data::InstanceModel,
         topology::Topology,
+        vertex::{Format, Kind, Vertex},
     },
-    dunge_shader::Shader,
+    dunge_shader::{Layout, Shader, TextureBindings},
     std::marker::PhantomData,
     wgpu::{
-        BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology, RenderPipeline,
-        TextureFormat,
+        BindGroupLayout, BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology,
+        RenderPipeline, TextureFormat, VertexAttribute, VertexBufferLayout,
     },
 };
+
+#[derive(Clone, Copy)]
+pub(crate) struct Parameters {
+    pub blend: BlendState,
+    pub topology: PrimitiveTopology,
+    pub cull_faces: bool,
+    pub mode: PolygonMode,
+    pub depth_stencil: Option<CompareFunction>,
+}
+
+impl Default for Parameters {
+    fn default() -> Self {
+        Self {
+            blend: BlendState::REPLACE,
+            topology: PrimitiveTopology::TriangleList,
+            cull_faces: true,
+            mode: PolygonMode::Fill,
+            depth_stencil: Some(CompareFunction::Less),
+        }
+    }
+}
+
+/// Layer's blending
+#[derive(Clone, Copy)]
+pub enum Blend {
+    Replace,
+    AlphaBlending,
+}
+
+/// Type of drawing mode for polygons
+#[derive(Clone, Copy)]
+pub enum DrawMode {
+    Fill,
+    Line,
+    Point,
+}
+
+/// Depth comparison function
+#[derive(Clone, Copy)]
+pub enum Compare {
+    /// Function never passes
+    Never,
+
+    /// Function passes if new value less than existing value
+    Less,
+
+    /// Function passes if new value is greater than existing value
+    Greater,
+
+    /// Function always passes
+    Always,
+}
+
+/// Builds new layer with specific parameters.
+#[must_use]
+pub struct ParametersBuilder<'a, V, T> {
+    render: &'a Render,
+    resources: &'a mut Resources,
+    params: Parameters,
+    vertex_type: PhantomData<(V, T)>,
+}
+
+impl<'a, V, T> ParametersBuilder<'a, V, T> {
+    pub(crate) fn new(render: &'a Render, resources: &'a mut Resources) -> Self {
+        Self {
+            render,
+            resources,
+            params: Parameters::default(),
+            vertex_type: PhantomData,
+        }
+    }
+
+    pub fn with_blend(mut self, blend: Blend) -> Self {
+        self.params.blend = match blend {
+            Blend::Replace => BlendState::REPLACE,
+            Blend::AlphaBlending => BlendState::ALPHA_BLENDING,
+        };
+
+        self
+    }
+
+    pub fn with_cull_faces(mut self, cull_faces: bool) -> Self {
+        self.params.cull_faces = cull_faces;
+        self
+    }
+
+    pub fn with_draw_mode(mut self, draw_mode: DrawMode) -> Self {
+        self.params.mode = match draw_mode {
+            DrawMode::Fill => PolygonMode::Fill,
+            DrawMode::Line => PolygonMode::Line,
+            DrawMode::Point => PolygonMode::Point,
+        };
+
+        self
+    }
+
+    pub fn with_depth_compare(mut self, depth_compare: Compare) -> Self {
+        self.params.depth_stencil = Some(match depth_compare {
+            Compare::Never => CompareFunction::Never,
+            Compare::Less => CompareFunction::Less,
+            Compare::Greater => CompareFunction::Greater,
+            Compare::Always => CompareFunction::Always,
+        });
+
+        self
+    }
+
+    /// Builds new layer.
+    ///
+    /// # Errors
+    /// Returns [`ResourceNotFound`] if given shader handler was deleted.
+    pub fn build(self, shader: ShaderHandle<V>) -> Result<LayerHandle<V, T>, ResourceNotFound>
+    where
+        V: Vertex,
+        T: Topology,
+    {
+        self.resources
+            .create_layer(self.render, self.params, shader)
+    }
+
+    pub fn _build(self) -> LayerHandle<V, T>
+    where
+        V: _Vertex,
+        T: Topology,
+    {
+        self.resources._create_layer(self.render, self.params)
+    }
+}
 
 pub(crate) struct Pipeline(RenderPipeline);
 
 impl Pipeline {
-    pub fn new(
-        device: &Device,
-        shader: Shader,
-        params: PipelineParameters,
-        format: TextureFormat,
-    ) -> Self {
+    pub fn new(device: &Device, shader: &Shader, vert: &VertexLayout, params: Parameters) -> Self {
         use wgpu::*;
 
         Self({
             let module = device.create_shader_module(ShaderModuleDescriptor {
                 label: None,
-                source: ShaderSource::Wgsl(shader.source),
+                source: ShaderSource::Wgsl(shader.source.as_str().into()),
             });
 
+            let groups = Groups::new(device, &shader.layout);
             let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: todo!(),
+                bind_group_layouts: &[&groups.globals, &groups.textures],
                 push_constant_ranges: &[],
             });
 
@@ -45,14 +172,14 @@ impl Pipeline {
                 layout: Some(&layout),
                 vertex: VertexState {
                     module: &module,
-                    entry_point: "vs_main",
-                    buffers: todo!(),
+                    entry_point: Shader::VERTEX_ENTRY_POINT,
+                    buffers: &[vert.buffer_layout(), InstanceModel::LAYOUT],
                 },
                 fragment: Some(FragmentState {
                     module: &module,
-                    entry_point: "fs_main",
+                    entry_point: Shader::FRAGMENT_ENTRY_POINT,
                     targets: &[Some(ColorTargetState {
-                        format,
+                        format: Framebuffer::RENDER_FORMAT,
                         blend: Some(params.blend),
                         write_mask: ColorWrites::ALL,
                     })],
@@ -82,10 +209,10 @@ impl Pipeline {
     pub fn _new(
         device: &Device,
         shaders: &Shaders,
-        groups: &Groups,
+        groups: &_Groups,
         format: TextureFormat,
         shader: _Shader,
-        params: PipelineParameters,
+        params: Parameters,
     ) -> Self {
         use wgpu::*;
 
@@ -141,117 +268,114 @@ impl Pipeline {
     }
 }
 
-/// Builds new layer with specific parameters.
-#[must_use]
-pub struct ParametersBuilder<'a, V, T> {
-    render: &'a Render,
-    resources: &'a mut Resources,
-    params: PipelineParameters,
-    vertex_type: PhantomData<(V, T)>,
+struct Groups {
+    globals: BindGroupLayout,
+    textures: BindGroupLayout,
 }
 
-impl<'a, V, T> ParametersBuilder<'a, V, T> {
-    pub(crate) fn new(render: &'a Render, resources: &'a mut Resources) -> Self {
+impl Groups {
+    fn new(device: &Device, layout: &Layout) -> Self {
+        use wgpu::*;
+
         Self {
-            render,
-            resources,
-            params: PipelineParameters::default(),
-            vertex_type: PhantomData,
+            globals: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("globals binding"),
+                entries: layout
+                    .globals
+                    .camera
+                    .map(|binding| {
+                        [BindGroupLayoutEntry {
+                            binding,
+                            visibility: ShaderStages::VERTEX,
+                            ty: BindingType::Buffer {
+                                ty: BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        }]
+                    })
+                    .as_ref()
+                    .map(|a| &a[..])
+                    .unwrap_or_default(),
+            }),
+            textures: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("textures binding"),
+                entries: layout
+                    .textures
+                    .texture
+                    .map(|TextureBindings { tdiff, sdiff }| {
+                        [
+                            BindGroupLayoutEntry {
+                                binding: tdiff,
+                                visibility: ShaderStages::FRAGMENT,
+                                ty: BindingType::Texture {
+                                    multisampled: false,
+                                    view_dimension: TextureViewDimension::D2,
+                                    sample_type: TextureSampleType::Float { filterable: true },
+                                },
+                                count: None,
+                            },
+                            BindGroupLayoutEntry {
+                                binding: sdiff,
+                                visibility: ShaderStages::FRAGMENT,
+                                ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                                count: None,
+                            },
+                        ]
+                    })
+                    .as_ref()
+                    .map(|a| &a[..])
+                    .unwrap_or_default(),
+            }),
         }
     }
+}
 
-    pub fn with_blend(mut self, blend: Blend) -> Self {
-        self.params.blend = match blend {
-            Blend::Replace => BlendState::REPLACE,
-            Blend::AlphaBlending => BlendState::ALPHA_BLENDING,
-        };
+pub(crate) struct VertexLayout {
+    size: usize,
+    attrs: Vec<VertexAttribute>,
+}
 
-        self
-    }
-
-    pub fn with_cull_faces(mut self, cull_faces: bool) -> Self {
-        self.params.cull_faces = cull_faces;
-        self
-    }
-
-    pub fn with_draw_mode(mut self, draw_mode: DrawMode) -> Self {
-        self.params.mode = match draw_mode {
-            DrawMode::Fill => PolygonMode::Fill,
-            DrawMode::Line => PolygonMode::Line,
-            DrawMode::Point => PolygonMode::Point,
-        };
-
-        self
-    }
-
-    pub fn with_depth_compare(mut self, depth_compare: Compare) -> Self {
-        self.params.depth_stencil = Some(match depth_compare {
-            Compare::Never => CompareFunction::Never,
-            Compare::Less => CompareFunction::Less,
-            Compare::Greater => CompareFunction::Greater,
-            Compare::Always => CompareFunction::Always,
-        });
-
-        self
-    }
-
-    pub fn build(self) -> LayerHandle<V, T>
+impl VertexLayout {
+    pub fn new<V>() -> Self
     where
         V: Vertex,
-        T: Topology,
     {
-        self.resources.create_layer(self.render, self.params)
-    }
-}
+        use {std::mem, wgpu::VertexFormat};
 
-#[derive(Clone, Copy)]
-pub(crate) struct PipelineParameters {
-    pub blend: BlendState,
-    pub topology: PrimitiveTopology,
-    pub cull_faces: bool,
-    pub mode: PolygonMode,
-    pub depth_stencil: Option<CompareFunction>,
-}
-
-impl Default for PipelineParameters {
-    fn default() -> Self {
         Self {
-            blend: BlendState::REPLACE,
-            topology: PrimitiveTopology::TriangleList,
-            cull_faces: true,
-            mode: PolygonMode::Fill,
-            depth_stencil: Some(CompareFunction::Less),
+            size: mem::size_of::<V>(),
+            attrs: V::FIELDS
+                .iter()
+                .scan(0, |offset, field| {
+                    let attr = VertexAttribute {
+                        format: match field.format {
+                            Format::FloatX2 => VertexFormat::Float32x2,
+                            Format::FloatX3 => VertexFormat::Float32x3,
+                        },
+                        offset: *offset,
+                        shader_location: match field.kind {
+                            Kind::Position => 0,
+                            Kind::Color => todo!(),
+                            Kind::TextureMap => 1,
+                        },
+                    };
+
+                    *offset += field.format.bytes_size() as u64;
+                    Some(attr)
+                })
+                .collect(),
         }
     }
-}
 
-/// Layer's blending
-#[derive(Clone, Copy)]
-pub enum Blend {
-    Replace,
-    AlphaBlending,
-}
+    fn buffer_layout(&self) -> VertexBufferLayout {
+        use wgpu::VertexStepMode;
 
-/// Type of drawing mode for polygons
-#[derive(Clone, Copy)]
-pub enum DrawMode {
-    Fill,
-    Line,
-    Point,
-}
-
-/// Depth comparison function
-#[derive(Clone, Copy)]
-pub enum Compare {
-    /// Function never passes
-    Never,
-
-    /// Function passes if new value less than existing value
-    Less,
-
-    /// Function passes if new value is greater than existing value
-    Greater,
-
-    /// Function always passes
-    Always,
+        VertexBufferLayout {
+            array_stride: self.size as _,
+            step_mode: VertexStepMode::Vertex,
+            attributes: &self.attrs,
+        }
+    }
 }

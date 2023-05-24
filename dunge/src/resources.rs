@@ -1,35 +1,71 @@
-use crate::{
-    _vertex::Vertex as _Vertex,
-    camera::{Camera, Projection, View},
-    color::Linear,
-    error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
-    handles::*,
-    mesh::{Data as MeshData, Mesh},
-    pipeline::{Pipeline, PipelineParameters},
-    render::Render,
-    shader_data::{
-        Instance, InstanceModel, Light, LightSpace, SourceModel, SpaceData, SpaceModel, Texture,
-        TextureData,
+use {
+    crate::{
+        _vertex::Vertex as _Vertex,
+        camera::{Camera, Projection, View},
+        color::Linear,
+        error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
+        handles::*,
+        mesh::{Data as MeshData, Mesh},
+        pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
+        render::Render,
+        shader_data::{
+            Instance, InstanceModel, Light, LightSpace, SourceModel, SpaceData, SpaceModel,
+            Texture, TextureData,
+        },
+        storage::Storage,
+        topology::Topology,
+        vertex::Vertex,
     },
-    storage::Storage,
-    topology::Topology,
-    vertex::Vertex,
+    dunge_shader::{generate, Scheme, Shader},
 };
 
 /// A container of resources for render.
 #[derive(Default)]
 pub(crate) struct Resources {
-    pub(crate) layers: Storage<Pipeline>,
-    pub(crate) textures: Storage<Texture>,
     pub(crate) instances: Storage<Instance>,
-    pub(crate) meshes: Storage<Mesh>,
-    pub(crate) views: Storage<Camera>,
+    pub(crate) layers: Storage<Pipeline>,
     pub(crate) lights: Storage<Light>,
+    pub(crate) meshes: Storage<Mesh>,
+    pub(crate) shaders: Storage<Shader>,
     pub(crate) spaces: Storage<LightSpace>,
+    pub(crate) textures: Storage<Texture>,
+    pub(crate) views: Storage<Camera>,
 }
 
 impl Resources {
+    pub fn create_shader<V>(&mut self, scheme: Scheme) -> ShaderHandle<V> {
+        let shader = generate(scheme);
+        log::debug!("generated shader:\n{}", shader.source);
+        let id = self.shaders.insert(shader);
+        ShaderHandle::new(id)
+    }
+
     pub fn create_layer<V, T>(
+        &mut self,
+        render: &Render,
+        params: PipelineParameters,
+        handle: ShaderHandle<V>,
+    ) -> Result<LayerHandle<V, T>, ResourceNotFound>
+    where
+        V: Vertex,
+        T: Topology,
+    {
+        let vert = VertexLayout::new::<V>();
+        let pipeline = Pipeline::new(
+            render.context().device(),
+            self.shaders.get(handle.id())?,
+            &vert,
+            PipelineParameters {
+                topology: T::VALUE.into_inner(),
+                ..params
+            },
+        );
+
+        let id = self.layers.insert(pipeline);
+        Ok(LayerHandle::new(id))
+    }
+
+    pub fn _create_layer<V, T>(
         &mut self,
         render: &Render,
         params: PipelineParameters,
@@ -38,7 +74,7 @@ impl Resources {
         V: _Vertex,
         T: Topology,
     {
-        let pipeline = render.create_pipeline(
+        let pipeline = render._create_pipeline(
             V::VALUE.into_inner(),
             PipelineParameters {
                 topology: T::VALUE.into_inner(),

@@ -2,14 +2,14 @@
 
 use {
     crate::{
-        layout::{Layout, Plain},
+        layout::{Plain, _Layout},
         shader::ShaderType,
     },
     wgpu::{VertexAttribute, VertexStepMode},
 };
 
 /// A trait that describes a vertex.
-pub trait Vertex: Layout + ShaderType {}
+pub trait Vertex: _Layout + ShaderType {}
 
 /// Vertex for drawing colored triangles.
 #[repr(C)]
@@ -21,7 +21,7 @@ pub struct ColorVertex {
 
 unsafe impl Plain for ColorVertex {}
 
-impl Layout for ColorVertex {
+impl _Layout for ColorVertex {
     const ATTRIBS: &'static [VertexAttribute] =
         &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3];
 
@@ -40,7 +40,7 @@ pub struct TextureVertex {
 
 unsafe impl Plain for TextureVertex {}
 
-impl Layout for TextureVertex {
+impl _Layout for TextureVertex {
     const ATTRIBS: &'static [VertexAttribute] =
         &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2];
 
@@ -59,7 +59,7 @@ pub struct FlatVertex {
 
 unsafe impl Plain for FlatVertex {}
 
-impl Layout for FlatVertex {
+impl _Layout for FlatVertex {
     const ATTRIBS: &'static [VertexAttribute] =
         &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2];
 

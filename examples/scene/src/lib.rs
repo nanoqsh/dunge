@@ -53,7 +53,7 @@ impl App {
         let color_layer = context
             .create_layer_with_parameters()
             .with_depth_compare(Compare::Always)
-            .build();
+            ._build();
 
         // Create the sprite texture
         let sprites = {

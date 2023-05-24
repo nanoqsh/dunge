@@ -19,6 +19,7 @@ use {
         transform::IntoMat,
         vertex::Vertex,
     },
+    dunge_shader::Scheme,
     winit::{event_loop::EventLoopProxy, window::Window},
 };
 
@@ -94,6 +95,10 @@ impl Context {
         }));
     }
 
+    pub fn create_shader<V>(&mut self, scheme: Scheme) -> ShaderHandle<V> {
+        self.resources.create_shader(scheme)
+    }
+
     /// Creates a new layer with default parameters.
     ///
     /// This is a shortcut for `context.create_layer_with_parameters().build()`.
@@ -103,7 +108,7 @@ impl Context {
         V: _Vertex,
         T: Topology,
     {
-        self.create_layer_with_parameters().build()
+        self.create_layer_with_parameters()._build()
     }
 
     /// Creates a layer [builder](ParametersBuilder) with custom parameters.

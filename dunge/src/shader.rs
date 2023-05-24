@@ -1,7 +1,7 @@
 use {
     crate::{
         _vertex::{ColorVertex, FlatVertex, TextureVertex},
-        layout::Layout,
+        layout::_Layout,
         shader_data::InstanceModel,
     },
     wgpu::VertexBufferLayout,
@@ -71,15 +71,15 @@ impl _Shader {
     }
 
     const COLOR_BUFFERS: [VertexBufferLayout<'static>; 2] =
-        [layout::<ColorVertex>(), layout::<InstanceModel>()];
+        [_layout::<ColorVertex>(), _layout::<InstanceModel>()];
 
     const FLAT_BUFFERS: [VertexBufferLayout<'static>; 2] =
-        [layout::<FlatVertex>(), layout::<InstanceModel>()];
+        [_layout::<FlatVertex>(), _layout::<InstanceModel>()];
 
     const POST_BUFFERS: [VertexBufferLayout<'static>; 0] = [];
 
     const TEXTURED_BUFFERS: [VertexBufferLayout<'static>; 2] =
-        [layout::<TextureVertex>(), layout::<InstanceModel>()];
+        [_layout::<TextureVertex>(), _layout::<InstanceModel>()];
 }
 
 pub struct ShaderValue(_Shader);
@@ -108,9 +108,9 @@ impl ShaderType for TextureVertex {
     const VALUE: ShaderValue = ShaderValue(_Shader::Textured);
 }
 
-const fn layout<V>() -> VertexBufferLayout<'static>
+const fn _layout<V>() -> VertexBufferLayout<'static>
 where
-    V: Layout,
+    V: _Layout,
 {
     use {std::mem, wgpu::BufferAddress};
 

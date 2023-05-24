@@ -4,9 +4,18 @@ use dunge::{
     handles::*,
     input::{Input, Key},
     transform::Position,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View,
+    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Perspective, Vertex, View,
     WindowMode,
 };
+
+#[repr(C)]
+#[derive(Vertex)]
+struct Vert {
+    #[position]
+    pos: [f32; 3],
+    #[color]
+    col: [f32; 3],
+}
 
 fn main() {
     env_logger::init();
@@ -25,8 +34,8 @@ fn main() {
 
 struct App {
     layer: LayerHandle<ColorVertex>,
-    instance: InstanceHandle,
     mesh: MeshHandle<ColorVertex>,
+    instance: InstanceHandle,
     view: ViewHandle,
 }
 
@@ -34,12 +43,6 @@ impl App {
     fn new(context: &mut Context) -> Self {
         // Create a layer
         let layer = context.create_layer();
-
-        // Create a model instance
-        let instance = {
-            let data = Position::default();
-            context.create_instances([data])
-        };
 
         // Create a mesh
         let mesh = {
@@ -62,13 +65,19 @@ impl App {
             context._create_mesh(&data)
         };
 
+        // Create a model instance
+        let instance = {
+            let data = Position::default();
+            context.create_instances([data])
+        };
+
         // Create the view
         let view = context.create_view::<Perspective>(View::default());
 
         Self {
             layer,
-            instance,
             mesh,
+            instance,
             view,
         }
     }

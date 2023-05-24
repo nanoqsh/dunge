@@ -116,6 +116,17 @@ pub enum Format {
     FloatX3,
 }
 
+impl Format {
+    pub(crate) const fn bytes_size(self) -> usize {
+        use std::mem;
+
+        match self {
+            Self::FloatX2 => 2 * mem::size_of::<f32>(),
+            Self::FloatX3 => 3 * mem::size_of::<f32>(),
+        }
+    }
+}
+
 /// The component is something that a [vertex](Vertex) can consist of.
 ///
 /// Available componets are:

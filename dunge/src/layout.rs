@@ -43,7 +43,7 @@ mod plain {
 }
 
 /// The trait describes a layout.
-pub trait Layout: Plain {
+pub trait _Layout: Plain {
     const ATTRIBS: &'static [VertexAttribute];
     const VERTEX_STEP_MODE: VertexStepMode;
 }

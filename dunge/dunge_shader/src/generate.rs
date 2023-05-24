@@ -1,15 +1,12 @@
-use {
-    crate::{
-        elements::*,
-        nodes::{Binding, Location},
-        out::Out,
-        templater::Templater,
-    },
-    std::borrow::Cow,
+use crate::{
+    elements::*,
+    nodes::{Binding, Location},
+    out::Out,
+    templater::Templater,
 };
 
 #[must_use]
-pub fn generate(Scheme { vert, camera }: Scheme) -> Shader<'static> {
+pub fn generate(Scheme { vert, camera }: Scheme) -> Shader {
     let vert_input = VertexInput {
         fragment: &vert.fragment,
         pos: vert.dimension,
@@ -76,8 +73,7 @@ pub fn generate(Scheme { vert, camera }: Scheme) -> Shader<'static> {
             .insert("vertex_out", &vertex_out)
             .insert("fragment_col", &fragment_col)
             .format(include_str!("../template.wgsl"))
-            .expect("generate shader")
-            .into(),
+            .expect("generate shader"),
     }
 }
 
@@ -93,9 +89,14 @@ pub struct Vertex {
     pub fragment: Fragment,
 }
 
-pub struct Shader<'a> {
+pub struct Shader {
     pub layout: Layout,
-    pub source: Cow<'a, str>,
+    pub source: String,
+}
+
+impl Shader {
+    pub const VERTEX_ENTRY_POINT: &str = "vs_main";
+    pub const FRAGMENT_ENTRY_POINT: &str = "fs_main";
 }
 
 pub struct Layout {
