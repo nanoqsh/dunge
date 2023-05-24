@@ -20,8 +20,8 @@ pub fn generate(Scheme { vert, camera }: Scheme) -> Shader {
     let types = {
         let mut o = Out::new();
         let mut location = Location::new();
-        vert_input.define_type(&mut location, &mut o);
         InstanceInput::define_type(&mut location, &mut o);
+        vert_input.define_type(&mut location, &mut o);
 
         let mut location = Location::new();
         vert_output.define_type(&mut location, &mut o);

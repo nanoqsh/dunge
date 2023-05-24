@@ -49,7 +49,7 @@ impl App {
         });
 
         // Create layer
-        let texture_layer = context.create_layer();
+        let texture_layer = context._create_layer();
         let color_layer = context
             .create_layer_with_parameters()
             .with_depth_compare(Compare::Always)
@@ -336,11 +336,11 @@ impl Loop for App {
                 .layer(self.texture_layer)?
                 .with_clear_color(CLEAR_COLOR)
                 .with_clear_depth()
-                .start();
+                ._start();
 
             layer.bind_light(self.light)?;
             layer.bind_space(self.lightspace)?;
-            layer.bind_view(self.view)?;
+            layer._bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;
             for model in &self.models {
                 layer.bind_instance(model.instance)?;
@@ -349,8 +349,8 @@ impl Loop for App {
         }
 
         {
-            let mut layer = frame.layer(self.color_layer)?.start();
-            layer.bind_view(self.view)?;
+            let mut layer = frame.layer(self.color_layer)?._start();
+            layer._bind_view(self.view)?;
             for cube in &self.cubes {
                 layer.bind_instance(cube.instance)?;
                 layer.draw(cube.mesh)?;

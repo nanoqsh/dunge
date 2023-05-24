@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::Vertex as _Vertex,
+        _vertex::_Vertex,
         layout::Plain,
         topology::{Topology, TriangleList},
         vertex::{self, Vertex},

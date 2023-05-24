@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::Vertex as _Vertex,
+        _vertex::_Vertex,
         camera::{Camera, Projection, View},
         color::Linear,
         error::{Error, ResourceNotFound, TooManySources, TooManySpaces},

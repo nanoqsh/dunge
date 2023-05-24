@@ -1,21 +1,14 @@
 use dunge::{
-    _vertex::ColorVertex,
     color::Standard,
     handles::*,
     input::{Input, Key},
     transform::Position,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Perspective, Vertex, View,
-    WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Vertex, WindowMode,
 };
 
 #[repr(C)]
 #[derive(Vertex)]
-struct Vert {
-    #[position]
-    pos: [f32; 3],
-    #[color]
-    col: [f32; 3],
-}
+struct Vert(#[position] [f32; 2], #[color] [f32; 3]);
 
 fn main() {
     env_logger::init();
@@ -33,36 +26,45 @@ fn main() {
 }
 
 struct App {
-    layer: LayerHandle<ColorVertex>,
-    mesh: MeshHandle<ColorVertex>,
+    layer: LayerHandle<Vert>,
+    mesh: MeshHandle<Vert>,
     instance: InstanceHandle,
-    view: ViewHandle,
 }
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Create a layer
-        let layer = context.create_layer();
+        // Create a shader and layer
+        let layer = {
+            use dunge_shader::{Camera, Dimension, Fragment, Scheme, Vertex};
+
+            let shader = context.create_shader(Scheme {
+                vert: Vertex {
+                    dimension: Dimension::D2,
+                    fragment: Fragment {
+                        fixed_color: None,
+                        vertex_color: true,
+                        vertex_texture: false,
+                    },
+                },
+                camera: Camera::None,
+            });
+
+            context
+                .create_layer_with_parameters()
+                .build(shader)
+                .expect("create layer")
+        };
 
         // Create a mesh
         let mesh = {
-            const VERTICES: [ColorVertex; 3] = [
-                ColorVertex {
-                    pos: [-0.5, -0.5, 0.],
-                    col: [1., 0., 0.],
-                },
-                ColorVertex {
-                    pos: [0.5, -0.5, 0.],
-                    col: [0., 1., 0.],
-                },
-                ColorVertex {
-                    pos: [0., 0.5, 0.],
-                    col: [0., 0., 1.],
-                },
+            const VERTICES: [Vert; 3] = [
+                Vert([-0.5, -0.5], [1., 0., 0.]),
+                Vert([0.5, -0.5], [0., 1., 0.]),
+                Vert([0., 0.5], [0., 0., 1.]),
             ];
 
             let data = MeshData::from_verts(&VERTICES);
-            context._create_mesh(&data)
+            context.create_mesh(&data)
         };
 
         // Create a model instance
@@ -71,14 +73,10 @@ impl App {
             context.create_instances([data])
         };
 
-        // Create the view
-        let view = context.create_view::<Perspective>(View::default());
-
         Self {
             layer,
             mesh,
             instance,
-            view,
         }
     }
 }
@@ -101,14 +99,11 @@ impl Loop for App {
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         let mut layer = frame
             .layer(self.layer)?
-            .with_clear_color(Standard([0, 0, 0, 255]))
+            .with_clear_color(Standard([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start();
 
-        layer.bind_view(self.view)?;
         layer.bind_instance(self.instance)?;
-        layer.draw(self.mesh)?;
-
-        Ok(())
+        layer.draw(self.mesh)
     }
 }

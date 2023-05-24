@@ -8,7 +8,6 @@ use {crate::topology::TriangleList, std::marker::PhantomData};
 pub struct InstanceHandle(pub(crate) u32);
 
 /// A layer handle. May be obtained from the [`create_layer`](crate::Context::create_layer) method.
-#[derive(Clone, Copy)]
 #[must_use]
 pub struct LayerHandle<V, T = TriangleList>(u32, PhantomData<(V, T)>);
 
@@ -22,6 +21,14 @@ impl<V, T> LayerHandle<V, T> {
     }
 }
 
+impl<V, T> Clone for LayerHandle<V, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<V, T> Copy for LayerHandle<V, T> {}
+
 /// A light handle. May be obtained from the [`create_light`](crate::Context::create_light) method.
 #[derive(Clone, Copy)]
 #[must_use]
@@ -32,7 +39,6 @@ impl LightHandle {
 }
 
 /// A mesh handle. May be obtained from the [`create_mesh`](crate::Context::create_mesh) method.
-#[derive(Clone, Copy)]
 #[must_use]
 pub struct MeshHandle<V, T = TriangleList>(u32, PhantomData<(V, T)>);
 
@@ -46,8 +52,15 @@ impl<V, T> MeshHandle<V, T> {
     }
 }
 
+impl<V, T> Clone for MeshHandle<V, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<V, T> Copy for MeshHandle<V, T> {}
+
 /// A shader handle. May be obtained from the [`create_shader`](crate::Context::create_shader) method.
-#[derive(Clone, Copy)]
 #[must_use]
 pub struct ShaderHandle<V>(u32, PhantomData<V>);
 
@@ -60,6 +73,14 @@ impl<V> ShaderHandle<V> {
         self.0
     }
 }
+
+impl<V> Clone for ShaderHandle<V> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<V> Copy for ShaderHandle<V> {}
 
 /// A space handle. May be obtained from the [`create_space`](crate::Context::create_space) method.
 #[derive(Clone, Copy)]

@@ -57,6 +57,7 @@ pub(crate) struct InstanceModel {
 }
 
 impl InstanceModel {
+    pub const LOCATION_OFFSET: u32 = 4;
     pub const LAYOUT: VertexBufferLayout<'_> = {
         use std::mem;
 

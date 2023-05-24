@@ -9,7 +9,7 @@ use {
 };
 
 /// A trait that describes a vertex.
-pub trait Vertex: _Layout + ShaderType {}
+pub trait _Vertex: _Layout + ShaderType {}
 
 /// Vertex for drawing colored triangles.
 #[repr(C)]
@@ -28,7 +28,7 @@ impl _Layout for ColorVertex {
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
 }
 
-impl Vertex for ColorVertex {}
+impl _Vertex for ColorVertex {}
 
 /// Vertex for drawing textured triangles.
 #[repr(C)]
@@ -47,7 +47,7 @@ impl _Layout for TextureVertex {
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
 }
 
-impl Vertex for TextureVertex {}
+impl _Vertex for TextureVertex {}
 
 /// Vertex for drawing flat sprites.
 #[repr(C)]
@@ -66,4 +66,4 @@ impl _Layout for FlatVertex {
     const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Vertex;
 }
 
-impl Vertex for FlatVertex {}
+impl _Vertex for FlatVertex {}

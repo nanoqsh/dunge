@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::Vertex,
+        _vertex::_Vertex,
         color::Linear,
         error::ResourceNotFound,
         handles::LayerHandle,
@@ -122,16 +122,12 @@ impl<'d> Frame<'d> {
         Ok(Builder::new(self, self.resources.layers.get(handle.id())?))
     }
 
-    /// Creates a new [layer](crate::Layer).
     pub(crate) fn start_layer<'l, V, T>(
         &'l mut self,
         pipeline: &'l Pipeline,
         clear_color: Option<Linear<f32>>,
         clear_depth: bool,
-    ) -> Layer<V, T>
-    where
-        V: Vertex,
-    {
+    ) -> Layer<V, T> {
         use wgpu::*;
 
         // Before start a new layer, finish the previous one if it exists
@@ -177,6 +173,68 @@ impl<'d> Frame<'d> {
         pass.set_viewport(0., 0., vw as f32, vh as f32, 0., 1.);
 
         Layer::new(
+            pass,
+            (vw, vh),
+            self.render.context().queue(),
+            self.resources,
+            &mut self.drawn_in_frame,
+        )
+    }
+
+    pub(crate) fn _start_layer<'l, V, T>(
+        &'l mut self,
+        pipeline: &'l Pipeline,
+        clear_color: Option<Linear<f32>>,
+        clear_depth: bool,
+    ) -> Layer<V, T>
+    where
+        V: _Vertex,
+    {
+        use wgpu::*;
+
+        // Before start a new layer, finish the previous one if it exists
+        self.encoder.finish(self.render);
+
+        let mut pass = self
+            .encoder
+            .get(self.render)
+            .begin_render_pass(&RenderPassDescriptor {
+                label: Some("layer render pass"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: self.render.framebuffer().render_view(),
+                    resolve_target: None,
+                    ops: Operations {
+                        load: clear_color.map_or(LoadOp::Load, |Linear([r, g, b, a])| {
+                            LoadOp::Clear(Color {
+                                r: r as f64,
+                                g: g as f64,
+                                b: b as f64,
+                                a: a as f64,
+                            })
+                        }),
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                    view: self.render.framebuffer().depth_view(),
+                    depth_ops: Some(Operations {
+                        load: if clear_depth {
+                            LoadOp::Clear(1.)
+                        } else {
+                            LoadOp::Load
+                        },
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
+            });
+
+        pass.set_pipeline(pipeline.as_ref());
+
+        let (vw, vh) = self.render.screen().virtual_size();
+        pass.set_viewport(0., 0., vw as f32, vh as f32, 0., 1.);
+
+        Layer::_new(
             pass,
             (vw, vh),
             self.render.context().queue(),

@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::{ColorVertex, FlatVertex, TextureVertex, Vertex as _Vertex},
+        _vertex::{ColorVertex, FlatVertex, TextureVertex, _Vertex},
         color::{IntoLinear, Linear},
         error::{Error, ResourceNotFound},
         frame::Frame,
@@ -27,10 +27,7 @@ pub struct Layer<'l, V, T> {
     vertex_type: PhantomData<(V, T)>,
 }
 
-impl<'l, V, T> Layer<'l, V, T>
-where
-    V: _Vertex,
-{
+impl<'l, V, T> Layer<'l, V, T> {
     pub(crate) fn new(
         pass: RenderPass<'l>,
         size: (u32, u32),
@@ -38,6 +35,27 @@ where
         resources: &'l Resources,
         drawn_in_frame: &'l mut bool,
     ) -> Self {
+        Self {
+            pass,
+            size,
+            queue,
+            resources,
+            instance: None,
+            drawn_in_frame,
+            vertex_type: PhantomData,
+        }
+    }
+
+    pub(crate) fn _new(
+        pass: RenderPass<'l>,
+        size: (u32, u32),
+        queue: &'l Queue,
+        resources: &'l Resources,
+        drawn_in_frame: &'l mut bool,
+    ) -> Self
+    where
+        V: _Vertex,
+    {
         let mut layer = Self {
             pass,
             size,
@@ -66,6 +84,12 @@ where
         }
 
         layer
+    }
+
+    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+        use dunge_shader::Globals;
+
+        self.bind_view_handle(handle, Globals::GROUP)
     }
 
     /// Binds the [instance](crate::handles::InstanceHandle).
@@ -166,7 +190,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
-    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+    pub fn _bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
         self.bind_view_handle(handle, shader::TEXTURED_GLOBALS_GROUP)
     }
 
@@ -204,7 +228,7 @@ impl<T> Layer<'_, ColorVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
-    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+    pub fn _bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
         self.bind_view_handle(handle, shader::COLOR_GLOBALS_GROUP)
     }
 
@@ -319,11 +343,17 @@ impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
     }
 
     /// Starts draw the layer.
-    pub fn start(self) -> Layer<'l, V, T>
+    pub fn start(self) -> Layer<'l, V, T> {
+        self.frame
+            .start_layer(self.pipeline, self.clear_color, self.clear_depth)
+    }
+
+    /// Starts draw the layer.
+    pub fn _start(self) -> Layer<'l, V, T>
     where
         V: _Vertex,
     {
         self.frame
-            .start_layer(self.pipeline, self.clear_color, self.clear_depth)
+            ._start_layer(self.pipeline, self.clear_color, self.clear_depth)
     }
 }

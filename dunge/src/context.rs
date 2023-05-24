@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::Vertex as _Vertex,
+        _vertex::_Vertex,
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
         color::IntoLinear,
@@ -103,7 +103,7 @@ impl Context {
     ///
     /// This is a shortcut for `context.create_layer_with_parameters().build()`.
     /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
-    pub fn create_layer<V, T>(&mut self) -> LayerHandle<V, T>
+    pub fn _create_layer<V, T>(&mut self) -> LayerHandle<V, T>
     where
         V: _Vertex,
         T: Topology,

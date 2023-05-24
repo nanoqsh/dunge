@@ -32,8 +32,8 @@ pub struct App {
 impl App {
     pub fn new(context: &mut Context) -> Self {
         // Create layers. The vertex type inferred from the context
-        let texture_layer = context.create_layer();
-        let color_layer = context.create_layer();
+        let texture_layer = context._create_layer();
+        let color_layer = context._create_layer();
 
         // Create a texture
         let texture = {
@@ -126,9 +126,9 @@ impl Loop for App {
                     .layer(self.texture_layer)?
                     .with_clear_color(color)
                     .with_clear_depth()
-                    .start();
+                    ._start();
 
-                layer.bind_view(self.view)?;
+                layer._bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;
                 layer.bind_texture(self.texture)?;
                 layer.draw(self.texture_mesh)?;
@@ -138,9 +138,9 @@ impl Loop for App {
                     .layer(self.color_layer)?
                     .with_clear_color(color)
                     .with_clear_depth()
-                    .start();
+                    ._start();
 
-                layer.bind_view(self.view)?;
+                layer._bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;
                 layer.draw(self.color_mesh)?;
             }

@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::Vertex as _Vertex,
+        _vertex::_Vertex,
         error::ResourceNotFound,
         framebuffer::Framebuffer,
         groups::_Groups,
@@ -154,56 +154,54 @@ impl Pipeline {
     pub fn new(device: &Device, shader: &Shader, vert: &VertexLayout, params: Parameters) -> Self {
         use wgpu::*;
 
-        Self({
-            let module = device.create_shader_module(ShaderModuleDescriptor {
-                label: None,
-                source: ShaderSource::Wgsl(shader.source.as_str().into()),
-            });
+        let module = device.create_shader_module(ShaderModuleDescriptor {
+            label: None,
+            source: ShaderSource::Wgsl(shader.source.as_str().into()),
+        });
 
-            let groups = Groups::new(device, &shader.layout);
-            let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-                label: None,
-                bind_group_layouts: &[&groups.globals, &groups.textures],
-                push_constant_ranges: &[],
-            });
+        let groups = Groups::new(device, &shader.layout);
+        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &groups.layouts(),
+            push_constant_ranges: &[],
+        });
 
-            device.create_render_pipeline(&RenderPipelineDescriptor {
-                label: None,
-                layout: Some(&layout),
-                vertex: VertexState {
-                    module: &module,
-                    entry_point: Shader::VERTEX_ENTRY_POINT,
-                    buffers: &[vert.buffer_layout(), InstanceModel::LAYOUT],
-                },
-                fragment: Some(FragmentState {
-                    module: &module,
-                    entry_point: Shader::FRAGMENT_ENTRY_POINT,
-                    targets: &[Some(ColorTargetState {
-                        format: Framebuffer::RENDER_FORMAT,
-                        blend: Some(params.blend),
-                        write_mask: ColorWrites::ALL,
-                    })],
-                }),
-                primitive: PrimitiveState {
-                    topology: params.topology,
-                    strip_index_format: None,
-                    front_face: FrontFace::Ccw,
-                    cull_mode: params.cull_faces.then_some(Face::Back),
-                    polygon_mode: params.mode,
-                    unclipped_depth: false,
-                    conservative: false,
-                },
-                depth_stencil: params.depth_stencil.map(|depth_compare| DepthStencilState {
-                    format: Framebuffer::DEPTH_FORMAT,
-                    depth_write_enabled: true,
-                    depth_compare,
-                    stencil: StencilState::default(),
-                    bias: DepthBiasState::default(),
-                }),
-                multisample: MultisampleState::default(),
-                multiview: None,
-            })
-        })
+        Self(device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: None,
+            layout: Some(&layout),
+            vertex: VertexState {
+                module: &module,
+                entry_point: Shader::VERTEX_ENTRY_POINT,
+                buffers: &[vert.buffer_layout(), InstanceModel::LAYOUT],
+            },
+            fragment: Some(FragmentState {
+                module: &module,
+                entry_point: Shader::FRAGMENT_ENTRY_POINT,
+                targets: &[Some(ColorTargetState {
+                    format: Framebuffer::RENDER_FORMAT,
+                    blend: Some(params.blend),
+                    write_mask: ColorWrites::ALL,
+                })],
+            }),
+            primitive: PrimitiveState {
+                topology: params.topology,
+                strip_index_format: None,
+                front_face: FrontFace::Ccw,
+                cull_mode: params.cull_faces.then_some(Face::Back),
+                polygon_mode: params.mode,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: params.depth_stencil.map(|depth_compare| DepthStencilState {
+                format: Framebuffer::DEPTH_FORMAT,
+                depth_write_enabled: true,
+                depth_compare,
+                stencil: StencilState::default(),
+                bias: DepthBiasState::default(),
+            }),
+            multisample: MultisampleState::default(),
+            multiview: None,
+        }))
     }
 
     pub fn _new(
@@ -269,8 +267,8 @@ impl Pipeline {
 }
 
 struct Groups {
-    globals: BindGroupLayout,
-    textures: BindGroupLayout,
+    globals: Option<BindGroupLayout>,
+    textures: Option<BindGroupLayout>,
 }
 
 impl Groups {
@@ -278,34 +276,28 @@ impl Groups {
         use wgpu::*;
 
         Self {
-            globals: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: Some("globals binding"),
-                entries: layout
-                    .globals
-                    .camera
-                    .map(|binding| {
-                        [BindGroupLayoutEntry {
-                            binding,
-                            visibility: ShaderStages::VERTEX,
-                            ty: BindingType::Buffer {
-                                ty: BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        }]
-                    })
-                    .as_ref()
-                    .map(|a| &a[..])
-                    .unwrap_or_default(),
+            globals: layout.globals.camera.map(|binding| {
+                device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                    label: Some("globals binding"),
+                    entries: &[BindGroupLayoutEntry {
+                        binding,
+                        visibility: ShaderStages::VERTEX,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    }],
+                })
             }),
-            textures: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: Some("textures binding"),
-                entries: layout
-                    .textures
-                    .texture
-                    .map(|TextureBindings { tdiff, sdiff }| {
-                        [
+            textures: layout
+                .textures
+                .texture
+                .map(|TextureBindings { tdiff, sdiff }| {
+                    device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                        label: Some("textures binding"),
+                        entries: &[
                             BindGroupLayoutEntry {
                                 binding: tdiff,
                                 visibility: ShaderStages::FRAGMENT,
@@ -322,13 +314,17 @@ impl Groups {
                                 ty: BindingType::Sampler(SamplerBindingType::Filtering),
                                 count: None,
                             },
-                        ]
+                        ],
                     })
-                    .as_ref()
-                    .map(|a| &a[..])
-                    .unwrap_or_default(),
-            }),
+                }),
         }
+    }
+
+    fn layouts(&self) -> Vec<&BindGroupLayout> {
+        [&self.globals, &self.textures]
+            .into_iter()
+            .flatten()
+            .collect()
     }
 }
 
@@ -349,17 +345,19 @@ impl VertexLayout {
             attrs: V::FIELDS
                 .iter()
                 .scan(0, |offset, field| {
+                    let location = match field.kind {
+                        Kind::Position => 0,
+                        Kind::Color => 1,
+                        Kind::TextureMap => todo!("what if color + texture will be used"),
+                    };
+
                     let attr = VertexAttribute {
                         format: match field.format {
                             Format::FloatX2 => VertexFormat::Float32x2,
                             Format::FloatX3 => VertexFormat::Float32x3,
                         },
                         offset: *offset,
-                        shader_location: match field.kind {
-                            Kind::Position => 0,
-                            Kind::Color => todo!(),
-                            Kind::TextureMap => 1,
-                        },
+                        shader_location: location + InstanceModel::LOCATION_OFFSET,
                     };
 
                     *offset += field.format.bytes_size() as u64;
