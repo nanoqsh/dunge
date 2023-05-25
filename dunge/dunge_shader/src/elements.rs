@@ -69,7 +69,7 @@ impl VertexInput {
 #[derive(Clone, Copy)]
 pub(crate) struct VertexOutput {
     pub fragment: Fragment,
-    pub color: Option<Color>,
+    pub base_color: Option<Color>,
     pub world: bool,
 }
 
@@ -132,7 +132,7 @@ impl VertexOutput {
         }
 
         let mut mult = o.write_str("col = ").separated(" * ");
-        if let Some(Color { r, g, b }) = self.color {
+        if let Some(Color { r, g, b }) = self.base_color {
             mult.out()
                 .write_str("vec3(")
                 .write_f32(r)

@@ -35,7 +35,7 @@ impl App {
     fn new(context: &mut Context) -> Self {
         // Create a shader and layer
         let layer = {
-            use dunge_shader::{Camera, Color, Dimension, Fragment, Scheme, Vertex};
+            use dunge_shader::{Camera, Dimension, Fragment, Scheme, Vertex};
 
             let shader = context.create_shader(Scheme {
                 vert: Vertex {
@@ -45,11 +45,7 @@ impl App {
                         vertex_texture: false,
                     },
                 },
-                color: Some(Color {
-                    r: 1.,
-                    g: 1.,
-                    b: 1.,
-                }),
+                base_color: None,
                 camera: Camera::None,
             });
 

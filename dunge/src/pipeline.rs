@@ -10,13 +10,13 @@ use {
         resources::Resources,
         shader_data::InstanceModel,
         topology::Topology,
-        vertex::{Format, Kind, Vertex},
+        vertex::Vertex,
     },
     dunge_shader::{Layout, Shader, TextureBindings},
     std::marker::PhantomData,
     wgpu::{
         BindGroupLayout, BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology,
-        RenderPipeline, TextureFormat, VertexAttribute, VertexBufferLayout,
+        RenderPipeline, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat,
     },
 };
 
@@ -338,33 +338,52 @@ impl VertexLayout {
     where
         V: Vertex,
     {
-        use {std::mem, wgpu::VertexFormat};
+        use {
+            crate::vertex::{Component, Component2D, Component3D},
+            std::mem,
+        };
+
+        let mut offset = 0;
+        let mut location = 0;
+        let mut make_attr = |n| {
+            let format = Self::format(n);
+            let new_offset = Self::offset(n);
+            let attr = VertexAttribute {
+                format,
+                offset,
+                shader_location: location + InstanceModel::LOCATION_OFFSET,
+            };
+
+            offset += new_offset;
+            location += 1;
+            attr
+        };
 
         Self {
             size: mem::size_of::<V>(),
-            attrs: V::FIELDS
-                .iter()
-                .scan(0, |offset, field| {
-                    let location = match field.kind {
-                        Kind::Position => 0,
-                        Kind::Color => 1,
-                        Kind::TextureMap => todo!("what if color + texture will be used"),
-                    };
-
-                    let attr = VertexAttribute {
-                        format: match field.format {
-                            Format::FloatX2 => VertexFormat::Float32x2,
-                            Format::FloatX3 => VertexFormat::Float32x3,
-                        },
-                        offset: *offset,
-                        shader_location: location + InstanceModel::LOCATION_OFFSET,
-                    };
-
-                    *offset += field.format.bytes_size() as u64;
-                    Some(attr)
-                })
-                .collect(),
+            attrs: [
+                Some(make_attr(V::Position::N_FLOATS)),
+                V::Color::OPTIONAL_N_FLOATS.map(&mut make_attr),
+                V::Texture::OPTIONAL_N_FLOATS.map(&mut make_attr),
+            ]
+            .into_iter()
+            .flatten()
+            .collect(),
         }
+    }
+
+    const fn format(n: u64) -> VertexFormat {
+        match n {
+            2 => VertexFormat::Float32x2,
+            3 => VertexFormat::Float32x3,
+            _ => unreachable!(),
+        }
+    }
+
+    const fn offset(n: u64) -> u64 {
+        use std::mem;
+
+        n * mem::size_of::<f32>() as u64
     }
 
     fn buffer_layout(&self) -> VertexBufferLayout {

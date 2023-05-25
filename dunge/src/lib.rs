@@ -47,7 +47,7 @@ mod shader_data {
         texture::{Data as TextureData, Error as TextureError},
     };
 }
-mod shader;
+pub mod shader;
 mod storage;
 mod time;
 pub mod topology;

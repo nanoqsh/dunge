@@ -1,23 +1,28 @@
+use crate::vertex::private::Format;
+
 /// Vertex type description.
 ///
 /// To use a vertex type, you need to describe its fields.
+/// For example, if a component of the vertex position is `[f32; 3]`, then the same type
+/// must be specified in [`Position`](Vertex::Position) of the trait implementation.
+/// If some component of the vertex is not used, the corresponding type must be specified as `()`.
+///
+/// Because all trait types must be [`Component`] no other types can be part of the vertex.
+///
 /// This implementation also requires some safety invariant, so the trait is `unsafe`.
 /// You can safely implement the trait for your type using [deriving](derive@crate::Vertex).
 ///
 /// # Safety
-/// * One of the fields must be of [`Kind::Position`].
+/// * The fields descriptions must exactly match the actual component types or be the unit `()`.
 /// * The fields of `Self` must be ordered, so the struct must have the `#[repr(C)]` attribute.
-/// * The `FIELDS` const must describe correct [kinds](Kind) and [formats](Format).
-/// * The [`check_format`](Field::check_format) must be true for every field.
+/// * The fields must be in the same order as they are listed in the trait.
+/// * The `Self` type must not have any other fields than those described by components.
 ///
 /// # Example
 /// Let's say we want to create a `Vert` type with a position and a texture map.
 /// Then the [`Vertex`] implementation for the type would be:
 /// ```rust
-/// use dunge::{
-///     vertex::{self, Field, Kind},
-///     Vertex,
-/// };
+/// use dunge::Vertex;
 ///
 /// #[repr(C)]
 /// struct Vert {
@@ -26,26 +31,9 @@
 /// }
 ///
 /// unsafe impl Vertex for Vert {
-///     const FIELDS: &'static [Field] = &[
-///         {   // `pos` field
-///             let f = Field {
-///                 kind: Kind::Position,
-///                 format: vertex::component_format::<[f32; 3]>(),
-///             };
-///
-///             assert!(f.check_format());
-///             f
-///         },
-///         {   // `map` field
-///             let f = Field {
-///                 kind: Kind::Color,
-///                 format: vertex::component_format::<[f32; 2]>(),
-///             };
-///
-///             assert!(f.check_format());
-///             f
-///         },
-///     ];
+///     type Position = [f32; 3]; // position type
+///     type Color = ();          // color component is not used
+///     type Texture = [f32; 2];  // texture type
 /// }
 /// ```
 ///
@@ -65,7 +53,9 @@
 /// ```
 ///
 pub unsafe trait Vertex {
-    const FIELDS: &'static [Field];
+    type Position: Component;
+    type Color: Component3D;
+    type Texture: Component2D;
 }
 
 pub(crate) fn verts_as_bytes<V>(verts: &[V]) -> &[u8]
@@ -74,116 +64,111 @@ where
 {
     use std::{mem, slice};
 
+    // Safety: all vertices consist of components, so they can be safely cast into bytes
     unsafe { slice::from_raw_parts(verts.as_ptr().cast(), verts.len() * mem::size_of::<V>()) }
-}
-
-/// Field description.
-#[derive(Clone, Copy)]
-pub struct Field {
-    pub kind: Kind,
-    pub format: Format,
-}
-
-impl Field {
-    /// Compiletime field check.
-    #[must_use]
-    pub const fn check_format(self) -> bool {
-        matches!(
-            (self.kind, self.format),
-            (Kind::Position, Format::FloatX2 | Format::FloatX3)
-                | (Kind::Color, Format::FloatX3)
-                | (Kind::TextureMap, Format::FloatX2)
-        )
-    }
-}
-
-/// Field kind.
-#[derive(Clone, Copy)]
-pub enum Kind {
-    /// Position of the vertex in 2D or 3D space.
-    Position,
-
-    /// Color of the vertex.
-    Color,
-
-    /// Texture map of the vertex.
-    TextureMap,
-}
-
-/// Field format.
-#[derive(Clone, Copy)]
-pub enum Format {
-    FloatX2,
-    FloatX3,
-}
-
-impl Format {
-    pub(crate) const fn bytes_size(self) -> usize {
-        use std::mem;
-
-        match self {
-            Self::FloatX2 => 2 * mem::size_of::<f32>(),
-            Self::FloatX3 => 3 * mem::size_of::<f32>(),
-        }
-    }
 }
 
 /// The component is something that a [vertex](Vertex) can consist of.
 ///
 /// Available componets are:
+/// * `(f32, f32)`         
+/// * `(f32, f32, f32)`    
+/// * `[f32; 2]`           
+/// * `[f32; 3]`           
+/// * [`Vec2`](glam::Vec2)
+/// * [`Vec3`](glam::Vec3)
 ///
-/// | Type                 | Possible [kind](Kind)                                          |
-/// | -------------------- | -------------------------------------------------------------- |
-/// | `(f32, f32)`         | [`Position`](Kind::Position), [`TextureMap`](Kind::TextureMap) |
-/// | `(f32, f32, f32)`    | [`Position`](Kind::Position), [`Color`](Kind::Color)           |
-/// | `[f32; 2]`           | [`Position`](Kind::Position), [`TextureMap`](Kind::TextureMap) |
-/// | `[f32; 3]`           | [`Position`](Kind::Position), [`Color`](Kind::Color)           |
-/// | [`Vec2`](glam::Vec2) | [`Position`](Kind::Position), [`TextureMap`](Kind::TextureMap) |
-/// | [`Vec3`](glam::Vec3) | [`Position`](Kind::Position), [`Color`](Kind::Color)           |
-///
-pub trait Component: private::Component {}
-impl<T> Component for T where T: private::Component {}
+pub trait Component: private::Component {
+    const N_FLOATS: u64;
+}
 
-/// Takes a [format](Format) from the [component](Component).
-#[must_use]
-pub const fn component_format<T>() -> Format
+impl<C> Component for C
 where
-    T: Component,
+    C: private::Component,
 {
-    T::FORMAT
+    const N_FLOATS: u64 = C::Format::N_FLOATS;
+}
+
+/// The 2D component.
+pub trait Component2D: private::OptionalComponent {
+    const OPTIONAL_N_FLOATS: Option<u64>;
+}
+
+impl<C> Component2D for C
+where
+    C: Component<Format = private::FormatFloatX2>,
+{
+    const OPTIONAL_N_FLOATS: Option<u64> = Some(C::Format::N_FLOATS);
+}
+
+/// Specify this type if a component is not used.
+impl Component2D for () {
+    const OPTIONAL_N_FLOATS: Option<u64> = None;
+}
+
+/// The 3D component.
+pub trait Component3D: private::OptionalComponent {
+    const OPTIONAL_N_FLOATS: Option<u64>;
+}
+
+impl<C> Component3D for C
+where
+    C: Component<Format = private::FormatFloatX3>,
+{
+    const OPTIONAL_N_FLOATS: Option<u64> = Some(C::Format::N_FLOATS);
+}
+
+/// Specify this type if a component is not used.
+impl Component3D for () {
+    const OPTIONAL_N_FLOATS: Option<u64> = None;
 }
 
 mod private {
-    use {
-        crate::vertex::Format,
-        glam::{Vec2, Vec3},
-    };
+    use glam::{Vec2, Vec3};
+
+    pub trait Format {
+        const N_FLOATS: u64;
+    }
+
+    pub struct FormatFloatX2;
+    impl Format for FormatFloatX2 {
+        const N_FLOATS: u64 = 2;
+    }
+
+    pub struct FormatFloatX3;
+    impl Format for FormatFloatX3 {
+        const N_FLOATS: u64 = 3;
+    }
 
     pub trait Component {
-        const FORMAT: Format;
+        type Format: Format;
     }
 
     impl Component for (f32, f32) {
-        const FORMAT: Format = Format::FloatX2;
+        type Format = FormatFloatX2;
     }
 
     impl Component for (f32, f32, f32) {
-        const FORMAT: Format = Format::FloatX3;
+        type Format = FormatFloatX3;
     }
 
     impl Component for [f32; 2] {
-        const FORMAT: Format = Format::FloatX2;
+        type Format = FormatFloatX2;
     }
 
     impl Component for [f32; 3] {
-        const FORMAT: Format = Format::FloatX3;
+        type Format = FormatFloatX3;
     }
 
     impl Component for Vec2 {
-        const FORMAT: Format = Format::FloatX2;
+        type Format = FormatFloatX2;
     }
 
     impl Component for Vec3 {
-        const FORMAT: Format = Format::FloatX3;
+        type Format = FormatFloatX3;
     }
+
+    pub trait OptionalComponent {}
+    impl<C> OptionalComponent for C where C: Component {}
+    impl OptionalComponent for () {}
 }

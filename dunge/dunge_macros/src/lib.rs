@@ -2,7 +2,7 @@ mod vertex;
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(Vertex, attributes(position, color, texture_map))]
+#[proc_macro_derive(Vertex, attributes(position, color, texture))]
 pub fn derive_vertex(input: TokenStream) -> TokenStream {
     use syn::DeriveInput;
 
