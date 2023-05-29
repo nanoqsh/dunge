@@ -9,6 +9,7 @@ use {
         mesh::Mesh,
         pipeline::Pipeline,
         resources::Resources,
+        shader::Shader,
         shader_data::Instance,
     },
     std::marker::PhantomData,
@@ -17,17 +18,17 @@ use {
 
 /// The frame layer. Can be created from a [`Frame`] instance.
 #[must_use]
-pub struct Layer<'l, V, T> {
+pub struct Layer<'l, S, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),
     queue: &'l Queue,
     resources: &'l Resources,
     instance: Option<&'l Instance>,
     drawn_in_frame: &'l mut bool,
-    vertex_type: PhantomData<(V, T)>,
+    vertex_type: PhantomData<(S, T)>,
 }
 
-impl<'l, V, T> Layer<'l, V, T> {
+impl<'l, S, T> Layer<'l, S, T> {
     pub(crate) fn new(
         pass: RenderPass<'l>,
         size: (u32, u32),
@@ -54,7 +55,7 @@ impl<'l, V, T> Layer<'l, V, T> {
         drawn_in_frame: &'l mut bool,
     ) -> Self
     where
-        V: _Vertex,
+        S: _Vertex,
     {
         let mut layer = Self {
             pass,
@@ -67,7 +68,7 @@ impl<'l, V, T> Layer<'l, V, T> {
         };
 
         // Bind default light and set default ambient
-        match V::VALUE.into_inner() {
+        match S::VALUE.into_inner() {
             _Shader::Color => layer
                 .bind_light_handle(LightHandle::DEFAULT, _shader::COLOR_SOURCES_GROUP)
                 .expect("bind default light"),
@@ -86,21 +87,35 @@ impl<'l, V, T> Layer<'l, V, T> {
         layer
     }
 
-    pub fn bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+    /// Binds the [globals](crate::handles::GlobalsHandle).
+    ///
+    /// # Errors
+    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
+    /// if given globals handler was deleted.
+    pub fn bind_globals(
+        &mut self,
+        handle: GlobalsHandle<S>,
+    ) -> Result<&mut Self, ResourceNotFound> {
         use dunge_shader::Globals;
 
-        self.bind_view_handle(handle, Globals::GROUP)
+        let globals = self.resources.globals.get(handle.id())?;
+        globals.write_camera(self.size, self.queue);
+
+        self.pass
+            .set_bind_group(Globals::GROUP, globals.bind_group(), &[]);
+
+        Ok(self)
     }
 
     /// Binds the [instance](crate::handles::InstanceHandle).
     ///
     /// # Errors
-    /// Returns [`Error::NotFound`] if given instance handler was deleted.
-    pub fn bind_instance(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
+    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
+    /// if given instance handler was deleted.
+    pub fn bind_instance(&mut self, handle: InstanceHandle) -> Result<&mut Self, ResourceNotFound> {
         let instance = self.resources.instances.get(handle.0)?;
         self.instance = Some(instance);
-
-        Ok(())
+        Ok(self)
     }
 
     /// Draws the [mesh](crate::handles::MeshHandle).
@@ -109,7 +124,20 @@ impl<'l, V, T> Layer<'l, V, T> {
     /// Returns [`Error::NotFound`] if given mesh handler was deleted.
     /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
     /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
-    pub fn draw(&mut self, handle: MeshHandle<V, T>) -> Result<(), Error> {
+    pub fn draw(&mut self, handle: MeshHandle<S::Vertex, T>) -> Result<(), Error>
+    where
+        S: Shader,
+    {
+        self.draw_mesh(self.resources.meshes.get(handle.id())?)
+    }
+
+    /// Draws the [mesh](crate::handles::MeshHandle).
+    ///
+    /// # Errors
+    /// Returns [`Error::NotFound`] if given mesh handler was deleted.
+    /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
+    /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
+    pub fn _draw(&mut self, handle: MeshHandle<S, T>) -> Result<(), Error> {
         self.draw_mesh(self.resources.meshes.get(handle.id())?)
     }
 
@@ -142,7 +170,11 @@ impl<'l, V, T> Layer<'l, V, T> {
         Ok(())
     }
 
-    fn bind_view_handle(&mut self, handle: ViewHandle, group: u32) -> Result<(), ResourceNotFound> {
+    fn _bind_view_handle(
+        &mut self,
+        handle: ViewHandle,
+        group: u32,
+    ) -> Result<(), ResourceNotFound> {
         let camera = self.resources.views.get(handle.0)?;
         camera.resize(self.size, self.queue);
         self.pass.set_bind_group(group, camera.bind_group(), &[]);
@@ -191,7 +223,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
     pub fn _bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
-        self.bind_view_handle(handle, _shader::TEXTURED_GLOBALS_GROUP)
+        self._bind_view_handle(handle, _shader::TEXTURED_GLOBALS_GROUP)
     }
 
     /// Binds the [texture](crate::handles::TextureHandle).
@@ -229,7 +261,7 @@ impl<T> Layer<'_, ColorVertex, T> {
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
     pub fn _bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
-        self.bind_view_handle(handle, _shader::COLOR_GLOBALS_GROUP)
+        self._bind_view_handle(handle, _shader::COLOR_GLOBALS_GROUP)
     }
 
     /// Binds the [light](crate::handles::LightHandle).
@@ -255,15 +287,15 @@ impl<T> Layer<'_, FlatVertex, T> {
 
 /// The layer builder. It creates a configured [`Layer`].
 #[must_use]
-pub struct Builder<'l, 'd, V, T> {
+pub struct Builder<'l, 'd, S, T> {
     frame: &'l mut Frame<'d>,
     pipeline: &'d Pipeline,
     clear_color: Option<Linear<f32>>,
     clear_depth: bool,
-    vertex_type: PhantomData<(V, T)>,
+    vertex_type: PhantomData<(S, T)>,
 }
 
-impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
+impl<'l, 'd, S, T> Builder<'l, 'd, S, T> {
     pub(crate) fn new(frame: &'l mut Frame<'d>, pipeline: &'d Pipeline) -> Self {
         Self {
             frame,
@@ -343,15 +375,15 @@ impl<'l, 'd, V, T> Builder<'l, 'd, V, T> {
     }
 
     /// Starts draw the layer.
-    pub fn start(self) -> Layer<'l, V, T> {
+    pub fn start(self) -> Layer<'l, S, T> {
         self.frame
             .start_layer(self.pipeline, self.clear_color, self.clear_depth)
     }
 
     /// Starts draw the layer.
-    pub fn _start(self) -> Layer<'l, V, T>
+    pub fn _start(self) -> Layer<'l, S, T>
     where
-        V: _Vertex,
+        S: _Vertex,
     {
         self.frame
             ._start_layer(self.pipeline, self.clear_color, self.clear_depth)

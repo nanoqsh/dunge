@@ -1,56 +1,78 @@
 use {
     crate::{
         _vertex::_Vertex,
-        camera::{Camera, Projection, View},
+        camera::{Camera, Projection, View, _Camera},
         color::Linear,
         error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
         handles::*,
         mesh::{Data as MeshData, Mesh},
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
         render::Render,
+        shader::Shader,
         shader_data::{
-            Instance, InstanceModel, Light, LightSpace, SourceModel, SpaceData, SpaceModel,
-            Texture, TextureData,
+            Globals, GlobalsParameters, Instance, InstanceModel, Light, LightSpace, SourceModel,
+            SpaceData, SpaceModel, Texture, TextureData, Uniforms,
         },
         storage::Storage,
         topology::Topology,
         vertex::Vertex,
     },
-    dunge_shader::{generate, Scheme, Shader},
+    dunge_shader::{generate, Scheme, ShaderInfo},
 };
 
 /// A container of resources for render.
 #[derive(Default)]
 pub(crate) struct Resources {
+    pub(crate) globals: Storage<Globals>,
     pub(crate) instances: Storage<Instance>,
     pub(crate) layers: Storage<Pipeline>,
     pub(crate) lights: Storage<Light>,
     pub(crate) meshes: Storage<Mesh>,
-    pub(crate) shaders: Storage<Shader>,
+    pub(crate) shaders: Storage<ShaderInfo>,
     pub(crate) spaces: Storage<LightSpace>,
     pub(crate) textures: Storage<Texture>,
-    pub(crate) views: Storage<Camera>,
+    pub(crate) views: Storage<_Camera>,
 }
 
 impl Resources {
-    pub fn create_shader<V>(&mut self, scheme: Scheme) -> ShaderHandle<V> {
+    pub fn create_globals<S>(
+        &mut self,
+        render: &Render,
+        uniforms: Uniforms,
+        handle: LayerHandle<S>,
+    ) -> Result<GlobalsHandle<S>, ResourceNotFound> {
+        let layer = self.layers.get(handle.id())?;
+        let globals = layer.globals().expect("there are no globals in the shader");
+        let params = GlobalsParameters {
+            camera: Camera::default(),
+            uniforms,
+            bindings: globals.bindings,
+            layout: &globals.layout,
+        };
+
+        let globals = Globals::new(params, render.context().device());
+        let id = self.globals.insert(globals);
+        Ok(GlobalsHandle::new(id))
+    }
+
+    pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
         let shader = generate(scheme);
         log::debug!("generated shader:\n{}", shader.source);
         let id = self.shaders.insert(shader);
         ShaderHandle::new(id)
     }
 
-    pub fn create_layer<V, T>(
+    pub fn create_layer<S, T>(
         &mut self,
         render: &Render,
         params: PipelineParameters,
-        handle: ShaderHandle<V>,
-    ) -> Result<LayerHandle<V, T>, ResourceNotFound>
+        handle: ShaderHandle<S>,
+    ) -> Result<LayerHandle<S, T>, ResourceNotFound>
     where
-        V: Vertex,
+        S: Shader,
         T: Topology,
     {
-        let vert = VertexLayout::new::<V>();
+        let vert = VertexLayout::new::<S::Vertex>();
         let pipeline = Pipeline::new(
             render.context().device(),
             self.shaders.get(handle.id())?,
@@ -172,7 +194,7 @@ impl Resources {
     }
 
     pub fn create_view(&mut self, render: &Render, view: View<Projection>) -> ViewHandle {
-        let mut camera = Camera::new(render.context().device(), &render.groups().globals);
+        let mut camera = _Camera::new(render.context().device(), &render.groups().globals);
         camera.set_view(view);
         let id = self.views.insert(camera);
         ViewHandle(id)

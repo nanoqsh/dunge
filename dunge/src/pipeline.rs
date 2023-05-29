@@ -8,11 +8,12 @@ use {
         handles::{LayerHandle, ShaderHandle},
         render::{Render, Shaders},
         resources::Resources,
+        shader::Shader,
         shader_data::InstanceModel,
         topology::Topology,
         vertex::Vertex,
     },
-    dunge_shader::{Layout, Shader, TextureBindings},
+    dunge_shader::{Globals as Gl, Layout, ShaderInfo, TextureBindings, Textures as Tx},
     std::marker::PhantomData,
     wgpu::{
         BindGroupLayout, BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology,
@@ -74,14 +75,14 @@ pub enum Compare {
 
 /// Builds new layer with specific parameters.
 #[must_use]
-pub struct ParametersBuilder<'a, V, T> {
+pub struct ParametersBuilder<'a, S, T> {
     render: &'a Render,
     resources: &'a mut Resources,
     params: Parameters,
-    vertex_type: PhantomData<(V, T)>,
+    vertex_type: PhantomData<(S, T)>,
 }
 
-impl<'a, V, T> ParametersBuilder<'a, V, T> {
+impl<'a, S, T> ParametersBuilder<'a, S, T> {
     pub(crate) fn new(render: &'a Render, resources: &'a mut Resources) -> Self {
         Self {
             render,
@@ -130,28 +131,36 @@ impl<'a, V, T> ParametersBuilder<'a, V, T> {
     ///
     /// # Errors
     /// Returns [`ResourceNotFound`] if given shader handler was deleted.
-    pub fn build(self, shader: ShaderHandle<V>) -> Result<LayerHandle<V, T>, ResourceNotFound>
+    pub fn build(self, shader: ShaderHandle<S>) -> Result<LayerHandle<S, T>, ResourceNotFound>
     where
-        V: Vertex,
+        S: Shader,
         T: Topology,
     {
         self.resources
             .create_layer(self.render, self.params, shader)
     }
 
-    pub fn _build(self) -> LayerHandle<V, T>
+    pub fn _build(self) -> LayerHandle<S, T>
     where
-        V: _Vertex,
+        S: _Vertex,
         T: Topology,
     {
         self.resources._create_layer(self.render, self.params)
     }
 }
 
-pub(crate) struct Pipeline(RenderPipeline);
+pub(crate) struct Pipeline {
+    inner: RenderPipeline,
+    groups: Groups,
+}
 
 impl Pipeline {
-    pub fn new(device: &Device, shader: &Shader, vert: &VertexLayout, params: Parameters) -> Self {
+    pub fn new(
+        device: &Device,
+        shader: &ShaderInfo,
+        vert: &VertexLayout,
+        params: Parameters,
+    ) -> Self {
         use wgpu::*;
 
         let module = device.create_shader_module(ShaderModuleDescriptor {
@@ -166,75 +175,20 @@ impl Pipeline {
             push_constant_ranges: &[],
         });
 
-        Self(device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: None,
-            layout: Some(&layout),
-            vertex: VertexState {
-                module: &module,
-                entry_point: Shader::VERTEX_ENTRY_POINT,
-                buffers: &[vert.buffer_layout(), InstanceModel::LAYOUT],
-            },
-            fragment: Some(FragmentState {
-                module: &module,
-                entry_point: Shader::FRAGMENT_ENTRY_POINT,
-                targets: &[Some(ColorTargetState {
-                    format: Framebuffer::RENDER_FORMAT,
-                    blend: Some(params.blend),
-                    write_mask: ColorWrites::ALL,
-                })],
-            }),
-            primitive: PrimitiveState {
-                topology: params.topology,
-                strip_index_format: None,
-                front_face: FrontFace::Ccw,
-                cull_mode: params.cull_faces.then_some(Face::Back),
-                polygon_mode: params.mode,
-                unclipped_depth: false,
-                conservative: false,
-            },
-            depth_stencil: params.depth_stencil.map(|depth_compare| DepthStencilState {
-                format: Framebuffer::DEPTH_FORMAT,
-                depth_write_enabled: true,
-                depth_compare,
-                stencil: StencilState::default(),
-                bias: DepthBiasState::default(),
-            }),
-            multisample: MultisampleState::default(),
-            multiview: None,
-        }))
-    }
-
-    pub fn _new(
-        device: &Device,
-        shaders: &Shaders,
-        groups: &_Groups,
-        format: TextureFormat,
-        shader: _Shader,
-        params: Parameters,
-    ) -> Self {
-        use wgpu::*;
-
-        Self({
-            let module = shaders.module(device, shader);
-            let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-                label: None,
-                bind_group_layouts: groups.bind_group_layouts(shader).as_slice(),
-                push_constant_ranges: &[],
-            });
-
-            device.create_render_pipeline(&RenderPipelineDescriptor {
+        Self {
+            inner: device.create_render_pipeline(&RenderPipelineDescriptor {
                 label: None,
                 layout: Some(&layout),
                 vertex: VertexState {
-                    module,
-                    entry_point: "vs_main",
-                    buffers: shader.buffers(),
+                    module: &module,
+                    entry_point: ShaderInfo::VERTEX_ENTRY_POINT,
+                    buffers: &[vert.buffer_layout(), InstanceModel::LAYOUT],
                 },
                 fragment: Some(FragmentState {
-                    module,
-                    entry_point: "fs_main",
+                    module: &module,
+                    entry_point: ShaderInfo::FRAGMENT_ENTRY_POINT,
                     targets: &[Some(ColorTargetState {
-                        format,
+                        format: Framebuffer::RENDER_FORMAT,
                         blend: Some(params.blend),
                         write_mask: ColorWrites::ALL,
                     })],
@@ -257,17 +211,102 @@ impl Pipeline {
                 }),
                 multisample: MultisampleState::default(),
                 multiview: None,
-            })
-        })
+            }),
+            groups,
+        }
+    }
+
+    pub fn _new(
+        device: &Device,
+        shaders: &Shaders,
+        groups: &_Groups,
+        format: TextureFormat,
+        shader: _Shader,
+        params: Parameters,
+    ) -> Self {
+        use wgpu::*;
+
+        Self {
+            inner: {
+                let module = shaders.module(device, shader);
+                let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                    label: None,
+                    bind_group_layouts: groups.bind_group_layouts(shader).as_slice(),
+                    push_constant_ranges: &[],
+                });
+
+                device.create_render_pipeline(&RenderPipelineDescriptor {
+                    label: None,
+                    layout: Some(&layout),
+                    vertex: VertexState {
+                        module,
+                        entry_point: "vs_main",
+                        buffers: shader.buffers(),
+                    },
+                    fragment: Some(FragmentState {
+                        module,
+                        entry_point: "fs_main",
+                        targets: &[Some(ColorTargetState {
+                            format,
+                            blend: Some(params.blend),
+                            write_mask: ColorWrites::ALL,
+                        })],
+                    }),
+                    primitive: PrimitiveState {
+                        topology: params.topology,
+                        strip_index_format: None,
+                        front_face: FrontFace::Ccw,
+                        cull_mode: params.cull_faces.then_some(Face::Back),
+                        polygon_mode: params.mode,
+                        unclipped_depth: false,
+                        conservative: false,
+                    },
+                    depth_stencil: params.depth_stencil.map(|depth_compare| DepthStencilState {
+                        format: Framebuffer::DEPTH_FORMAT,
+                        depth_write_enabled: true,
+                        depth_compare,
+                        stencil: StencilState::default(),
+                        bias: DepthBiasState::default(),
+                    }),
+                    multisample: MultisampleState::default(),
+                    multiview: None,
+                })
+            },
+            groups: Groups::new(
+                device,
+                &Layout {
+                    globals: Gl {
+                        camera: None,
+                        color: None,
+                    },
+                    textures: Tx { texture: None },
+                },
+            ),
+        }
     }
 
     pub fn as_ref(&self) -> &RenderPipeline {
-        &self.0
+        &self.inner
+    }
+
+    pub fn globals(&self) -> Option<&Globals> {
+        self.groups.globals.as_ref()
     }
 }
 
+pub(crate) struct Globals {
+    pub layout: BindGroupLayout,
+    pub bindings: GlobalsBindings,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct GlobalsBindings {
+    pub camera: u32,
+    pub color: u32,
+}
+
 struct Groups {
-    globals: Option<BindGroupLayout>,
+    globals: Option<Globals>,
     textures: Option<BindGroupLayout>,
 }
 
@@ -276,10 +315,10 @@ impl Groups {
         use wgpu::*;
 
         Self {
-            globals: layout.globals.camera.map(|binding| {
-                device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                    label: Some("globals binding"),
-                    entries: &[BindGroupLayoutEntry {
+            globals: {
+                let mut entries = vec![];
+                if let Some(binding) = layout.globals.camera {
+                    entries.push(BindGroupLayoutEntry {
                         binding,
                         visibility: ShaderStages::VERTEX,
                         ty: BindingType::Buffer {
@@ -288,9 +327,33 @@ impl Groups {
                             min_binding_size: None,
                         },
                         count: None,
-                    }],
+                    });
+                }
+
+                if let Some(binding) = layout.globals.color {
+                    entries.push(BindGroupLayoutEntry {
+                        binding,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    });
+                }
+
+                entries.first().map(|_| Globals {
+                    layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                        label: Some("globals binding"),
+                        entries: &entries,
+                    }),
+                    bindings: GlobalsBindings {
+                        camera: layout.globals.camera.unwrap_or_default(),
+                        color: layout.globals.color.unwrap_or_default(),
+                    },
                 })
-            }),
+            },
             textures: layout
                 .textures
                 .texture
@@ -321,10 +384,13 @@ impl Groups {
     }
 
     fn layouts(&self) -> Vec<&BindGroupLayout> {
-        [&self.globals, &self.textures]
-            .into_iter()
-            .flatten()
-            .collect()
+        [
+            self.globals.as_ref().map(|Globals { layout, .. }| layout),
+            self.textures.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
     }
 }
 

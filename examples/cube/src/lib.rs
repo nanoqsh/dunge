@@ -131,7 +131,7 @@ impl Loop for App {
                 layer._bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;
                 layer.bind_texture(self.texture)?;
-                layer.draw(self.texture_mesh)?;
+                layer._draw(self.texture_mesh)?;
             }
             State::Color => {
                 let mut layer = frame
@@ -142,7 +142,7 @@ impl Loop for App {
 
                 layer._bind_view(self.view)?;
                 layer.bind_instance(self.instance)?;
-                layer.draw(self.color_mesh)?;
+                layer._draw(self.color_mesh)?;
             }
         }
 

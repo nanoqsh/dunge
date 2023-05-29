@@ -23,7 +23,12 @@ impl Out {
     }
 
     pub fn write_f32(&mut self, f: f32) -> &mut Self {
-        _ = write!(self.buf, "{f:?}");
+        if f.is_finite() {
+            _ = write!(self.buf, "{f:?}");
+        } else {
+            self.buf.push_str("0.0");
+        }
+
         self
     }
 

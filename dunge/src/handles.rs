@@ -2,9 +2,30 @@
 
 use {crate::topology::TriangleList, std::marker::PhantomData};
 
-/// An instance handle. May be obtained from the [`create_instances`](crate::Context::create_instances) method.
-#[derive(Clone, Copy)]
 #[must_use]
+pub struct GlobalsHandle<S>(u32, PhantomData<S>);
+
+impl<S> GlobalsHandle<S> {
+    pub(crate) fn new(id: u32) -> Self {
+        Self(id, PhantomData)
+    }
+
+    pub(crate) fn id(self) -> u32 {
+        self.0
+    }
+}
+
+impl<S> Clone for GlobalsHandle<S> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S> Copy for GlobalsHandle<S> {}
+
+/// An instance handle. May be obtained from the [`create_instances`](crate::Context::create_instances) method.
+#[must_use]
+#[derive(Clone, Copy)]
 pub struct InstanceHandle(pub(crate) u32);
 
 /// A layer handle. May be obtained from the [`create_layer`](crate::Context::create_layer) method.
@@ -30,8 +51,8 @@ impl<V, T> Clone for LayerHandle<V, T> {
 impl<V, T> Copy for LayerHandle<V, T> {}
 
 /// A light handle. May be obtained from the [`create_light`](crate::Context::create_light) method.
-#[derive(Clone, Copy)]
 #[must_use]
+#[derive(Clone, Copy)]
 pub struct LightHandle(pub(crate) u32);
 
 impl LightHandle {
@@ -62,9 +83,9 @@ impl<V, T> Copy for MeshHandle<V, T> {}
 
 /// A shader handle. May be obtained from the [`create_shader`](crate::Context::create_shader) method.
 #[must_use]
-pub struct ShaderHandle<V>(u32, PhantomData<V>);
+pub struct ShaderHandle<S>(u32, PhantomData<S>);
 
-impl<V> ShaderHandle<V> {
+impl<S> ShaderHandle<S> {
     pub(crate) fn new(id: u32) -> Self {
         Self(id, PhantomData)
     }
@@ -74,17 +95,17 @@ impl<V> ShaderHandle<V> {
     }
 }
 
-impl<V> Clone for ShaderHandle<V> {
+impl<S> Clone for ShaderHandle<S> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<V> Copy for ShaderHandle<V> {}
+impl<S> Copy for ShaderHandle<S> {}
 
 /// A space handle. May be obtained from the [`create_space`](crate::Context::create_space) method.
-#[derive(Clone, Copy)]
 #[must_use]
+#[derive(Clone, Copy)]
 pub struct SpaceHandle(pub(crate) u32);
 
 impl SpaceHandle {
@@ -92,11 +113,11 @@ impl SpaceHandle {
 }
 
 /// A texture handle. May be obtained from the [`create_texture`](crate::Context::create_texture) method.
-#[derive(Clone, Copy)]
 #[must_use]
+#[derive(Clone, Copy)]
 pub struct TextureHandle(pub(crate) u32);
 
 /// A view handle. May be obtained from the [`create_view`](crate::Context::create_view) method.
-#[derive(Clone, Copy)]
 #[must_use]
+#[derive(Clone, Copy)]
 pub struct ViewHandle(pub(crate) u32);

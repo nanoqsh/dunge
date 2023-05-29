@@ -21,19 +21,68 @@ mod proj {
         Orthographic(Orthographic),
     }
 
+    impl Default for Projection {
+        fn default() -> Self {
+            Self::Orthographic(Orthographic::default())
+        }
+    }
+
     pub trait IntoProjection {
         fn into_projection(self) -> Projection;
     }
 }
 
+#[derive(Default)]
 pub(crate) struct Camera {
+    view: View<Projection>,
+    cache: Cell<Option<Cache>>,
+}
+
+impl Camera {
+    pub fn new(view: View<Projection>) -> Self {
+        Self {
+            view,
+            cache: Cell::default(),
+        }
+    }
+
+    pub fn set_view(&mut self, view: View<Projection>) {
+        self.view = view;
+        self.cache.set(None);
+    }
+
+    pub fn uniform(&self, (width, height): (u32, u32)) -> CameraUniform {
+        match self.cache.get() {
+            Some(Cache { size: (w, h), .. }) if width != w || height != h => {}
+            Some(Cache { uniform, .. }) => return uniform,
+            None => {}
+        }
+
+        let mat = self.view.build_mat((width as f32, height as f32));
+        let uniform = CameraUniform::new(mat.to_cols_array_2d());
+        self.cache.set(Some(Cache {
+            size: (width, height),
+            uniform,
+        }));
+
+        uniform
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Cache {
+    size: (u32, u32),
+    uniform: CameraUniform,
+}
+
+pub(crate) struct _Camera {
     view: View<Projection>,
     size: Cell<Option<(u32, u32)>>,
     buffer: Buffer,
     bind_group: BindGroup,
 }
 
-impl Camera {
+impl _Camera {
     pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},

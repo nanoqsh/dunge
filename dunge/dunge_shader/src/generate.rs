@@ -1,16 +1,17 @@
 use crate::{
-    elements::*,
     nodes::{Binding, Location},
     out::Out,
+    parts::*,
     templater::Templater,
 };
 
 #[must_use]
-pub fn generate(scheme: Scheme) -> Shader {
+pub fn generate(scheme: Scheme) -> ShaderInfo {
     let Scheme {
         vert,
-        base_color,
-        camera,
+        view,
+        static_color,
+        dynamic_color,
     } = scheme;
 
     let vert_input = VertexInput {
@@ -20,7 +21,8 @@ pub fn generate(scheme: Scheme) -> Shader {
 
     let vert_output = VertexOutput {
         fragment: vert.fragment,
-        base_color,
+        static_color,
+        dynamic_color,
         world: true,
     };
 
@@ -33,7 +35,7 @@ pub fn generate(scheme: Scheme) -> Shader {
         let mut location = Location::new();
         vert_output.define_type(&mut location, &mut o);
 
-        camera.define_type(&mut o);
+        view.define_type(&mut o);
         o
     };
 
@@ -43,7 +45,8 @@ pub fn generate(scheme: Scheme) -> Shader {
             globals: {
                 let mut binding = Binding::with_group(Globals::GROUP);
                 Globals {
-                    camera: camera.declare_group(&mut binding, &mut o),
+                    camera: view.declare_group(&mut binding, &mut o),
+                    color: dynamic_color.then(|| DynamicColor::declare_group(&mut binding, &mut o)),
                 }
             },
             textures: {
@@ -62,7 +65,7 @@ pub fn generate(scheme: Scheme) -> Shader {
 
     let vertex_out = {
         let mut o = Out::new();
-        vert_output.calc_vertex(vert_input, camera, &mut o);
+        vert_output.calc_vertex(vert_input, view, &mut o);
         o
     };
 
@@ -72,7 +75,7 @@ pub fn generate(scheme: Scheme) -> Shader {
         o
     };
 
-    Shader {
+    ShaderInfo {
         layout,
         source: Templater::default()
             .insert("types", &types)
@@ -87,8 +90,9 @@ pub fn generate(scheme: Scheme) -> Shader {
 #[derive(Clone, Copy)]
 pub struct Scheme {
     pub vert: Vertex,
-    pub base_color: Option<Color>,
-    pub camera: Camera,
+    pub view: View,
+    pub static_color: Option<Color>,
+    pub dynamic_color: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -97,12 +101,12 @@ pub struct Vertex {
     pub fragment: Fragment,
 }
 
-pub struct Shader {
+pub struct ShaderInfo {
     pub layout: Layout,
     pub source: String,
 }
 
-impl Shader {
+impl ShaderInfo {
     pub const VERTEX_ENTRY_POINT: &str = "vs_main";
     pub const FRAGMENT_ENTRY_POINT: &str = "fs_main";
 }
@@ -114,6 +118,7 @@ pub struct Layout {
 
 pub struct Globals {
     pub camera: Option<u32>,
+    pub color: Option<u32>,
 }
 
 impl Globals {

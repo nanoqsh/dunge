@@ -13,7 +13,8 @@ use {
         resources::Resources,
         screen::Screen,
         shader_data::{
-            InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel, TextureData,
+            GlobalsBuilder, InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel,
+            TextureData,
         },
         topology::Topology,
         transform::IntoMat,
@@ -95,7 +96,11 @@ impl Context {
         }));
     }
 
-    pub fn create_shader<V>(&mut self, scheme: Scheme) -> ShaderHandle<V> {
+    pub fn globals_builder(&mut self) -> GlobalsBuilder {
+        GlobalsBuilder::new(&mut self.resources, &self.render)
+    }
+
+    pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
         self.resources.create_shader(scheme)
     }
 

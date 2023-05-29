@@ -26,6 +26,8 @@ mod resources;
 mod screen;
 mod shader_data {
     mod camera;
+    mod color;
+    mod globals;
     mod instance;
     mod light;
     mod post;
@@ -34,6 +36,8 @@ mod shader_data {
 
     pub(crate) use self::{
         camera::CameraUniform,
+        color::ColorUniform,
+        globals::{Builder as GlobalsBuilder, Globals, Parameters as GlobalsParameters, Uniforms},
         instance::{Instance, InstanceModel},
         light::{Light, SourceModel},
         post::PostShaderData,

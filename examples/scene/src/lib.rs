@@ -344,7 +344,7 @@ impl Loop for App {
             layer.bind_texture(self.sprites)?;
             for model in &self.models {
                 layer.bind_instance(model.instance)?;
-                layer.draw(model.mesh)?;
+                layer._draw(model.mesh)?;
             }
         }
 
@@ -353,7 +353,7 @@ impl Loop for App {
             layer._bind_view(self.view)?;
             for cube in &self.cubes {
                 layer.bind_instance(cube.instance)?;
-                layer.draw(cube.mesh)?;
+                layer._draw(cube.mesh)?;
             }
         }
 

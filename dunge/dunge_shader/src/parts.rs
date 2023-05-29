@@ -69,7 +69,8 @@ impl VertexInput {
 #[derive(Clone, Copy)]
 pub(crate) struct VertexOutput {
     pub fragment: Fragment,
-    pub base_color: Option<Color>,
+    pub static_color: Option<Color>,
+    pub dynamic_color: bool,
     pub world: bool,
 }
 
@@ -103,7 +104,7 @@ impl VertexOutput {
         });
     }
 
-    pub fn calc_vertex(self, input: VertexInput, camera: Camera, o: &mut Out) {
+    pub fn calc_vertex(self, input: VertexInput, camera: View, o: &mut Out) {
         o.write_str("let world = ");
         input.calc_world(o);
         o.write_str(";\n");
@@ -132,7 +133,7 @@ impl VertexOutput {
         }
 
         let mut mult = o.write_str("col = ").separated(" * ");
-        if let Some(Color { r, g, b }) = self.base_color {
+        if let Some(Color { r, g, b }) = self.static_color {
             mult.out()
                 .write_str("vec3(")
                 .write_f32(r)
@@ -141,6 +142,10 @@ impl VertexOutput {
                 .write_str(", ")
                 .write_f32(b)
                 .write_str(")");
+        }
+
+        if self.dynamic_color {
+            mult.out().write_str("color");
         }
 
         if self.fragment.vertex_color {
@@ -203,15 +208,31 @@ pub struct TextureBindings {
     pub sdiff: u32,
 }
 
-#[derive(Clone, Copy)]
-pub enum Camera {
-    None,
-    View,
+pub struct DynamicColor;
+
+impl DynamicColor {
+    pub(crate) fn declare_group(binding: &mut Binding, o: &mut Out) -> u32 {
+        let binding = binding.next();
+        o.write(Var {
+            binding,
+            uniform: true,
+            name: "color",
+            ty: Type::VEC3,
+        });
+
+        binding.get()
+    }
 }
 
-impl Camera {
+#[derive(Clone, Copy)]
+pub enum View {
+    None,
+    Camera,
+}
+
+impl View {
     pub(crate) fn define_type(self, o: &mut Out) {
-        if let Self::View = self {
+        if let Self::Camera = self {
             o.write(Struct {
                 name: "Camera",
                 fields: vec![Field {
@@ -226,7 +247,7 @@ impl Camera {
     pub(crate) fn declare_group(self, binding: &mut Binding, o: &mut Out) -> Option<u32> {
         match self {
             Self::None => None,
-            Self::View => {
+            Self::Camera => {
                 let binding = binding.next();
                 o.write(Var {
                     binding,
@@ -243,7 +264,7 @@ impl Camera {
     pub(crate) fn calc_view(self, o: &mut Out) {
         o.write_str(match self {
             Self::None => "world",
-            Self::View => "camera.view * world",
+            Self::Camera => "camera.view * world",
         });
     }
 }

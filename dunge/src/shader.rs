@@ -1,8 +1,10 @@
-use {crate::vertex::Vertex, dunge_shader::Color};
+use {
+    crate::vertex::Vertex,
+    dunge_shader::{Color, View},
+};
 
 pub trait Shader {
     type Vertex: Vertex;
-    const BASE_COLOR: Option<Color>;
+    const VIEW: View = View::None;
+    const BASE_COLOR: Option<Color> = None;
 }
-
-pub trait View: Shader {}
