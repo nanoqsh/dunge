@@ -70,7 +70,7 @@ impl VertexInput {
 pub(crate) struct VertexOutput {
     pub fragment: Fragment,
     pub static_color: Option<Color>,
-    pub dynamic_color: bool,
+    pub ambient: bool,
     pub world: bool,
 }
 
@@ -144,8 +144,8 @@ impl VertexOutput {
                 .write_str(")");
         }
 
-        if self.dynamic_color {
-            mult.out().write_str("color");
+        if self.ambient {
+            mult.out().write_str("ambient");
         }
 
         if self.fragment.vertex_color {
@@ -208,15 +208,15 @@ pub struct TextureBindings {
     pub sdiff: u32,
 }
 
-pub struct DynamicColor;
+pub struct Ambient;
 
-impl DynamicColor {
+impl Ambient {
     pub(crate) fn declare_group(binding: &mut Binding, o: &mut Out) -> u32 {
         let binding = binding.next();
         o.write(Var {
             binding,
             uniform: true,
-            name: "color",
+            name: "ambient",
             ty: Type::VEC3,
         });
 

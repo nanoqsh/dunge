@@ -55,5 +55,5 @@ impl<const N: usize> IntoLinear<N> for () {
 }
 
 fn to_f32_color(c: u8) -> f32 {
-    f32::from(c) / 255.
+    f32::from(c) / u8::MAX as f32
 }

@@ -42,9 +42,9 @@ impl Resources {
         handle: LayerHandle<S>,
     ) -> Result<GlobalsHandle<S>, ResourceNotFound> {
         let layer = self.layers.get(handle.id())?;
-        let globals = layer.globals().expect("there are no globals in the shader");
+        let globals = layer.globals().expect("the shader has no globals");
         let params = GlobalsParameters {
-            camera: Camera::default(),
+            camera: Camera::new(),
             uniforms,
             bindings: globals.bindings,
             layout: &globals.layout,
@@ -53,6 +53,28 @@ impl Resources {
         let globals = Globals::new(params, render.context().device());
         let id = self.globals.insert(globals);
         Ok(GlobalsHandle::new(id))
+    }
+
+    pub fn update_globals_view<S>(
+        &mut self,
+        handle: GlobalsHandle<S>,
+        view: View<Projection>,
+    ) -> Result<(), ResourceNotFound> {
+        self.globals.get_mut(handle.id())?.set_view(view);
+        Ok(())
+    }
+
+    pub fn update_globals_ambient<S>(
+        &mut self,
+        render: &Render,
+        handle: GlobalsHandle<S>,
+        color: Linear<f32, 3>,
+    ) -> Result<(), ResourceNotFound> {
+        self.globals
+            .get_mut(handle.id())?
+            .write_ambient(color.0, render.context().queue());
+
+        Ok(())
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {

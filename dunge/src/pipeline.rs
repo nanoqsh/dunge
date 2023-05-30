@@ -277,7 +277,7 @@ impl Pipeline {
                 &Layout {
                     globals: Gl {
                         camera: None,
-                        color: None,
+                        ambient: None,
                     },
                     textures: Tx { texture: None },
                 },
@@ -302,7 +302,7 @@ pub(crate) struct Globals {
 #[derive(Clone, Copy)]
 pub(crate) struct GlobalsBindings {
     pub camera: u32,
-    pub color: u32,
+    pub ambient: u32,
 }
 
 struct Groups {
@@ -330,7 +330,7 @@ impl Groups {
                     });
                 }
 
-                if let Some(binding) = layout.globals.color {
+                if let Some(binding) = layout.globals.ambient {
                     entries.push(BindGroupLayoutEntry {
                         binding,
                         visibility: ShaderStages::FRAGMENT,
@@ -350,7 +350,7 @@ impl Groups {
                     }),
                     bindings: GlobalsBindings {
                         camera: layout.globals.camera.unwrap_or_default(),
-                        color: layout.globals.color.unwrap_or_default(),
+                        ambient: layout.globals.ambient.unwrap_or_default(),
                     },
                 })
             },

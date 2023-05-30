@@ -10,6 +10,9 @@ pub enum Error {
     /// Returned when too large buffer is passed.
     TooLargeSize,
 
+    /// Returns when globals is not set.
+    GlobalsNotSet,
+
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
 }

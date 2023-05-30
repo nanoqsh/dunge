@@ -9,11 +9,11 @@ use {
         mesh::Mesh,
         pipeline::Pipeline,
         resources::Resources,
-        shader::Shader,
+        shader::{self, Shader},
         shader_data::Instance,
     },
     std::marker::PhantomData,
-    wgpu::{Queue, RenderPass},
+    wgpu::{BindGroup, Queue, RenderPass},
 };
 
 /// The frame layer. Can be created from a [`Frame`] instance.
@@ -23,8 +23,9 @@ pub struct Layer<'l, S, T> {
     size: (u32, u32),
     queue: &'l Queue,
     resources: &'l Resources,
-    instance: Option<&'l Instance>,
     drawn_in_frame: &'l mut bool,
+    groups: Groups<'l>,
+    instance: Option<&'l Instance>,
     vertex_type: PhantomData<(S, T)>,
 }
 
@@ -41,8 +42,9 @@ impl<'l, S, T> Layer<'l, S, T> {
             size,
             queue,
             resources,
-            instance: None,
             drawn_in_frame,
+            groups: Groups::default(),
+            instance: None,
             vertex_type: PhantomData,
         }
     }
@@ -62,8 +64,9 @@ impl<'l, S, T> Layer<'l, S, T> {
             size,
             queue,
             resources,
-            instance: None,
             drawn_in_frame,
+            groups: Groups::default(),
+            instance: None,
             vertex_type: PhantomData,
         };
 
@@ -96,14 +99,10 @@ impl<'l, S, T> Layer<'l, S, T> {
         &mut self,
         handle: GlobalsHandle<S>,
     ) -> Result<&mut Self, ResourceNotFound> {
-        use dunge_shader::Globals;
-
         let globals = self.resources.globals.get(handle.id())?;
         globals.write_camera(self.size, self.queue);
 
-        self.pass
-            .set_bind_group(Globals::GROUP, globals.bind_group(), &[]);
-
+        self.groups.globals = Some(globals.bind_group());
         Ok(self)
     }
 
@@ -121,13 +120,18 @@ impl<'l, S, T> Layer<'l, S, T> {
     /// Draws the [mesh](crate::handles::MeshHandle).
     ///
     /// # Errors
-    /// Returns [`Error::NotFound`] if given mesh handler was deleted.
-    /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
-    /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
+    /// See [`Error`] for details.
     pub fn draw(&mut self, handle: MeshHandle<S::Vertex, T>) -> Result<(), Error>
     where
         S: Shader,
     {
+        use dunge_shader::Globals;
+
+        if shader::has_globals::<S>() {
+            let group = self.groups.globals.ok_or(Error::GlobalsNotSet)?;
+            self.pass.set_bind_group(Globals::GROUP, group, &[]);
+        }
+
         self.draw_mesh(self.resources.meshes.get(handle.id())?)
     }
 
@@ -283,6 +287,11 @@ impl<T> Layer<'_, FlatVertex, T> {
     pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
         self.bind_texture_handle(handle, _shader::FLAT_TEXTURE_GROUP)
     }
+}
+
+#[derive(Default)]
+struct Groups<'l> {
+    globals: Option<&'l BindGroup>,
 }
 
 /// The layer builder. It creates a configured [`Layer`].

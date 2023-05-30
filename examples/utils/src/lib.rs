@@ -41,6 +41,7 @@ impl Camera {
         View {
             eye: [x, y, z],
             look: [0.; 3],
+            up: [0., 1., 0.],
             proj,
         }
     }

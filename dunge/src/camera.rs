@@ -32,16 +32,15 @@ mod proj {
     }
 }
 
-#[derive(Default)]
 pub(crate) struct Camera {
     view: View<Projection>,
     cache: Cell<Option<Cache>>,
 }
 
 impl Camera {
-    pub fn new(view: View<Projection>) -> Self {
+    pub fn new() -> Self {
         Self {
-            view,
+            view: View::default().into_projection_view(),
             cache: Cell::default(),
         }
     }
@@ -141,12 +140,15 @@ impl _Camera {
 
 /// The camera view.
 #[derive(Clone, Copy)]
-pub struct View<P = Perspective> {
+pub struct View<P = Orthographic> {
     /// Eye 3d point.
     pub eye: [f32; 3],
 
     /// Look at 3d point.
     pub look: [f32; 3],
+
+    /// Up direction.
+    pub up: [f32; 3],
 
     /// Camera projection.
     /// Can be a [`Perspective`] or [`Orthographic`].
@@ -161,6 +163,7 @@ impl<P> View<P> {
         View {
             eye: self.eye,
             look: self.look,
+            up: self.up,
             proj: self.proj.into_projection(),
         }
     }
@@ -196,20 +199,18 @@ impl View<Projection> {
             }
         };
 
-        let view = Mat4::look_at_rh(self.eye.into(), self.look.into(), Vec3::Y);
+        let view = Mat4::look_at_rh(self.eye.into(), self.look.into(), self.up.into());
         proj * view
     }
 }
 
-impl<P> Default for View<P>
-where
-    P: Default,
-{
+impl Default for View<Orthographic> {
     fn default() -> Self {
         Self {
             eye: [0., 0., 1.],
             look: [0.; 3],
-            proj: P::default(),
+            up: [0., 1., 0.],
+            proj: Orthographic::default(),
         }
     }
 }

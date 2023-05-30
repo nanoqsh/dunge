@@ -1,9 +1,13 @@
-use dunge::{
-    color::Standard,
-    handles::*,
-    input::{Input, Key},
-    transform::Position,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Shader, Vertex, WindowMode,
+use {
+    dunge::{
+        color::Standard,
+        handles::*,
+        input::{Input, Key},
+        transform::Position,
+        CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Shader, Vertex,
+        WindowMode,
+    },
+    dunge_shader::{Dimension, Fragment, Scheme, Vertex as SchemeVertex, View},
 };
 
 #[repr(C)]
@@ -13,6 +17,8 @@ struct Vert(#[position] [f32; 2], #[color] [f32; 3]);
 struct ColorShader;
 impl Shader for ColorShader {
     type Vertex = Vert;
+    const VIEW: View = View::Camera;
+    const AMBIENT: bool = true;
 }
 
 fn main() {
@@ -35,16 +41,15 @@ struct App {
     globals: GlobalsHandle<ColorShader>,
     mesh: MeshHandle<Vert>,
     instance: InstanceHandle,
+    state: f32,
 }
 
 impl App {
     fn new(context: &mut Context) -> Self {
         // Create shader and layer
         let layer = {
-            use dunge_shader::{Dimension, Fragment, Scheme, Vertex, View};
-
             let shader: ShaderHandle<ColorShader> = context.create_shader(Scheme {
-                vert: Vertex {
+                vert: SchemeVertex {
                     dimension: Dimension::D2,
                     fragment: Fragment {
                         vertex_color: true,
@@ -53,11 +58,12 @@ impl App {
                 },
                 view: View::Camera,
                 static_color: None,
-                dynamic_color: false,
+                ambient: true,
             });
 
             context
                 .create_layer_with_parameters()
+                .with_cull_faces(false)
                 .build(shader)
                 .expect("create layer")
         };
@@ -66,6 +72,7 @@ impl App {
         let globals = context
             .globals_builder()
             .with_view()
+            .with_ambient(Standard([0.1, 0.3, 1.]))
             .build(layer)
             .expect("create globals");
 
@@ -92,6 +99,7 @@ impl App {
             globals,
             mesh,
             instance,
+            state: 0.,
         }
     }
 }
@@ -107,6 +115,24 @@ impl Loop for App {
                 return Ok(());
             }
         }
+
+        self.state += input.delta_time;
+        context
+            .update_globals_view(
+                self.globals,
+                dunge::View {
+                    up: [self.state.sin(), self.state.cos(), 0.],
+                    ..dunge::View::default()
+                },
+            )
+            .expect("update globals");
+
+        context
+            .update_globals_ambient(
+                self.globals,
+                Standard([self.state.sin() * 0.5 + 1., self.state.cos() * 0.5 + 1., 1.]),
+            )
+            .expect("update globals");
 
         Ok(())
     }

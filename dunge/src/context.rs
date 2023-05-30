@@ -12,6 +12,7 @@ use {
         render::{Render, RenderContext},
         resources::Resources,
         screen::Screen,
+        shader::Shader,
         shader_data::{
             GlobalsBuilder, InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel,
             TextureData,
@@ -98,6 +99,38 @@ impl Context {
 
     pub fn globals_builder(&mut self) -> GlobalsBuilder {
         GlobalsBuilder::new(&mut self.resources, &self.render)
+    }
+
+    pub fn update_globals_view<S, P>(
+        &mut self,
+        handle: GlobalsHandle<S>,
+        view: View<P>,
+    ) -> Result<(), ResourceNotFound>
+    where
+        S: Shader,
+        P: IntoProjection,
+    {
+        use dunge_shader::View;
+
+        assert!(matches!(S::VIEW, View::Camera), "the shader has no view");
+
+        self.resources
+            .update_globals_view(handle, view.into_projection_view())
+    }
+
+    pub fn update_globals_ambient<S, C>(
+        &mut self,
+        handle: GlobalsHandle<S>,
+        color: C,
+    ) -> Result<(), ResourceNotFound>
+    where
+        S: Shader,
+        C: IntoLinear<3>,
+    {
+        assert!(S::AMBIENT, "the shader has no ambient");
+
+        self.resources
+            .update_globals_ambient(&self.render, handle, color.into_linear())
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {

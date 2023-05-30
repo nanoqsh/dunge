@@ -1,20 +1,22 @@
 use {
     crate::{
-        camera::Camera,
+        camera::{Camera, Projection, View},
+        color::{IntoLinear, Linear},
         error::ResourceNotFound,
         handles::{GlobalsHandle, LayerHandle},
         layout::Plain,
         pipeline::GlobalsBindings as Bindings,
         render::Render,
         resources::Resources,
-        shader_data::{CameraUniform, ColorUniform},
+        shader::Shader,
+        shader_data::{AmbientUniform, CameraUniform},
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
 pub(crate) struct Globals {
     camera: Option<(Camera, Buffer)>,
-    color: Option<Buffer>,
+    ambient: Option<Buffer>,
     bind_group: BindGroup,
 }
 
@@ -40,9 +42,9 @@ impl Globals {
             })
         });
 
-        let color = uniforms.color.map(|uniform| {
+        let ambient = uniforms.ambient.map(|uniform| {
             device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("color buffer"),
+                label: Some("ambient buffer"),
                 contents: uniform.as_bytes(),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
@@ -53,8 +55,8 @@ impl Globals {
                 binding: bindings.camera,
                 resource: buf.as_entire_binding(),
             }),
-            color.as_ref().map(|buf| BindGroupEntry {
-                binding: bindings.color,
+            ambient.as_ref().map(|buf| BindGroupEntry {
+                binding: bindings.ambient,
                 resource: buf.as_entire_binding(),
             }),
         ]
@@ -69,8 +71,13 @@ impl Globals {
                 label: Some("globals bind group"),
             }),
             camera: camera.map(|buf| (params.camera, buf)),
-            color,
+            ambient,
         }
+    }
+
+    pub fn set_view(&mut self, view: View<Projection>) {
+        let (camera, _) = self.camera.as_mut().expect("camera");
+        camera.set_view(view);
     }
 
     pub fn write_camera(&self, size: (u32, u32), queue: &Queue) {
@@ -82,12 +89,13 @@ impl Globals {
         queue.write_buffer(buf, 0, uniform.as_bytes());
     }
 
-    pub fn write_color(&self, color: &ColorUniform, queue: &Queue) {
-        let Some(buf) = &self.color else {
+    pub fn write_ambient(&self, color: [f32; 3], queue: &Queue) {
+        let Some(buf) = &self.ambient else {
             return;
         };
 
-        queue.write_buffer(buf, 0, color.as_bytes());
+        let uniform = AmbientUniform::new(color);
+        queue.write_buffer(buf, 0, uniform.as_bytes());
     }
 
     pub fn bind_group(&self) -> &BindGroup {
@@ -105,7 +113,7 @@ pub(crate) struct Parameters<'a> {
 #[derive(Default)]
 pub(crate) struct Uniforms {
     pub camera: Option<CameraUniform>,
-    pub color: Option<ColorUniform>,
+    pub ambient: Option<AmbientUniform>,
 }
 
 pub struct Builder<'a> {
@@ -128,7 +136,35 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S>(self, handle: LayerHandle<S>) -> Result<GlobalsHandle<S>, ResourceNotFound> {
+    pub fn with_ambient<C>(mut self, color: C) -> Self
+    where
+        C: IntoLinear<3>,
+    {
+        let Linear(color) = color.into_linear();
+        self.uniforms.ambient = Some(AmbientUniform::new(color));
+        self
+    }
+
+    pub fn build<S>(self, handle: LayerHandle<S>) -> Result<GlobalsHandle<S>, ResourceNotFound>
+    where
+        S: Shader,
+    {
+        use dunge_shader::View;
+
+        if let View::Camera = S::VIEW {
+            assert!(
+                self.uniforms.camera.is_some(),
+                "the shader requires `view`, but it's not set",
+            );
+        }
+
+        if S::AMBIENT {
+            assert!(
+                self.uniforms.ambient.is_some(),
+                "the shader requires `ambient`, but it's not set",
+            );
+        }
+
         self.resources
             .create_globals(self.render, self.uniforms, handle)
     }

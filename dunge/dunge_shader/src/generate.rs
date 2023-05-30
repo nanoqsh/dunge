@@ -10,8 +10,8 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
     let Scheme {
         vert,
         view,
+        ambient,
         static_color,
-        dynamic_color,
     } = scheme;
 
     let vert_input = VertexInput {
@@ -22,7 +22,7 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
     let vert_output = VertexOutput {
         fragment: vert.fragment,
         static_color,
-        dynamic_color,
+        ambient,
         world: true,
     };
 
@@ -46,7 +46,7 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
                 let mut binding = Binding::with_group(Globals::GROUP);
                 Globals {
                     camera: view.declare_group(&mut binding, &mut o),
-                    color: dynamic_color.then(|| DynamicColor::declare_group(&mut binding, &mut o)),
+                    ambient: ambient.then(|| Ambient::declare_group(&mut binding, &mut o)),
                 }
             },
             textures: {
@@ -91,8 +91,8 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
 pub struct Scheme {
     pub vert: Vertex,
     pub view: View,
+    pub ambient: bool,
     pub static_color: Option<Color>,
-    pub dynamic_color: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -118,7 +118,7 @@ pub struct Layout {
 
 pub struct Globals {
     pub camera: Option<u32>,
-    pub color: Option<u32>,
+    pub ambient: Option<u32>,
 }
 
 impl Globals {
