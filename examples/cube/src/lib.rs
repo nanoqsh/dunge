@@ -20,11 +20,11 @@ enum State {
 pub struct App {
     texture_layer: LayerHandle<TextureVertex>,
     color_layer: LayerHandle<ColorVertex>,
-    texture: TextureHandle,
+    texture: _TextureHandle,
     instance: InstanceHandle,
     texture_mesh: MeshHandle<TextureVertex>,
     color_mesh: MeshHandle<ColorVertex>,
-    view: ViewHandle,
+    view: _ViewHandle,
     camera: Camera,
     state: State,
 }

@@ -9,7 +9,7 @@ use {
         mesh::Mesh,
         pipeline::Pipeline,
         resources::Resources,
-        shader::{self, Shader},
+        shader::{Shader, ShaderInfo},
         shader_data::Instance,
     },
     std::marker::PhantomData,
@@ -106,6 +106,20 @@ impl<'l, S, T> Layer<'l, S, T> {
         Ok(self)
     }
 
+    /// Binds the [textures](crate::handles::TexturesHandle).
+    ///
+    /// # Errors
+    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
+    /// if given textures handler was deleted.
+    pub fn bind_textures(
+        &mut self,
+        handle: TexturesHandle<S>,
+    ) -> Result<&mut Self, ResourceNotFound> {
+        let textures = self.resources.textures.get(handle.id())?;
+        self.groups.textures = Some(textures.bind_group());
+        Ok(self)
+    }
+
     /// Binds the [instance](crate::handles::InstanceHandle).
     ///
     /// # Errors
@@ -125,11 +139,17 @@ impl<'l, S, T> Layer<'l, S, T> {
     where
         S: Shader,
     {
-        use dunge_shader::Globals;
+        use dunge_shader::{Globals, Textures};
 
-        if shader::has_globals::<S>() {
+        let info = ShaderInfo::new::<S>();
+        if info.has_globals() {
             let group = self.groups.globals.ok_or(Error::GlobalsNotSet)?;
             self.pass.set_bind_group(Globals::GROUP, group, &[]);
+        }
+
+        if info.has_textures() {
+            let group = self.groups.textures.ok_or(Error::TexturesNotSet)?;
+            self.pass.set_bind_group(Textures::GROUP, group, &[]);
         }
 
         self.draw_mesh(self.resources.meshes.get(handle.id())?)
@@ -176,7 +196,7 @@ impl<'l, S, T> Layer<'l, S, T> {
 
     fn _bind_view_handle(
         &mut self,
-        handle: ViewHandle,
+        handle: _ViewHandle,
         group: u32,
     ) -> Result<(), ResourceNotFound> {
         let camera = self.resources.views.get(handle.0)?;
@@ -188,11 +208,11 @@ impl<'l, S, T> Layer<'l, S, T> {
 
     fn bind_texture_handle(
         &mut self,
-        handle: TextureHandle,
+        handle: _TextureHandle,
         group: u32,
     ) -> Result<(), ResourceNotFound> {
-        let texture = self.resources.textures.get(handle.0)?;
-        self.pass.set_bind_group(group, texture.bind_group(), &[]);
+        let texture = self.resources._textures.get(handle.0)?;
+        self.pass.set_bind_group(group, texture._bind_group(), &[]);
 
         Ok(())
     }
@@ -226,7 +246,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
-    pub fn _bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+    pub fn _bind_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
         self._bind_view_handle(handle, _shader::TEXTURED_GLOBALS_GROUP)
     }
 
@@ -235,7 +255,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given texture handler was deleted.
-    pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
+    pub fn bind_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
         self.bind_texture_handle(handle, _shader::TEXTURED_TEXTURE_GROUP)
     }
 
@@ -264,7 +284,7 @@ impl<T> Layer<'_, ColorVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given view handler was deleted.
-    pub fn _bind_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+    pub fn _bind_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
         self._bind_view_handle(handle, _shader::COLOR_GLOBALS_GROUP)
     }
 
@@ -284,7 +304,7 @@ impl<T> Layer<'_, FlatVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given texture handler was deleted.
-    pub fn bind_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
+    pub fn bind_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
         self.bind_texture_handle(handle, _shader::FLAT_TEXTURE_GROUP)
     }
 }
@@ -292,6 +312,7 @@ impl<T> Layer<'_, FlatVertex, T> {
 #[derive(Default)]
 struct Groups<'l> {
     globals: Option<&'l BindGroup>,
+    textures: Option<&'l BindGroup>,
 }
 
 /// The layer builder. It creates a configured [`Layer`].

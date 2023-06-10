@@ -65,7 +65,7 @@ where
     use std::{mem, slice};
 
     // Safety: all vertices consist of components, so they can be safely cast into bytes
-    unsafe { slice::from_raw_parts(verts.as_ptr().cast(), verts.len() * mem::size_of::<V>()) }
+    unsafe { slice::from_raw_parts(verts.as_ptr().cast(), mem::size_of_val(verts)) }
 }
 
 /// The component is something that a [vertex](Vertex) can consist of.

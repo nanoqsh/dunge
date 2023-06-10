@@ -1,6 +1,8 @@
 use {
     crate::{_shader, error::TooLargeSize},
-    wgpu::{BindGroup, BindGroupLayout, Device, Queue, Texture as WgpuTexture},
+    wgpu::{
+        BindGroup, BindGroupLayout, Device, Queue, Sampler, Texture as WgpuTexture, TextureView,
+    },
 };
 
 /// A data struct for a texture creation.
@@ -42,7 +44,9 @@ pub enum Error {
 pub(crate) struct Texture {
     buf_size: (u32, u32),
     texture: WgpuTexture,
-    bind_group: BindGroup,
+    view: TextureView,
+    sampler: Sampler,
+    _bind_group: BindGroup,
 }
 
 impl Texture {
@@ -111,7 +115,9 @@ impl Texture {
         Self {
             buf_size: data.size,
             texture,
-            bind_group,
+            view,
+            sampler,
+            _bind_group: bind_group,
         }
     }
 
@@ -147,7 +153,15 @@ impl Texture {
         Ok(())
     }
 
-    pub fn bind_group(&self) -> &BindGroup {
-        &self.bind_group
+    pub fn view(&self) -> &TextureView {
+        &self.view
+    }
+
+    pub fn sampler(&self) -> &Sampler {
+        &self.sampler
+    }
+
+    pub fn _bind_group(&self) -> &BindGroup {
+        &self._bind_group
     }
 }

@@ -52,7 +52,7 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
             textures: {
                 let mut binding = Binding::with_group(Textures::GROUP);
                 Textures {
-                    texture: vert
+                    map: vert
                         .fragment
                         .vertex_texture
                         .then(|| Texture::declare_group(&mut binding, &mut o)),
@@ -126,7 +126,7 @@ impl Globals {
 }
 
 pub struct Textures {
-    pub texture: Option<TextureBindings>,
+    pub map: Option<TextureBindings>,
 }
 
 impl Textures {

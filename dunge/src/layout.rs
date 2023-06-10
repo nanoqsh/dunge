@@ -37,7 +37,7 @@ mod plain {
         fn as_bytes(&self) -> &[u8] {
             use std::{mem, slice};
 
-            unsafe { slice::from_raw_parts(self.as_ptr().cast(), self.len() * mem::size_of::<T>()) }
+            unsafe { slice::from_raw_parts(self.as_ptr().cast(), mem::size_of_val(*self)) }
         }
     }
 }

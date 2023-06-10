@@ -115,9 +115,30 @@ impl SpaceHandle {
 /// A texture handle. May be obtained from the [`create_texture`](crate::Context::create_texture) method.
 #[must_use]
 #[derive(Clone, Copy)]
-pub struct TextureHandle(pub(crate) u32);
+pub struct _TextureHandle(pub(crate) u32);
+
+#[must_use]
+pub struct TexturesHandle<S>(u32, PhantomData<S>);
+
+impl<S> TexturesHandle<S> {
+    pub(crate) fn new(id: u32) -> Self {
+        Self(id, PhantomData)
+    }
+
+    pub(crate) fn id(self) -> u32 {
+        self.0
+    }
+}
+
+impl<S> Clone for TexturesHandle<S> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S> Copy for TexturesHandle<S> {}
 
 /// A view handle. May be obtained from the [`create_view`](crate::Context::create_view) method.
 #[must_use]
 #[derive(Clone, Copy)]
-pub struct ViewHandle(pub(crate) u32);
+pub struct _ViewHandle(pub(crate) u32);

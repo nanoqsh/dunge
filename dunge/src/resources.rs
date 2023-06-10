@@ -10,8 +10,12 @@ use {
         render::Render,
         shader::Shader,
         shader_data::{
-            Globals, GlobalsParameters, Instance, InstanceModel, Light, LightSpace, SourceModel,
-            SpaceData, SpaceModel, Texture, TextureData, Uniforms,
+            globals::{Globals, Parameters as GlobalsParameters, Variables as GlobalsVariables},
+            textures::{
+                Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
+            },
+            Instance, InstanceModel, Light, LightSpace, SourceModel, SpaceData, SpaceModel,
+            Texture, TextureData,
         },
         storage::Storage,
         topology::Topology,
@@ -30,7 +34,8 @@ pub(crate) struct Resources {
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) shaders: Storage<ShaderInfo>,
     pub(crate) spaces: Storage<LightSpace>,
-    pub(crate) textures: Storage<Texture>,
+    pub(crate) _textures: Storage<Texture>,
+    pub(crate) textures: Storage<Textures>,
     pub(crate) views: Storage<_Camera>,
 }
 
@@ -38,14 +43,14 @@ impl Resources {
     pub fn create_globals<S>(
         &mut self,
         render: &Render,
-        uniforms: Uniforms,
+        variables: GlobalsVariables,
         handle: LayerHandle<S>,
     ) -> Result<GlobalsHandle<S>, ResourceNotFound> {
         let layer = self.layers.get(handle.id())?;
         let globals = layer.globals().expect("the shader has no globals");
         let params = GlobalsParameters {
             camera: Camera::new(),
-            uniforms,
+            variables,
             bindings: globals.bindings,
             layout: &globals.layout,
         };
@@ -65,14 +70,47 @@ impl Resources {
     }
 
     pub fn update_globals_ambient<S>(
-        &mut self,
+        &self,
         render: &Render,
         handle: GlobalsHandle<S>,
         color: Linear<f32, 3>,
     ) -> Result<(), ResourceNotFound> {
         self.globals
-            .get_mut(handle.id())?
+            .get(handle.id())?
             .write_ambient(color.0, render.context().queue());
+
+        Ok(())
+    }
+
+    pub fn create_textures<S>(
+        &mut self,
+        render: &Render,
+        variables: TexturesVariables,
+        handle: LayerHandle<S>,
+    ) -> Result<TexturesHandle<S>, ResourceNotFound> {
+        let layer = self.layers.get(handle.id())?;
+        let textures = layer.textures().expect("the shader has no textures");
+        let params = TexturesParameters {
+            variables,
+            bindings: textures.bindings,
+            layout: &textures.layout,
+        };
+
+        let context = render.context();
+        let textures = Textures::new(params, context.device(), context.queue());
+        let id = self.textures.insert(textures);
+        Ok(TexturesHandle::new(id))
+    }
+
+    pub fn update_textures_map<S>(
+        &self,
+        render: &Render,
+        handle: TexturesHandle<S>,
+        data: TextureData,
+    ) -> Result<(), Error> {
+        self.textures
+            .get(handle.id())?
+            .update_data(data, render.context().queue())?;
 
         Ok(())
     }
@@ -137,7 +175,7 @@ impl Resources {
         self.layers.remove(handle.id())
     }
 
-    pub fn create_texture(&mut self, render: &Render, data: TextureData) -> TextureHandle {
+    pub fn create_texture(&mut self, render: &Render, data: TextureData) -> _TextureHandle {
         let texture = Texture::new(
             data,
             render.context().device(),
@@ -145,24 +183,24 @@ impl Resources {
             &render.groups().textured,
         );
 
-        let id = self.textures.insert(texture);
-        TextureHandle(id)
+        let id = self._textures.insert(texture);
+        _TextureHandle(id)
     }
 
     pub fn update_texture(
         &self,
         render: &Render,
-        handle: TextureHandle,
+        handle: _TextureHandle,
         data: TextureData,
     ) -> Result<(), Error> {
-        let texture = self.textures.get(handle.0)?;
+        let texture = self._textures.get(handle.0)?;
         texture.update_data(data, render.context().queue())?;
 
         Ok(())
     }
 
-    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
-        self.textures.remove(handle.0)
+    pub fn delete_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
+        self._textures.remove(handle.0)
     }
 
     pub fn create_instances(
@@ -215,16 +253,16 @@ impl Resources {
         self.meshes.remove(handle.id())
     }
 
-    pub fn create_view(&mut self, render: &Render, view: View<Projection>) -> ViewHandle {
+    pub fn create_view(&mut self, render: &Render, view: View<Projection>) -> _ViewHandle {
         let mut camera = _Camera::new(render.context().device(), &render.groups().globals);
         camera.set_view(view);
         let id = self.views.insert(camera);
-        ViewHandle(id)
+        _ViewHandle(id)
     }
 
     pub fn update_view(
         &mut self,
-        handle: ViewHandle,
+        handle: _ViewHandle,
         view: View<Projection>,
     ) -> Result<(), ResourceNotFound> {
         self.views
@@ -232,7 +270,7 @@ impl Resources {
             .map(|camera| camera.set_view(view))
     }
 
-    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+    pub fn delete_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
         self.views.remove(handle.0)
     }
 

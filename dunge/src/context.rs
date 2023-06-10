@@ -12,10 +12,10 @@ use {
         render::{Render, RenderContext},
         resources::Resources,
         screen::Screen,
-        shader::Shader,
+        shader::{Shader, ShaderInfo},
         shader_data::{
-            GlobalsBuilder, InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel,
-            TextureData,
+            globals::Builder as GlobalsBuilder, textures::Builder as TexturesBuilder,
+            InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel, TextureData,
         },
         topology::Topology,
         transform::IntoMat,
@@ -110,9 +110,7 @@ impl Context {
         S: Shader,
         P: IntoProjection,
     {
-        use dunge_shader::View;
-
-        assert!(matches!(S::VIEW, View::Camera), "the shader has no view");
+        assert!(ShaderInfo::new::<S>().has_camera, "the shader has no view");
 
         self.resources
             .update_globals_view(handle, view.into_projection_view())
@@ -127,10 +125,34 @@ impl Context {
         S: Shader,
         C: IntoLinear<3>,
     {
-        assert!(S::AMBIENT, "the shader has no ambient");
+        assert!(
+            ShaderInfo::new::<S>().has_ambient,
+            "the shader has no ambient",
+        );
 
         self.resources
             .update_globals_ambient(&self.render, handle, color.into_linear())
+    }
+
+    pub fn textures_builder(&mut self) -> TexturesBuilder {
+        TexturesBuilder::new(&mut self.resources, &self.render)
+    }
+
+    pub fn update_textures_map<S>(
+        &mut self,
+        handle: TexturesHandle<S>,
+        data: TextureData,
+    ) -> Result<(), Error>
+    where
+        S: Shader,
+    {
+        assert!(
+            ShaderInfo::new::<S>().has_map,
+            "the shader has no texture map",
+        );
+
+        self.resources
+            .update_textures_map(&self.render, handle, data)
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
@@ -166,7 +188,7 @@ impl Context {
     }
 
     /// Creates a new texture.
-    pub fn create_texture(&mut self, data: TextureData) -> TextureHandle {
+    pub fn create_texture(&mut self, data: TextureData) -> _TextureHandle {
         self.resources.create_texture(&self.render, data)
     }
 
@@ -176,7 +198,7 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn update_texture(
         &mut self,
-        handle: TextureHandle,
+        handle: _TextureHandle,
         data: TextureData,
     ) -> Result<(), Error> {
         self.resources.update_texture(&self.render, handle, data)
@@ -186,7 +208,7 @@ impl Context {
     ///
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_texture(&mut self, handle: TextureHandle) -> Result<(), ResourceNotFound> {
+    pub fn delete_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
         self.resources.delete_texture(handle)
     }
 
@@ -259,7 +281,7 @@ impl Context {
     }
 
     /// Creates a new view.
-    pub fn create_view<P>(&mut self, view: View<P>) -> ViewHandle
+    pub fn create_view<P>(&mut self, view: View<P>) -> _ViewHandle
     where
         P: IntoProjection,
     {
@@ -273,7 +295,7 @@ impl Context {
     /// See [`ResourceNotFound`] for detailed info.
     pub fn update_view<P>(
         &mut self,
-        handle: ViewHandle,
+        handle: _ViewHandle,
         view: View<P>,
     ) -> Result<(), ResourceNotFound>
     where
@@ -287,7 +309,7 @@ impl Context {
     ///
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_view(&mut self, handle: ViewHandle) -> Result<(), ResourceNotFound> {
+    pub fn delete_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
         self.resources.delete_view(handle)
     }
 

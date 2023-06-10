@@ -279,7 +279,7 @@ impl Pipeline {
                         camera: None,
                         ambient: None,
                     },
-                    textures: Tx { texture: None },
+                    textures: Tx { map: None },
                 },
             ),
         }
@@ -292,22 +292,15 @@ impl Pipeline {
     pub fn globals(&self) -> Option<&Globals> {
         self.groups.globals.as_ref()
     }
-}
 
-pub(crate) struct Globals {
-    pub layout: BindGroupLayout,
-    pub bindings: GlobalsBindings,
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct GlobalsBindings {
-    pub camera: u32,
-    pub ambient: u32,
+    pub fn textures(&self) -> Option<&Textures> {
+        self.groups.textures.as_ref()
+    }
 }
 
 struct Groups {
     globals: Option<Globals>,
-    textures: Option<BindGroupLayout>,
+    textures: Option<Textures>,
 }
 
 impl Groups {
@@ -354,44 +347,72 @@ impl Groups {
                     },
                 })
             },
-            textures: layout
-                .textures
-                .texture
-                .map(|TextureBindings { tdiff, sdiff }| {
-                    device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            textures: {
+                let mut entries = vec![];
+                if let Some(TextureBindings { tdiff, sdiff }) = layout.textures.map {
+                    entries.extend([
+                        BindGroupLayoutEntry {
+                            binding: tdiff,
+                            visibility: ShaderStages::FRAGMENT,
+                            ty: BindingType::Texture {
+                                multisampled: false,
+                                view_dimension: TextureViewDimension::D2,
+                                sample_type: TextureSampleType::Float { filterable: true },
+                            },
+                            count: None,
+                        },
+                        BindGroupLayoutEntry {
+                            binding: sdiff,
+                            visibility: ShaderStages::FRAGMENT,
+                            ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                            count: None,
+                        },
+                    ]);
+                }
+
+                entries.first().map(|_| Textures {
+                    layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: Some("textures binding"),
-                        entries: &[
-                            BindGroupLayoutEntry {
-                                binding: tdiff,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Texture {
-                                    multisampled: false,
-                                    view_dimension: TextureViewDimension::D2,
-                                    sample_type: TextureSampleType::Float { filterable: true },
-                                },
-                                count: None,
-                            },
-                            BindGroupLayoutEntry {
-                                binding: sdiff,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                                count: None,
-                            },
-                        ],
-                    })
-                }),
+                        entries: &entries,
+                    }),
+                    bindings: TexturesBindings {
+                        map: layout.textures.map.unwrap_or_default(),
+                    },
+                })
+            },
         }
     }
 
     fn layouts(&self) -> Vec<&BindGroupLayout> {
         [
             self.globals.as_ref().map(|Globals { layout, .. }| layout),
-            self.textures.as_ref(),
+            self.textures.as_ref().map(|Textures { layout, .. }| layout),
         ]
         .into_iter()
         .flatten()
         .collect()
     }
+}
+
+pub(crate) struct Globals {
+    pub layout: BindGroupLayout,
+    pub bindings: GlobalsBindings,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct GlobalsBindings {
+    pub camera: u32,
+    pub ambient: u32,
+}
+
+pub(crate) struct Textures {
+    pub layout: BindGroupLayout,
+    pub bindings: TexturesBindings,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct TexturesBindings {
+    pub map: TextureBindings,
 }
 
 pub(crate) struct VertexLayout {

@@ -13,6 +13,9 @@ pub enum Error {
     /// Returns when globals is not set.
     GlobalsNotSet,
 
+    /// Returns when textures is not set.
+    TexturesNotSet,
+
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
 }

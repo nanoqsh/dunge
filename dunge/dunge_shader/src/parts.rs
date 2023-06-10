@@ -52,6 +52,14 @@ impl VertexInput {
             });
         }
 
+        if self.fragment.vertex_texture {
+            fields.push(Field {
+                location: location.next(),
+                name: "map",
+                ty: Type::VEC2,
+            });
+        }
+
         o.write(Struct {
             name: "VertexInput",
             fields,
@@ -90,6 +98,14 @@ impl VertexOutput {
             });
         }
 
+        if self.fragment.vertex_texture {
+            fields.push(Field {
+                location: location.next(),
+                name: "map",
+                ty: Type::VEC2,
+            });
+        }
+
         if self.world {
             fields.push(Field {
                 location: location.next(),
@@ -115,6 +131,10 @@ impl VertexOutput {
 
         if self.fragment.vertex_color {
             o.write_str("    out.col = input.col;\n");
+        }
+
+        if self.fragment.vertex_texture {
+            o.write_str("    out.map = input.map;\n");
         }
 
         if self.world {
@@ -202,7 +222,7 @@ impl Texture {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct TextureBindings {
     pub tdiff: u32,
     pub sdiff: u32,

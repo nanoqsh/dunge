@@ -4,15 +4,15 @@ use {
         handles::*,
         input::{Input, Key},
         transform::Position,
-        CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Shader, Vertex,
-        WindowMode,
+        CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Shader, TextureData,
+        Vertex, WindowMode,
     },
     dunge_shader::{Dimension, Fragment, Scheme, Vertex as SchemeVertex, View},
 };
 
 #[repr(C)]
 #[derive(Vertex)]
-struct Vert(#[position] [f32; 2], #[color] [f32; 3]);
+struct Vert(#[position] [f32; 2], #[color] [f32; 3], #[texture] [f32; 2]);
 
 struct ColorShader;
 impl Shader for ColorShader {
@@ -39,6 +39,7 @@ fn main() {
 struct App {
     layer: LayerHandle<ColorShader>,
     globals: GlobalsHandle<ColorShader>,
+    textures: TexturesHandle<ColorShader>,
     mesh: MeshHandle<Vert>,
     instance: InstanceHandle,
     state: f32,
@@ -53,7 +54,7 @@ impl App {
                     dimension: Dimension::D2,
                     fragment: Fragment {
                         vertex_color: true,
-                        vertex_texture: false,
+                        vertex_texture: true,
                     },
                 },
                 view: View::Camera,
@@ -76,12 +77,25 @@ impl App {
             .build(layer)
             .expect("create globals");
 
+        // Create textures
+        let textures = {
+            let im = utils::read_png(include_bytes!("../nana.png"));
+            let data = TextureData::new(&im, im.dimensions()).expect("texture data");
+
+            context
+                .textures_builder()
+                .with_map(data)
+                .build(layer)
+                .expect("create textures")
+        };
+
         // Create a mesh
         let mesh = {
+            const SIZE: f32 = 160.;
             const VERTICES: [Vert; 3] = [
-                Vert([-100., -100.], [1., 0., 0.]),
-                Vert([100., -100.], [0., 1., 0.]),
-                Vert([0., 100.], [0., 0., 1.]),
+                Vert([-SIZE, -SIZE], [1., 0., 0.], [0., 0.]),
+                Vert([SIZE, -SIZE], [0., 1., 0.], [1., 0.]),
+                Vert([0., SIZE], [0., 0., 1.], [1., 1.]),
             ];
 
             let data = MeshData::from_verts(&VERTICES);
@@ -97,6 +111,7 @@ impl App {
         Self {
             layer,
             globals,
+            textures,
             mesh,
             instance,
             state: 0.,
@@ -144,6 +159,7 @@ impl Loop for App {
             .with_clear_depth()
             .start()
             .bind_globals(self.globals)?
+            .bind_textures(self.textures)?
             .bind_instance(self.instance)?
             .draw(self.mesh)
     }

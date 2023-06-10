@@ -27,17 +27,17 @@ mod screen;
 mod shader_data {
     mod ambient;
     mod camera;
-    mod globals;
+    pub(crate) mod globals;
     mod instance;
     mod light;
     mod post;
     mod space;
     mod texture;
+    pub(crate) mod textures;
 
     pub(crate) use self::{
         ambient::AmbientUniform,
         camera::CameraUniform,
-        globals::{Builder as GlobalsBuilder, Globals, Parameters as GlobalsParameters, Uniforms},
         instance::{Instance, InstanceModel},
         light::{Light, SourceModel},
         post::PostShaderData,

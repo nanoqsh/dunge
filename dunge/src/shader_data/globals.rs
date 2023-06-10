@@ -8,16 +8,16 @@ use {
         pipeline::GlobalsBindings as Bindings,
         render::Render,
         resources::Resources,
-        shader::Shader,
+        shader::{Shader, ShaderInfo},
         shader_data::{AmbientUniform, CameraUniform},
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
 pub(crate) struct Globals {
+    bind_group: BindGroup,
     camera: Option<(Camera, Buffer)>,
     ambient: Option<Buffer>,
-    bind_group: BindGroup,
 }
 
 impl Globals {
@@ -29,12 +29,12 @@ impl Globals {
 
         let Parameters {
             bindings,
-            uniforms,
+            variables,
             layout,
             ..
         } = params;
 
-        let camera = uniforms.camera.map(|uniform| {
+        let camera = variables.camera.map(|uniform| {
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("camera buffer"),
                 contents: uniform.as_bytes(),
@@ -42,7 +42,7 @@ impl Globals {
             })
         });
 
-        let ambient = uniforms.ambient.map(|uniform| {
+        let ambient = variables.ambient.map(|uniform| {
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("ambient buffer"),
                 contents: uniform.as_bytes(),
@@ -106,12 +106,12 @@ impl Globals {
 pub(crate) struct Parameters<'a> {
     pub camera: Camera,
     pub bindings: Bindings,
-    pub uniforms: Uniforms,
+    pub variables: Variables,
     pub layout: &'a BindGroupLayout,
 }
 
 #[derive(Default)]
-pub(crate) struct Uniforms {
+pub(crate) struct Variables {
     pub camera: Option<CameraUniform>,
     pub ambient: Option<AmbientUniform>,
 }
@@ -119,7 +119,7 @@ pub(crate) struct Uniforms {
 pub struct Builder<'a> {
     resources: &'a mut Resources,
     render: &'a Render,
-    uniforms: Uniforms,
+    variables: Variables,
 }
 
 impl<'a> Builder<'a> {
@@ -127,12 +127,12 @@ impl<'a> Builder<'a> {
         Self {
             resources,
             render,
-            uniforms: Uniforms::default(),
+            variables: Variables::default(),
         }
     }
 
     pub fn with_view(mut self) -> Self {
-        self.uniforms.camera = Some(CameraUniform::default());
+        self.variables.camera = Some(CameraUniform::default());
         self
     }
 
@@ -141,7 +141,7 @@ impl<'a> Builder<'a> {
         C: IntoLinear<3>,
     {
         let Linear(color) = color.into_linear();
-        self.uniforms.ambient = Some(AmbientUniform::new(color));
+        self.variables.ambient = Some(AmbientUniform::new(color));
         self
     }
 
@@ -149,23 +149,22 @@ impl<'a> Builder<'a> {
     where
         S: Shader,
     {
-        use dunge_shader::View;
-
-        if let View::Camera = S::VIEW {
+        let info = ShaderInfo::new::<S>();
+        if info.has_camera {
             assert!(
-                self.uniforms.camera.is_some(),
+                self.variables.camera.is_some(),
                 "the shader requires `view`, but it's not set",
             );
         }
 
-        if S::AMBIENT {
+        if info.has_ambient {
             assert!(
-                self.uniforms.ambient.is_some(),
+                self.variables.ambient.is_some(),
                 "the shader requires `ambient`, but it's not set",
             );
         }
 
         self.resources
-            .create_globals(self.render, self.uniforms, handle)
+            .create_globals(self.render, self.variables, handle)
     }
 }
