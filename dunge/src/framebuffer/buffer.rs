@@ -13,12 +13,12 @@ impl Framebuffer {
     pub const DEPTH_FORMAT: TextureFormat = DepthFrame::FORMAT;
     pub const RENDER_FORMAT: TextureFormat = RenderFrame::FORMAT;
 
-    pub fn new_default(device: &Device, layout: &BindGroupLayout) -> Self {
+    pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
         let one = NonZeroU32::new(1).expect("non zero");
-        Self::new((one, one), FrameFilter::Nearest, device, layout)
+        Self::with_size_and_filter((one, one), FrameFilter::Nearest, device, layout)
     }
 
-    pub fn new(
+    pub fn with_size_and_filter(
         size: (NonZeroU32, NonZeroU32),
         filter: FrameFilter,
         device: &Device,
@@ -35,7 +35,7 @@ impl Framebuffer {
     }
 
     pub fn render_bind_group(&self) -> &BindGroup {
-        self.render.bind_group()
+        self.render._bind_group()
     }
 
     pub fn render_view(&self) -> &TextureView {

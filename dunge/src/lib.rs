@@ -21,6 +21,7 @@ mod layout;
 mod r#loop;
 mod mesh;
 mod pipeline;
+mod postproc;
 mod render;
 mod resources;
 mod screen;

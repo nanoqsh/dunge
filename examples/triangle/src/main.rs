@@ -93,9 +93,9 @@ impl App {
         let mesh = {
             const SIZE: f32 = 160.;
             const VERTICES: [Vert; 3] = [
-                Vert([-SIZE, -SIZE], [1., 0., 0.], [0., 0.]),
-                Vert([SIZE, -SIZE], [0., 1., 0.], [1., 0.]),
-                Vert([0., SIZE], [0., 0., 1.], [1., 1.]),
+                Vert([-SIZE, -SIZE], [1., 0., 0.], [0., 1.]),
+                Vert([SIZE, -SIZE], [0., 1., 0.], [1., 1.]),
+                Vert([0., SIZE], [0., 0., 1.], [0.5, 0.]),
             ];
 
             let data = MeshData::from_verts(&VERTICES);

@@ -1,5 +1,5 @@
 use {
-    crate::_shader,
+    crate::postproc::PostProcessor,
     std::num::NonZeroU32,
     wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
@@ -52,7 +52,6 @@ impl RenderFrame {
         });
 
         let view = texture.create_view(&TextureViewDescriptor::default());
-
         let filter_mode = match filter {
             FrameFilter::Nearest => FilterMode::Nearest,
             FrameFilter::Linear => FilterMode::Linear,
@@ -71,11 +70,11 @@ impl RenderFrame {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: _shader::TDIFF_BINDING,
+                    binding: PostProcessor::TEXTURE_BINDING.tdiff,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: _shader::SDIFF_BINDING,
+                    binding: PostProcessor::TEXTURE_BINDING.sdiff,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
@@ -96,7 +95,7 @@ impl RenderFrame {
         &self.view
     }
 
-    pub fn bind_group(&self) -> &BindGroup {
+    pub fn _bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
 }

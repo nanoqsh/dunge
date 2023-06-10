@@ -7,6 +7,7 @@ use {
         framebuffer::Framebuffer,
         groups::_Groups,
         pipeline::{Parameters as PipelineParameters, Pipeline},
+        postproc::PostProcessor,
         r#loop::Loop,
         resources::Resources,
         screen::Screen,
@@ -25,9 +26,10 @@ pub(crate) struct Render {
     limits: RenderLimits,
     screen: Screen,
     shaders: Shaders,
-    groups: _Groups,
-    post_pipeline: Pipeline,
-    post_shader_data: PostShaderData,
+    _groups: _Groups,
+    post: PostProcessor,
+    _post_pipeline: Pipeline,
+    _post_shader_data: PostShaderData,
     framebuffer: Framebuffer,
 }
 
@@ -65,6 +67,8 @@ impl Render {
                 .expect("default light space"),
         );
 
+        let post = PostProcessor::new(&context.device);
+
         let post_pipeline = Pipeline::_new(
             &context.device,
             &shaders,
@@ -80,7 +84,7 @@ impl Render {
             },
         );
 
-        let framebuffer = Framebuffer::new_default(&context.device, &groups.textured);
+        let framebuffer = Framebuffer::new(&context.device, &groups.textured);
 
         Self {
             context,
@@ -88,9 +92,10 @@ impl Render {
             limits,
             screen: Screen::default(),
             shaders,
-            groups,
-            post_pipeline,
-            post_shader_data,
+            _groups: groups,
+            post,
+            _post_pipeline: post_pipeline,
+            _post_shader_data: post_shader_data,
             framebuffer,
         }
     }
@@ -116,7 +121,7 @@ impl Render {
         Pipeline::_new(
             &self.context.device,
             &self.shaders,
-            &self.groups,
+            &self._groups,
             self.surface_conf.format,
             shader,
             params,
@@ -162,17 +167,24 @@ impl Render {
 
         let (bw, bh) = self.screen.buffer_size(self.limits.max_texture_size);
         let (fw, fh) = self.screen.size_factor();
-        self.post_shader_data.resize(
+
+        self._post_shader_data.resize(
             [bw.get() as f32, bh.get() as f32],
             [fw, fh],
             &self.context.queue,
         );
 
-        self.framebuffer = Framebuffer::new(
+        self.post.resize(
+            [bw.get() as f32, bh.get() as f32],
+            [fw, fh],
+            &self.context.queue,
+        );
+
+        self.framebuffer = Framebuffer::with_size_and_filter(
             (bw, bh),
             self.screen.filter,
             &self.context.device,
-            &self.groups.textured,
+            &self._groups.textured,
         );
     }
 
@@ -298,16 +310,20 @@ impl Render {
         &self.context
     }
 
-    pub fn groups(&self) -> &_Groups {
-        &self.groups
+    pub fn _groups(&self) -> &_Groups {
+        &self._groups
     }
 
-    pub fn post_pipeline(&self) -> &Pipeline {
-        &self.post_pipeline
+    pub fn post_processor(&self) -> &PostProcessor {
+        &self.post
     }
 
-    pub fn post_shader_data(&self) -> &PostShaderData {
-        &self.post_shader_data
+    pub fn _post_pipeline(&self) -> &Pipeline {
+        &self._post_pipeline
+    }
+
+    pub fn _post_shader_data(&self) -> &PostShaderData {
+        &self._post_shader_data
     }
 
     pub fn framebuffer(&self) -> &Framebuffer {

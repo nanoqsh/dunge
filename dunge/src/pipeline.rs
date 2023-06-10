@@ -158,7 +158,7 @@ impl Pipeline {
     pub fn new(
         device: &Device,
         shader: &ShaderInfo,
-        vert: &VertexLayout,
+        vert: Option<&VertexLayout>,
         params: Parameters,
     ) -> Self {
         use wgpu::*;
@@ -175,6 +175,7 @@ impl Pipeline {
             push_constant_ranges: &[],
         });
 
+        let layouts;
         Self {
             inner: device.create_render_pipeline(&RenderPipelineDescriptor {
                 label: None,
@@ -182,7 +183,13 @@ impl Pipeline {
                 vertex: VertexState {
                     module: &module,
                     entry_point: ShaderInfo::VERTEX_ENTRY_POINT,
-                    buffers: &[vert.buffer_layout(), InstanceModel::LAYOUT],
+                    buffers: match vert {
+                        Some(vl) => {
+                            layouts = [vl.buffer_layout(), InstanceModel::LAYOUT];
+                            &layouts[..]
+                        }
+                        None => &[],
+                    },
                 },
                 fragment: Some(FragmentState {
                     module: &module,
@@ -276,6 +283,7 @@ impl Pipeline {
                 device,
                 &Layout {
                     globals: Gl {
+                        post_data: None,
                         camera: None,
                         ambient: None,
                     },
@@ -310,6 +318,19 @@ impl Groups {
         Self {
             globals: {
                 let mut entries = vec![];
+                if let Some(binding) = layout.globals.post_data {
+                    entries.push(BindGroupLayoutEntry {
+                        binding,
+                        visibility: ShaderStages::VERTEX,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    });
+                }
+
                 if let Some(binding) = layout.globals.camera {
                     entries.push(BindGroupLayoutEntry {
                         binding,
@@ -459,7 +480,7 @@ impl VertexLayout {
         }
     }
 
-    const fn format(n: u64) -> VertexFormat {
+    fn format(n: u64) -> VertexFormat {
         match n {
             2 => VertexFormat::Float32x2,
             3 => VertexFormat::Float32x3,
@@ -467,7 +488,7 @@ impl VertexLayout {
         }
     }
 
-    const fn offset(n: u64) -> u64 {
+    fn offset(n: u64) -> u64 {
         use std::mem;
 
         n * mem::size_of::<f32>() as u64

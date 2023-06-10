@@ -1,11 +1,11 @@
 use {
-    crate::{_shader, layout::Plain},
+    crate::{layout::Plain, postproc::PostProcessor},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
 pub(crate) struct PostShaderData {
-    buffer: Buffer,
     bind_group: BindGroup,
+    buffer: Buffer,
 }
 
 impl PostShaderData {
@@ -27,13 +27,13 @@ impl PostShaderData {
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout,
             entries: &[BindGroupEntry {
-                binding: _shader::DATA_BINDING,
+                binding: PostProcessor::DATA_BINDING,
                 resource: buffer.as_entire_binding(),
             }],
             label: Some("post bind group"),
         });
 
-        Self { buffer, bind_group }
+        Self { bind_group, buffer }
     }
 
     pub fn resize(&self, size: [f32; 2], factor: [f32; 2], queue: &Queue) {

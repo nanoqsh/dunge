@@ -136,7 +136,7 @@ impl Resources {
         let pipeline = Pipeline::new(
             render.context().device(),
             self.shaders.get(handle.id())?,
-            &vert,
+            Some(&vert),
             PipelineParameters {
                 topology: T::VALUE.into_inner(),
                 ..params
@@ -180,7 +180,7 @@ impl Resources {
             data,
             render.context().device(),
             render.context().queue(),
-            &render.groups().textured,
+            &render._groups().textured,
         );
 
         let id = self._textures.insert(texture);
@@ -254,7 +254,7 @@ impl Resources {
     }
 
     pub fn create_view(&mut self, render: &Render, view: View<Projection>) -> _ViewHandle {
-        let mut camera = _Camera::new(render.context().device(), &render.groups().globals);
+        let mut camera = _Camera::new(render.context().device(), &render._groups().globals);
         camera.set_view(view);
         let id = self.views.insert(camera);
         _ViewHandle(id)
@@ -284,7 +284,7 @@ impl Resources {
             ambient.0,
             srcs,
             render.context().device(),
-            &render.groups().lights,
+            &render._groups().lights,
         )?;
 
         let id = self.lights.insert(light);
@@ -332,7 +332,7 @@ impl Resources {
             data,
             render.context().device(),
             render.context().queue(),
-            &render.groups().space,
+            &render._groups().space,
         )?;
 
         let id = self.spaces.insert(ls);

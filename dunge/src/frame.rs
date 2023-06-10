@@ -7,6 +7,7 @@ use {
         handles::LayerHandle,
         layer::{Builder, Layer},
         pipeline::Pipeline,
+        postproc::PostProcessor,
         render::Render,
         resources::Resources,
     },
@@ -93,15 +94,57 @@ impl<'d> Frame<'d> {
                     depth_stencil_attachment: None,
                 });
 
-            pass.set_pipeline(self.render.post_pipeline().as_ref());
+            let post = self.render.post_processor();
+            pass.set_pipeline(post.render_pipeline());
+            pass.set_bind_group(PostProcessor::DATA_GROUP, post.data_bind_group(), &[]);
+            pass.set_bind_group(
+                PostProcessor::TEXTURE_GROUP,
+                self.render.framebuffer().render_bind_group(),
+                &[],
+            );
+
+            pass.draw(0..4, 0..1);
+        }
+
+        self.encoder.finish(self.render);
+    }
+
+    pub fn _commit_in_frame(&mut self) {
+        use wgpu::*;
+
+        if !self.drawn_in_frame {
+            return;
+        }
+
+        self.drawn_in_frame = false;
+
+        {
+            let mut pass = self
+                .encoder
+                .get(self.render)
+                .begin_render_pass(&RenderPassDescriptor {
+                    label: Some("post render pass"),
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: &self.frame_view,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: LoadOp::Load,
+                            store: true,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                });
+
+            pass.set_pipeline(self.render._post_pipeline().as_ref());
             pass.set_bind_group(
                 _shader::POST_TEXTURE_GROUP,
                 self.render.framebuffer().render_bind_group(),
                 &[],
             );
+
             pass.set_bind_group(
                 _shader::POST_DATA_GROUP,
-                self.render.post_shader_data().bind_group(),
+                self.render._post_shader_data().bind_group(),
                 &[],
             );
 

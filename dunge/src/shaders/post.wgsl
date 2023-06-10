@@ -7,7 +7,7 @@ struct Data {
 var<uniform> data: Data;
 
 struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
+    @builtin(position) pos: vec4<f32>,
     @location(0) map: vec2<f32>,
 }
 
@@ -16,19 +16,19 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
     var out: VertexOutput;
     switch in_vertex_index {
         case 0u {
-            out.clip_position = vec4(1., -1., 0., 1.);
+            out.pos = vec4(1., -1., 0., 1.);
             out.map = data.factor.xy;
         }
         case 1u {
-            out.clip_position = vec4(1., 1., 0., 1.);
+            out.pos = vec4(1., 1., 0., 1.);
             out.map = vec2(data.factor.x, 0.);
         }
         case 2u {
-             out.clip_position = vec4(-1., -1., 0., 1.);
+             out.pos = vec4(-1., -1., 0., 1.);
             out.map = vec2(0., data.factor.y);
         }
         case 3u {
-            out.clip_position = vec4(-1., 1., 0., 1.);
+            out.pos = vec4(-1., 1., 0., 1.);
             out.map = vec2(0., 0.);
         }
         default {}

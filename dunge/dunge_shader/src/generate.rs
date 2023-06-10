@@ -45,6 +45,7 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
             globals: {
                 let mut binding = Binding::with_group(Globals::GROUP);
                 Globals {
+                    post_data: None,
                     camera: view.declare_group(&mut binding, &mut o),
                     ambient: ambient.then(|| Ambient::declare_group(&mut binding, &mut o)),
                 }
@@ -116,7 +117,9 @@ pub struct Layout {
     pub textures: Textures,
 }
 
+#[derive(Default)]
 pub struct Globals {
+    pub post_data: Option<u32>,
     pub camera: Option<u32>,
     pub ambient: Option<u32>,
 }
@@ -125,6 +128,7 @@ impl Globals {
     pub const GROUP: u32 = 0;
 }
 
+#[derive(Default)]
 pub struct Textures {
     pub map: Option<TextureBindings>,
 }

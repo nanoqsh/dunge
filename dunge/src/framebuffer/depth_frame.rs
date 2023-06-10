@@ -14,7 +14,7 @@ impl DepthFrame {
     pub fn new((width, height): (NonZeroU32, NonZeroU32), device: &Device) -> Self {
         use wgpu::*;
 
-        let desc = TextureDescriptor {
+        let texture = device.create_texture(&TextureDescriptor {
             label: None,
             size: Extent3d {
                 width: width.get(),
@@ -27,8 +27,7 @@ impl DepthFrame {
             format: Self::FORMAT,
             usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
-        };
-        let texture = device.create_texture(&desc);
+        });
 
         let view = texture.create_view(&TextureViewDescriptor::default());
         let sampler = device.create_sampler(&SamplerDescriptor {
