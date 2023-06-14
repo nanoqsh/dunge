@@ -5,7 +5,6 @@ use crate::{
     templater::Templater,
 };
 
-#[must_use]
 pub fn generate(scheme: Scheme) -> ShaderInfo {
     let Scheme {
         vert,
@@ -102,6 +101,7 @@ pub struct Vertex {
     pub fragment: Fragment,
 }
 
+#[must_use]
 pub struct ShaderInfo {
     pub layout: Layout,
     pub source: String,
@@ -110,6 +110,19 @@ pub struct ShaderInfo {
 impl ShaderInfo {
     pub const VERTEX_ENTRY_POINT: &str = "vs_main";
     pub const FRAGMENT_ENTRY_POINT: &str = "fs_main";
+
+    pub fn postproc(post_data: u32, map: TextureBindings, source: String) -> Self {
+        Self {
+            layout: Layout {
+                globals: Globals {
+                    post_data: Some(post_data),
+                    ..Default::default()
+                },
+                textures: Textures { map: Some(map) },
+            },
+            source,
+        }
+    }
 }
 
 pub struct Layout {

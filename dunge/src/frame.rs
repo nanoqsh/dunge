@@ -82,7 +82,7 @@ impl<'d> Frame<'d> {
                 .encoder
                 .get(self.render)
                 .begin_render_pass(&RenderPassDescriptor {
-                    label: Some("post render pass"),
+                    label: None,
                     color_attachments: &[Some(RenderPassColorAttachment {
                         view: &self.frame_view,
                         resolve_target: None,
@@ -123,7 +123,7 @@ impl<'d> Frame<'d> {
                 .encoder
                 .get(self.render)
                 .begin_render_pass(&RenderPassDescriptor {
-                    label: Some("post render pass"),
+                    label: None,
                     color_attachments: &[Some(RenderPassColorAttachment {
                         view: &self.frame_view,
                         resolve_target: None,
@@ -180,7 +180,7 @@ impl<'d> Frame<'d> {
             .encoder
             .get(self.render)
             .begin_render_pass(&RenderPassDescriptor {
-                label: Some("layer render pass"),
+                label: None,
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: self.render.framebuffer().render_view(),
                     resolve_target: None,
@@ -212,12 +212,13 @@ impl<'d> Frame<'d> {
 
         pass.set_pipeline(pipeline.as_ref());
 
-        let (vw, vh) = self.render.screen().virtual_size();
-        pass.set_viewport(0., 0., vw as f32, vh as f32, 0., 1.);
+        let screen = self.render.screen();
+        let view_size = screen.virtual_size_with_antialiasing().as_vec2();
+        pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
 
         Layer::new(
             pass,
-            (vw, vh),
+            screen.virtual_size().into(),
             self.render.context().queue(),
             self.resources,
             &mut self.drawn_in_frame,
@@ -274,7 +275,7 @@ impl<'d> Frame<'d> {
 
         pass.set_pipeline(pipeline.as_ref());
 
-        let (vw, vh) = self.render.screen().virtual_size();
+        let (vw, vh) = self.render.screen().virtual_size().into();
         pass.set_viewport(0., 0., vw as f32, vh as f32, 0., 1.);
 
         Layer::_new(

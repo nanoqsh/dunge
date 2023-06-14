@@ -80,7 +80,7 @@ impl Context {
     /// Returns the canvas size.
     #[must_use]
     pub fn size(&self) -> (u32, u32) {
-        self.render.screen().virtual_size()
+        self.render.screen().virtual_size().into()
     }
 
     /// Sets context's [`Limits`].
@@ -92,6 +92,7 @@ impl Context {
     pub fn set_frame_parameters(&mut self, params: FrameParameters) {
         self.render.set_screen(Some(Screen {
             pixel_size: params.pixel_size,
+            antialiasing: params.antialiasing,
             filter: params.filter,
             ..self.render.screen()
         }));
@@ -559,6 +560,9 @@ impl Default for Limits {
 pub struct FrameParameters {
     /// Virtual pixels size in physical pixels.
     pub pixel_size: PixelSize,
+
+    /// Enable antialiasing.
+    pub antialiasing: bool,
 
     /// The frame filter mode.
     pub filter: FrameFilter,

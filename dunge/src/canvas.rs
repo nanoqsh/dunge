@@ -231,7 +231,7 @@ impl Canvas {
                     match context.render.draw_frame(&lp, &context.resources) {
                         RenderResult::Ok => {}
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
-                            log::error!("suface error: timeout");
+                            log::info!("suface error: timeout");
                         }
                         RenderResult::SurfaceError(SurfaceError::Outdated) => {
                             log::error!("suface error: outdated");

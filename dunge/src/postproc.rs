@@ -3,7 +3,7 @@ use {
         pipeline::{Parameters, Pipeline},
         shader_data::PostShaderData,
     },
-    dunge_shader::{Globals, TextureBindings, Textures},
+    dunge_shader::TextureBindings,
     wgpu::{BindGroup, Device, Queue, RenderPipeline},
 };
 
@@ -18,27 +18,23 @@ impl PostProcessor {
     pub const TEXTURE_GROUP: u32 = 1;
     pub const TEXTURE_BINDING: TextureBindings = TextureBindings { tdiff: 0, sdiff: 1 };
 
-    pub fn new(device: &Device) -> Self {
+    pub fn new(device: &Device, antialiasing: bool) -> Self {
         use {
-            dunge_shader::{Layout, ShaderInfo},
+            dunge_shader::ShaderInfo,
             wgpu::{BlendState, PrimitiveTopology},
         };
 
         let pipeline = Pipeline::new(
             device,
-            &ShaderInfo {
-                layout: Layout {
-                    globals: Globals {
-                        post_data: Some(Self::DATA_BINDING),
-                        ..Default::default()
-                    },
-                    textures: Textures {
-                        map: Some(Self::TEXTURE_BINDING),
-                        ..Default::default()
-                    },
+            &ShaderInfo::postproc(
+                Self::DATA_BINDING,
+                Self::TEXTURE_BINDING,
+                if antialiasing {
+                    String::from(include_str!("shaders/post_ssaa.wgsl"))
+                } else {
+                    String::from(include_str!("shaders/post.wgsl"))
                 },
-                source: String::from(include_str!("shaders/post.wgsl")),
-            },
+            ),
             None,
             Parameters {
                 blend: BlendState::ALPHA_BLENDING,
@@ -49,12 +45,12 @@ impl PostProcessor {
             },
         );
 
-        let layout = &pipeline.globals().expect("globals").layout;
-        let data = PostShaderData::new(device, layout);
+        let globals = &pipeline.globals().expect("globals").layout;
+        let data = PostShaderData::new(device, globals);
         Self { pipeline, data }
     }
 
-    pub fn resize(&self, size: [f32; 2], factor: [f32; 2], queue: &Queue) {
+    pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
         self.data.resize(size, factor, queue);
     }
 

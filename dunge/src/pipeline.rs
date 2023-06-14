@@ -321,7 +321,7 @@ impl Groups {
                 if let Some(binding) = layout.globals.post_data {
                     entries.push(BindGroupLayoutEntry {
                         binding,
-                        visibility: ShaderStages::VERTEX,
+                        visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
                             has_dynamic_offset: false,

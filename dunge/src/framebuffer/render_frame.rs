@@ -13,9 +13,9 @@ pub enum FrameFilter {
 }
 
 pub(crate) struct RenderFrame {
+    bind_group: BindGroup,
     texture: Texture,
     view: TextureView,
-    bind_group: BindGroup,
 }
 
 impl RenderFrame {
@@ -81,9 +81,9 @@ impl RenderFrame {
         });
 
         Self {
+            bind_group,
             texture,
             view,
-            bind_group,
         }
     }
 
@@ -95,7 +95,7 @@ impl RenderFrame {
         &self.view
     }
 
-    pub fn _bind_group(&self) -> &BindGroup {
+    pub fn bind_group(&self) -> &BindGroup {
         &self.bind_group
     }
 }

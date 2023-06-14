@@ -35,7 +35,7 @@ impl Framebuffer {
     }
 
     pub fn render_bind_group(&self) -> &BindGroup {
-        self.render._bind_group()
+        self.render.bind_group()
     }
 
     pub fn render_view(&self) -> &TextureView {

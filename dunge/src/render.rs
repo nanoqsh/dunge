@@ -67,8 +67,7 @@ impl Render {
                 .expect("default light space"),
         );
 
-        let post = PostProcessor::new(&context.device);
-
+        let post = PostProcessor::new(&context.device, false);
         let post_pipeline = Pipeline::_new(
             &context.device,
             &shaders,
@@ -148,15 +147,10 @@ impl Render {
 
     pub fn set_screen(&mut self, screen: Option<Screen>) {
         if let Some(screen) = screen {
-            let (width, height) = screen.physical_size();
-            if self.surface_conf.width == width && self.surface_conf.height == height {
-                return;
-            }
-
             self.screen = screen;
         }
 
-        let (width, height) = self.screen.physical_size();
+        let (width, height) = self.screen.physical_size().into();
         self.surface_conf.width = width;
         self.surface_conf.height = height;
         self.context
@@ -166,17 +160,18 @@ impl Render {
             .configure(&self.context.device, &self.surface_conf);
 
         let (bw, bh) = self.screen.buffer_size(self.limits.max_texture_size);
-        let (fw, fh) = self.screen.size_factor();
+        let size_factor = self.screen.size_factor();
 
         self._post_shader_data.resize(
-            [bw.get() as f32, bh.get() as f32],
-            [fw, fh],
+            (bw.get() as f32, bh.get() as f32),
+            size_factor.into(),
             &self.context.queue,
         );
 
+        self.post = PostProcessor::new(&self.context.device, self.screen.antialiasing);
         self.post.resize(
-            [bw.get() as f32, bh.get() as f32],
-            [fw, fh],
+            (bw.get() as f32, bh.get() as f32),
+            size_factor.into(),
             &self.context.queue,
         );
 
@@ -232,7 +227,11 @@ impl Render {
             aspect: TextureAspect::All,
         };
 
-        let (width, height) = self.screen.virtual_size_aligned();
+        let (width, height) = {
+            let (width, height) = self.screen.buffer_size(self.limits.max_texture_size);
+            (width.get(), height.get())
+        };
+
         let buffer = self.context.device.create_buffer(&BufferDescriptor {
             label: Some("copy buffer"),
             size: width as u64 * height as u64 * N_COLOR_CHANNELS as u64,
@@ -280,12 +279,15 @@ impl Render {
             };
         }
 
-        let (vw, vh) = self.screen.virtual_size();
+        let virtual_size = self.screen.virtual_size_with_antialiasing();
         let data = {
             let view = buffer_slice.get_mapped_range();
-            let mut data = Vec::with_capacity(vw as usize * vh as usize * N_COLOR_CHANNELS);
+            let mut data = Vec::with_capacity(
+                virtual_size.x as usize * virtual_size.y as usize * N_COLOR_CHANNELS,
+            );
+
             let row_size = width as usize * N_COLOR_CHANNELS;
-            let virt_row_size = vw as usize * N_COLOR_CHANNELS;
+            let virt_row_size = virtual_size.x as usize * N_COLOR_CHANNELS;
             for row in view.chunks(row_size) {
                 data.extend_from_slice(&row[..virt_row_size]);
             }
@@ -300,8 +302,8 @@ impl Render {
         };
 
         Screenshot {
-            width: vw,
-            height: vh,
+            width: virtual_size.x,
+            height: virtual_size.y,
             data,
         }
     }
@@ -372,6 +374,7 @@ impl RenderContext {
             let desc = DeviceDescriptor {
                 features: Features::empty(),
                 limits: Limits {
+                    max_texture_dimension_2d: 8192,
                     max_storage_buffers_per_shader_stage: 0,
                     max_storage_textures_per_shader_stage: 0,
                     max_dynamic_storage_buffers_per_pipeline_layout: 0,

@@ -4,8 +4,8 @@ use {
         handles::*,
         input::{Input, Key},
         transform::Position,
-        CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Shader, TextureData,
-        Vertex, WindowMode,
+        CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData, Shader,
+        TextureData, Vertex, WindowMode,
     },
     dunge_shader::{Dimension, Fragment, Scheme, Vertex as SchemeVertex, View},
 };
@@ -47,6 +47,11 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
+        context.set_frame_parameters(FrameParameters {
+            antialiasing: true,
+            ..Default::default()
+        });
+
         // Create shader and layer
         let layer = {
             let shader: ShaderHandle<ColorShader> = context.create_shader(Scheme {
@@ -73,7 +78,7 @@ impl App {
         let globals = context
             .globals_builder()
             .with_view()
-            .with_ambient(Standard([0.1, 0.3, 1.]))
+            .with_ambient(Standard([1.; 3]))
             .build(layer)
             .expect("create globals");
 
@@ -93,9 +98,9 @@ impl App {
         let mesh = {
             const SIZE: f32 = 160.;
             const VERTICES: [Vert; 3] = [
-                Vert([-SIZE, -SIZE], [1., 0., 0.], [0., 1.]),
-                Vert([SIZE, -SIZE], [0., 1., 0.], [1., 1.]),
-                Vert([0., SIZE], [0., 0., 1.], [0.5, 0.]),
+                Vert([-SIZE, -SIZE], [1.; 3], [0., 1.]),
+                Vert([SIZE, -SIZE], [1.; 3], [1., 1.]),
+                Vert([0., SIZE], [1.; 3], [0.5, 0.]),
             ];
 
             let data = MeshData::from_verts(&VERTICES);
@@ -129,9 +134,17 @@ impl Loop for App {
                 context.plan_to_close();
                 return Ok(());
             }
+
+            if key == Key::P {
+                let shot = context.take_screenshot();
+                utils::create_image(shot.width, shot.height, shot.data)
+                    .save("screen.png")
+                    .expect("save screenshot");
+            }
         }
 
-        self.state += input.delta_time;
+        // self.state += input.delta_time * 0.5;
+        self.state = 0.1;
         context
             .update_globals_view(
                 self.globals,
@@ -142,12 +155,12 @@ impl Loop for App {
             )
             .expect("update globals");
 
-        context
-            .update_globals_ambient(
-                self.globals,
-                Standard([self.state.sin() * 0.5 + 1., self.state.cos() * 0.5 + 1., 1.]),
-            )
-            .expect("update globals");
+        // context
+        //     .update_globals_ambient(
+        //         self.globals,
+        //         Standard([self.state.sin() * 0.5 + 1., self.state.cos() * 0.5 + 1., 1.]),
+        //     )
+        //     .expect("update globals");
 
         Ok(())
     }
