@@ -1,5 +1,5 @@
 use {
-    std::num::NonZeroU32,
+    crate::screen::BufferSize,
     wgpu::{Device, Sampler, TextureFormat, TextureView},
 };
 
@@ -11,14 +11,14 @@ pub(crate) struct DepthFrame {
 impl DepthFrame {
     pub const FORMAT: TextureFormat = TextureFormat::Depth24Plus;
 
-    pub fn new((width, height): (NonZeroU32, NonZeroU32), device: &Device) -> Self {
+    pub fn new(BufferSize(width, height): BufferSize, device: &Device) -> Self {
         use wgpu::*;
 
         let texture = device.create_texture(&TextureDescriptor {
             label: None,
             size: Extent3d {
-                width: width.get(),
-                height: height.get(),
+                width,
+                height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,

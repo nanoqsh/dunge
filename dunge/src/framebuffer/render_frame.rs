@@ -1,6 +1,5 @@
 use {
-    crate::postproc::PostProcessor,
-    std::num::NonZeroU32,
+    crate::{postproc::PostProcessor, screen::BufferSize},
     wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
 
@@ -26,7 +25,7 @@ impl RenderFrame {
     };
 
     pub fn new(
-        (width, height): (NonZeroU32, NonZeroU32),
+        BufferSize(width, height): BufferSize,
         filter: FrameFilter,
         device: &Device,
         layout: &BindGroupLayout,
@@ -36,8 +35,8 @@ impl RenderFrame {
         let texture = device.create_texture(&TextureDescriptor {
             label: None,
             size: Extent3d {
-                width: width.get(),
-                height: height.get(),
+                width,
+                height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,

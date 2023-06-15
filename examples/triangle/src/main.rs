@@ -4,8 +4,8 @@ use {
         handles::*,
         input::{Input, Key},
         transform::Position,
-        CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData, Shader,
-        TextureData, Vertex, WindowMode,
+        CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
+        PixelSize, Shader, TextureData, Vertex, WindowMode,
     },
     dunge_shader::{Dimension, Fragment, Scheme, Vertex as SchemeVertex, View},
 };
@@ -48,7 +48,8 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            antialiasing: true,
+            pixel_size: PixelSize::X2,
+            antialiasing: false,
             ..Default::default()
         });
 
@@ -143,8 +144,8 @@ impl Loop for App {
             }
         }
 
-        // self.state += input.delta_time * 0.5;
-        self.state = 0.1;
+        self.state += input.delta_time * 0.5;
+        // self.state = 0.1;
         context
             .update_globals_view(
                 self.globals,

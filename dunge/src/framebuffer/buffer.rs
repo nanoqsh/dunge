@@ -1,6 +1,8 @@
 use {
-    crate::framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame, FrameFilter},
-    std::num::NonZeroU32,
+    crate::{
+        framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame, FrameFilter},
+        screen::BufferSize,
+    },
     wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
 
@@ -14,12 +16,11 @@ impl Framebuffer {
     pub const RENDER_FORMAT: TextureFormat = RenderFrame::FORMAT;
 
     pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
-        let one = NonZeroU32::new(1).expect("non zero");
-        Self::with_size_and_filter((one, one), FrameFilter::Nearest, device, layout)
+        Self::with_size_and_filter(BufferSize::MIN, FrameFilter::Nearest, device, layout)
     }
 
     pub fn with_size_and_filter(
-        size: (NonZeroU32, NonZeroU32),
+        size: BufferSize,
         filter: FrameFilter,
         device: &Device,
         layout: &BindGroupLayout,

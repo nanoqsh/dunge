@@ -10,7 +10,7 @@ use {
         postproc::PostProcessor,
         r#loop::Loop,
         resources::Resources,
-        screen::Screen,
+        screen::{BufferSize, RenderScreen, Screen},
         shader_data::{Light, LightSpace, PostShaderData},
     },
     once_cell::unsync::OnceCell,
@@ -23,8 +23,7 @@ use {
 pub(crate) struct Render {
     context: RenderContext,
     surface_conf: SurfaceConfiguration,
-    limits: RenderLimits,
-    screen: Screen,
+    screen: RenderScreen,
     shaders: Shaders,
     _groups: _Groups,
     post: PostProcessor,
@@ -47,9 +46,7 @@ impl Render {
             view_formats: vec![],
         };
 
-        let limits = RenderLimits {
-            max_texture_size: context.device.limits().max_texture_dimension_2d,
-        };
+        let screen = RenderScreen::new(context.device.limits().max_texture_dimension_2d);
 
         let groups = _Groups::new(&context.device);
         let post_shader_data = PostShaderData::new(&context.device, &groups.post_shader_data);
@@ -88,8 +85,7 @@ impl Render {
         Self {
             context,
             surface_conf,
-            limits,
-            screen: Screen::default(),
+            screen,
             shaders,
             _groups: groups,
             post,
@@ -128,7 +124,7 @@ impl Render {
     }
 
     pub fn screen(&self) -> Screen {
-        self.screen
+        self.screen.screen()
     }
 
     pub fn resize(&mut self, size: (u32, u32)) {
@@ -147,10 +143,11 @@ impl Render {
 
     pub fn set_screen(&mut self, screen: Option<Screen>) {
         if let Some(screen) = screen {
-            self.screen = screen;
+            self.screen.set_screen(screen);
         }
 
-        let (width, height) = self.screen.physical_size().into();
+        let screen = self.screen();
+        let (width, height) = screen.physical_size().into();
         self.surface_conf.width = width;
         self.surface_conf.height = height;
         self.context
@@ -159,25 +156,19 @@ impl Render {
             .expect("surface")
             .configure(&self.context.device, &self.surface_conf);
 
-        let (bw, bh) = self.screen.buffer_size(self.limits.max_texture_size);
-        let size_factor = self.screen.size_factor();
+        let buffer_size = self.screen.buffer_size();
+        let size_factor = screen.size_factor();
 
-        self._post_shader_data.resize(
-            (bw.get() as f32, bh.get() as f32),
-            size_factor.into(),
-            &self.context.queue,
-        );
+        self._post_shader_data
+            .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
 
-        self.post = PostProcessor::new(&self.context.device, self.screen.antialiasing);
-        self.post.resize(
-            (bw.get() as f32, bh.get() as f32),
-            size_factor.into(),
-            &self.context.queue,
-        );
+        self.post = PostProcessor::new(&self.context.device, screen.antialiasing);
+        self.post
+            .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
 
         self.framebuffer = Framebuffer::with_size_and_filter(
-            (bw, bh),
-            self.screen.filter,
+            buffer_size,
+            screen.filter,
             &self.context.device,
             &self._groups.textured,
         );
@@ -227,11 +218,7 @@ impl Render {
             aspect: TextureAspect::All,
         };
 
-        let (width, height) = {
-            let (width, height) = self.screen.buffer_size(self.limits.max_texture_size);
-            (width.get(), height.get())
-        };
-
+        let BufferSize(width, height) = self.screen.buffer_size();
         let buffer = self.context.device.create_buffer(&BufferDescriptor {
             label: Some("copy buffer"),
             size: width as u64 * height as u64 * N_COLOR_CHANNELS as u64,
@@ -279,7 +266,7 @@ impl Render {
             };
         }
 
-        let virtual_size = self.screen.virtual_size_with_antialiasing();
+        let virtual_size = self.screen().virtual_size_with_antialiasing();
         let data = {
             let view = buffer_slice.get_mapped_range();
             let mut data = Vec::with_capacity(
@@ -465,10 +452,6 @@ impl RenderContext {
     pub fn queue(&self) -> &Queue {
         &self.queue
     }
-}
-
-struct RenderLimits {
-    max_texture_size: u32,
 }
 
 pub(crate) enum RenderResult<E> {

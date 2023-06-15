@@ -571,7 +571,6 @@ pub struct FrameParameters {
 /// Virtual pixels size in physical pixels.
 #[derive(Clone, Copy, Default)]
 pub enum PixelSize {
-    XHalf,
     #[default]
     X1,
     X2,
