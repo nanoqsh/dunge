@@ -1,8 +1,5 @@
 use {
-    crate::{
-        framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame, FrameFilter},
-        screen::BufferSize,
-    },
+    crate::framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame, FrameFilter},
     wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
 
@@ -45,5 +42,22 @@ impl Framebuffer {
 
     pub fn depth_view(&self) -> &TextureView {
         self.depth.view()
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct BufferSize(pub u32, pub u32);
+
+impl BufferSize {
+    pub(crate) const MIN: Self = Self(1, 1);
+
+    pub(crate) fn new(width: u32, height: u32, max_size: u32) -> Self {
+        Self(width.clamp(1, max_size), height.clamp(1, max_size))
+    }
+}
+
+impl From<BufferSize> for (f32, f32) {
+    fn from(BufferSize(width, height): BufferSize) -> Self {
+        (width as f32, height as f32)
     }
 }

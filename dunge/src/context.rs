@@ -92,7 +92,6 @@ impl Context {
     pub fn set_frame_parameters(&mut self, params: FrameParameters) {
         self.render.set_screen(Some(Screen {
             pixel_size: params.pixel_size,
-            antialiasing: params.antialiasing,
             filter: params.filter,
             ..self.render.screen()
         }));
@@ -561,9 +560,6 @@ pub struct FrameParameters {
     /// Virtual pixels size in physical pixels.
     pub pixel_size: PixelSize,
 
-    /// Enable antialiasing.
-    pub antialiasing: bool,
-
     /// The frame filter mode.
     pub filter: FrameFilter,
 }
@@ -571,6 +567,7 @@ pub struct FrameParameters {
 /// Virtual pixels size in physical pixels.
 #[derive(Clone, Copy, Default)]
 pub enum PixelSize {
+    Antialiasing,
     #[default]
     X1,
     X2,

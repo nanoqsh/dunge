@@ -1,5 +1,5 @@
 use {
-    crate::screen::BufferSize,
+    crate::framebuffer::buffer::BufferSize,
     wgpu::{Device, Sampler, TextureFormat, TextureView},
 };
 

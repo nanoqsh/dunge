@@ -1,5 +1,5 @@
 use {
-    crate::{postproc::PostProcessor, screen::BufferSize},
+    crate::{framebuffer::buffer::BufferSize, postproc::PostProcessor},
     wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
 };
 

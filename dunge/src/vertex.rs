@@ -47,7 +47,7 @@ use crate::vertex::private::Format;
 /// struct Vert {
 ///     #[position]
 ///     pos: [f32; 3],
-///     #[texture_map]
+///     #[texture]
 ///     map: [f32; 2],
 /// }
 /// ```

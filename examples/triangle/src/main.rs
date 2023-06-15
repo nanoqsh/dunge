@@ -48,8 +48,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X2,
-            antialiasing: false,
+            pixel_size: PixelSize::X1,
             ..Default::default()
         });
 
@@ -145,7 +144,6 @@ impl Loop for App {
         }
 
         self.state += input.delta_time * 0.5;
-        // self.state = 0.1;
         context
             .update_globals_view(
                 self.globals,
@@ -156,12 +154,12 @@ impl Loop for App {
             )
             .expect("update globals");
 
-        // context
-        //     .update_globals_ambient(
-        //         self.globals,
-        //         Standard([self.state.sin() * 0.5 + 1., self.state.cos() * 0.5 + 1., 1.]),
-        //     )
-        //     .expect("update globals");
+        context
+            .update_globals_ambient(
+                self.globals,
+                Standard([self.state.sin() * 0.5 + 1., self.state.cos() * 0.5 + 1., 1.]),
+            )
+            .expect("update globals");
 
         Ok(())
     }

@@ -4,13 +4,13 @@ use {
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
         context::Screenshot,
         frame::Frame,
-        framebuffer::Framebuffer,
+        framebuffer::{BufferSize, Framebuffer},
         groups::_Groups,
         pipeline::{Parameters as PipelineParameters, Pipeline},
         postproc::PostProcessor,
         r#loop::Loop,
         resources::Resources,
-        screen::{BufferSize, RenderScreen, Screen},
+        screen::{RenderScreen, Screen},
         shader_data::{Light, LightSpace, PostShaderData},
     },
     once_cell::unsync::OnceCell,
@@ -162,7 +162,7 @@ impl Render {
         self._post_shader_data
             .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
 
-        self.post = PostProcessor::new(&self.context.device, screen.antialiasing);
+        self.post = PostProcessor::new(&self.context.device, screen.is_antialiasing_enabled());
         self.post
             .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
 
@@ -170,7 +170,7 @@ impl Render {
             buffer_size,
             screen.filter,
             &self.context.device,
-            &self._groups.textured,
+            self.post.layout(),
         );
     }
 

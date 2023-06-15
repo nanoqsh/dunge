@@ -10,7 +10,7 @@ mod framebuffer {
     mod depth_frame;
     mod render_frame;
 
-    pub(crate) use self::buffer::Framebuffer;
+    pub(crate) use self::buffer::{BufferSize, Framebuffer};
     pub use self::render_frame::FrameFilter;
 }
 pub mod error;

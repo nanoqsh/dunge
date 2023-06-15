@@ -4,7 +4,7 @@ use {
         shader_data::PostShaderData,
     },
     dunge_shader::TextureBindings,
-    wgpu::{BindGroup, Device, Queue, RenderPipeline},
+    wgpu::{BindGroup, BindGroupLayout, Device, Queue, RenderPipeline},
 };
 
 pub(crate) struct PostProcessor {
@@ -52,6 +52,10 @@ impl PostProcessor {
 
     pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
         self.data.resize(size, factor, queue);
+    }
+
+    pub fn layout(&self) -> &BindGroupLayout {
+        &self.pipeline.textures().expect("textures layout").layout
     }
 
     pub fn render_pipeline(&self) -> &RenderPipeline {

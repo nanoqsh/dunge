@@ -1,5 +1,8 @@
 use {
-    crate::{context::PixelSize, framebuffer::FrameFilter},
+    crate::{
+        context::PixelSize,
+        framebuffer::{BufferSize, FrameFilter},
+    },
     glam::{UVec2, Vec2},
     std::num::NonZeroU32,
 };
@@ -9,11 +12,14 @@ pub(crate) struct Screen {
     pub width: NonZeroU32,
     pub height: NonZeroU32,
     pub pixel_size: PixelSize,
-    pub antialiasing: bool,
     pub filter: FrameFilter,
 }
 
 impl Screen {
+    pub fn is_antialiasing_enabled(&self) -> bool {
+        matches!(self.pixel_size, PixelSize::Antialiasing)
+    }
+
     /// The physical size of the frame.
     pub fn physical_size(&self) -> UVec2 {
         UVec2::new(self.width.get(), self.height.get())
@@ -23,7 +29,7 @@ impl Screen {
     pub fn virtual_size(&self) -> UVec2 {
         let size = self.physical_size();
         match self.pixel_size {
-            PixelSize::X1 => size,
+            PixelSize::Antialiasing | PixelSize::X1 => size,
             PixelSize::X2 => size / 2,
             PixelSize::X3 => size / 3,
             PixelSize::X4 => size / 4,
@@ -33,7 +39,7 @@ impl Screen {
     /// The virtual size of the frame.
     pub fn virtual_size_with_antialiasing(&self) -> UVec2 {
         let size = self.virtual_size();
-        if self.antialiasing {
+        if self.is_antialiasing_enabled() {
             size * 2
         } else {
             size
@@ -56,7 +62,7 @@ impl Screen {
     pub fn size_factor(&self) -> Vec2 {
         let aligned = self.virtual_size_aligned().as_vec2();
         let aligned = match self.pixel_size {
-            PixelSize::X1 if self.antialiasing => aligned / 2.,
+            PixelSize::Antialiasing => aligned / 2.,
             PixelSize::X1 => aligned,
             PixelSize::X2 => aligned * 2.,
             PixelSize::X3 => aligned * 3.,
@@ -75,7 +81,6 @@ impl Default for Screen {
             width: n,
             height: n,
             pixel_size: PixelSize::default(),
-            antialiasing: false,
             filter: FrameFilter::default(),
         }
     }
@@ -107,22 +112,5 @@ impl RenderScreen {
         let size = self.screen.virtual_size_aligned();
         let (width, height) = size.into();
         BufferSize::new(width, height, self.max_texture_size)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct BufferSize(pub u32, pub u32);
-
-impl BufferSize {
-    pub(crate) const MIN: Self = Self(1, 1);
-
-    fn new(width: u32, height: u32, max_size: u32) -> Self {
-        Self(width.clamp(1, max_size), height.clamp(1, max_size))
-    }
-}
-
-impl From<BufferSize> for (f32, f32) {
-    fn from(BufferSize(width, height): BufferSize) -> Self {
-        (width as f32, height as f32)
     }
 }
