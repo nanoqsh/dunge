@@ -4,7 +4,7 @@ use {
 };
 
 /// Describes a frame render filter mode.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum FrameFilter {
     #[default]
     Nearest,

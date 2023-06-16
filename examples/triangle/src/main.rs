@@ -48,7 +48,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X1,
+            pixel_size: PixelSize::Antialiasing,
             ..Default::default()
         });
 
@@ -151,13 +151,6 @@ impl Loop for App {
                     up: [self.state.sin(), self.state.cos(), 0.],
                     ..dunge::View::default()
                 },
-            )
-            .expect("update globals");
-
-        context
-            .update_globals_ambient(
-                self.globals,
-                Standard([self.state.sin() * 0.5 + 1., self.state.cos() * 0.5 + 1., 1.]),
             )
             .expect("update globals");
 

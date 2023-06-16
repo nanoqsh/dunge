@@ -6,6 +6,7 @@ use {
 pub(crate) struct Framebuffer {
     depth: DepthFrame,
     render: RenderFrame,
+    params: Parameters,
 }
 
 impl Framebuffer {
@@ -13,19 +14,27 @@ impl Framebuffer {
     pub const RENDER_FORMAT: TextureFormat = RenderFrame::FORMAT;
 
     pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
-        Self::with_size_and_filter(BufferSize::MIN, FrameFilter::Nearest, device, layout)
+        const DEFAULT_SIZE: BufferSize = BufferSize::MIN;
+        const DEFAULT_FILTER: FrameFilter = FrameFilter::Nearest;
+
+        Self {
+            depth: DepthFrame::new(DEFAULT_SIZE, device),
+            render: RenderFrame::new(DEFAULT_SIZE, DEFAULT_FILTER, device, layout),
+            params: Parameters {
+                size: DEFAULT_SIZE,
+                filter: DEFAULT_FILTER,
+            },
+        }
     }
 
-    pub fn with_size_and_filter(
-        size: BufferSize,
-        filter: FrameFilter,
-        device: &Device,
-        layout: &BindGroupLayout,
-    ) -> Self {
-        Self {
-            depth: DepthFrame::new(size, device),
-            render: RenderFrame::new(size, filter, device, layout),
+    pub fn set_params(&mut self, params: Parameters, device: &Device, layout: &BindGroupLayout) {
+        if self.params == params {
+            return;
         }
+
+        self.depth = DepthFrame::new(params.size, device);
+        self.render = RenderFrame::new(params.size, params.filter, device, layout);
+        self.params = params;
     }
 
     pub fn render_texture(&self) -> &Texture {
@@ -45,7 +54,13 @@ impl Framebuffer {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Parameters {
+    pub size: BufferSize,
+    pub filter: FrameFilter,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct BufferSize(pub u32, pub u32);
 
 impl BufferSize {

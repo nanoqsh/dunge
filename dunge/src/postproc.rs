@@ -8,8 +8,9 @@ use {
 };
 
 pub(crate) struct PostProcessor {
-    pipeline: Pipeline,
     data: PostShaderData,
+    pipeline: Pipeline,
+    antialiasing: bool,
 }
 
 impl PostProcessor {
@@ -18,13 +19,50 @@ impl PostProcessor {
     pub const TEXTURE_GROUP: u32 = 1;
     pub const TEXTURE_BINDING: TextureBindings = TextureBindings { tdiff: 0, sdiff: 1 };
 
-    pub fn new(device: &Device, antialiasing: bool) -> Self {
+    pub fn new(device: &Device) -> Self {
+        const DEFAULT_ANTIALIASING: bool = false;
+
+        let pipeline = Self::pipeline(device, DEFAULT_ANTIALIASING);
+        let globals = &pipeline.globals().expect("globals").layout;
+        let data = PostShaderData::new(device, globals);
+        Self {
+            data,
+            pipeline,
+            antialiasing: DEFAULT_ANTIALIASING,
+        }
+    }
+
+    pub fn set_antialiasing(&mut self, device: &Device, antialiasing: bool) {
+        if self.antialiasing == antialiasing {
+            return;
+        }
+
+        self.pipeline = Self::pipeline(device, antialiasing)
+    }
+
+    pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
+        self.data.resize(size, factor, queue);
+    }
+
+    pub fn layout(&self) -> &BindGroupLayout {
+        &self.pipeline.textures().expect("textures layout").layout
+    }
+
+    pub fn render_pipeline(&self) -> &RenderPipeline {
+        self.pipeline.as_ref()
+    }
+
+    pub fn data_bind_group(&self) -> &BindGroup {
+        self.data.bind_group()
+    }
+
+    fn pipeline(device: &Device, antialiasing: bool) -> Pipeline {
         use {
             dunge_shader::ShaderInfo,
             wgpu::{BlendState, PrimitiveTopology},
         };
 
-        let pipeline = Pipeline::new(
+        Pipeline::new(
             device,
             &ShaderInfo::postproc(
                 Self::DATA_BINDING,
@@ -43,26 +81,6 @@ impl PostProcessor {
                 depth_stencil: None,
                 ..Default::default()
             },
-        );
-
-        let globals = &pipeline.globals().expect("globals").layout;
-        let data = PostShaderData::new(device, globals);
-        Self { pipeline, data }
-    }
-
-    pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
-        self.data.resize(size, factor, queue);
-    }
-
-    pub fn layout(&self) -> &BindGroupLayout {
-        &self.pipeline.textures().expect("textures layout").layout
-    }
-
-    pub fn render_pipeline(&self) -> &RenderPipeline {
-        self.pipeline.as_ref()
-    }
-
-    pub fn data_bind_group(&self) -> &BindGroup {
-        self.data.bind_group()
+        )
     }
 }

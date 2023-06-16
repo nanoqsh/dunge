@@ -4,7 +4,7 @@ use {
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
         context::Screenshot,
         frame::Frame,
-        framebuffer::{BufferSize, Framebuffer},
+        framebuffer::{BufferSize, FrameParameters, Framebuffer},
         groups::_Groups,
         pipeline::{Parameters as PipelineParameters, Pipeline},
         postproc::PostProcessor,
@@ -26,9 +26,9 @@ pub(crate) struct Render {
     screen: RenderScreen,
     shaders: Shaders,
     _groups: _Groups,
-    post: PostProcessor,
     _post_pipeline: Pipeline,
     _post_shader_data: PostShaderData,
+    postproc: PostProcessor,
     framebuffer: Framebuffer,
 }
 
@@ -64,7 +64,6 @@ impl Render {
                 .expect("default light space"),
         );
 
-        let post = PostProcessor::new(&context.device, false);
         let post_pipeline = Pipeline::_new(
             &context.device,
             &shaders,
@@ -80,7 +79,8 @@ impl Render {
             },
         );
 
-        let framebuffer = Framebuffer::new(&context.device, &groups.textured);
+        let postproc = PostProcessor::new(&context.device);
+        let framebuffer = Framebuffer::new(&context.device, postproc.layout());
 
         Self {
             context,
@@ -88,7 +88,7 @@ impl Render {
             screen,
             shaders,
             _groups: groups,
-            post,
+            postproc,
             _post_pipeline: post_pipeline,
             _post_shader_data: post_shader_data,
             framebuffer,
@@ -162,15 +162,19 @@ impl Render {
         self._post_shader_data
             .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
 
-        self.post = PostProcessor::new(&self.context.device, screen.is_antialiasing_enabled());
-        self.post
+        self.postproc
+            .set_antialiasing(&self.context.device, screen.is_antialiasing_enabled());
+
+        self.postproc
             .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
 
-        self.framebuffer = Framebuffer::with_size_and_filter(
-            buffer_size,
-            screen.filter,
+        self.framebuffer.set_params(
+            FrameParameters {
+                size: buffer_size,
+                filter: screen.filter,
+            },
             &self.context.device,
-            self.post.layout(),
+            self.postproc.layout(),
         );
     }
 
@@ -304,7 +308,7 @@ impl Render {
     }
 
     pub fn post_processor(&self) -> &PostProcessor {
-        &self.post
+        &self.postproc
     }
 
     pub fn _post_pipeline(&self) -> &Pipeline {
