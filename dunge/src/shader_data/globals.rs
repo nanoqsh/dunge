@@ -107,8 +107,8 @@ impl Globals {
 
 pub(crate) struct Parameters<'a> {
     pub camera: Camera,
-    pub bindings: Bindings,
     pub variables: Variables,
+    pub bindings: &'a Bindings,
     pub layout: &'a BindGroupLayout,
 }
 

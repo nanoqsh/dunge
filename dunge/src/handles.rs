@@ -50,12 +50,33 @@ impl<V, T> Clone for LayerHandle<V, T> {
 
 impl<V, T> Copy for LayerHandle<V, T> {}
 
+#[must_use]
+pub struct LightsHandle<S>(u32, PhantomData<S>);
+
+impl<S> LightsHandle<S> {
+    pub(crate) fn new(id: u32) -> Self {
+        Self(id, PhantomData)
+    }
+
+    pub(crate) fn id(self) -> u32 {
+        self.0
+    }
+}
+
+impl<S> Clone for LightsHandle<S> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S> Copy for LightsHandle<S> {}
+
 /// A light handle. May be obtained from the [`create_light`](crate::Context::create_light) method.
 #[must_use]
 #[derive(Clone, Copy)]
-pub struct LightHandle(pub(crate) u32);
+pub struct _LightHandle(pub(crate) u32);
 
-impl LightHandle {
+impl _LightHandle {
     pub(crate) const DEFAULT: Self = Self(0);
 }
 
@@ -106,9 +127,9 @@ impl<S> Copy for ShaderHandle<S> {}
 /// A space handle. May be obtained from the [`create_space`](crate::Context::create_space) method.
 #[must_use]
 #[derive(Clone, Copy)]
-pub struct SpaceHandle(pub(crate) u32);
+pub struct _SpaceHandle(pub(crate) u32);
 
-impl SpaceHandle {
+impl _SpaceHandle {
     pub(crate) const DEFAULT: Self = Self(0);
 }
 

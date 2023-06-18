@@ -5,7 +5,7 @@ use {
         input::{Input, Key},
         transform::Position,
         CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        PixelSize, Shader, TextureData, Vertex, WindowMode,
+        PixelSize, Shader, Source, TextureData, Vertex, WindowMode,
     },
     dunge_shader::{
         Dimension, Fragment, Scheme, SourceArray, SourceArrays, SourceKind, Vertex as SchemeVertex,
@@ -17,10 +17,15 @@ use {
 #[derive(Vertex)]
 struct Vert(#[position] [f32; 2], #[color] [f32; 3], #[texture] [f32; 2]);
 
-struct ColorShader;
-impl Shader for ColorShader {
+struct TriangleShader;
+impl Shader for TriangleShader {
     type Vertex = Vert;
+    const VIEW: View = View::Camera;
+    const AMBIENT: bool = true;
+    const SOURCES: SourceArrays = SourceArrays::new(&SOURCE_ARRAYS);
 }
+
+const SOURCE_ARRAYS: [SourceArray; 1] = [SourceArray::new(SourceKind::Glow, 4)];
 
 fn main() {
     env_logger::init();
@@ -38,9 +43,10 @@ fn main() {
 }
 
 struct App {
-    layer: LayerHandle<ColorShader>,
-    // globals: GlobalsHandle<ColorShader>,
-    textures: TexturesHandle<ColorShader>,
+    layer: LayerHandle<TriangleShader>,
+    globals: GlobalsHandle<TriangleShader>,
+    textures: TexturesHandle<TriangleShader>,
+    lights: LightsHandle<TriangleShader>,
     mesh: MeshHandle<Vert>,
     instance: InstanceHandle,
     state: f32,
@@ -49,13 +55,13 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X1,
+            pixel_size: PixelSize::Antialiasing,
             ..Default::default()
         });
 
         // Create shader and layer
         let layer = {
-            let shader: ShaderHandle<ColorShader> = context.create_shader(Scheme {
+            let shader: ShaderHandle<TriangleShader> = context.create_shader(Scheme {
                 vert: SchemeVertex {
                     dimension: Dimension::D2,
                     fragment: Fragment {
@@ -63,15 +69,10 @@ impl App {
                         vertex_texture: true,
                     },
                 },
-                view: View::None,
+                view: View::Camera,
                 static_color: None,
-                ambient: false,
-                source_arrays: SourceArrays::new(&[
-                    SourceArray::new(SourceKind::Glow, 1),
-                    SourceArray::new(SourceKind::Gloom, 2),
-                    SourceArray::new(SourceKind::Gloom, 3),
-                    SourceArray::new(SourceKind::Gloom, 4),
-                ]),
+                ambient: true,
+                source_arrays: SourceArrays::new(&SOURCE_ARRAYS),
             });
 
             context
@@ -82,12 +83,12 @@ impl App {
         };
 
         // Create globals
-        // let globals = context
-        //     .globals_builder()
-        //     .with_view()
-        //     .with_ambient(Standard([1.; 3]))
-        //     .build(layer)
-        //     .expect("create globals");
+        let globals = context
+            .globals_builder()
+            .with_view()
+            .with_ambient(Standard([0.5; 3]))
+            .build(layer)
+            .expect("create globals");
 
         // Create textures
         let textures = {
@@ -101,9 +102,37 @@ impl App {
                 .expect("create textures")
         };
 
+        // Create lights
+        let lights = context
+            .lights_builder()
+            .with_sources(&[
+                Source {
+                    col: [0., 1., 0.],
+                    pos: [0., 50., 0.],
+                    rad: 80.,
+                },
+                Source {
+                    col: [1., 0., 0.],
+                    pos: [50., 0., 0.],
+                    rad: 80.,
+                },
+                Source {
+                    col: [0., 0., 1.],
+                    pos: [-50., 0., 0.],
+                    rad: 80.,
+                },
+                Source {
+                    col: [1., 1., 0.],
+                    pos: [0., -50., 0.],
+                    rad: 80.,
+                },
+            ])
+            .build(layer)
+            .expect("create lights");
+
         // Create a mesh
         let mesh = {
-            const SIZE: f32 = 0.5;
+            const SIZE: f32 = 160.;
             const VERTICES: [Vert; 3] = [
                 Vert([-SIZE, -SIZE], [1.; 3], [0., 1.]),
                 Vert([SIZE, -SIZE], [1.; 3], [1., 1.]),
@@ -122,8 +151,9 @@ impl App {
 
         Self {
             layer,
-            // globals,
+            globals,
             textures,
+            lights,
             mesh,
             instance,
             state: 0.,
@@ -151,15 +181,15 @@ impl Loop for App {
         }
 
         self.state += input.delta_time * 0.5;
-        // context
-        //     .update_globals_view(
-        //         self.globals,
-        //         dunge::View {
-        //             up: [self.state.sin(), self.state.cos(), 0.],
-        //             ..dunge::View::default()
-        //         },
-        //     )
-        //     .expect("update globals");
+        context
+            .update_globals_view(
+                self.globals,
+                dunge::View {
+                    up: [self.state.sin(), self.state.cos(), 0.],
+                    ..dunge::View::default()
+                },
+            )
+            .expect("update globals");
 
         Ok(())
     }
@@ -170,8 +200,9 @@ impl Loop for App {
             .with_clear_color(Standard([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
-            // .bind_globals(self.globals)?
+            .bind_globals(self.globals)?
             .bind_textures(self.textures)?
+            .bind_lights(self.lights)?
             .bind_instance(self.instance)?
             .draw(self.mesh)
     }

@@ -14,8 +14,9 @@ use {
         screen::Screen,
         shader::{Shader, ShaderInfo},
         shader_data::{
-            globals::Builder as GlobalsBuilder, textures::Builder as TexturesBuilder,
-            InstanceModel, Source, SourceModel, Space, SpaceData, SpaceModel, TextureData,
+            globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
+            textures::Builder as TexturesBuilder, InstanceModel, SourceModel, Space, SpaceData,
+            SpaceModel, TextureData, _Source,
         },
         topology::Topology,
         transform::IntoMat,
@@ -153,6 +154,10 @@ impl Context {
 
         self.resources
             .update_textures_map(&self.render, handle, data)
+    }
+
+    pub fn lights_builder(&mut self) -> LightsBuilder {
+        LightsBuilder::new(&mut self.resources, &self.render)
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
@@ -321,10 +326,10 @@ impl Context {
         &mut self,
         ambient: C,
         srcs: I,
-    ) -> Result<LightHandle, TooManySources>
+    ) -> Result<_LightHandle, TooManySources>
     where
         C: IntoLinear<3>,
-        I: IntoIterator<Item = Source<S>>,
+        I: IntoIterator<Item = _Source<S>>,
         S: IntoLinear<3>,
     {
         self.sources.clear();
@@ -343,13 +348,13 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn update_light<C, I, S>(
         &mut self,
-        handle: LightHandle,
+        handle: _LightHandle,
         ambient: C,
         srcs: I,
     ) -> Result<(), Error>
     where
         C: IntoLinear<3>,
-        I: IntoIterator<Item = Source<S>>,
+        I: IntoIterator<Item = _Source<S>>,
         S: IntoLinear<3>,
     {
         self.sources.clear();
@@ -370,9 +375,9 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn update_nth_light<S>(
         &mut self,
-        handle: LightHandle,
+        handle: _LightHandle,
         n: usize,
-        src: Source<S>,
+        src: _Source<S>,
     ) -> Result<(), Error>
     where
         S: IntoLinear<3>,
@@ -389,7 +394,7 @@ impl Context {
     ///
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), ResourceNotFound> {
+    pub fn delete_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
         self.resources.delete_light(handle)
     }
 
@@ -397,7 +402,7 @@ impl Context {
     ///
     /// # Errors
     /// Returns the [`TooManySpaces`] when trying to create too many light sources.
-    pub fn create_space<'a, I, M, C>(&mut self, spaces: I) -> Result<SpaceHandle, TooManySpaces>
+    pub fn create_space<'a, I, M, C>(&mut self, spaces: I) -> Result<_SpaceHandle, TooManySpaces>
     where
         I: IntoIterator<Item = Space<'a, M, C>>,
         M: IntoMat,
@@ -429,7 +434,11 @@ impl Context {
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_space<'a, I, M, C>(&mut self, handle: SpaceHandle, spaces: I) -> Result<(), Error>
+    pub fn update_space<'a, I, M, C>(
+        &mut self,
+        handle: _SpaceHandle,
+        spaces: I,
+    ) -> Result<(), Error>
     where
         I: IntoIterator<Item = Space<'a, M, C>>,
         M: IntoMat,
@@ -465,7 +474,7 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn update_nth_space<M, C>(
         &mut self,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         n: usize,
         space: Space<M, C>,
     ) -> Result<(), Error>
@@ -489,7 +498,7 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn update_nth_space_color<C>(
         &mut self,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         n: usize,
         color: C,
     ) -> Result<(), Error>
@@ -508,7 +517,7 @@ impl Context {
     /// See [`Error`] for detailed info.
     pub fn update_nth_space_data(
         &mut self,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         n: usize,
         data: SpaceData,
     ) -> Result<(), Error> {
@@ -520,7 +529,7 @@ impl Context {
     ///
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), ResourceNotFound> {
+    pub fn delete_space(&mut self, handle: _SpaceHandle) -> Result<(), ResourceNotFound> {
         self.resources.delete_space(handle)
     }
 

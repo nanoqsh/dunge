@@ -6,12 +6,12 @@ use crate::{
 };
 
 #[derive(Clone, Copy)]
-pub struct Scheme<'a> {
+pub struct Scheme {
     pub vert: Vertex,
     pub view: View,
     pub ambient: bool,
     pub static_color: Option<Color>,
-    pub source_arrays: SourceArrays<'a>,
+    pub source_arrays: SourceArrays,
 }
 
 #[derive(Clone, Copy)]

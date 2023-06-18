@@ -73,8 +73,8 @@ impl Textures {
 }
 
 pub(crate) struct Parameters<'a> {
-    pub bindings: Bindings,
     pub variables: Variables<'a>,
+    pub bindings: &'a Bindings,
     pub layout: &'a BindGroupLayout,
 }
 

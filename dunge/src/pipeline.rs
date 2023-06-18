@@ -14,8 +14,8 @@ use {
         vertex::Vertex,
     },
     dunge_shader::{
-        Globals as Gl, Group, Layout, Lights as Lt, Shader as ShaderData, TextureBindings,
-        Textures as Tx,
+        Globals as Gl, Group, Layout, Lights as Lt, Shader as ShaderData, SourceBindings,
+        TextureBindings, Textures as Tx,
     },
     std::marker::PhantomData,
     wgpu::{
@@ -313,11 +313,16 @@ impl Pipeline {
     pub fn textures(&self) -> Option<&Textures> {
         self.groups.textures.as_ref()
     }
+
+    pub fn lights(&self) -> Option<&Lights> {
+        self.groups.lights.as_ref()
+    }
 }
 
 struct Groups {
     globals: Option<Globals>,
     textures: Option<Textures>,
+    lights: Option<Lights>,
 }
 
 impl Groups {
@@ -412,6 +417,49 @@ impl Groups {
                     },
                 })
             },
+            lights: {
+                let entries: Vec<_> = layout
+                    .lights
+                    .bindings
+                    .source_arrays
+                    .iter()
+                    .flat_map(|bindings| {
+                        [
+                            BindGroupLayoutEntry {
+                                binding: bindings.binding_array,
+                                visibility: ShaderStages::FRAGMENT,
+                                ty: BindingType::Buffer {
+                                    ty: BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                            BindGroupLayoutEntry {
+                                binding: bindings.binding_len,
+                                visibility: ShaderStages::FRAGMENT,
+                                ty: BindingType::Buffer {
+                                    ty: BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                        ]
+                    })
+                    .collect();
+
+                entries.first().map(|_| Lights {
+                    layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                        label: Some("lights binding"),
+                        entries: &entries,
+                    }),
+                    bindings: LightsBindings {
+                        group: layout.lights.num,
+                        source_arrays: layout.lights.bindings.source_arrays.clone(),
+                    },
+                })
+            },
         }
     }
 
@@ -419,6 +467,7 @@ impl Groups {
         [
             self.globals.as_ref().map(|Globals { layout, .. }| layout),
             self.textures.as_ref().map(|Textures { layout, .. }| layout),
+            self.lights.as_ref().map(|Lights { layout, .. }| layout),
         ]
         .into_iter()
         .flatten()
@@ -431,7 +480,6 @@ pub(crate) struct Globals {
     pub bindings: GlobalsBindings,
 }
 
-#[derive(Clone, Copy)]
 pub(crate) struct GlobalsBindings {
     pub group: u32,
     pub camera: u32,
@@ -443,10 +491,19 @@ pub(crate) struct Textures {
     pub bindings: TexturesBindings,
 }
 
-#[derive(Clone, Copy)]
 pub(crate) struct TexturesBindings {
     pub group: u32,
     pub map: TextureBindings,
+}
+
+pub(crate) struct Lights {
+    pub layout: BindGroupLayout,
+    pub bindings: LightsBindings,
+}
+
+pub(crate) struct LightsBindings {
+    pub group: u32,
+    pub source_arrays: Vec<SourceBindings>,
 }
 
 pub(crate) struct VertexLayout {

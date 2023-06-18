@@ -16,6 +16,9 @@ pub enum Error {
     /// Returns when textures is not set.
     TexturesNotSet,
 
+    /// Returns when lights is not set.
+    LightsNotSet,
+
     /// Returns when an instance of rendered resourse is not set.
     InstanceNotSet,
 }

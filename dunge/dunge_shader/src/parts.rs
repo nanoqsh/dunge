@@ -73,14 +73,14 @@ impl VertexInput {
     }
 }
 
-pub(crate) struct VertexOutput<'a> {
+pub(crate) struct VertexOutput {
     pub fragment: Fragment,
     pub static_color: Option<Color>,
     pub ambient: bool,
-    pub source_arrays: SourceArrays<'a>,
+    pub source_arrays: SourceArrays,
 }
 
-impl VertexOutput<'_> {
+impl VertexOutput {
     pub fn define_type(&self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: Location::Position,
@@ -150,9 +150,14 @@ impl VertexOutput<'_> {
             );
         }
 
-        let mut mult = o.write_str("col = ").separated(" * ");
+        let has_light = self.calc_light(o);
+        let mut col = o.write_str("col = ").separated(" * ");
+        if has_light {
+            col.out().write_str("light");
+        }
+
         if let Some(Color { r, g, b }) = self.static_color {
-            mult.out()
+            col.out()
                 .write_str("vec3(")
                 .write_f32(r)
                 .write_str(", ")
@@ -162,24 +167,80 @@ impl VertexOutput<'_> {
                 .write_str(")");
         }
 
-        if self.ambient {
-            mult.out().write_str("ambient");
-        }
-
         if self.fragment.vertex_color {
-            mult.out().write_str("out.col");
+            col.out().write_str("out.col");
         }
 
         if self.fragment.vertex_texture {
-            mult.out().write_str("tex.rgb");
+            col.out().write_str("tex.rgb");
+        }
+
+        col.write_default("vec3(0.)");
+        o.write_str(";\n");
+    }
+
+    fn calc_light(&self, o: &mut Out) -> bool {
+        if !self.ambient && !self.has_sources() {
+            return false;
         }
 
         if self.has_sources() {
-            //todo!()
+            o.write_str("\n    ")
+                .write_str("var sources = vec3(0.); \n    ");
+
+            for (n, SourceArray { kind, .. }) in self.source_arrays.enumerate() {
+                o.write_str("for (var i = 0u; i < ")
+                    .write(Name::Num {
+                        str: "sources_len",
+                        n,
+                    })
+                    .write_str("; i++) {\n        ")
+                    .write_str("let src = ")
+                    .write(Name::Num {
+                        str: "sources_array",
+                        n,
+                    })
+                    .write_str("[i];\n        ")
+                    .write_str(
+                        "if out.world.x > src.pos.x - src.rad && out.world.x < src.pos.x + src.rad \
+                         && out.world.y > src.pos.y - src.rad && out.world.y < src.pos.y + src.rad \
+                         && out.world.z > src.pos.z - src.rad && out.world.z < src.pos.z + src.rad \
+                         {\n            ",
+                    )
+                    .write_str("let len = length(out.world - src.pos);\n            ")
+                    .write_str("if len < src.rad {\n                ")
+                    .write_str("let e = 1. - (len / src.rad);\n                ");
+
+                match kind {
+                    SourceKind::Glow => {
+                        o.write_str("sources += e * e * src.col");
+                    }
+                    SourceKind::Gloom if self.ambient => {
+                        o.write_str("sources -= e * e * src.col * ambient");
+                    }
+                    SourceKind::Gloom => {
+                        o.write_str("sources -= e * e * src.col");
+                    }
+                }
+
+                o.write_str(";\n            ")
+                    .write_str("}\n        ")
+                    .write_str("}\n    ")
+                    .write_str("}\n    ");
+            }
         }
 
-        mult.write_default("vec3(0.)");
-        o.write_str(";\n");
+        let mut light = o.write_str("let light = ").separated(" + ");
+        if self.ambient {
+            light.out().write_str("ambient");
+        }
+
+        if self.has_sources() {
+            light.out().write_str("sources");
+        }
+
+        o.write_str(";\n    ");
+        true
     }
 
     pub fn has_sources(&self) -> bool {
@@ -295,11 +356,11 @@ impl View {
 }
 
 #[derive(Clone, Copy)]
-pub struct SourceArrays<'a>(&'a [SourceArray]);
+pub struct SourceArrays(&'static [SourceArray]);
 
-impl<'a> SourceArrays<'a> {
+impl SourceArrays {
     #[must_use]
-    pub const fn new(arrays: &'a [SourceArray]) -> Self {
+    pub const fn new(arrays: &'static [SourceArray]) -> Self {
         assert!(
             arrays.len() <= 4,
             "the number of source arrays cannot be greater than 4",
@@ -308,7 +369,13 @@ impl<'a> SourceArrays<'a> {
         Self(arrays)
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
@@ -323,22 +390,21 @@ impl<'a> SourceArrays<'a> {
                 },
                 Field {
                     location: Location::None,
-                    name: Name::Str("pos"),
-                    ty: Type::VEC3,
+                    name: Name::Str("rad"),
+                    ty: Type::F32,
                 },
                 Field {
                     location: Location::None,
-                    name: Name::Str("rad"),
-                    ty: Type::F32,
+                    name: Name::Str("pos"),
+                    ty: Type::VEC3,
                 },
             ],
         });
     }
 
     pub(crate) fn declare_group(&self, binding: &mut Binding, o: &mut Out) -> Vec<SourceBindings> {
-        (0..)
-            .zip(self.0)
-            .map(|(n, &SourceArray { size, .. })| {
+        self.enumerate()
+            .map(|(n, SourceArray { size, .. })| {
                 let binding_array = binding.next();
                 let binding_len = binding.next();
 
@@ -373,8 +439,13 @@ impl<'a> SourceArrays<'a> {
             })
             .collect()
     }
+
+    fn enumerate(&self) -> impl Iterator<Item = (u32, SourceArray)> {
+        (0..).zip(self.0.iter().copied())
+    }
 }
 
+#[derive(Clone, Copy)]
 pub struct SourceArray {
     kind: SourceKind,
     size: u8,
@@ -389,11 +460,13 @@ impl SourceArray {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum SourceKind {
     Glow,
     Gloom,
 }
 
+#[derive(Clone, Copy)]
 pub struct SourceBindings {
     pub binding_array: u32,
     pub binding_len: u32,

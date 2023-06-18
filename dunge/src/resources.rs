@@ -11,6 +11,7 @@ use {
         shader::Shader,
         shader_data::{
             globals::{Globals, Parameters as GlobalsParameters, Variables as GlobalsVariables},
+            lights::{Lights, Parameters as LightsParameters, Variables as LightsVariables},
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
@@ -30,7 +31,8 @@ pub(crate) struct Resources {
     pub(crate) globals: Storage<Globals>,
     pub(crate) instances: Storage<Instance>,
     pub(crate) layers: Storage<Pipeline>,
-    pub(crate) lights: Storage<Light>,
+    pub(crate) _lights: Storage<Light>,
+    pub(crate) lights: Storage<Lights>,
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) shaders: Storage<ShaderData>,
     pub(crate) spaces: Storage<LightSpace>,
@@ -51,7 +53,7 @@ impl Resources {
         let params = GlobalsParameters {
             camera: Camera::new(),
             variables,
-            bindings: globals.bindings,
+            bindings: &globals.bindings,
             layout: &globals.layout,
         };
 
@@ -92,7 +94,7 @@ impl Resources {
         let textures = layer.textures().expect("the shader has no textures");
         let params = TexturesParameters {
             variables,
-            bindings: textures.bindings,
+            bindings: &textures.bindings,
             layout: &textures.layout,
         };
 
@@ -113,6 +115,25 @@ impl Resources {
             .update_data(data, render.context().queue())?;
 
         Ok(())
+    }
+
+    pub fn create_lights<S>(
+        &mut self,
+        render: &Render,
+        variables: LightsVariables,
+        handle: LayerHandle<S>,
+    ) -> Result<LightsHandle<S>, ResourceNotFound> {
+        let layer = self.layers.get(handle.id())?;
+        let lights = layer.lights().expect("the shader has no lights");
+        let params = LightsParameters {
+            variables,
+            bindings: &lights.bindings,
+            layout: &lights.layout,
+        };
+
+        let lights = Lights::new(params, render.context().device());
+        let id = self.lights.insert(lights);
+        Ok(LightsHandle::new(id))
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
@@ -279,7 +300,7 @@ impl Resources {
         render: &Render,
         ambient: Linear<f32, 3>,
         srcs: &[SourceModel],
-    ) -> Result<LightHandle, TooManySources> {
+    ) -> Result<_LightHandle, TooManySources> {
         let light = Light::new(
             ambient.0,
             srcs,
@@ -287,18 +308,18 @@ impl Resources {
             &render._groups().lights,
         )?;
 
-        let id = self.lights.insert(light);
-        Ok(LightHandle(id))
+        let id = self._lights.insert(light);
+        Ok(_LightHandle(id))
     }
 
     pub fn update_light(
         &mut self,
         render: &Render,
-        handle: LightHandle,
+        handle: _LightHandle,
         ambient: Linear<f32, 3>,
         srcs: &[SourceModel],
     ) -> Result<(), Error> {
-        let light = self.lights.get_mut(handle.0)?;
+        let light = self._lights.get_mut(handle.0)?;
         light.update_sources(ambient.0, srcs, render.context().queue())?;
 
         Ok(())
@@ -307,18 +328,18 @@ impl Resources {
     pub fn update_nth_light(
         &self,
         render: &Render,
-        handle: LightHandle,
+        handle: _LightHandle,
         n: usize,
         source: SourceModel,
     ) -> Result<(), Error> {
-        let light = self.lights.get(handle.0)?;
+        let light = self._lights.get(handle.0)?;
         light.update_nth(n, source, render.context().queue())?;
 
         Ok(())
     }
 
-    pub fn delete_light(&mut self, handle: LightHandle) -> Result<(), ResourceNotFound> {
-        self.lights.remove(handle.0)
+    pub fn delete_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
+        self._lights.remove(handle.0)
     }
 
     pub fn create_space(
@@ -326,7 +347,7 @@ impl Resources {
         render: &Render,
         spaces: &[SpaceModel],
         data: &[SpaceData],
-    ) -> Result<SpaceHandle, TooManySpaces> {
+    ) -> Result<_SpaceHandle, TooManySpaces> {
         let ls = LightSpace::new(
             spaces,
             data,
@@ -336,13 +357,13 @@ impl Resources {
         )?;
 
         let id = self.spaces.insert(ls);
-        Ok(SpaceHandle(id))
+        Ok(_SpaceHandle(id))
     }
 
     pub fn update_space(
         &mut self,
         render: &Render,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         spaces: &[SpaceModel],
         data: &[SpaceData],
     ) -> Result<(), Error> {
@@ -355,7 +376,7 @@ impl Resources {
     pub fn update_nth_space(
         &self,
         render: &Render,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         n: usize,
         space: SpaceModel,
     ) -> Result<(), Error> {
@@ -368,7 +389,7 @@ impl Resources {
     pub fn update_nth_space_color(
         &self,
         render: &Render,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         n: usize,
         color: Linear<f32, 3>,
     ) -> Result<(), Error> {
@@ -381,7 +402,7 @@ impl Resources {
     pub fn update_nth_space_data(
         &self,
         render: &Render,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         n: usize,
         data: SpaceData,
     ) -> Result<(), Error> {
@@ -391,7 +412,7 @@ impl Resources {
         Ok(())
     }
 
-    pub fn delete_space(&mut self, handle: SpaceHandle) -> Result<(), ResourceNotFound> {
+    pub fn delete_space(&mut self, handle: _SpaceHandle) -> Result<(), ResourceNotFound> {
         self.spaces.remove(handle.0)
     }
 }

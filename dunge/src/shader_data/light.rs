@@ -10,19 +10,19 @@ use {
 
 /// Parameters of a light source.
 #[derive(Clone, Copy)]
-pub struct Source<C = Linear<f32, 3>> {
+pub struct _Source<C = Linear<f32, 3>> {
     pub pos: [f32; 3],
     pub rad: f32,
     pub col: C,
     pub kind: LightKind,
 }
 
-impl<C> Source<C> {
-    pub(crate) fn into_linear(self) -> Source
+impl<C> _Source<C> {
+    pub(crate) fn into_linear(self) -> _Source
     where
         C: IntoLinear<3>,
     {
-        Source {
+        _Source {
             pos: self.pos,
             rad: self.rad,
             col: self.col.into_linear(),
@@ -171,7 +171,7 @@ pub(crate) struct SourceModel {
 }
 
 impl SourceModel {
-    pub fn new(src: Source) -> Self {
+    pub fn new(src: _Source) -> Self {
         Self {
             pos: src.pos,
             rad: src.rad,

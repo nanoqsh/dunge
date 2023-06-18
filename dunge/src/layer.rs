@@ -73,15 +73,15 @@ impl<'l, S, T> Layer<'l, S, T> {
         // Bind default light and set default ambient
         match S::VALUE.into_inner() {
             _Shader::Color => layer
-                .bind_light_handle(LightHandle::DEFAULT, _shader::COLOR_SOURCES_GROUP)
+                .bind_light_handle(_LightHandle::DEFAULT, _shader::COLOR_SOURCES_GROUP)
                 .expect("bind default light"),
             _Shader::Textured => {
                 layer
-                    .bind_light_handle(LightHandle::DEFAULT, _shader::TEXTURED_SOURCES_GROUP)
+                    .bind_light_handle(_LightHandle::DEFAULT, _shader::TEXTURED_SOURCES_GROUP)
                     .expect("bind default light");
 
                 layer
-                    .bind_space_handle(SpaceHandle::DEFAULT, _shader::TEXTURED_SPACE_GROUP)
+                    .bind_space_handle(_SpaceHandle::DEFAULT, _shader::TEXTURED_SPACE_GROUP)
                     .expect("bind default space");
             }
             _ => {}
@@ -120,6 +120,17 @@ impl<'l, S, T> Layer<'l, S, T> {
         Ok(self)
     }
 
+    /// Binds the [lights](crate::handles::LightsHandle).
+    ///
+    /// # Errors
+    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
+    /// if given lights handler was deleted.
+    pub fn bind_lights(&mut self, handle: LightsHandle<S>) -> Result<&mut Self, ResourceNotFound> {
+        let lights = self.resources.lights.get(handle.id())?;
+        self.groups.lights = Some(lights.bind());
+        Ok(self)
+    }
+
     /// Binds the [instance](crate::handles::InstanceHandle).
     ///
     /// # Errors
@@ -147,6 +158,11 @@ impl<'l, S, T> Layer<'l, S, T> {
 
         if info.has_textures() {
             let (index, group) = self.groups.textures.ok_or(Error::TexturesNotSet)?;
+            self.pass.set_bind_group(index, group, &[]);
+        }
+
+        if info.has_lights() {
+            let (index, group) = self.groups.lights.ok_or(Error::LightsNotSet)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
@@ -217,10 +233,10 @@ impl<'l, S, T> Layer<'l, S, T> {
 
     fn bind_light_handle(
         &mut self,
-        handle: LightHandle,
+        handle: _LightHandle,
         group: u32,
     ) -> Result<(), ResourceNotFound> {
-        let light = self.resources.lights.get(handle.0)?;
+        let light = self.resources._lights.get(handle.0)?;
         self.pass.set_bind_group(group, light.bind_group(), &[]);
 
         Ok(())
@@ -228,7 +244,7 @@ impl<'l, S, T> Layer<'l, S, T> {
 
     fn bind_space_handle(
         &mut self,
-        handle: SpaceHandle,
+        handle: _SpaceHandle,
         group: u32,
     ) -> Result<(), ResourceNotFound> {
         let space = self.resources.spaces.get(handle.0)?;
@@ -262,7 +278,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given light handler was deleted.
-    pub fn bind_light(&mut self, handle: LightHandle) -> Result<(), ResourceNotFound> {
+    pub fn bind_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
         self.bind_light_handle(handle, _shader::TEXTURED_SOURCES_GROUP)
     }
 
@@ -271,7 +287,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given space handler was deleted.
-    pub fn bind_space(&mut self, handle: SpaceHandle) -> Result<(), ResourceNotFound> {
+    pub fn bind_space(&mut self, handle: _SpaceHandle) -> Result<(), ResourceNotFound> {
         self.bind_space_handle(handle, _shader::TEXTURED_SPACE_GROUP)
     }
 }
@@ -291,7 +307,7 @@ impl<T> Layer<'_, ColorVertex, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given light handler was deleted.
-    pub fn bind_light(&mut self, handle: LightHandle) -> Result<(), ResourceNotFound> {
+    pub fn bind_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
         self.bind_light_handle(handle, _shader::COLOR_SOURCES_GROUP)
     }
 }
@@ -311,6 +327,7 @@ impl<T> Layer<'_, FlatVertex, T> {
 struct Groups<'l> {
     globals: Option<(u32, &'l BindGroup)>,
     textures: Option<(u32, &'l BindGroup)>,
+    lights: Option<(u32, &'l BindGroup)>,
 }
 
 /// The layer builder. It creates a configured [`Layer`].

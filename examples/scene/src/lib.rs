@@ -2,8 +2,8 @@ mod models;
 
 use {
     dunge::{
-        FrameParameters, LightKind, Loop, MeshData, Orthographic, PixelSize, Source, Space,
-        SpaceData, SpaceFormat, TextureData, View,
+        FrameParameters, LightKind, Loop, MeshData, Orthographic, PixelSize, Space, SpaceData,
+        SpaceFormat, TextureData, View, _Source,
         _vertex::{ColorVertex, TextureVertex},
         color::{Linear, Standard},
         handles::*,
@@ -33,8 +33,8 @@ pub struct App {
     sprites: _TextureHandle,
     models: Vec<Model>,
     cubes: Vec<Cube>,
-    light: LightHandle,
-    lightspace: SpaceHandle,
+    light: _LightHandle,
+    lightspace: _SpaceHandle,
     view: _ViewHandle,
     camera: Camera,
     time: f32,
@@ -207,7 +207,7 @@ impl App {
 
         // Crate the light
         let light = {
-            const EMPTY: [Source; 0] = [];
+            const EMPTY: [_Source; 0] = [];
 
             context.create_light((), EMPTY).expect("create light")
         };
@@ -250,7 +250,7 @@ impl Loop for App {
         ];
 
         self.time += input.delta_time * LIGHTS_SPEED;
-        let make_source = |step, col| Source {
+        let make_source = |step, col| _Source {
             pos: {
                 let step: f32 = (self.time + step) % TAU;
                 [

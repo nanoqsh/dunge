@@ -52,7 +52,7 @@ impl Render {
         let post_shader_data = PostShaderData::new(&context.device, &groups.post_shader_data);
         let shaders = Shaders::default();
 
-        resources.lights.insert({
+        resources._lights.insert({
             const DEFAULT_AMBIENT: [f32; 3] = [1.; 3];
 
             Light::new(DEFAULT_AMBIENT, &[], &context.device, &groups.lights)
