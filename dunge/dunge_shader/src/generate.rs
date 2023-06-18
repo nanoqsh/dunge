@@ -11,6 +11,7 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
         view,
         ambient,
         static_color,
+        source_arrays,
     } = scheme;
 
     let vert_input = VertexInput {
@@ -18,11 +19,12 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
         pos: vert.dimension,
     };
 
+    let world = !source_arrays.is_empty();
     let vert_output = VertexOutput {
         fragment: vert.fragment,
         static_color,
         ambient,
-        world: true,
+        world,
     };
 
     let types = {
@@ -35,34 +37,30 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
         vert_output.define_type(&mut location, &mut o);
 
         view.define_type(&mut o);
+
+        if world {
+            SourceArrays::define_type(&mut o);
+        }
+
         o
     };
 
-    let (groups, layout) = {
-        let mut o = Out::new();
-        let layout = Layout::new(
-            |group, o| {
-                let mut binding = Binding::with_group(group);
-                Globals {
-                    post_data: None,
-                    camera: view.declare_group(&mut binding, o),
-                    ambient: ambient.then(|| Ambient::declare_group(&mut binding, o)),
-                }
-            },
-            |group, o| {
-                let mut binding = Binding::with_group(group);
-                Textures {
-                    map: vert
-                        .fragment
-                        .vertex_texture
-                        .then(|| Texture::declare_group(&mut binding, o)),
-                }
-            },
-            &mut o,
-        );
-
-        (o, layout)
-    };
+    let (layout, groups) = Layout::new(
+        |binding, o| Globals {
+            post_data: None,
+            camera: view.declare_group(binding, o),
+            ambient: ambient.then(|| Ambient::declare_group(binding, o)),
+        },
+        |binding, o| Textures {
+            map: vert
+                .fragment
+                .vertex_texture
+                .then(|| Texture::declare_group(binding, o)),
+        },
+        |binding, o| Lights {
+            source_arrays: source_arrays.declare_group(binding, o),
+        },
+    );
 
     let vertex_out = {
         let mut o = Out::new();
@@ -89,11 +87,12 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
 }
 
 #[derive(Clone, Copy)]
-pub struct Scheme {
+pub struct Scheme<'a> {
     pub vert: Vertex,
     pub view: View,
     pub ambient: bool,
     pub static_color: Option<Color>,
+    pub source_arrays: SourceArrays<'a>,
 }
 
 #[derive(Clone, Copy)]
@@ -113,42 +112,43 @@ impl ShaderInfo {
     pub const FRAGMENT_ENTRY_POINT: &str = "fs_main";
 
     pub fn postproc(post_data: u32, map: TextureBindings, source: String) -> Self {
-        let mut o = Out::new();
-        Self {
-            layout: Layout::new(
-                |group, _| {
-                    assert_eq!(group, 0);
-                    Globals {
-                        post_data: Some(post_data),
-                        ..Default::default()
-                    }
-                },
-                |group, _| {
-                    assert_eq!(group, 1);
-                    Textures { map: Some(map) }
-                },
-                &mut o,
-            ),
-            source,
-        }
+        let (layout, _) = Layout::new(
+            |binding, _| {
+                assert_eq!(binding.group(), 0);
+                Globals {
+                    post_data: Some(post_data),
+                    ..Default::default()
+                }
+            },
+            |binding, _| {
+                assert_eq!(binding.group(), 1);
+                Textures { map: Some(map) }
+            },
+            |_, _| Lights::default(),
+        );
+
+        Self { layout, source }
     }
 }
 
 pub struct Layout {
     pub globals: Group<Globals>,
     pub textures: Group<Textures>,
+    pub lights: Group<Lights>,
 }
 
 impl Layout {
-    fn new<G, T>(globals: G, textures: T, o: &mut Out) -> Self
+    fn new<G, T, L>(globals: G, textures: T, lights: L) -> (Self, Out)
     where
-        G: FnOnce(u32, &mut Out) -> Globals,
-        T: FnOnce(u32, &mut Out) -> Textures,
+        G: FnOnce(&mut Binding, &mut Out) -> Globals,
+        T: FnOnce(&mut Binding, &mut Out) -> Textures,
+        L: FnOnce(&mut Binding, &mut Out) -> Lights,
     {
+        let mut o = Out::new();
         let mut num = 0;
         let globals = Group {
             num,
-            bindings: globals(num, o),
+            bindings: globals(&mut Binding::with_group(num), &mut o),
         };
 
         if !globals.bindings.is_empty() {
@@ -157,10 +157,26 @@ impl Layout {
 
         let textures = Group {
             num,
-            bindings: textures(num, o),
+            bindings: textures(&mut Binding::with_group(num), &mut o),
         };
 
-        Self { globals, textures }
+        if !textures.bindings.is_empty() {
+            num += 1;
+        }
+
+        let lights = Group {
+            num,
+            bindings: lights(&mut Binding::with_group(num), &mut o),
+        };
+
+        (
+            Self {
+                globals,
+                textures,
+                lights,
+            },
+            o,
+        )
     }
 }
 
@@ -191,4 +207,9 @@ impl Textures {
     fn is_empty(&self) -> bool {
         self.map.is_none()
     }
+}
+
+#[derive(Default)]
+pub struct Lights {
+    pub source_arrays: Vec<SourceBindings>,
 }

@@ -13,7 +13,9 @@ use {
         topology::Topology,
         vertex::Vertex,
     },
-    dunge_shader::{Globals as Gl, Group, Layout, ShaderInfo, TextureBindings, Textures as Tx},
+    dunge_shader::{
+        Globals as Gl, Group, Layout, Lights as Lt, ShaderInfo, TextureBindings, Textures as Tx,
+    },
     std::marker::PhantomData,
     wgpu::{
         BindGroupLayout, BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology,
@@ -284,15 +286,15 @@ impl Pipeline {
                 &Layout {
                     globals: Group {
                         num: 0,
-                        bindings: Gl {
-                            post_data: None,
-                            camera: None,
-                            ambient: None,
-                        },
+                        bindings: Gl::default(),
                     },
                     textures: Group {
-                        num: 1,
-                        bindings: Tx { map: None },
+                        num: 0,
+                        bindings: Tx::default(),
+                    },
+                    lights: Group {
+                        num: 0,
+                        bindings: Lt::default(),
                     },
                 },
             ),

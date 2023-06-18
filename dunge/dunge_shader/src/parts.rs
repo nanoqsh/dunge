@@ -19,7 +19,7 @@ impl InstanceInput {
                 .into_iter()
                 .map(|name| Field {
                     location: location.next(),
-                    name,
+                    name: Name::Str(name),
                     ty: Type::VEC4,
                 })
                 .collect(),
@@ -37,7 +37,7 @@ impl VertexInput {
     pub fn define_type(self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: location.next(),
-            name: "pos",
+            name: Name::Str("pos"),
             ty: match self.pos {
                 Dimension::D2 => Type::VEC2,
                 Dimension::D3 => Type::VEC3,
@@ -47,7 +47,7 @@ impl VertexInput {
         if self.fragment.vertex_color {
             fields.push(Field {
                 location: location.next(),
-                name: "col",
+                name: Name::Str("col"),
                 ty: Type::VEC3,
             });
         }
@@ -55,7 +55,7 @@ impl VertexInput {
         if self.fragment.vertex_texture {
             fields.push(Field {
                 location: location.next(),
-                name: "map",
+                name: Name::Str("map"),
                 ty: Type::VEC2,
             });
         }
@@ -86,14 +86,14 @@ impl VertexOutput {
     pub fn define_type(self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: Location::Position,
-            name: "pos",
+            name: Name::Str("pos"),
             ty: Type::VEC4,
         }];
 
         if self.fragment.vertex_color {
             fields.push(Field {
                 location: location.next(),
-                name: "col",
+                name: Name::Str("col"),
                 ty: Type::VEC3,
             });
         }
@@ -101,7 +101,7 @@ impl VertexOutput {
         if self.fragment.vertex_texture {
             fields.push(Field {
                 location: location.next(),
-                name: "map",
+                name: Name::Str("map"),
                 ty: Type::VEC2,
             });
         }
@@ -109,7 +109,7 @@ impl VertexOutput {
         if self.world {
             fields.push(Field {
                 location: location.next(),
-                name: "world",
+                name: Name::Str("world"),
                 ty: Type::VEC3,
             });
         }
@@ -205,13 +205,13 @@ impl Texture {
         o.write(Var {
             binding: tdiff,
             uniform: false,
-            name: "tdiff",
+            name: Name::Str("tdiff"),
             ty: Type::TEXTURE2D,
         })
         .write(Var {
             binding: sdiff,
             uniform: false,
-            name: "sdiff",
+            name: Name::Str("sdiff"),
             ty: Type::SAMPLER,
         });
 
@@ -236,7 +236,7 @@ impl Ambient {
         o.write(Var {
             binding,
             uniform: true,
-            name: "ambient",
+            name: Name::Str("ambient"),
             ty: Type::VEC3,
         });
 
@@ -257,7 +257,7 @@ impl View {
                 name: "Camera",
                 fields: vec![Field {
                     location: Location::None,
-                    name: "view",
+                    name: Name::Str("view"),
                     ty: Type::MAT4,
                 }],
             });
@@ -272,7 +272,7 @@ impl View {
                 o.write(Var {
                     binding,
                     uniform: true,
-                    name: "camera",
+                    name: Name::Str("camera"),
                     ty: Type::Simple("Camera"),
                 });
 
@@ -287,4 +287,113 @@ impl View {
             Self::Camera => "camera.view * world",
         });
     }
+}
+
+#[derive(Clone, Copy)]
+pub struct SourceArrays<'a>(&'a [SourceArray]);
+
+impl<'a> SourceArrays<'a> {
+    pub const fn new(arrays: &'a [SourceArray]) -> Self {
+        if arrays.len() > 4 {
+            panic!("the number of source arrays cannot be more than 4");
+        }
+
+        Self(arrays)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub(crate) fn define_type(o: &mut Out) {
+        o.write(Struct {
+            name: "Source",
+            fields: vec![
+                Field {
+                    location: Location::None,
+                    name: Name::Str("pos"),
+                    ty: Type::VEC3,
+                },
+                Field {
+                    location: Location::None,
+                    name: Name::Str("rad"),
+                    ty: Type::F32,
+                },
+                Field {
+                    location: Location::None,
+                    name: Name::Str("col"),
+                    ty: Type::VEC3,
+                },
+            ],
+        });
+    }
+
+    pub(crate) fn declare_group(&self, binding: &mut Binding, o: &mut Out) -> Vec<SourceBindings> {
+        (0..)
+            .zip(self.0)
+            .map(|(n, &SourceArray { size, .. })| {
+                let binding_array = binding.next();
+                let binding_len = binding.next();
+
+                o.write(Var {
+                    binding: binding_array,
+                    uniform: true,
+                    name: Name::Num {
+                        str: "sources_array",
+                        n,
+                    },
+                    ty: Type::Array {
+                        ty: &Type::Simple("Source"),
+                        size,
+                    },
+                });
+
+                o.write(Var {
+                    binding: binding_len,
+                    uniform: true,
+                    name: Name::Num {
+                        str: "sources_len",
+                        n,
+                    },
+                    ty: Type::U32,
+                });
+
+                SourceBindings {
+                    binding_array: binding_array.get(),
+                    binding_len: binding_len.get(),
+                    size,
+                }
+            })
+            .collect()
+    }
+}
+
+pub struct SourceArray {
+    kind: SourceKind,
+    size: u8,
+}
+
+impl SourceArray {
+    pub const fn new(kind: SourceKind, size: u8) -> Self {
+        if size == 0 {
+            panic!("source array cannot have size equal to zero");
+        }
+
+        if size > 127 {
+            panic!("source array cannot be larger than 127");
+        }
+
+        Self { kind, size }
+    }
+}
+
+pub enum SourceKind {
+    Glow,
+    Gloom,
+}
+
+pub struct SourceBindings {
+    pub binding_array: u32,
+    pub binding_len: u32,
+    pub size: u8,
 }

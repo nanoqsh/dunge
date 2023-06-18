@@ -7,7 +7,10 @@ use {
         CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
         PixelSize, Shader, TextureData, Vertex, WindowMode,
     },
-    dunge_shader::{Dimension, Fragment, Scheme, Vertex as SchemeVertex, View},
+    dunge_shader::{
+        Dimension, Fragment, Scheme, SourceArray, SourceArrays, SourceKind, Vertex as SchemeVertex,
+        View,
+    },
 };
 
 #[repr(C)]
@@ -63,6 +66,12 @@ impl App {
                 view: View::None,
                 static_color: None,
                 ambient: false,
+                source_arrays: SourceArrays::new(&[
+                    SourceArray::new(SourceKind::Glow, 1),
+                    SourceArray::new(SourceKind::Gloom, 2),
+                    SourceArray::new(SourceKind::Gloom, 3),
+                    SourceArray::new(SourceKind::Gloom, 4),
+                ]),
             });
 
             context

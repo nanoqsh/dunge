@@ -20,7 +20,7 @@ impl fmt::Display for Struct {
 #[derive(Clone, Copy)]
 pub(crate) struct Field {
     pub location: Location,
-    pub name: &'static str,
+    pub name: Name,
     pub ty: Type,
 }
 
@@ -83,13 +83,17 @@ impl Binding {
     pub fn get(self) -> u32 {
         self.binding
     }
+
+    pub fn group(self) -> u32 {
+        self.group
+    }
 }
 
 #[derive(Clone, Copy)]
 pub(crate) struct Var {
     pub binding: Binding,
     pub uniform: bool,
-    pub name: &'static str,
+    pub name: Name,
     pub ty: Type,
 }
 
@@ -111,9 +115,24 @@ impl fmt::Display for Var {
 }
 
 #[derive(Clone, Copy)]
+pub(crate) enum Name {
+    Str(&'static str),
+    Num { str: &'static str, n: u32 },
+}
+
+impl fmt::Display for Name {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Str(str) => write!(f, "{str}"),
+            Self::Num { str, n } => write!(f, "{str}_{n}"),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub(crate) enum Type {
     Simple(&'static str),
-    Array { ty: &'static Self, size: u32 },
+    Array { ty: &'static Self, size: u8 },
 }
 
 impl Type {
