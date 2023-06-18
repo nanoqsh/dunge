@@ -5,87 +5,6 @@ use crate::{
     templater::Templater,
 };
 
-pub fn generate(scheme: Scheme) -> ShaderInfo {
-    let Scheme {
-        vert,
-        view,
-        ambient,
-        static_color,
-        source_arrays,
-    } = scheme;
-
-    let vert_input = VertexInput {
-        fragment: vert.fragment,
-        pos: vert.dimension,
-    };
-
-    let world = !source_arrays.is_empty();
-    let vert_output = VertexOutput {
-        fragment: vert.fragment,
-        static_color,
-        ambient,
-        world,
-    };
-
-    let types = {
-        let mut o = Out::new();
-        let mut location = Location::new();
-        InstanceInput::define_type(&mut location, &mut o);
-        vert_input.define_type(&mut location, &mut o);
-
-        let mut location = Location::new();
-        vert_output.define_type(&mut location, &mut o);
-
-        view.define_type(&mut o);
-
-        if world {
-            SourceArrays::define_type(&mut o);
-        }
-
-        o
-    };
-
-    let (layout, groups) = Layout::new(
-        |binding, o| Globals {
-            post_data: None,
-            camera: view.declare_group(binding, o),
-            ambient: ambient.then(|| Ambient::declare_group(binding, o)),
-        },
-        |binding, o| Textures {
-            map: vert
-                .fragment
-                .vertex_texture
-                .then(|| Texture::declare_group(binding, o)),
-        },
-        |binding, o| Lights {
-            source_arrays: source_arrays.declare_group(binding, o),
-        },
-    );
-
-    let vertex_out = {
-        let mut o = Out::new();
-        vert_output.calc_vertex(vert_input, view, &mut o);
-        o
-    };
-
-    let fragment_col = {
-        let mut o = Out::new();
-        vert_output.calc_fragment(&mut o);
-        o
-    };
-
-    ShaderInfo {
-        layout,
-        source: Templater::default()
-            .insert("types", &types)
-            .insert("groups", &groups)
-            .insert("vertex_out", &vertex_out)
-            .insert("fragment_col", &fragment_col)
-            .format(include_str!("../template.wgsl"))
-            .expect("generate shader"),
-    }
-}
-
 #[derive(Clone, Copy)]
 pub struct Scheme<'a> {
     pub vert: Vertex,
@@ -102,14 +21,92 @@ pub struct Vertex {
 }
 
 #[must_use]
-pub struct ShaderInfo {
+pub struct Shader {
     pub layout: Layout,
     pub source: String,
 }
 
-impl ShaderInfo {
+impl Shader {
     pub const VERTEX_ENTRY_POINT: &str = "vs_main";
     pub const FRAGMENT_ENTRY_POINT: &str = "fs_main";
+
+    pub fn generate(scheme: Scheme) -> Self {
+        let Scheme {
+            vert,
+            view,
+            ambient,
+            static_color,
+            source_arrays,
+        } = scheme;
+
+        let vert_input = VertexInput {
+            fragment: vert.fragment,
+            pos: vert.dimension,
+        };
+
+        let vert_output = VertexOutput {
+            fragment: vert.fragment,
+            static_color,
+            ambient,
+            source_arrays,
+        };
+
+        let types = {
+            let mut o = Out::new();
+            let mut location = Location::new();
+            InstanceInput::define_type(&mut location, &mut o);
+            vert_input.define_type(&mut location, &mut o);
+
+            let mut location = Location::new();
+            vert_output.define_type(&mut location, &mut o);
+            if vert_output.has_sources() {
+                SourceArrays::define_type(&mut o);
+            }
+
+            view.define_type(&mut o);
+            o
+        };
+
+        let (layout, groups) = Layout::new(
+            |binding, o| Globals {
+                post_data: None,
+                camera: view.declare_group(binding, o),
+                ambient: ambient.then(|| Ambient::declare_group(binding, o)),
+            },
+            |binding, o| Textures {
+                map: vert
+                    .fragment
+                    .vertex_texture
+                    .then(|| Texture::declare_group(binding, o)),
+            },
+            |binding, o| Lights {
+                source_arrays: source_arrays.declare_group(binding, o),
+            },
+        );
+
+        let vertex_out = {
+            let mut o = Out::new();
+            vert_output.calc_vertex(&vert_input, view, &mut o);
+            o
+        };
+
+        let fragment_col = {
+            let mut o = Out::new();
+            vert_output.calc_fragment(&mut o);
+            o
+        };
+
+        Self {
+            layout,
+            source: Templater::default()
+                .insert("types", &types)
+                .insert("groups", &groups)
+                .insert("vertex_out", &vertex_out)
+                .insert("fragment_col", &fragment_col)
+                .format(include_str!("../template.wgsl"))
+                .expect("generate shader"),
+        }
+    }
 
     pub fn postproc(post_data: u32, map: TextureBindings, source: String) -> Self {
         let (layout, _) = Layout::new(

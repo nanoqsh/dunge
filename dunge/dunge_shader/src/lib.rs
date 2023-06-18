@@ -1,7 +1,7 @@
-mod generate;
 mod nodes;
 mod out;
 mod parts;
+mod shader;
 mod templater;
 
-pub use crate::{generate::*, parts::*};
+pub use crate::{parts::*, shader::*};

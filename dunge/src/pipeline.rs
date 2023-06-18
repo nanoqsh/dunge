@@ -14,7 +14,8 @@ use {
         vertex::Vertex,
     },
     dunge_shader::{
-        Globals as Gl, Group, Layout, Lights as Lt, ShaderInfo, TextureBindings, Textures as Tx,
+        Globals as Gl, Group, Layout, Lights as Lt, Shader as ShaderData, TextureBindings,
+        Textures as Tx,
     },
     std::marker::PhantomData,
     wgpu::{
@@ -159,7 +160,7 @@ pub(crate) struct Pipeline {
 impl Pipeline {
     pub fn new(
         device: &Device,
-        shader: &ShaderInfo,
+        shader: &ShaderData,
         vert: Option<&VertexLayout>,
         params: Parameters,
     ) -> Self {
@@ -184,7 +185,7 @@ impl Pipeline {
                 layout: Some(&layout),
                 vertex: VertexState {
                     module: &module,
-                    entry_point: ShaderInfo::VERTEX_ENTRY_POINT,
+                    entry_point: ShaderData::VERTEX_ENTRY_POINT,
                     buffers: match vert {
                         Some(vl) => {
                             layouts = [vl.buffer_layout(), InstanceModel::LAYOUT];
@@ -195,7 +196,7 @@ impl Pipeline {
                 },
                 fragment: Some(FragmentState {
                     module: &module,
-                    entry_point: ShaderInfo::FRAGMENT_ENTRY_POINT,
+                    entry_point: ShaderData::FRAGMENT_ENTRY_POINT,
                     targets: &[Some(ColorTargetState {
                         format: Framebuffer::RENDER_FORMAT,
                         blend: Some(params.blend),

@@ -21,7 +21,7 @@ use {
         topology::Topology,
         vertex::Vertex,
     },
-    dunge_shader::{generate, Scheme, ShaderInfo},
+    dunge_shader::{Scheme, Shader as ShaderData},
 };
 
 /// A container of resources for render.
@@ -32,7 +32,7 @@ pub(crate) struct Resources {
     pub(crate) layers: Storage<Pipeline>,
     pub(crate) lights: Storage<Light>,
     pub(crate) meshes: Storage<Mesh>,
-    pub(crate) shaders: Storage<ShaderInfo>,
+    pub(crate) shaders: Storage<ShaderData>,
     pub(crate) spaces: Storage<LightSpace>,
     pub(crate) _textures: Storage<Texture>,
     pub(crate) textures: Storage<Textures>,
@@ -116,7 +116,7 @@ impl Resources {
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
-        let shader = generate(scheme);
+        let shader = ShaderData::generate(scheme);
         log::debug!("generated shader:\n{}", shader.source);
         let id = self.shaders.insert(shader);
         ShaderHandle::new(id)

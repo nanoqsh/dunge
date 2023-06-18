@@ -27,14 +27,13 @@ impl InstanceInput {
     }
 }
 
-#[derive(Clone, Copy)]
 pub(crate) struct VertexInput {
     pub fragment: Fragment,
     pub pos: Dimension,
 }
 
 impl VertexInput {
-    pub fn define_type(self, location: &mut Location, o: &mut Out) {
+    pub fn define_type(&self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: location.next(),
             name: Name::Str("pos"),
@@ -66,7 +65,7 @@ impl VertexInput {
         });
     }
 
-    pub fn calc_world(self, o: &mut Out) {
+    pub fn calc_world(&self, o: &mut Out) {
         o.write_str(match self.pos {
             Dimension::D2 => "model * vec4(input.pos, 0., 1.)",
             Dimension::D3 => "model * vec4(input.pos, 1.)",
@@ -74,16 +73,15 @@ impl VertexInput {
     }
 }
 
-#[derive(Clone, Copy)]
-pub(crate) struct VertexOutput {
+pub(crate) struct VertexOutput<'a> {
     pub fragment: Fragment,
     pub static_color: Option<Color>,
     pub ambient: bool,
-    pub world: bool,
+    pub source_arrays: SourceArrays<'a>,
 }
 
-impl VertexOutput {
-    pub fn define_type(self, location: &mut Location, o: &mut Out) {
+impl VertexOutput<'_> {
+    pub fn define_type(&self, location: &mut Location, o: &mut Out) {
         let mut fields = vec![Field {
             location: Location::Position,
             name: Name::Str("pos"),
@@ -106,7 +104,7 @@ impl VertexOutput {
             });
         }
 
-        if self.world {
+        if self.has_sources() {
             fields.push(Field {
                 location: location.next(),
                 name: Name::Str("world"),
@@ -120,7 +118,7 @@ impl VertexOutput {
         });
     }
 
-    pub fn calc_vertex(self, input: VertexInput, camera: View, o: &mut Out) {
+    pub fn calc_vertex(&self, input: &VertexInput, camera: View, o: &mut Out) {
         o.write_str("let world = ");
         input.calc_world(o);
         o.write_str(";\n");
@@ -137,12 +135,12 @@ impl VertexOutput {
             o.write_str("    out.map = input.map;\n");
         }
 
-        if self.world {
+        if self.has_sources() {
             o.write_str("    out.world = world.xyz;\n");
         }
     }
 
-    pub fn calc_fragment(self, o: &mut Out) {
+    pub fn calc_fragment(&self, o: &mut Out) {
         if self.fragment.vertex_texture {
             o.write_str(
                 "let tex = textureSample(tdiff, sdiff, out.map); \n    \
@@ -176,8 +174,16 @@ impl VertexOutput {
             mult.out().write_str("tex.rgb");
         }
 
+        if self.has_sources() {
+            //todo!()
+        }
+
         mult.write_default("vec3(0.)");
         o.write_str(";\n");
+    }
+
+    pub fn has_sources(&self) -> bool {
+        !self.source_arrays.is_empty()
     }
 }
 
@@ -194,7 +200,6 @@ pub struct Color {
     pub b: f32,
 }
 
-#[derive(Clone, Copy)]
 pub(crate) struct Texture;
 
 impl Texture {
@@ -228,10 +233,10 @@ pub struct TextureBindings {
     pub sdiff: u32,
 }
 
-pub struct Ambient;
+pub(crate) struct Ambient;
 
 impl Ambient {
-    pub(crate) fn declare_group(binding: &mut Binding, o: &mut Out) -> u32 {
+    pub fn declare_group(binding: &mut Binding, o: &mut Out) -> u32 {
         let binding = binding.next();
         o.write(Var {
             binding,
@@ -293,10 +298,12 @@ impl View {
 pub struct SourceArrays<'a>(&'a [SourceArray]);
 
 impl<'a> SourceArrays<'a> {
+    #[must_use]
     pub const fn new(arrays: &'a [SourceArray]) -> Self {
-        if arrays.len() > 4 {
-            panic!("the number of source arrays cannot be more than 4");
-        }
+        assert!(
+            arrays.len() <= 4,
+            "the number of source arrays cannot be greater than 4",
+        );
 
         Self(arrays)
     }
@@ -311,6 +318,11 @@ impl<'a> SourceArrays<'a> {
             fields: vec![
                 Field {
                     location: Location::None,
+                    name: Name::Str("col"),
+                    ty: Type::VEC3,
+                },
+                Field {
+                    location: Location::None,
                     name: Name::Str("pos"),
                     ty: Type::VEC3,
                 },
@@ -318,11 +330,6 @@ impl<'a> SourceArrays<'a> {
                     location: Location::None,
                     name: Name::Str("rad"),
                     ty: Type::F32,
-                },
-                Field {
-                    location: Location::None,
-                    name: Name::Str("col"),
-                    ty: Type::VEC3,
                 },
             ],
         });
@@ -374,15 +381,10 @@ pub struct SourceArray {
 }
 
 impl SourceArray {
+    #[must_use]
     pub const fn new(kind: SourceKind, size: u8) -> Self {
-        if size == 0 {
-            panic!("source array cannot have size equal to zero");
-        }
-
-        if size > 127 {
-            panic!("source array cannot be larger than 127");
-        }
-
+        assert!(size != 0, "source array cannot have size equal to zero");
+        assert!(size <= 127, "source array cannot be larger than 127");
         Self { kind, size }
     }
 }

@@ -37,7 +37,7 @@ impl PostProcessor {
             return;
         }
 
-        self.pipeline = Self::pipeline(device, antialiasing)
+        self.pipeline = Self::pipeline(device, antialiasing);
     }
 
     pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
@@ -58,13 +58,13 @@ impl PostProcessor {
 
     fn pipeline(device: &Device, antialiasing: bool) -> Pipeline {
         use {
-            dunge_shader::ShaderInfo,
+            dunge_shader::Shader,
             wgpu::{BlendState, PrimitiveTopology},
         };
 
         Pipeline::new(
             device,
-            &ShaderInfo::postproc(
+            &Shader::postproc(
                 Self::DATA_BINDING,
                 Self::TEXTURE_BINDING,
                 if antialiasing {
