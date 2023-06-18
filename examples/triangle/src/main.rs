@@ -48,7 +48,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::Antialiasing,
+            pixel_size: PixelSize::X1,
             ..Default::default()
         });
 

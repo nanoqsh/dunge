@@ -1,5 +1,6 @@
 struct Data {
     size: vec2<f32>,
+    step: vec2<f32>,
     factor: vec2<f32>,
 }
 
@@ -43,11 +44,10 @@ var sdiff: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let step = 0.5 / data.size;
-    let s0 = vec2(step.x, step.y);
-    let s1 = vec2(-step.x, step.y);
-    let s2 = vec2(step.x, -step.y);
-    let s3 = vec2(-step.x, -step.y);
+    let s0 = vec2(data.step.x, data.step.y);
+    let s1 = vec2(-data.step.x, data.step.y);
+    let s2 = vec2(data.step.x, -data.step.y);
+    let s3 = vec2(-data.step.x, -data.step.y);
 
     return (
           textureSample(tdiff, sdiff, in.map + s0)

@@ -50,12 +50,19 @@ impl PostShaderData {
 #[derive(Copy, Clone)]
 struct PostShaderDataUniform {
     size: (f32, f32),
+    step: (f32, f32),
     factor: (f32, f32),
 }
 
 impl PostShaderDataUniform {
-    fn new(size: (f32, f32), factor: (f32, f32)) -> Self {
-        Self { size, factor }
+    fn new((width, height): (f32, f32), factor: (f32, f32)) -> Self {
+        const STEP_FACTOR: f32 = 0.5;
+
+        Self {
+            size: (width, height),
+            step: (STEP_FACTOR / width, STEP_FACTOR / height),
+            factor,
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 struct Data {
     size: vec2<f32>,
+    step: vec2<f32>,
     factor: vec2<f32>,
 }
 
