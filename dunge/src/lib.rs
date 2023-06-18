@@ -31,6 +31,7 @@ mod shader_data {
     pub(crate) mod globals;
     mod instance;
     mod light;
+    pub(crate) mod lights;
     mod post;
     mod space;
     mod texture;

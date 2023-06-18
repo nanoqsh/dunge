@@ -348,21 +348,25 @@ pub(crate) mod window {
         pub show_cursor: bool,
     }
 
-    impl Default for InitialState<'static> {
+    impl Default for InitialState<'_> {
         fn default() -> Self {
             Self {
                 title: "Dunge",
-                mode: WindowMode::Fullscreen,
+                mode: WindowMode::default(),
                 show_cursor: true,
             }
         }
     }
 
     /// The window mode.
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Default)]
     pub enum WindowMode {
+        #[default]
         Fullscreen,
-        Windowed { width: u32, height: u32 },
+        Windowed {
+            width: u32,
+            height: u32,
+        },
     }
 }
 

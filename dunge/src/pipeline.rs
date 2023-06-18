@@ -13,7 +13,7 @@ use {
         topology::Topology,
         vertex::Vertex,
     },
-    dunge_shader::{Globals as Gl, Layout, ShaderInfo, TextureBindings, Textures as Tx},
+    dunge_shader::{Globals as Gl, Group, Layout, ShaderInfo, TextureBindings, Textures as Tx},
     std::marker::PhantomData,
     wgpu::{
         BindGroupLayout, BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology,
@@ -282,12 +282,18 @@ impl Pipeline {
             groups: Groups::new(
                 device,
                 &Layout {
-                    globals: Gl {
-                        post_data: None,
-                        camera: None,
-                        ambient: None,
+                    globals: Group {
+                        num: 0,
+                        bindings: Gl {
+                            post_data: None,
+                            camera: None,
+                            ambient: None,
+                        },
                     },
-                    textures: Tx { map: None },
+                    textures: Group {
+                        num: 1,
+                        bindings: Tx { map: None },
+                    },
                 },
             ),
         }
@@ -318,7 +324,7 @@ impl Groups {
         Self {
             globals: {
                 let mut entries = vec![];
-                if let Some(binding) = layout.globals.post_data {
+                if let Some(binding) = layout.globals.bindings.post_data {
                     entries.push(BindGroupLayoutEntry {
                         binding,
                         visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
@@ -331,7 +337,7 @@ impl Groups {
                     });
                 }
 
-                if let Some(binding) = layout.globals.camera {
+                if let Some(binding) = layout.globals.bindings.camera {
                     entries.push(BindGroupLayoutEntry {
                         binding,
                         visibility: ShaderStages::VERTEX,
@@ -344,7 +350,7 @@ impl Groups {
                     });
                 }
 
-                if let Some(binding) = layout.globals.ambient {
+                if let Some(binding) = layout.globals.bindings.ambient {
                     entries.push(BindGroupLayoutEntry {
                         binding,
                         visibility: ShaderStages::FRAGMENT,
@@ -363,14 +369,15 @@ impl Groups {
                         entries: &entries,
                     }),
                     bindings: GlobalsBindings {
-                        camera: layout.globals.camera.unwrap_or_default(),
-                        ambient: layout.globals.ambient.unwrap_or_default(),
+                        group: layout.globals.num,
+                        camera: layout.globals.bindings.camera.unwrap_or_default(),
+                        ambient: layout.globals.bindings.ambient.unwrap_or_default(),
                     },
                 })
             },
             textures: {
                 let mut entries = vec![];
-                if let Some(TextureBindings { tdiff, sdiff }) = layout.textures.map {
+                if let Some(TextureBindings { tdiff, sdiff }) = layout.textures.bindings.map {
                     entries.extend([
                         BindGroupLayoutEntry {
                             binding: tdiff,
@@ -397,7 +404,8 @@ impl Groups {
                         entries: &entries,
                     }),
                     bindings: TexturesBindings {
-                        map: layout.textures.map.unwrap_or_default(),
+                        group: layout.textures.num,
+                        map: layout.textures.bindings.map.unwrap_or_default(),
                     },
                 })
             },
@@ -422,6 +430,7 @@ pub(crate) struct Globals {
 
 #[derive(Clone, Copy)]
 pub(crate) struct GlobalsBindings {
+    pub group: u32,
     pub camera: u32,
     pub ambient: u32,
 }
@@ -433,6 +442,7 @@ pub(crate) struct Textures {
 
 #[derive(Clone, Copy)]
 pub(crate) struct TexturesBindings {
+    pub group: u32,
     pub map: TextureBindings,
 }
 

@@ -40,25 +40,26 @@ pub fn generate(scheme: Scheme) -> ShaderInfo {
 
     let (groups, layout) = {
         let mut o = Out::new();
-        let layout = Layout {
-            globals: {
-                let mut binding = Binding::with_group(Globals::GROUP);
+        let layout = Layout::new(
+            |group, o| {
+                let mut binding = Binding::with_group(group);
                 Globals {
                     post_data: None,
-                    camera: view.declare_group(&mut binding, &mut o),
-                    ambient: ambient.then(|| Ambient::declare_group(&mut binding, &mut o)),
+                    camera: view.declare_group(&mut binding, o),
+                    ambient: ambient.then(|| Ambient::declare_group(&mut binding, o)),
                 }
             },
-            textures: {
-                let mut binding = Binding::with_group(Textures::GROUP);
+            |group, o| {
+                let mut binding = Binding::with_group(group);
                 Textures {
                     map: vert
                         .fragment
                         .vertex_texture
-                        .then(|| Texture::declare_group(&mut binding, &mut o)),
+                        .then(|| Texture::declare_group(&mut binding, o)),
                 }
             },
-        };
+            &mut o,
+        );
 
         (o, layout)
     };
@@ -112,22 +113,60 @@ impl ShaderInfo {
     pub const FRAGMENT_ENTRY_POINT: &str = "fs_main";
 
     pub fn postproc(post_data: u32, map: TextureBindings, source: String) -> Self {
+        let mut o = Out::new();
         Self {
-            layout: Layout {
-                globals: Globals {
-                    post_data: Some(post_data),
-                    ..Default::default()
+            layout: Layout::new(
+                |group, _| {
+                    assert_eq!(group, 0);
+                    Globals {
+                        post_data: Some(post_data),
+                        ..Default::default()
+                    }
                 },
-                textures: Textures { map: Some(map) },
-            },
+                |group, _| {
+                    assert_eq!(group, 1);
+                    Textures { map: Some(map) }
+                },
+                &mut o,
+            ),
             source,
         }
     }
 }
 
 pub struct Layout {
-    pub globals: Globals,
-    pub textures: Textures,
+    pub globals: Group<Globals>,
+    pub textures: Group<Textures>,
+}
+
+impl Layout {
+    fn new<G, T>(globals: G, textures: T, o: &mut Out) -> Self
+    where
+        G: FnOnce(u32, &mut Out) -> Globals,
+        T: FnOnce(u32, &mut Out) -> Textures,
+    {
+        let mut num = 0;
+        let globals = Group {
+            num,
+            bindings: globals(num, o),
+        };
+
+        if !globals.bindings.is_empty() {
+            num += 1;
+        }
+
+        let textures = Group {
+            num,
+            bindings: textures(num, o),
+        };
+
+        Self { globals, textures }
+    }
+}
+
+pub struct Group<T> {
+    pub num: u32,
+    pub bindings: T,
 }
 
 #[derive(Default)]
@@ -138,7 +177,9 @@ pub struct Globals {
 }
 
 impl Globals {
-    pub const GROUP: u32 = 0;
+    fn is_empty(&self) -> bool {
+        self.post_data.is_none() && self.camera.is_none() && self.ambient.is_none()
+    }
 }
 
 #[derive(Default)]
@@ -147,5 +188,7 @@ pub struct Textures {
 }
 
 impl Textures {
-    pub const GROUP: u32 = 1;
+    fn is_empty(&self) -> bool {
+        self.map.is_none()
+    }
 }

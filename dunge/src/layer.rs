@@ -102,7 +102,7 @@ impl<'l, S, T> Layer<'l, S, T> {
         let globals = self.resources.globals.get(handle.id())?;
         globals.write_camera(self.size, self.queue);
 
-        self.groups.globals = Some(globals.bind_group());
+        self.groups.globals = Some(globals.bind());
         Ok(self)
     }
 
@@ -116,7 +116,7 @@ impl<'l, S, T> Layer<'l, S, T> {
         handle: TexturesHandle<S>,
     ) -> Result<&mut Self, ResourceNotFound> {
         let textures = self.resources.textures.get(handle.id())?;
-        self.groups.textures = Some(textures.bind_group());
+        self.groups.textures = Some(textures.bind());
         Ok(self)
     }
 
@@ -139,17 +139,15 @@ impl<'l, S, T> Layer<'l, S, T> {
     where
         S: Shader,
     {
-        use dunge_shader::{Globals, Textures};
-
         let info = ShaderInfo::new::<S>();
         if info.has_globals() {
-            let group = self.groups.globals.ok_or(Error::GlobalsNotSet)?;
-            self.pass.set_bind_group(Globals::GROUP, group, &[]);
+            let (index, group) = self.groups.globals.ok_or(Error::GlobalsNotSet)?;
+            self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_textures() {
-            let group = self.groups.textures.ok_or(Error::TexturesNotSet)?;
-            self.pass.set_bind_group(Textures::GROUP, group, &[]);
+            let (index, group) = self.groups.textures.ok_or(Error::TexturesNotSet)?;
+            self.pass.set_bind_group(index, group, &[]);
         }
 
         self.draw_mesh(self.resources.meshes.get(handle.id())?)
@@ -311,8 +309,8 @@ impl<T> Layer<'_, FlatVertex, T> {
 
 #[derive(Default)]
 struct Groups<'l> {
-    globals: Option<&'l BindGroup>,
-    textures: Option<&'l BindGroup>,
+    globals: Option<(u32, &'l BindGroup)>,
+    textures: Option<(u32, &'l BindGroup)>,
 }
 
 /// The layer builder. It creates a configured [`Layer`].

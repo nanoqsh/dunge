@@ -273,7 +273,7 @@ impl View {
                     binding,
                     uniform: true,
                     name: "camera",
-                    ty: Type("Camera"),
+                    ty: Type::Simple("Camera"),
                 });
 
                 Some(binding.get())

@@ -26,12 +26,7 @@ pub(crate) struct Field {
 
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let &Self {
-            location,
-            name,
-            ty: Type(ty),
-        } = self;
-
+        let &Self { location, name, ty } = self;
         write!(f, "    {location}{name}: {ty},")
     }
 }
@@ -104,7 +99,7 @@ impl fmt::Display for Var {
             binding: Binding { group, binding },
             uniform,
             name,
-            ty: Type(ty),
+            ty,
         } = self;
 
         writeln!(
@@ -116,13 +111,27 @@ impl fmt::Display for Var {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct Type(pub &'static str);
+pub(crate) enum Type {
+    Simple(&'static str),
+    Array { ty: &'static Self, size: u32 },
+}
 
 impl Type {
-    pub const VEC2: Self = Self("vec2<f32>");
-    pub const VEC3: Self = Self("vec3<f32>");
-    pub const VEC4: Self = Self("vec4<f32>");
-    pub const MAT4: Self = Self("mat4x4<f32>");
-    pub const TEXTURE2D: Self = Self("texture_2d<f32>");
-    pub const SAMPLER: Self = Self("sampler");
+    pub const F32: Self = Self::Simple("f32");
+    pub const U32: Self = Self::Simple("u32");
+    pub const VEC2: Self = Self::Simple("vec2<f32>");
+    pub const VEC3: Self = Self::Simple("vec3<f32>");
+    pub const VEC4: Self = Self::Simple("vec4<f32>");
+    pub const MAT4: Self = Self::Simple("mat4x4<f32>");
+    pub const TEXTURE2D: Self = Self::Simple("texture_2d<f32>");
+    pub const SAMPLER: Self = Self::Simple("sampler");
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Simple(ty) => write!(f, "{ty}"),
+            Self::Array { ty, size } => write!(f, "array<{ty}, {size}>"),
+        }
+    }
 }

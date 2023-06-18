@@ -15,6 +15,7 @@ use {
 };
 
 pub(crate) struct Globals {
+    group: u32,
     bind_group: BindGroup,
     camera: Option<(Camera, Buffer)>,
     ambient: Option<Buffer>,
@@ -65,6 +66,7 @@ impl Globals {
         .collect();
 
         Self {
+            group: bindings.group,
             bind_group: device.create_bind_group(&BindGroupDescriptor {
                 layout,
                 entries: &entries,
@@ -98,8 +100,8 @@ impl Globals {
         queue.write_buffer(buf, 0, uniform.as_bytes());
     }
 
-    pub fn bind_group(&self) -> &BindGroup {
-        &self.bind_group
+    pub fn bind(&self) -> (u32, &BindGroup) {
+        (self.group, &self.bind_group)
     }
 }
 

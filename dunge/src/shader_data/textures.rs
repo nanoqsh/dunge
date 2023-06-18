@@ -12,6 +12,7 @@ use {
 };
 
 pub(crate) struct Textures {
+    group: u32,
     bind_group: BindGroup,
     map: Option<Texture>,
 }
@@ -44,6 +45,7 @@ impl Textures {
         });
 
         Self {
+            group: bindings.group,
             bind_group: device.create_bind_group(&BindGroupDescriptor {
                 layout,
                 entries: match &entries {
@@ -65,8 +67,8 @@ impl Textures {
         map.update_data(data, queue)
     }
 
-    pub fn bind_group(&self) -> &BindGroup {
-        &self.bind_group
+    pub fn bind(&self) -> (u32, &BindGroup) {
+        (self.group, &self.bind_group)
     }
 }
 

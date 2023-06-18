@@ -17,8 +17,6 @@ struct Vert(#[position] [f32; 2], #[color] [f32; 3], #[texture] [f32; 2]);
 struct ColorShader;
 impl Shader for ColorShader {
     type Vertex = Vert;
-    const VIEW: View = View::Camera;
-    const AMBIENT: bool = true;
 }
 
 fn main() {
@@ -38,7 +36,7 @@ fn main() {
 
 struct App {
     layer: LayerHandle<ColorShader>,
-    globals: GlobalsHandle<ColorShader>,
+    // globals: GlobalsHandle<ColorShader>,
     textures: TexturesHandle<ColorShader>,
     mesh: MeshHandle<Vert>,
     instance: InstanceHandle,
@@ -62,9 +60,9 @@ impl App {
                         vertex_texture: true,
                     },
                 },
-                view: View::Camera,
+                view: View::None,
                 static_color: None,
-                ambient: true,
+                ambient: false,
             });
 
             context
@@ -75,12 +73,12 @@ impl App {
         };
 
         // Create globals
-        let globals = context
-            .globals_builder()
-            .with_view()
-            .with_ambient(Standard([1.; 3]))
-            .build(layer)
-            .expect("create globals");
+        // let globals = context
+        //     .globals_builder()
+        //     .with_view()
+        //     .with_ambient(Standard([1.; 3]))
+        //     .build(layer)
+        //     .expect("create globals");
 
         // Create textures
         let textures = {
@@ -96,7 +94,7 @@ impl App {
 
         // Create a mesh
         let mesh = {
-            const SIZE: f32 = 160.;
+            const SIZE: f32 = 0.5;
             const VERTICES: [Vert; 3] = [
                 Vert([-SIZE, -SIZE], [1.; 3], [0., 1.]),
                 Vert([SIZE, -SIZE], [1.; 3], [1., 1.]),
@@ -115,7 +113,7 @@ impl App {
 
         Self {
             layer,
-            globals,
+            // globals,
             textures,
             mesh,
             instance,
@@ -144,15 +142,15 @@ impl Loop for App {
         }
 
         self.state += input.delta_time * 0.5;
-        context
-            .update_globals_view(
-                self.globals,
-                dunge::View {
-                    up: [self.state.sin(), self.state.cos(), 0.],
-                    ..dunge::View::default()
-                },
-            )
-            .expect("update globals");
+        // context
+        //     .update_globals_view(
+        //         self.globals,
+        //         dunge::View {
+        //             up: [self.state.sin(), self.state.cos(), 0.],
+        //             ..dunge::View::default()
+        //         },
+        //     )
+        //     .expect("update globals");
 
         Ok(())
     }
@@ -163,7 +161,7 @@ impl Loop for App {
             .with_clear_color(Standard([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
-            .bind_globals(self.globals)?
+            // .bind_globals(self.globals)?
             .bind_textures(self.textures)?
             .bind_instance(self.instance)?
             .draw(self.mesh)
