@@ -15,8 +15,8 @@ use {
         shader::{Shader, ShaderInfo},
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
-            textures::Builder as TexturesBuilder, InstanceModel, SourceModel, Space, SpaceData,
-            SpaceModel, TextureData, _Source,
+            textures::Builder as TexturesBuilder, InstanceModel, Source, SourceModel, Space,
+            SpaceData, SpaceModel, TextureData, _Source,
         },
         topology::Topology,
         transform::IntoMat,
@@ -158,6 +158,25 @@ impl Context {
 
     pub fn lights_builder(&mut self) -> LightsBuilder {
         LightsBuilder::new(&mut self.resources, &self.render)
+    }
+
+    pub fn update_lights_sources<S>(
+        &mut self,
+        handle: LightsHandle<S>,
+        index: usize,
+        offset: usize,
+        sources: &[Source],
+    ) -> Result<(), SourceUpdateError>
+    where
+        S: Shader,
+    {
+        assert!(
+            ShaderInfo::new::<S>().source_arrays > 0,
+            "the shader has no light sources",
+        );
+
+        self.resources
+            .update_lights_sources(&self.render, handle, index, offset, sources)
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {

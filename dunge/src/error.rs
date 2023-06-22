@@ -1,3 +1,5 @@
+use crate::shader_data::lights::UpdateError;
+
 /// The main loop error.
 #[derive(Debug)]
 pub enum Error {
@@ -80,5 +82,23 @@ pub struct TooLargeSize;
 impl From<TooLargeSize> for Error {
     fn from(_: TooLargeSize) -> Self {
         Self::TooLargeSize
+    }
+}
+
+#[derive(Debug)]
+pub enum SourceUpdateError {
+    Source(UpdateError),
+    ResourceNotFound,
+}
+
+impl From<UpdateError> for SourceUpdateError {
+    fn from(v: UpdateError) -> Self {
+        Self::Source(v)
+    }
+}
+
+impl From<ResourceNotFound> for SourceUpdateError {
+    fn from(_: ResourceNotFound) -> Self {
+        Self::ResourceNotFound
     }
 }

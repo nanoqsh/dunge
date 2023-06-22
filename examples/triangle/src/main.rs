@@ -55,7 +55,7 @@ struct App {
 impl App {
     fn new(context: &mut Context) -> Self {
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::Antialiasing,
+            pixel_size: PixelSize::X1,
             ..Default::default()
         });
 
@@ -103,32 +103,13 @@ impl App {
         };
 
         // Create lights
-        let lights = context
-            .lights_builder()
-            .with_sources(&[
-                Source {
-                    col: [0., 1., 0.],
-                    pos: [0., 50., 0.],
-                    rad: 80.,
-                },
-                Source {
-                    col: [1., 0., 0.],
-                    pos: [50., 0., 0.],
-                    rad: 80.,
-                },
-                Source {
-                    col: [0., 0., 1.],
-                    pos: [-50., 0., 0.],
-                    rad: 80.,
-                },
-                Source {
-                    col: [1., 1., 0.],
-                    pos: [0., -50., 0.],
-                    rad: 80.,
-                },
-            ])
-            .build(layer)
-            .expect("create lights");
+        let lights = {
+            context
+                .lights_builder()
+                .with_sources(&[])
+                .build(layer)
+                .expect("create lights")
+        };
 
         // Create a mesh
         let mesh = {
@@ -165,6 +146,8 @@ impl Loop for App {
     type Error = Error;
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+        use std::f32::consts::TAU;
+
         // Handle pressed keys
         for key in input.pressed_keys {
             if key == Key::Escape {
@@ -181,15 +164,43 @@ impl Loop for App {
         }
 
         self.state += input.delta_time * 0.5;
+
+        let size = 80.;
+        let step = TAU / 4.;
+        let calc_position = |i: f32| {
+            let state = self.state + step * i;
+            [state.sin() * size, state.cos() * size, 0.]
+        };
+
         context
-            .update_globals_view(
-                self.globals,
-                dunge::View {
-                    up: [self.state.sin(), self.state.cos(), 0.],
-                    ..dunge::View::default()
-                },
+            .update_lights_sources(
+                self.lights,
+                0,
+                0,
+                &[
+                    Source {
+                        col: [0., 2., 0.],
+                        pos: calc_position(1.),
+                        rad: 80.,
+                    },
+                    Source {
+                        col: [2., 0., 0.],
+                        pos: calc_position(2.),
+                        rad: 80.,
+                    },
+                    Source {
+                        col: [0., 0., 2.],
+                        pos: calc_position(3.),
+                        rad: 80.,
+                    },
+                    Source {
+                        col: [2., 2., 0.],
+                        pos: calc_position(4.),
+                        rad: 80.,
+                    },
+                ],
             )
-            .expect("update globals");
+            .expect("update lights");
 
         Ok(())
     }

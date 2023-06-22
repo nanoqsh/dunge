@@ -1,4 +1,4 @@
-use crate::layout::Plain;
+use {crate::layout::Plain, std::iter};
 
 /// Light source parameters.
 #[derive(Clone, Copy)]
@@ -15,8 +15,6 @@ pub(crate) struct SourceArray {
 
 impl SourceArray {
     pub fn new(sources: &[Source], max_size: usize) -> Self {
-        use std::iter;
-
         assert!(sources.len() <= max_size);
         let mut buf = vec![SourceUniform::default(); max_size];
         for (uniform, &source) in iter::zip(&mut buf, sources) {
@@ -29,6 +27,28 @@ impl SourceArray {
         }
     }
 
+    pub fn update(&mut self, offset: usize, sources: &[Source]) -> Result<(), UpdateError> {
+        let buf = self.buf.get_mut(offset..).ok_or(UpdateError::Offset)?;
+        if sources.len() > buf.len() {
+            return Err(UpdateError::Len);
+        }
+
+        for (uniform, &source) in iter::zip(buf, sources) {
+            *uniform = SourceUniform::new(source);
+        }
+
+        Ok(())
+    }
+
+    pub fn set_len(&mut self, len: u32) -> Result<(), SetLenError> {
+        if len as usize > self.buf.len() {
+            return Err(SetLenError);
+        }
+
+        self.len = len;
+        Ok(())
+    }
+
     pub fn buf(&self) -> &[SourceUniform] {
         &self.buf
     }
@@ -37,6 +57,15 @@ impl SourceArray {
         self.len
     }
 }
+
+#[derive(Debug)]
+pub enum UpdateError {
+    Offset,
+    Len,
+}
+
+#[derive(Debug)]
+pub struct SetLenError;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]

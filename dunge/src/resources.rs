@@ -3,7 +3,7 @@ use {
         _vertex::_Vertex,
         camera::{Camera, Projection, View, _Camera},
         color::Linear,
-        error::{Error, ResourceNotFound, TooManySources, TooManySpaces},
+        error::{Error, ResourceNotFound, SourceUpdateError, TooManySources, TooManySpaces},
         handles::*,
         mesh::{Data as MeshData, Mesh},
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
@@ -15,7 +15,7 @@ use {
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
-            Instance, InstanceModel, Light, LightSpace, SourceModel, SpaceData, SpaceModel,
+            Instance, InstanceModel, Light, LightSpace, Source, SourceModel, SpaceData, SpaceModel,
             Texture, TextureData,
         },
         storage::Storage,
@@ -134,6 +134,24 @@ impl Resources {
         let lights = Lights::new(params, render.context().device());
         let id = self.lights.insert(lights);
         Ok(LightsHandle::new(id))
+    }
+
+    pub fn update_lights_sources<S>(
+        &mut self,
+        render: &Render,
+        handle: LightsHandle<S>,
+        index: usize,
+        offset: usize,
+        sources: &[Source],
+    ) -> Result<(), SourceUpdateError> {
+        self.lights.get_mut(handle.id())?.update_array(
+            index,
+            offset,
+            sources,
+            render.context().queue(),
+        )?;
+
+        Ok(())
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {

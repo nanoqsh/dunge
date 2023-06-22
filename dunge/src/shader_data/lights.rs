@@ -7,9 +7,12 @@ use {
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::{Source, SourceArray},
+        shader_data::{
+            source::{SetLenError, SourceUniform, UpdateError as ArrayUpdateError},
+            Source, SourceArray,
+        },
     },
-    wgpu::{BindGroup, BindGroupLayout, Buffer, Device},
+    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
 pub(crate) struct Lights {
@@ -85,8 +88,59 @@ impl Lights {
         }
     }
 
+    pub fn update_array(
+        &mut self,
+        index: usize,
+        offset: usize,
+        sources: &[Source],
+        queue: &Queue,
+    ) -> Result<(), UpdateError> {
+        use std::mem;
+
+        let (array, buffers) = self
+            .source_arrays
+            .get_mut(index)
+            .ok_or(UpdateError::Index)?;
+
+        array.update(offset, sources)?;
+        let data = &array.buf()[offset..];
+        queue.write_buffer(
+            &buffers.array,
+            (offset * mem::size_of::<SourceUniform>()) as _,
+            data.as_bytes(),
+        );
+
+        let old_len = array.len();
+        let new_len = (offset + sources.len()) as u32;
+        if old_len < new_len {
+            array.set_len(new_len)?;
+            queue.write_buffer(&buffers.len, 0, &array.len().to_ne_bytes());
+        }
+
+        Ok(())
+    }
+
     pub fn bind(&self) -> (u32, &BindGroup) {
         (self.group, &self.bind_group)
+    }
+}
+
+#[derive(Debug)]
+pub enum UpdateError {
+    Index,
+    Array(ArrayUpdateError),
+    SetLen(SetLenError),
+}
+
+impl From<ArrayUpdateError> for UpdateError {
+    fn from(v: ArrayUpdateError) -> Self {
+        Self::Array(v)
+    }
+}
+
+impl From<SetLenError> for UpdateError {
+    fn from(v: SetLenError) -> Self {
+        Self::SetLen(v)
     }
 }
 
