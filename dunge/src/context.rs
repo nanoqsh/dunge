@@ -143,7 +143,7 @@ impl Context {
         &mut self,
         handle: TexturesHandle<S>,
         data: TextureData,
-    ) -> Result<(), Error>
+    ) -> Result<(), TexturesError>
     where
         S: Shader,
     {
@@ -166,7 +166,7 @@ impl Context {
         index: usize,
         offset: usize,
         sources: &[Source],
-    ) -> Result<(), SourceUpdateError>
+    ) -> Result<(), SourceError>
     where
         S: Shader,
     {

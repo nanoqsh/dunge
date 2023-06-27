@@ -59,12 +59,10 @@ impl Textures {
     }
 
     pub fn update_data(&self, data: TextureData, queue: &Queue) -> Result<(), TooLargeSize> {
-        let Some(map) = &self.map else {
-            // TODO: Error
-            return Ok(());
-        };
-
-        map.update_data(data, queue)
+        self.map
+            .as_ref()
+            .expect("texture map")
+            .update_data(data, queue)
     }
 
     pub fn bind(&self) -> (u32, &BindGroup) {

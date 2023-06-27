@@ -3,7 +3,9 @@ use {
         _vertex::_Vertex,
         camera::{Camera, Projection, View, _Camera},
         color::Linear,
-        error::{Error, ResourceNotFound, SourceUpdateError, TooManySources, TooManySpaces},
+        error::{
+            Error, ResourceNotFound, SourceError, TexturesError, TooManySources, TooManySpaces,
+        },
         handles::*,
         mesh::{Data as MeshData, Mesh},
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
@@ -109,7 +111,7 @@ impl Resources {
         render: &Render,
         handle: TexturesHandle<S>,
         data: TextureData,
-    ) -> Result<(), Error> {
+    ) -> Result<(), TexturesError> {
         self.textures
             .get(handle.id())?
             .update_data(data, render.context().queue())?;
@@ -143,7 +145,7 @@ impl Resources {
         index: usize,
         offset: usize,
         sources: &[Source],
-    ) -> Result<(), SourceUpdateError> {
+    ) -> Result<(), SourceError> {
         self.lights.get_mut(handle.id())?.update_array(
             index,
             offset,
