@@ -15,8 +15,8 @@ use {
         shader::{Shader, ShaderInfo},
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
-            textures::Builder as TexturesBuilder, InstanceModel, Source, SourceModel, Space,
-            SpaceData, SpaceModel, TextureData, _Source,
+            textures::Builder as TexturesBuilder, InstanceModel, Source, SourceModel, SpaceData,
+            TextureData, _Source, _Space, _SpaceModel,
         },
         topology::Topology,
         transform::IntoMat,
@@ -37,7 +37,7 @@ pub struct Context {
     limits: Limits,
     models: Vec<InstanceModel>,
     sources: Vec<SourceModel>,
-    spaces: Vec<SpaceModel>,
+    spaces: Vec<_SpaceModel>,
     space_data: Vec<SpaceData<'static>>,
 }
 
@@ -164,7 +164,6 @@ impl Context {
         &mut self,
         handle: LightsHandle<S>,
         index: usize,
-        offset: usize,
         sources: &[Source],
     ) -> Result<(), SourceError>
     where
@@ -176,7 +175,7 @@ impl Context {
         );
 
         self.resources
-            .update_lights_sources(&self.render, handle, index, offset, sources)
+            .update_lights_sources(&self.render, handle, index, sources)
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
@@ -423,7 +422,7 @@ impl Context {
     /// Returns the [`TooManySpaces`] when trying to create too many light sources.
     pub fn create_space<'a, I, M, C>(&mut self, spaces: I) -> Result<_SpaceHandle, TooManySpaces>
     where
-        I: IntoIterator<Item = Space<'a, M, C>>,
+        I: IntoIterator<Item = _Space<'a, M, C>>,
         M: IntoMat,
         C: IntoLinear<3>,
     {
@@ -436,7 +435,7 @@ impl Context {
         for space in spaces {
             space_data.push(space.data);
             self.spaces
-                .push(SpaceModel::new(&space.into_mat_and_linear()));
+                .push(_SpaceModel::new(&space.into_mat_and_linear()));
         }
 
         let space = self
@@ -459,7 +458,7 @@ impl Context {
         spaces: I,
     ) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Space<'a, M, C>>,
+        I: IntoIterator<Item = _Space<'a, M, C>>,
         M: IntoMat,
         C: IntoLinear<3>,
     {
@@ -472,7 +471,7 @@ impl Context {
         for space in spaces {
             space_data.push(space.data);
             self.spaces
-                .push(SpaceModel::new(&space.into_mat_and_linear()));
+                .push(_SpaceModel::new(&space.into_mat_and_linear()));
         }
 
         let updated = self
@@ -495,7 +494,7 @@ impl Context {
         &mut self,
         handle: _SpaceHandle,
         n: usize,
-        space: Space<M, C>,
+        space: _Space<M, C>,
     ) -> Result<(), Error>
     where
         M: IntoMat,
@@ -505,7 +504,7 @@ impl Context {
             &self.render,
             handle,
             n,
-            SpaceModel::new(&space.into_mat_and_linear()),
+            _SpaceModel::new(&space.into_mat_and_linear()),
         )
     }
 

@@ -14,19 +14,19 @@ type Mat = [[f32; 4]; 4];
 
 /// Parameters of the light space.
 #[derive(Clone, Copy)]
-pub struct Space<'a, M = Mat, C = Linear<f32, 3>> {
+pub struct _Space<'a, M = Mat, C = Linear<f32, 3>> {
     pub data: Data<'a>,
     pub transform: M,
     pub col: C,
 }
 
-impl<'a, M, C> Space<'a, M, C> {
-    pub(crate) fn into_mat_and_linear(self) -> Space<'a>
+impl<'a, M, C> _Space<'a, M, C> {
+    pub(crate) fn into_mat_and_linear(self) -> _Space<'a>
     where
         M: IntoMat,
         C: IntoLinear<3>,
     {
-        Space {
+        _Space {
             data: self.data,
             transform: self.transform.into_mat(),
             col: self.col.into_linear(),
@@ -83,16 +83,16 @@ impl Format {
     }
 }
 
-pub(crate) struct LightSpace {
+pub(crate) struct _LightSpace {
     space_buffer: Buffer,
     n_spaces: usize,
     textures: Box<[SpaceTexture]>,
     bind_group: BindGroup,
 }
 
-impl LightSpace {
+impl _LightSpace {
     pub fn new(
-        spaces: &[SpaceModel],
+        spaces: &[_SpaceModel],
         data: &[Data],
         device: &Device,
         queue: &Queue,
@@ -267,7 +267,7 @@ impl LightSpace {
 
     pub fn update_spaces(
         &mut self,
-        spaces: &[SpaceModel],
+        spaces: &[_SpaceModel],
         data: &[Data],
         queue: &Queue,
     ) -> Result<(), Error> {
@@ -291,7 +291,7 @@ impl LightSpace {
             let len = spaces.len() as u32;
             queue.write_buffer(
                 &self.space_buffer,
-                mem::size_of::<[SpaceModel; 4]>() as _,
+                mem::size_of::<[_SpaceModel; 4]>() as _,
                 len.as_bytes(),
             );
 
@@ -308,7 +308,7 @@ impl LightSpace {
     pub fn update_nth_space(
         &self,
         n: usize,
-        space: SpaceModel,
+        space: _SpaceModel,
         queue: &Queue,
     ) -> Result<(), SpaceNotFound> {
         use std::mem;
@@ -319,7 +319,7 @@ impl LightSpace {
 
         queue.write_buffer(
             &self.space_buffer,
-            (mem::size_of::<SpaceModel>() * n) as _,
+            (mem::size_of::<_SpaceModel>() * n) as _,
             space.as_bytes(),
         );
 
@@ -342,7 +342,7 @@ impl LightSpace {
 
         queue.write_buffer(
             &self.space_buffer,
-            (mem::size_of::<SpaceModel>() * n + COL_OFFSET) as _,
+            (mem::size_of::<_SpaceModel>() * n + COL_OFFSET) as _,
             col.as_bytes(),
         );
 
@@ -411,14 +411,14 @@ impl View {
 
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
-pub(crate) struct SpaceModel {
+pub(crate) struct _SpaceModel {
     model: Mat,
     col: [f32; 3],
     flags: u32,
 }
 
-impl SpaceModel {
-    pub fn new(space: &Space) -> Self {
+impl _SpaceModel {
+    pub fn new(space: &_Space) -> Self {
         Self {
             model: {
                 use glam::{Mat4, Quat, Vec3};
@@ -446,18 +446,18 @@ impl SpaceModel {
     }
 }
 
-unsafe impl Plain for SpaceModel {}
+unsafe impl Plain for _SpaceModel {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
 pub(crate) struct Spaces {
-    data: [SpaceModel; 4],
+    data: [_SpaceModel; 4],
     len: u32,
     pad: [u32; 3],
 }
 
 impl Spaces {
-    fn from_slice(slice: &[SpaceModel]) -> Self {
+    fn from_slice(slice: &[_SpaceModel]) -> Self {
         let mut spaces = Self::default();
         spaces.data[..slice.len()].copy_from_slice(slice);
         spaces.len = slice.len() as u32;

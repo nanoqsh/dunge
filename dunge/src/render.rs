@@ -11,7 +11,7 @@ use {
         r#loop::Loop,
         resources::Resources,
         screen::{RenderScreen, Screen},
-        shader_data::{Light, LightSpace, PostShaderData},
+        shader_data::{Light, PostShaderData, _LightSpace},
     },
     std::cell::OnceCell,
     wgpu::{
@@ -60,7 +60,7 @@ impl Render {
         });
 
         resources.spaces.insert(
-            LightSpace::new(&[], &[], &context.device, &context.queue, &groups.space)
+            _LightSpace::new(&[], &[], &context.device, &context.queue, &groups.space)
                 .expect("default light space"),
         );
 

@@ -15,7 +15,7 @@ pub(crate) struct SourceArray {
 
 impl SourceArray {
     pub fn new(sources: &[Source], max_size: usize) -> Self {
-        assert!(sources.len() <= max_size);
+        assert!(sources.len() <= max_size, "too many light sources");
         let mut buf = vec![SourceUniform::default(); max_size];
         for (uniform, &source) in iter::zip(&mut buf, sources) {
             *uniform = SourceUniform::new(source);

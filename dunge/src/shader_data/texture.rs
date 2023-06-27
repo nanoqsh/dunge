@@ -97,7 +97,8 @@ impl Texture {
             ..Default::default()
         });
 
-        let bind_group = device.create_bind_group(&BindGroupDescriptor {
+        let _bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("texture bind group"),
             layout,
             entries: &[
                 BindGroupEntry {
@@ -109,7 +110,6 @@ impl Texture {
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
-            label: Some("texture bind group"),
         });
 
         Self {
@@ -117,7 +117,7 @@ impl Texture {
             texture,
             view,
             sampler,
-            _bind_group: bind_group,
+            _bind_group,
         }
     }
 

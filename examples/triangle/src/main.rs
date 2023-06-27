@@ -176,7 +176,6 @@ impl Loop for App {
             .update_lights_sources(
                 self.lights,
                 0,
-                0,
                 &[
                     Source {
                         col: [0., 2., 0.],

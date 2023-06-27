@@ -2,8 +2,8 @@ mod models;
 
 use {
     dunge::{
-        FrameParameters, LightKind, Loop, MeshData, Orthographic, PixelSize, Space, SpaceData,
-        SpaceFormat, TextureData, View, _Source,
+        FrameParameters, LightKind, Loop, MeshData, Orthographic, PixelSize, SpaceData,
+        SpaceFormat, TextureData, View, _Source, _Space,
         _vertex::{ColorVertex, TextureVertex},
         color::{Linear, Standard},
         handles::*,
@@ -80,7 +80,7 @@ impl App {
                 (width as u8, height as u8, layers.len() as u8)
             };
 
-            let space = Space {
+            let space = _Space {
                 data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
                 transform: Transform::default(),
                 col: Linear([2.5; 3]),

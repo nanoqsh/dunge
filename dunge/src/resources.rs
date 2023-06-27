@@ -17,8 +17,8 @@ use {
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
-            Instance, InstanceModel, Light, LightSpace, Source, SourceModel, SpaceData, SpaceModel,
-            Texture, TextureData,
+            Instance, InstanceModel, Light, Source, SourceModel, SpaceData, Texture, TextureData,
+            _LightSpace, _SpaceModel,
         },
         storage::Storage,
         topology::Topology,
@@ -37,7 +37,7 @@ pub(crate) struct Resources {
     pub(crate) lights: Storage<Lights>,
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) shaders: Storage<ShaderData>,
-    pub(crate) spaces: Storage<LightSpace>,
+    pub(crate) spaces: Storage<_LightSpace>,
     pub(crate) _textures: Storage<Texture>,
     pub(crate) textures: Storage<Textures>,
     pub(crate) views: Storage<_Camera>,
@@ -143,12 +143,11 @@ impl Resources {
         render: &Render,
         handle: LightsHandle<S>,
         index: usize,
-        offset: usize,
         sources: &[Source],
     ) -> Result<(), SourceError> {
         self.lights.get_mut(handle.id())?.update_array(
             index,
-            offset,
+            0,
             sources,
             render.context().queue(),
         )?;
@@ -365,10 +364,10 @@ impl Resources {
     pub fn create_space(
         &mut self,
         render: &Render,
-        spaces: &[SpaceModel],
+        spaces: &[_SpaceModel],
         data: &[SpaceData],
     ) -> Result<_SpaceHandle, TooManySpaces> {
-        let ls = LightSpace::new(
+        let ls = _LightSpace::new(
             spaces,
             data,
             render.context().device(),
@@ -384,7 +383,7 @@ impl Resources {
         &mut self,
         render: &Render,
         handle: _SpaceHandle,
-        spaces: &[SpaceModel],
+        spaces: &[_SpaceModel],
         data: &[SpaceData],
     ) -> Result<(), Error> {
         let ls = self.spaces.get_mut(handle.0)?;
@@ -398,7 +397,7 @@ impl Resources {
         render: &Render,
         handle: _SpaceHandle,
         n: usize,
-        space: SpaceModel,
+        space: _SpaceModel,
     ) -> Result<(), Error> {
         let ls = self.spaces.get(handle.0)?;
         ls.update_nth_space(n, space, render.context().queue())?;
