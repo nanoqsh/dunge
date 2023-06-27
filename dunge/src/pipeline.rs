@@ -15,7 +15,7 @@ use {
     },
     dunge_shader::{
         Globals as Gl, Group, Layout, Lights as Lt, Shader as ShaderData, SourceBindings,
-        TextureBindings, Textures as Tx,
+        Spaces as Sp, TextureBindings, Textures as Tx,
     },
     std::marker::PhantomData,
     wgpu::{
@@ -296,6 +296,10 @@ impl Pipeline {
                     lights: Group {
                         num: 0,
                         bindings: Lt::default(),
+                    },
+                    spaces: Group {
+                        num: 0,
+                        bindings: Sp::default(),
                     },
                 },
             ),

@@ -359,6 +359,8 @@ impl View {
 pub struct SourceArrays(&'static [SourceArray]);
 
 impl SourceArrays {
+    pub const EMPTY: Self = Self(&[]);
+
     #[must_use]
     pub const fn new(arrays: &'static [SourceArray]) -> Self {
         assert!(
@@ -379,7 +381,11 @@ impl SourceArrays {
         self.0.is_empty()
     }
 
-    pub(crate) fn define_type(o: &mut Out) {
+    pub(crate) fn define_type(&self, o: &mut Out) {
+        if self.is_empty() {
+            return;
+        }
+
         o.write(Struct {
             name: "Source",
             fields: vec![
@@ -404,38 +410,39 @@ impl SourceArrays {
 
     pub(crate) fn declare_group(&self, binding: &mut Binding, o: &mut Out) -> Vec<SourceBindings> {
         self.enumerate()
-            .map(|(n, SourceArray { size, .. })| {
-                let binding_array = binding.next();
-                let binding_len = binding.next();
+            .map(|(n, SourceArray { size, .. })| SourceBindings {
+                binding_array: {
+                    let binding = binding.next();
+                    o.write(Var {
+                        binding,
+                        uniform: true,
+                        name: Name::Num {
+                            str: "sources_array",
+                            n,
+                        },
+                        ty: Type::Array {
+                            ty: &Type::Simple("Source"),
+                            size,
+                        },
+                    });
 
-                o.write(Var {
-                    binding: binding_array,
-                    uniform: true,
-                    name: Name::Num {
-                        str: "sources_array",
-                        n,
-                    },
-                    ty: Type::Array {
-                        ty: &Type::Simple("Source"),
-                        size,
-                    },
-                });
+                    binding.get()
+                },
+                binding_len: {
+                    let binding = binding.next();
+                    o.write(Var {
+                        binding,
+                        uniform: true,
+                        name: Name::Num {
+                            str: "sources_len",
+                            n,
+                        },
+                        ty: Type::U32,
+                    });
 
-                o.write(Var {
-                    binding: binding_len,
-                    uniform: true,
-                    name: Name::Num {
-                        str: "sources_len",
-                        n,
-                    },
-                    ty: Type::U32,
-                });
-
-                SourceBindings {
-                    binding_array: binding_array.get(),
-                    binding_len: binding_len.get(),
-                    size,
-                }
+                    binding.get()
+                },
+                size,
             })
             .collect()
     }
@@ -471,4 +478,137 @@ pub struct SourceBindings {
     pub binding_array: u32,
     pub binding_len: u32,
     pub size: u8,
+}
+
+#[derive(Clone, Copy)]
+pub struct LightSpaces(&'static [SpaceKind]);
+
+impl LightSpaces {
+    pub const EMPTY: Self = Self(&[]);
+
+    #[must_use]
+    pub const fn new(spaces: &'static [SpaceKind]) -> Self {
+        assert!(
+            spaces.len() <= 4,
+            "the number of light spaces cannot be greater than 4",
+        );
+
+        Self(spaces)
+    }
+
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub(crate) fn define_type(&self, o: &mut Out) {
+        if self.is_empty() {
+            return;
+        }
+
+        o.write(Struct {
+            name: "Space",
+            fields: vec![
+                Field {
+                    location: Location::None,
+                    name: Name::Str("model"),
+                    ty: Type::MAT4,
+                },
+                Field {
+                    location: Location::None,
+                    name: Name::Str("col"),
+                    ty: Type::VEC3,
+                },
+            ],
+        });
+    }
+
+    pub(crate) fn declare_group(
+        &self,
+        binding: &mut Binding,
+        o: &mut Out,
+    ) -> Option<SpaceBindings> {
+        if self.is_empty() {
+            return None;
+        }
+
+        Some(SpaceBindings {
+            binding_array: {
+                let binding = binding.next();
+                o.write(Var {
+                    binding,
+                    uniform: true,
+                    name: Name::Str("spaces_array"),
+                    ty: Type::Array {
+                        ty: &Type::Simple("Space"),
+                        size: self.len() as u8,
+                    },
+                });
+
+                binding.get()
+            },
+            binding_len: {
+                let binding = binding.next();
+                o.write(Var {
+                    binding,
+                    uniform: true,
+                    name: Name::Str("spaces_len"),
+                    ty: Type::U32,
+                });
+
+                binding.get()
+            },
+            tdiffs: self
+                .enumerate()
+                .map(|(n, ..)| {
+                    let binding = binding.next();
+                    o.write(Var {
+                        binding,
+                        uniform: false,
+                        name: Name::Num {
+                            str: "space_tdiff",
+                            n,
+                        },
+                        ty: Type::TEXTURE3D,
+                    });
+
+                    binding.get()
+                })
+                .collect(),
+            sdiff: {
+                let binding = binding.next();
+                o.write(Var {
+                    binding,
+                    uniform: false,
+                    name: Name::Str("space_sdiff"),
+                    ty: Type::SAMPLER,
+                });
+
+                binding.get()
+            },
+        })
+    }
+
+    fn enumerate(&self) -> impl Iterator<Item = (u32, SpaceKind)> {
+        (0..).zip(self.0.iter().copied())
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum SpaceKind {
+    Rgba,
+    Gray,
+}
+
+#[derive(Clone)]
+pub struct SpaceBindings {
+    pub binding_array: u32,
+    pub binding_len: u32,
+    pub tdiffs: Vec<u32>,
+    pub sdiff: u32,
 }

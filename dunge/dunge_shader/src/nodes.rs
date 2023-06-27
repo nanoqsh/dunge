@@ -143,6 +143,7 @@ impl Type {
     pub const VEC4: Self = Self::Simple("vec4<f32>");
     pub const MAT4: Self = Self::Simple("mat4x4<f32>");
     pub const TEXTURE2D: Self = Self::Simple("texture_2d<f32>");
+    pub const TEXTURE3D: Self = Self::Simple("texture_3d<f32>");
     pub const SAMPLER: Self = Self::Simple("sampler");
 }
 

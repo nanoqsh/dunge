@@ -8,8 +8,8 @@ use {
         PixelSize, Shader, Source, TextureData, Vertex, WindowMode,
     },
     dunge_shader::{
-        Dimension, Fragment, Scheme, SourceArray, SourceArrays, SourceKind, Vertex as SchemeVertex,
-        View,
+        Dimension, Fragment, LightSpaces, Scheme, SourceArray, SourceArrays, SourceKind, SpaceKind,
+        Vertex as SchemeVertex, View,
     },
 };
 
@@ -73,6 +73,11 @@ impl App {
                 static_color: None,
                 ambient: true,
                 source_arrays: SourceArrays::new(&SOURCE_ARRAYS),
+                light_spaces: LightSpaces::new(&[
+                    SpaceKind::Rgba,
+                    SpaceKind::Rgba,
+                    SpaceKind::Gray,
+                ]),
             });
 
             context

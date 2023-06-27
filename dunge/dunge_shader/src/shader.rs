@@ -12,6 +12,7 @@ pub struct Scheme {
     pub ambient: bool,
     pub static_color: Option<Color>,
     pub source_arrays: SourceArrays,
+    pub light_spaces: LightSpaces,
 }
 
 #[derive(Clone, Copy)]
@@ -37,6 +38,7 @@ impl Shader {
             ambient,
             static_color,
             source_arrays,
+            light_spaces,
         } = scheme;
 
         let vert_input = VertexInput {
@@ -59,11 +61,9 @@ impl Shader {
 
             let mut location = Location::new();
             vert_output.define_type(&mut location, &mut o);
-            if vert_output.has_sources() {
-                SourceArrays::define_type(&mut o);
-            }
-
             view.define_type(&mut o);
+            source_arrays.define_type(&mut o);
+            light_spaces.define_type(&mut o);
             o
         };
 
@@ -81,6 +81,9 @@ impl Shader {
             },
             |binding, o| Lights {
                 source_arrays: source_arrays.declare_group(binding, o),
+            },
+            |binding, o| Spaces {
+                light_spaces: light_spaces.declare_group(binding, o),
             },
         );
 
@@ -122,6 +125,7 @@ impl Shader {
                 Textures { map: Some(map) }
             },
             |_, _| Lights::default(),
+            |_, _| Spaces::default(),
         );
 
         Self { layout, source }
@@ -132,14 +136,16 @@ pub struct Layout {
     pub globals: Group<Globals>,
     pub textures: Group<Textures>,
     pub lights: Group<Lights>,
+    pub spaces: Group<Spaces>,
 }
 
 impl Layout {
-    fn new<G, T, L>(globals: G, textures: T, lights: L) -> (Self, Out)
+    fn new<G, T, L, S>(globals: G, textures: T, lights: L, spaces: S) -> (Self, Out)
     where
         G: FnOnce(&mut Binding, &mut Out) -> Globals,
         T: FnOnce(&mut Binding, &mut Out) -> Textures,
         L: FnOnce(&mut Binding, &mut Out) -> Lights,
+        S: FnOnce(&mut Binding, &mut Out) -> Spaces,
     {
         let mut o = Out::new();
         let mut num = 0;
@@ -166,11 +172,21 @@ impl Layout {
             bindings: lights(&mut Binding::with_group(num), &mut o),
         };
 
+        if !lights.bindings.is_empty() {
+            num += 1;
+        }
+
+        let spaces = Group {
+            num,
+            bindings: spaces(&mut Binding::with_group(num), &mut o),
+        };
+
         (
             Self {
                 globals,
                 textures,
                 lights,
+                spaces,
             },
             o,
         )
@@ -209,4 +225,15 @@ impl Textures {
 #[derive(Default)]
 pub struct Lights {
     pub source_arrays: Vec<SourceBindings>,
+}
+
+impl Lights {
+    fn is_empty(&self) -> bool {
+        self.source_arrays.is_empty()
+    }
+}
+
+#[derive(Default)]
+pub struct Spaces {
+    pub light_spaces: Option<SpaceBindings>,
 }
