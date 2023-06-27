@@ -51,6 +51,7 @@ impl Shader {
             static_color,
             ambient,
             source_arrays,
+            light_spaces,
         };
 
         let types = {

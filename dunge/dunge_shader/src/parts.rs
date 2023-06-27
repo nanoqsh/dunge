@@ -78,6 +78,7 @@ pub(crate) struct VertexOutput {
     pub static_color: Option<Color>,
     pub ambient: bool,
     pub source_arrays: SourceArrays,
+    pub light_spaces: LightSpaces,
 }
 
 impl VertexOutput {
@@ -112,6 +113,14 @@ impl VertexOutput {
             });
         }
 
+        for (n, ..) in self.light_spaces.enumerate() {
+            fields.push(Field {
+                location: location.next(),
+                name: Name::Num { str: "space", n },
+                ty: Type::VEC3,
+            });
+        }
+
         o.write(Struct {
             name: "VertexOutput",
             fields,
@@ -137,6 +146,14 @@ impl VertexOutput {
 
         if self.has_sources() {
             o.write_str("    out.world = world.xyz;\n");
+        }
+
+        for (n, ..) in self.light_spaces.enumerate() {
+            o.write_str("    out.space_")
+                .write(n)
+                .write_str(" = (spaces[")
+                .write(n)
+                .write_str("].model * world).xzy;\n");
         }
     }
 
@@ -180,7 +197,7 @@ impl VertexOutput {
     }
 
     fn calc_light(&self, o: &mut Out) -> bool {
-        if !self.ambient && !self.has_sources() {
+        if !self.ambient && !self.has_sources() && self.light_spaces.is_empty() {
             return false;
         }
 
@@ -230,6 +247,7 @@ impl VertexOutput {
             }
         }
 
+        let has_spaces = self.calc_spaces(o);
         let mut light = o.write_str("let light = ").separated(" + ");
         if self.ambient {
             light.out().write_str("ambient");
@@ -239,12 +257,34 @@ impl VertexOutput {
             light.out().write_str("sources");
         }
 
+        if has_spaces {
+            light.out().write_str("space");
+        }
+
         o.write_str(";\n    ");
         true
     }
 
     pub fn has_sources(&self) -> bool {
         !self.source_arrays.is_empty()
+    }
+
+    fn calc_spaces(&self, o: &mut Out) -> bool {
+        const NAMES: [&str; 4] = ["space_a", "space_b", "space_c", "space_d"];
+
+        if self.light_spaces.is_empty() {
+            return false;
+        }
+
+        o.write_str("\n    ")
+            .write_str("var space = vec3(0.);\n    ");
+
+        for ((n, kind), name) in self.light_spaces.enumerate().zip(NAMES) {
+            kind.calc(name, n, o);
+        }
+
+        o.write_str("\n    ");
+        true
     }
 }
 
@@ -538,27 +578,16 @@ impl LightSpaces {
         }
 
         Some(SpaceBindings {
-            binding_array: {
+            spaces: {
                 let binding = binding.next();
                 o.write(Var {
                     binding,
                     uniform: true,
-                    name: Name::Str("spaces_array"),
+                    name: Name::Str("spaces"),
                     ty: Type::Array {
                         ty: &Type::Simple("Space"),
                         size: self.len() as u8,
                     },
-                });
-
-                binding.get()
-            },
-            binding_len: {
-                let binding = binding.next();
-                o.write(Var {
-                    binding,
-                    uniform: true,
-                    name: Name::Str("spaces_len"),
-                    ty: Type::U32,
                 });
 
                 binding.get()
@@ -605,10 +634,43 @@ pub enum SpaceKind {
     Gray,
 }
 
+impl SpaceKind {
+    fn calc(self, name: &str, index: u32, o: &mut Out) {
+        o.write_str("var ")
+            .write_str(name)
+            .write_str(" = textureSampleLevel(space_tdiff_")
+            .write(index)
+            .write_str(", space_sdiff, out.space_")
+            .write(index)
+            .write_str(", 0.);\n    ")
+            .write_str("space = ");
+
+        if index == 0 {
+            o.write_str(name)
+                .write_str(match self {
+                    Self::Rgba => ".rgb",
+                    Self::Gray => ".rrr",
+                })
+                .write_str(" * spaces[")
+                .write(index)
+                .write_str("].col;\n    ");
+        } else {
+            o.write_str("max(space, ")
+                .write_str(name)
+                .write_str(match self {
+                    Self::Rgba => ".rgb",
+                    Self::Gray => ".rrr",
+                })
+                .write_str(" * spaces[")
+                .write(index)
+                .write_str("].col);\n    ");
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct SpaceBindings {
-    pub binding_array: u32,
-    pub binding_len: u32,
+    pub spaces: u32,
     pub tdiffs: Vec<u32>,
     pub sdiff: u32,
 }
