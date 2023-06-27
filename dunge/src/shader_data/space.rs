@@ -99,15 +99,14 @@ impl LightSpace {
         layout: &BindGroupLayout,
     ) -> Result<Self, TooManySpaces> {
         use {
-            once_cell::sync::OnceCell,
-            std::array,
+            std::{array, sync::OnceLock},
             wgpu::{
                 util::{BufferInitDescriptor, DeviceExt},
                 *,
             },
         };
 
-        static FAKE_VIEW: OnceCell<&TextureView> = OnceCell::new();
+        static FAKE_VIEW: OnceLock<&TextureView> = OnceLock::new();
 
         debug_assert_eq!(
             spaces.len(),

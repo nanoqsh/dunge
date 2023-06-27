@@ -7,10 +7,7 @@ use std::process::{Command, Output};
 pub fn run_wasm_pack() {
     use std::env;
 
-    let debug = env::var("DEBUG")
-        .map(|var| var == "true")
-        .unwrap_or_default();
-
+    let debug = env::var("DEBUG").is_ok_and(|var| var == "true");
     let output = Command::new("wasm-pack")
         .args([
             "--log-level",
@@ -41,10 +38,7 @@ pub fn run_wasm_pack() {
 pub fn run_cargo_apk() {
     use std::env;
 
-    let debug = env::var("DEBUG")
-        .map(|var| var == "true")
-        .unwrap_or_default();
-
+    let debug = env::var("DEBUG").is_ok_and(|var| var == "true");
     let output = Command::new("cargo")
         .args(["apk", "build", "--manifest-path", "./android/Cargo.toml"])
         .args((!debug).then_some("--release"))

@@ -13,7 +13,7 @@ use {
         screen::{RenderScreen, Screen},
         shader_data::{Light, LightSpace, PostShaderData},
     },
-    once_cell::unsync::OnceCell,
+    std::cell::OnceCell,
     wgpu::{
         Adapter, Device, Instance, Queue, ShaderModule, Surface, SurfaceConfiguration, SurfaceError,
     },
@@ -134,8 +134,8 @@ impl Render {
             let (width, height) = size;
             let screen = self.screen();
             Some(Screen {
-                width: NonZeroU32::new(width.max(1)).expect("non zero"),
-                height: NonZeroU32::new(height.max(1)).expect("non zero"),
+                width: NonZeroU32::new(width).unwrap_or(NonZeroU32::MIN),
+                height: NonZeroU32::new(height).unwrap_or(NonZeroU32::MIN),
                 ..screen
             })
         });

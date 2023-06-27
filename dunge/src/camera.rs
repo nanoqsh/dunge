@@ -121,8 +121,7 @@ impl _Camera {
         if self
             .size
             .get()
-            .map(|(w, h)| width == w && height == h)
-            .unwrap_or_default()
+            .is_some_and(|(w, h)| width == w && height == h)
         {
             return;
         }

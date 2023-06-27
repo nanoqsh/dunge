@@ -8,7 +8,7 @@ keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
 readme = "../README.md"
 repository = "https://github.com/nanoqsh/dunge"
-rust-version = "1.67"
+rust-version = "1.70"
 
 [dependencies]
 dunge_macros = { path = "dunge_macros" }
@@ -16,7 +16,6 @@ dunge_shader = { path = "dunge_shader" }
 ahash = "0.8"
 glam = "0.24"
 log = "0.4"
-once_cell = "1.17"
 wgpu = "0.16"
 winit = { version = "0.28", default-features = false }
 
