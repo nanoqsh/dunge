@@ -15,7 +15,7 @@ use {
     },
     dunge_shader::{
         Globals as Gl, Group, Layout, Lights as Lt, Shader as ShaderData, SourceBindings,
-        Spaces as Sp, TextureBindings, Textures as Tx,
+        SpaceBindings, Spaces as Sp, TextureBindings, Textures as Tx,
     },
     std::marker::PhantomData,
     wgpu::{
@@ -310,77 +310,69 @@ impl Pipeline {
         &self.inner
     }
 
-    pub fn globals(&self) -> Option<&Globals> {
+    pub fn globals(&self) -> Option<&GroupLayout<Globals>> {
         self.groups.globals.as_ref()
     }
 
-    pub fn textures(&self) -> Option<&Textures> {
+    pub fn textures(&self) -> Option<&GroupLayout<Textures>> {
         self.groups.textures.as_ref()
     }
 
-    pub fn lights(&self) -> Option<&Lights> {
+    pub fn lights(&self) -> Option<&GroupLayout<Lights>> {
         self.groups.lights.as_ref()
+    }
+
+    pub fn spaces(&self) -> Option<&GroupLayout<Spaces>> {
+        self.groups.spaces.as_ref()
     }
 }
 
 struct Groups {
-    globals: Option<Globals>,
-    textures: Option<Textures>,
-    lights: Option<Lights>,
+    globals: Option<GroupLayout<Globals>>,
+    textures: Option<GroupLayout<Textures>>,
+    lights: Option<GroupLayout<Lights>>,
+    spaces: Option<GroupLayout<Spaces>>,
 }
 
 impl Groups {
     fn new(device: &Device, layout: &Layout) -> Self {
         use wgpu::*;
 
+        let entry = |binding, visibility| BindGroupLayoutEntry {
+            binding,
+            visibility,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        };
+
         Self {
             globals: {
                 let mut entries = vec![];
                 if let Some(binding) = layout.globals.bindings.post_data {
-                    entries.push(BindGroupLayoutEntry {
+                    entries.push(entry(
                         binding,
-                        visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    });
+                        ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+                    ));
                 }
 
                 if let Some(binding) = layout.globals.bindings.camera {
-                    entries.push(BindGroupLayoutEntry {
-                        binding,
-                        visibility: ShaderStages::VERTEX,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    });
+                    entries.push(entry(binding, ShaderStages::VERTEX));
                 }
 
                 if let Some(binding) = layout.globals.bindings.ambient {
-                    entries.push(BindGroupLayoutEntry {
-                        binding,
-                        visibility: ShaderStages::FRAGMENT,
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    });
+                    entries.push(entry(binding, ShaderStages::FRAGMENT));
                 }
 
-                entries.first().map(|_| Globals {
+                entries.first().map(|_| GroupLayout {
                     layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: Some("globals binding"),
                         entries: &entries,
                     }),
-                    bindings: GlobalsBindings {
+                    bindings: Globals {
                         group: layout.globals.num,
                         camera: layout.globals.bindings.camera.unwrap_or_default(),
                         ambient: layout.globals.bindings.ambient.unwrap_or_default(),
@@ -410,12 +402,12 @@ impl Groups {
                     ]);
                 }
 
-                entries.first().map(|_| Textures {
+                entries.first().map(|_| GroupLayout {
                     layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: Some("textures binding"),
                         entries: &entries,
                     }),
-                    bindings: TexturesBindings {
+                    bindings: Textures {
                         group: layout.textures.num,
                         map: layout.textures.bindings.map.unwrap_or_default(),
                     },
@@ -429,38 +421,60 @@ impl Groups {
                     .iter()
                     .flat_map(|bindings| {
                         [
-                            BindGroupLayoutEntry {
-                                binding: bindings.binding_array,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Buffer {
-                                    ty: BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                            BindGroupLayoutEntry {
-                                binding: bindings.binding_len,
-                                visibility: ShaderStages::FRAGMENT,
-                                ty: BindingType::Buffer {
-                                    ty: BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
+                            entry(bindings.binding_array, ShaderStages::FRAGMENT),
+                            entry(bindings.binding_len, ShaderStages::FRAGMENT),
                         ]
                     })
                     .collect();
 
-                entries.first().map(|_| Lights {
+                entries.first().map(|_| GroupLayout {
                     layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: Some("lights binding"),
                         entries: &entries,
                     }),
-                    bindings: LightsBindings {
+                    bindings: Lights {
                         group: layout.lights.num,
                         source_arrays: layout.lights.bindings.source_arrays.clone(),
+                    },
+                })
+            },
+            spaces: 'spaces: {
+                let ls = &layout.spaces.bindings.light_spaces;
+                if ls.is_empty() {
+                    break 'spaces None;
+                }
+
+                let mut entries = vec![entry(
+                    ls.spaces,
+                    ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+                )];
+
+                entries.extend(ls.tdiffs.iter().map(|&binding| BindGroupLayoutEntry {
+                    binding,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: TextureViewDimension::D3,
+                        sample_type: TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                }));
+
+                entries.push(BindGroupLayoutEntry {
+                    binding: ls.sdiff,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                    count: None,
+                });
+
+                Some(GroupLayout {
+                    layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                        label: Some("spaces binding"),
+                        entries: &entries,
+                    }),
+                    bindings: Spaces {
+                        group: layout.spaces.num,
+                        bindings: ls.clone(),
                     },
                 })
             },
@@ -469,9 +483,10 @@ impl Groups {
 
     fn layouts(&self) -> Vec<&BindGroupLayout> {
         [
-            self.globals.as_ref().map(|Globals { layout, .. }| layout),
-            self.textures.as_ref().map(|Textures { layout, .. }| layout),
-            self.lights.as_ref().map(|Lights { layout, .. }| layout),
+            self.globals.as_ref().map(|group| &group.layout),
+            self.textures.as_ref().map(|group| &group.layout),
+            self.lights.as_ref().map(|group| &group.layout),
+            self.spaces.as_ref().map(|group| &group.layout),
         ]
         .into_iter()
         .flatten()
@@ -479,35 +494,30 @@ impl Groups {
     }
 }
 
-pub(crate) struct Globals {
+pub(crate) struct GroupLayout<T> {
     pub layout: BindGroupLayout,
-    pub bindings: GlobalsBindings,
+    pub bindings: T,
 }
 
-pub(crate) struct GlobalsBindings {
+pub(crate) struct Globals {
     pub group: u32,
     pub camera: u32,
     pub ambient: u32,
 }
 
 pub(crate) struct Textures {
-    pub layout: BindGroupLayout,
-    pub bindings: TexturesBindings,
-}
-
-pub(crate) struct TexturesBindings {
     pub group: u32,
     pub map: TextureBindings,
 }
 
 pub(crate) struct Lights {
-    pub layout: BindGroupLayout,
-    pub bindings: LightsBindings,
-}
-
-pub(crate) struct LightsBindings {
     pub group: u32,
     pub source_arrays: Vec<SourceBindings>,
+}
+
+pub(crate) struct Spaces {
+    pub group: u32,
+    pub bindings: SpaceBindings,
 }
 
 pub(crate) struct VertexLayout {

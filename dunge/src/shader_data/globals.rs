@@ -5,7 +5,7 @@ use {
         error::ResourceNotFound,
         handles::{GlobalsHandle, LayerHandle},
         layout::Plain,
-        pipeline::GlobalsBindings as Bindings,
+        pipeline::Globals as Bindings,
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},

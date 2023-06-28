@@ -35,6 +35,8 @@ mod shader_data {
     pub(crate) mod lights;
     mod post;
     mod source;
+    mod space;
+    pub(crate) mod spaces;
     mod texture;
     pub(crate) mod textures;
 
@@ -43,16 +45,17 @@ mod shader_data {
         ambient::AmbientUniform,
         camera::CameraUniform,
         instance::{Instance, InstanceModel},
-        light::{Light, SourceModel},
+        light::{Light, _SourceModel},
         post::PostShaderData,
         source::SourceArray,
         texture::Texture,
     };
 
     pub use self::{
-        _space::{Data as SpaceData, Format as SpaceFormat, _Space},
+        _space::{Data as _SpaceData, Format as _SpaceFormat, _Space},
         light::{LightKind, _Source},
         source::Source,
+        space::{Data as SpaceData, Format as SpaceFormat, Space},
         texture::{Data as TextureData, Error as TextureError},
     };
 }
@@ -91,7 +94,8 @@ pub use {
         r#loop::Loop,
         shader::Shader,
         shader_data::{
-            LightKind, Source, SpaceData, SpaceFormat, TextureData, TextureError, _Source, _Space,
+            LightKind, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError, _Source,
+            _Space, _SpaceData, _SpaceFormat,
         },
         vertex::Vertex,
     },

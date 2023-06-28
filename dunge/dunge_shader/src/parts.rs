@@ -568,16 +568,12 @@ impl LightSpaces {
         });
     }
 
-    pub(crate) fn declare_group(
-        &self,
-        binding: &mut Binding,
-        o: &mut Out,
-    ) -> Option<SpaceBindings> {
+    pub(crate) fn declare_group(&self, binding: &mut Binding, o: &mut Out) -> SpaceBindings {
         if self.is_empty() {
-            return None;
+            return SpaceBindings::default();
         }
 
-        Some(SpaceBindings {
+        SpaceBindings {
             spaces: {
                 let binding = binding.next();
                 o.write(Var {
@@ -620,10 +616,10 @@ impl LightSpaces {
 
                 binding.get()
             },
-        })
+        }
     }
 
-    fn enumerate(&self) -> impl Iterator<Item = (u32, SpaceKind)> {
+    pub fn enumerate(&self) -> impl Iterator<Item = (u32, SpaceKind)> {
         (0..).zip(self.0.iter().copied())
     }
 }
@@ -668,9 +664,16 @@ impl SpaceKind {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SpaceBindings {
     pub spaces: u32,
     pub tdiffs: Vec<u32>,
     pub sdiff: u32,
+}
+
+impl SpaceBindings {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.tdiffs.is_empty()
+    }
 }

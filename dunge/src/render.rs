@@ -59,7 +59,7 @@ impl Render {
                 .expect("default light")
         });
 
-        resources.spaces.insert(
+        resources._spaces.insert(
             _LightSpace::new(&[], &[], &context.device, &context.queue, &groups.space)
                 .expect("default light space"),
         );

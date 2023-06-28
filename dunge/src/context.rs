@@ -15,8 +15,8 @@ use {
         shader::{Shader, ShaderInfo},
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
-            textures::Builder as TexturesBuilder, InstanceModel, Source, SourceModel, SpaceData,
-            TextureData, _Source, _Space, _SpaceModel,
+            spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, InstanceModel,
+            Source, TextureData, _Source, _SourceModel, _Space, _SpaceData, _SpaceModel,
         },
         topology::Topology,
         transform::IntoMat,
@@ -36,9 +36,9 @@ pub struct Context {
     pub(crate) resources: Resources,
     limits: Limits,
     models: Vec<InstanceModel>,
-    sources: Vec<SourceModel>,
+    sources: Vec<_SourceModel>,
     spaces: Vec<_SpaceModel>,
-    space_data: Vec<SpaceData<'static>>,
+    space_data: Vec<_SpaceData<'static>>,
 }
 
 impl Context {
@@ -176,6 +176,10 @@ impl Context {
 
         self.resources
             .update_lights_sources(&self.render, handle, index, sources)
+    }
+
+    pub fn spaces_builder(&mut self) -> SpacesBuilder {
+        SpacesBuilder::new(&mut self.resources, &self.render)
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
@@ -353,7 +357,7 @@ impl Context {
         self.sources.clear();
         let models = srcs
             .into_iter()
-            .map(|src| SourceModel::new(src.into_linear()));
+            .map(|src| _SourceModel::new(src.into_linear()));
 
         self.sources.extend(models);
         self.resources
@@ -378,7 +382,7 @@ impl Context {
         self.sources.clear();
         let models = srcs
             .into_iter()
-            .map(|src| SourceModel::new(src.into_linear()));
+            .map(|src| _SourceModel::new(src.into_linear()));
 
         self.sources.extend(models);
         self.resources
@@ -404,7 +408,7 @@ impl Context {
             &self.render,
             handle,
             n,
-            SourceModel::new(src.into_linear()),
+            _SourceModel::new(src.into_linear()),
         )
     }
 
@@ -537,7 +541,7 @@ impl Context {
         &mut self,
         handle: _SpaceHandle,
         n: usize,
-        data: SpaceData,
+        data: _SpaceData,
     ) -> Result<(), Error> {
         self.resources
             .update_nth_space_data(&self.render, handle, n, data)

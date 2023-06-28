@@ -3,7 +3,7 @@ use {
         _shader::{self, _Shader},
         _vertex::{ColorVertex, FlatVertex, TextureVertex, _Vertex},
         color::{IntoLinear, Linear},
-        error::{Error, ResourceNotFound},
+        error::{Error, NotSet, ResourceNotFound},
         frame::Frame,
         handles::*,
         mesh::Mesh,
@@ -131,6 +131,17 @@ impl<'l, S, T> Layer<'l, S, T> {
         Ok(self)
     }
 
+    /// Binds the [spaces](crate::handles::SpacesHandle).
+    ///
+    /// # Errors
+    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
+    /// if given spaces handler was deleted.
+    pub fn bind_spaces(&mut self, handle: SpacesHandle<S>) -> Result<&mut Self, ResourceNotFound> {
+        let spaces = self.resources.spaces.get(handle.id())?;
+        self.groups.spaces = Some(spaces.bind());
+        Ok(self)
+    }
+
     /// Binds the [instance](crate::handles::InstanceHandle).
     ///
     /// # Errors
@@ -152,21 +163,28 @@ impl<'l, S, T> Layer<'l, S, T> {
     {
         let info = ShaderInfo::new::<S>();
         if info.has_globals() {
-            let (index, group) = self.groups.globals.ok_or(Error::GlobalsNotSet)?;
+            let (index, group) = self.groups.globals.ok_or(NotSet::Globals)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_textures() {
-            let (index, group) = self.groups.textures.ok_or(Error::TexturesNotSet)?;
+            let (index, group) = self.groups.textures.ok_or(NotSet::Textures)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_lights() {
-            let (index, group) = self.groups.lights.ok_or(Error::LightsNotSet)?;
+            let (index, group) = self.groups.lights.ok_or(NotSet::Lights)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
-        self.draw_mesh(self.resources.meshes.get(handle.id())?)
+        if info.has_spaces() {
+            let (index, group) = self.groups.spaces.ok_or(NotSet::Spaces)?;
+            self.pass.set_bind_group(index, group, &[]);
+        }
+
+        let mesh = self.resources.meshes.get(handle.id())?;
+        self.draw_mesh(mesh)?;
+        Ok(())
     }
 
     /// Draws the [mesh](crate::handles::MeshHandle).
@@ -176,13 +194,15 @@ impl<'l, S, T> Layer<'l, S, T> {
     /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
     /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
     pub fn _draw(&mut self, handle: MeshHandle<S, T>) -> Result<(), Error> {
-        self.draw_mesh(self.resources.meshes.get(handle.id())?)
+        let mesh = self.resources.meshes.get(handle.id())?;
+        self.draw_mesh(mesh)?;
+        Ok(())
     }
 
-    fn draw_mesh(&mut self, mesh: &'l Mesh) -> Result<(), Error> {
+    fn draw_mesh(&mut self, mesh: &'l Mesh) -> Result<(), NotSet> {
         use {crate::mesh::Type, wgpu::IndexFormat};
 
-        let instance = self.instance.ok_or(Error::InstanceNotSet)?;
+        let instance = self.instance.ok_or(NotSet::Instance)?;
 
         self.pass
             .set_vertex_buffer(_shader::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
@@ -247,7 +267,7 @@ impl<'l, S, T> Layer<'l, S, T> {
         handle: _SpaceHandle,
         group: u32,
     ) -> Result<(), ResourceNotFound> {
-        let space = self.resources.spaces.get(handle.0)?;
+        let space = self.resources._spaces.get(handle.0)?;
         self.pass.set_bind_group(group, space.bind_group(), &[]);
 
         Ok(())
@@ -328,6 +348,7 @@ struct Groups<'l> {
     globals: Option<(u32, &'l BindGroup)>,
     textures: Option<(u32, &'l BindGroup)>,
     lights: Option<(u32, &'l BindGroup)>,
+    spaces: Option<(u32, &'l BindGroup)>,
 }
 
 /// The layer builder. It creates a configured [`Layer`].

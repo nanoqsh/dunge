@@ -49,7 +49,7 @@ pub(crate) struct Light {
 impl Light {
     pub fn new(
         ambient: [f32; 3],
-        srcs: &[SourceModel],
+        srcs: &[_SourceModel],
         device: &Device,
         layout: &BindGroupLayout,
     ) -> Result<Self, TooManySources> {
@@ -107,7 +107,7 @@ impl Light {
     pub fn update_sources(
         &mut self,
         ambient: [f32; 3],
-        srcs: &[SourceModel],
+        srcs: &[_SourceModel],
         queue: &Queue,
     ) -> Result<(), TooManySources> {
         use std::mem;
@@ -124,7 +124,7 @@ impl Light {
             let len = srcs.len() as u32;
             queue.write_buffer(
                 &self.sources_buffer,
-                mem::size_of::<[SourceModel; 64]>() as _,
+                mem::size_of::<[_SourceModel; 64]>() as _,
                 len.as_bytes(),
             );
 
@@ -138,7 +138,7 @@ impl Light {
     pub fn update_nth(
         &self,
         n: usize,
-        source: SourceModel,
+        source: _SourceModel,
         queue: &Queue,
     ) -> Result<(), SourceNotFound> {
         use std::mem;
@@ -149,7 +149,7 @@ impl Light {
 
         queue.write_buffer(
             &self.sources_buffer,
-            (mem::size_of::<SourceModel>() * n) as _,
+            (mem::size_of::<_SourceModel>() * n) as _,
             source.as_bytes(),
         );
 
@@ -163,14 +163,14 @@ impl Light {
 
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
-pub(crate) struct SourceModel {
+pub(crate) struct _SourceModel {
     pos: [f32; 3],
     rad: f32,
     col: [f32; 3],
     flags: u32,
 }
 
-impl SourceModel {
+impl _SourceModel {
     pub fn new(src: _Source) -> Self {
         Self {
             pos: src.pos,
@@ -184,18 +184,18 @@ impl SourceModel {
     }
 }
 
-unsafe impl Plain for SourceModel {}
+unsafe impl Plain for _SourceModel {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub(crate) struct Sources {
-    data: [SourceModel; 64],
+    data: [_SourceModel; 64],
     len: u32,
     pad: [u32; 3],
 }
 
 impl Sources {
-    fn from_slice(slice: &[SourceModel]) -> Self {
+    fn from_slice(slice: &[_SourceModel]) -> Self {
         let mut sources = Self::default();
         sources.data[..slice.len()].copy_from_slice(slice);
         sources.len = slice.len() as u32;
@@ -206,7 +206,7 @@ impl Sources {
 impl Default for Sources {
     fn default() -> Self {
         Self {
-            data: [SourceModel::default(); 64],
+            data: [_SourceModel::default(); 64],
             len: 0,
             pad: [0; 3],
         }

@@ -115,14 +115,14 @@ impl Shader {
     pub fn postproc(post_data: u32, map: TextureBindings, source: String) -> Self {
         let (layout, _) = Layout::new(
             |binding, _| {
-                assert_eq!(binding.group(), 0);
+                assert_eq!(binding.group(), 0, "expected group 0 for the globals");
                 Globals {
                     post_data: Some(post_data),
                     ..Default::default()
                 }
             },
             |binding, _| {
-                assert_eq!(binding.group(), 1);
+                assert_eq!(binding.group(), 1, "expected group 1 for the textures");
                 Textures { map: Some(map) }
             },
             |_, _| Lights::default(),
@@ -236,5 +236,5 @@ impl Lights {
 
 #[derive(Default)]
 pub struct Spaces {
-    pub light_spaces: Option<SpaceBindings>,
+    pub light_spaces: SpaceBindings,
 }

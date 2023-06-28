@@ -17,7 +17,7 @@ pub(crate) struct ShaderInfo {
     pub has_ambient: bool,
     pub has_map: bool,
     pub source_arrays: usize,
-    pub light_spaces: usize,
+    pub light_spaces: LightSpaces,
 }
 
 impl ShaderInfo {
@@ -30,7 +30,7 @@ impl ShaderInfo {
             has_ambient: S::AMBIENT,
             has_map: <S::Vertex as Vertex>::Texture::OPTIONAL_N_FLOATS.is_some(),
             source_arrays: S::SOURCES.len(),
-            light_spaces: S::SPACES.len(),
+            light_spaces: S::SPACES,
         }
     }
 
@@ -47,6 +47,6 @@ impl ShaderInfo {
     }
 
     pub const fn has_spaces(&self) -> bool {
-        self.light_spaces > 0
+        !self.light_spaces.is_empty()
     }
 }

@@ -124,6 +124,27 @@ impl<S> Clone for ShaderHandle<S> {
 
 impl<S> Copy for ShaderHandle<S> {}
 
+#[must_use]
+pub struct SpacesHandle<S>(u32, PhantomData<S>);
+
+impl<S> SpacesHandle<S> {
+    pub(crate) fn new(id: u32) -> Self {
+        Self(id, PhantomData)
+    }
+
+    pub(crate) fn id(self) -> u32 {
+        self.0
+    }
+}
+
+impl<S> Clone for SpacesHandle<S> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S> Copy for SpacesHandle<S> {}
+
 /// A space handle. May be obtained from the [`create_space`](crate::Context::create_space) method.
 #[must_use]
 #[derive(Clone, Copy)]

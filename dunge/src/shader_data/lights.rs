@@ -3,7 +3,7 @@ use {
         error::ResourceNotFound,
         handles::{LayerHandle, LightsHandle},
         layout::Plain,
-        pipeline::LightsBindings as Bindings,
+        pipeline::Lights as Bindings,
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},

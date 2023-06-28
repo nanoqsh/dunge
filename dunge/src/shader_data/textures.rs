@@ -2,7 +2,7 @@ use {
     crate::{
         error::{ResourceNotFound, TooLargeSize},
         handles::{LayerHandle, TexturesHandle},
-        pipeline::TexturesBindings as Bindings,
+        pipeline::Textures as Bindings,
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},

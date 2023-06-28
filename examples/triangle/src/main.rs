@@ -3,9 +3,9 @@ use {
         color::Standard,
         handles::*,
         input::{Input, Key},
-        transform::Position,
+        transform::{AxisAngle, Position, Transform},
         CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        PixelSize, Shader, Source, TextureData, Vertex, WindowMode,
+        PixelSize, Shader, Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, WindowMode,
     },
     dunge_shader::{
         Dimension, Fragment, LightSpaces, Scheme, SourceArray, SourceArrays, SourceKind, SpaceKind,
@@ -23,9 +23,11 @@ impl Shader for TriangleShader {
     const VIEW: View = View::Camera;
     const AMBIENT: bool = true;
     const SOURCES: SourceArrays = SourceArrays::new(&SOURCE_ARRAYS);
+    const SPACES: LightSpaces = LightSpaces::new(&LIGHT_SPACES);
 }
 
 const SOURCE_ARRAYS: [SourceArray; 1] = [SourceArray::new(SourceKind::Glow, 4)];
+const LIGHT_SPACES: [SpaceKind; 1] = [SpaceKind::Rgba];
 
 fn main() {
     env_logger::init();
@@ -47,6 +49,7 @@ struct App {
     globals: GlobalsHandle<TriangleShader>,
     textures: TexturesHandle<TriangleShader>,
     lights: LightsHandle<TriangleShader>,
+    spaces: SpacesHandle<TriangleShader>,
     mesh: MeshHandle<Vert>,
     instance: InstanceHandle,
     state: f32,
@@ -73,11 +76,7 @@ impl App {
                 static_color: None,
                 ambient: true,
                 source_arrays: SourceArrays::new(&SOURCE_ARRAYS),
-                light_spaces: LightSpaces::new(&[
-                    SpaceKind::Rgba,
-                    SpaceKind::Rgba,
-                    SpaceKind::Gray,
-                ]),
+                light_spaces: LightSpaces::new(&LIGHT_SPACES),
             });
 
             context
@@ -95,11 +94,11 @@ impl App {
             .build(layer)
             .expect("create globals");
 
+        let nana = utils::read_png(include_bytes!("../nana.png"));
+
         // Create textures
         let textures = {
-            let im = utils::read_png(include_bytes!("../nana.png"));
-            let data = TextureData::new(&im, im.dimensions()).expect("texture data");
-
+            let data = TextureData::new(&nana, nana.dimensions()).expect("texture data");
             context
                 .textures_builder()
                 .with_map(data)
@@ -108,12 +107,33 @@ impl App {
         };
 
         // Create lights
-        let lights = {
+        let lights = context
+            .lights_builder()
+            .with_sources(&[])
+            .build(layer)
+            .expect("create lights");
+
+        // Create spaces
+        let spaces = {
+            use std::f32::consts::FRAC_PI_2;
+
+            let (width, height) = nana.dimensions();
+            let data = SpaceData::new(&nana, (width as u8, height as u8, 1), SpaceFormat::Srgba)
+                .expect("space data");
+
             context
-                .lights_builder()
-                .with_sources(&[])
+                .spaces_builder()
+                .with_space(Space {
+                    data,
+                    transform: Transform {
+                        pos: [0.; 3],
+                        rot: AxisAngle([1., 0., 0.], -FRAC_PI_2),
+                        scl: [0.5; 3],
+                    },
+                    col: Standard([1.; 3]),
+                })
                 .build(layer)
-                .expect("create lights")
+                .expect("create spaces")
         };
 
         // Create a mesh
@@ -140,6 +160,7 @@ impl App {
             globals,
             textures,
             lights,
+            spaces,
             mesh,
             instance,
             state: 0.,
@@ -218,6 +239,7 @@ impl Loop for App {
             .bind_globals(self.globals)?
             .bind_textures(self.textures)?
             .bind_lights(self.lights)?
+            .bind_spaces(self.spaces)?
             .bind_instance(self.instance)?
             .draw(self.mesh)
     }

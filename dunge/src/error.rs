@@ -12,17 +12,32 @@ pub enum Error {
     /// Returned when too large buffer is passed.
     TooLargeSize,
 
+    /// Returns when the requested object is not set.
+    NotSet(NotSet),
+}
+
+impl From<NotSet> for Error {
+    fn from(v: NotSet) -> Self {
+        Self::NotSet(v)
+    }
+}
+
+#[derive(Debug)]
+pub enum NotSet {
     /// Returns when globals is not set.
-    GlobalsNotSet,
+    Globals,
 
     /// Returns when textures is not set.
-    TexturesNotSet,
+    Textures,
 
     /// Returns when lights is not set.
-    LightsNotSet,
+    Lights,
+
+    /// Returns when spaces is not set.
+    Spaces,
 
     /// Returns when an instance of rendered resourse is not set.
-    InstanceNotSet,
+    Instance,
 }
 
 /// Returns when a rendered resourse not found.
