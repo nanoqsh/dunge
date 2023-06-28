@@ -5,6 +5,5 @@ edition = "2021"
 
 [dependencies]
 utils = { path = "../utils" }
-dunge_shader = { path = "../../dunge/dunge_shader" }
 dunge = { path = "../../dunge" }
 env_logger = "0.9"

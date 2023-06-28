@@ -1,16 +1,11 @@
-use {
-    dunge::{
-        color::Standard,
-        handles::*,
-        input::{Input, Key},
-        transform::{AxisAngle, Position, Transform},
-        CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
-        PixelSize, Shader, Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, WindowMode,
-    },
-    dunge_shader::{
-        Dimension, Fragment, LightSpaces, Scheme, SourceArray, SourceArrays, SourceKind, SpaceKind,
-        Vertex as SchemeVertex, View,
-    },
+use dunge::{
+    color::Standard,
+    handles::*,
+    input::{Input, Key},
+    shader::*,
+    transform::{AxisAngle, Position, Transform},
+    CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData, PixelSize,
+    Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, WindowMode,
 };
 
 #[repr(C)]
@@ -64,21 +59,7 @@ impl App {
 
         // Create shader and layer
         let layer = {
-            let shader: ShaderHandle<TriangleShader> = context.create_shader(Scheme {
-                vert: SchemeVertex {
-                    dimension: Dimension::D2,
-                    fragment: Fragment {
-                        vertex_color: true,
-                        vertex_texture: true,
-                    },
-                },
-                view: View::Camera,
-                static_color: None,
-                ambient: true,
-                source_arrays: SourceArrays::new(&SOURCE_ARRAYS),
-                light_spaces: LightSpaces::new(&LIGHT_SPACES),
-            });
-
+            let shader: ShaderHandle<TriangleShader> = context.create_shader();
             context
                 .create_layer_with_parameters()
                 .with_cull_faces(false)

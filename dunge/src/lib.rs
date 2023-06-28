@@ -92,7 +92,6 @@ pub use {
         mesh::{Data as MeshData, Error as MeshError},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
-        shader::Shader,
         shader_data::{
             LightKind, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError, _Source,
             _Space, _SpaceData, _SpaceFormat,

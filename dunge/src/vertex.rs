@@ -68,6 +68,25 @@ where
     unsafe { slice::from_raw_parts(verts.as_ptr().cast(), mem::size_of_val(verts)) }
 }
 
+pub(crate) struct VertexInfo {
+    pub dimensions: u64,
+    pub has_color: bool,
+    pub has_texture: bool,
+}
+
+impl VertexInfo {
+    pub const fn new<V>() -> Self
+    where
+        V: Vertex,
+    {
+        Self {
+            dimensions: V::Position::N_FLOATS,
+            has_color: V::Color::OPTIONAL_N_FLOATS.is_some(),
+            has_texture: V::Texture::OPTIONAL_N_FLOATS.is_some(),
+        }
+    }
+}
+
 /// The component is something that a [vertex](Vertex) can consist of.
 ///
 /// Available componets are:

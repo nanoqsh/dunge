@@ -12,7 +12,7 @@ use {
         render::{Render, RenderContext},
         resources::Resources,
         screen::Screen,
-        shader::{Shader, ShaderInfo},
+        shader::{self, Shader, ShaderInfo},
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, InstanceModel,
@@ -22,7 +22,6 @@ use {
         transform::IntoMat,
         vertex::Vertex,
     },
-    dunge_shader::Scheme,
     winit::{event_loop::EventLoopProxy, window::Window},
 };
 
@@ -182,8 +181,11 @@ impl Context {
         SpacesBuilder::new(&mut self.resources, &self.render)
     }
 
-    pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
-        self.resources.create_shader(scheme)
+    pub fn create_shader<S>(&mut self) -> ShaderHandle<S>
+    where
+        S: Shader,
+    {
+        self.resources.create_shader(shader::scheme::<S>())
     }
 
     /// Creates a new layer with default parameters.
