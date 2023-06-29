@@ -49,7 +49,7 @@ impl Lights {
 
                 let len_buf = device.create_buffer_init(&BufferInitDescriptor {
                     label: Some("source len buffer"),
-                    contents: &array.len().to_ne_bytes(),
+                    contents: array.len().as_bytes(),
                     usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                 });
 
@@ -113,9 +113,9 @@ impl Lights {
 
         let old_len = array.len();
         let new_len = (offset + sources.len()) as u32;
-        if old_len < new_len {
+        if old_len.get() < new_len {
             array.set_len(new_len)?;
-            queue.write_buffer(&buffers.len, 0, &array.len().to_ne_bytes());
+            queue.write_buffer(&buffers.len, 0, array.len().as_bytes());
         }
 
         Ok(())
@@ -188,9 +188,8 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn with_sources_empty(mut self) -> Self {
-        self.variables.source_arrays.push(vec![]);
-        self
+    pub fn with_sources_empty(self) -> Self {
+        self.with_sources::<_, ()>([])
     }
 
     pub fn build<S>(self, handle: LayerHandle<S>) -> Result<LightsHandle<S>, ResourceNotFound>

@@ -191,7 +191,7 @@ impl<'l, S, T> Layer<'l, S, T> {
 
         let mesh = self.resources.meshes.get(mesh.id())?;
         let instance = self.resources.instances.get(instance.0)?;
-        self.draw_mesh(mesh, instance)?;
+        self.draw_mesh(mesh, instance);
         Ok(())
     }
 
@@ -204,11 +204,11 @@ impl<'l, S, T> Layer<'l, S, T> {
     pub fn _draw(&mut self, handle: MeshHandle<S, T>) -> Result<(), Error> {
         let mesh = self.resources.meshes.get(handle.id())?;
         let instance = self._instance.expect("instance");
-        self.draw_mesh(mesh, instance)?;
+        self.draw_mesh(mesh, instance);
         Ok(())
     }
 
-    fn draw_mesh(&mut self, mesh: &'l Mesh, instance: &'l Instance) -> Result<(), NotSet> {
+    fn draw_mesh(&mut self, mesh: &'l Mesh, instance: &'l Instance) {
         use {crate::mesh::Type, wgpu::IndexFormat};
 
         self.pass
@@ -232,7 +232,6 @@ impl<'l, S, T> Layer<'l, S, T> {
         }
 
         *self.drawn_in_frame = true;
-        Ok(())
     }
 
     fn _bind_view_handle(

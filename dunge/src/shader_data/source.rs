@@ -1,6 +1,7 @@
 use crate::{
     color::{IntoLinear, Linear},
     layout::Plain,
+    shader_data::len::LenUniform,
 };
 
 /// Light source parameters.
@@ -59,8 +60,8 @@ impl SourceArray {
         &self.buf
     }
 
-    pub fn len(&self) -> u32 {
-        self.len
+    pub fn len(&self) -> LenUniform {
+        LenUniform::new(self.len)
     }
 }
 

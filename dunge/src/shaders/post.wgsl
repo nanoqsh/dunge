@@ -2,6 +2,7 @@ struct Data {
     size: vec2<f32>,
     step: vec2<f32>,
     factor: vec2<f32>,
+    pad: vec2<u32>,
 }
 
 @group(0) @binding(0)

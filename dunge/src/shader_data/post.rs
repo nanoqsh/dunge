@@ -52,6 +52,7 @@ struct PostShaderDataUniform {
     size: (f32, f32),
     step: (f32, f32),
     factor: (f32, f32),
+    pad: u64,
 }
 
 impl PostShaderDataUniform {
@@ -62,6 +63,7 @@ impl PostShaderDataUniform {
             size: (width, height),
             step: (STEP_FACTOR / width, STEP_FACTOR / height),
             factor,
+            pad: 0,
         }
     }
 }

@@ -31,6 +31,7 @@ mod shader_data {
     mod camera;
     pub(crate) mod globals;
     mod instance;
+    mod len;
     mod light;
     pub(crate) mod lights;
     mod post;

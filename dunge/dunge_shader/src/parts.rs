@@ -211,7 +211,7 @@ impl VertexOutput {
                         str: "sources_len",
                         n,
                     })
-                    .write_str("; i++) {\n        ")
+                    .write_str(".n; i++) {\n        ")
                     .write_str("let src = ")
                     .write(Name::Num {
                         str: "sources_array",
@@ -233,7 +233,7 @@ impl VertexOutput {
                         o.write_str("sources += e * e * src.col");
                     }
                     SourceKind::Gloom if self.ambient => {
-                        o.write_str("sources -= e * e * src.col * ambient");
+                        o.write_str("sources -= e * e * src.col * ambient.rgb");
                     }
                     SourceKind::Gloom => {
                         o.write_str("sources -= e * e * src.col");
@@ -250,7 +250,7 @@ impl VertexOutput {
         let has_spaces = self.calc_spaces(o);
         let mut light = o.write_str("let light = ").separated(" + ");
         if self.ambient {
-            light.out().write_str("ambient");
+            light.out().write_str("ambient.rgb");
         }
 
         if self.has_sources() {
@@ -343,7 +343,7 @@ impl Ambient {
             binding,
             uniform: true,
             name: Name::Str("ambient"),
-            ty: Type::VEC3,
+            ty: Type::VEC4,
         });
 
         binding.get()
@@ -445,6 +445,31 @@ impl SourceArrays {
                     ty: Type::VEC3,
                 },
             ],
+        })
+        .write(Struct {
+            name: "Len",
+            fields: vec![
+                Field {
+                    location: Location::None,
+                    name: Name::Str("n"),
+                    ty: Type::U32,
+                },
+                Field {
+                    location: Location::None,
+                    name: Name::Str("pad0"),
+                    ty: Type::U32,
+                },
+                Field {
+                    location: Location::None,
+                    name: Name::Str("pad1"),
+                    ty: Type::U32,
+                },
+                Field {
+                    location: Location::None,
+                    name: Name::Str("pad2"),
+                    ty: Type::U32,
+                },
+            ],
         });
     }
 
@@ -477,7 +502,7 @@ impl SourceArrays {
                             str: "sources_len",
                             n,
                         },
-                        ty: Type::U32,
+                        ty: Type::Simple("Len"),
                     });
 
                     binding.get()
