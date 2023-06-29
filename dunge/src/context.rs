@@ -16,7 +16,7 @@ use {
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, InstanceModel,
-            Source, TextureData, _Source, _SourceModel, _Space, _SpaceData, _SpaceModel,
+            Source, SpaceData, TextureData, _Source, _SourceModel, _Space, _SpaceData, _SpaceModel,
         },
         topology::Topology,
         transform::IntoMat,
@@ -179,6 +179,24 @@ impl Context {
 
     pub fn spaces_builder(&mut self) -> SpacesBuilder {
         SpacesBuilder::new(&mut self.resources, &self.render)
+    }
+
+    pub fn update_spaces_data<S>(
+        &mut self,
+        handle: SpacesHandle<S>,
+        index: usize,
+        data: SpaceData,
+    ) -> Result<(), SpaceError>
+    where
+        S: Shader,
+    {
+        assert!(
+            !ShaderInfo::new::<S>().light_spaces.is_empty(),
+            "the shader has no light spaces",
+        );
+
+        self.resources
+            .update_spaces_data(&self.render, handle, index, data)
     }
 
     pub fn create_shader<S>(&mut self) -> ShaderHandle<S>

@@ -4,7 +4,8 @@ use {
         camera::{Camera, Projection, View, _Camera},
         color::Linear,
         error::{
-            Error, ResourceNotFound, SourceError, TexturesError, TooManySources, TooManySpaces,
+            Error, ResourceNotFound, SourceError, SpaceError, TexturesError, TooManySources,
+            TooManySpaces,
         },
         handles::*,
         mesh::{Data as MeshData, Mesh},
@@ -18,7 +19,7 @@ use {
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
-            Instance, InstanceModel, Light, Source, Texture, TextureData, _LightSpace,
+            Instance, InstanceModel, Light, Source, SpaceData, Texture, TextureData, _LightSpace,
             _SourceModel, _SpaceData, _SpaceModel,
         },
         storage::Storage,
@@ -175,6 +176,20 @@ impl Resources {
         let spaces = Spaces::new(params, context.device(), context.queue());
         let id = self.spaces.insert(spaces);
         Ok(SpacesHandle::new(id))
+    }
+
+    pub fn update_spaces_data<S>(
+        &self,
+        render: &Render,
+        handle: SpacesHandle<S>,
+        index: usize,
+        data: SpaceData,
+    ) -> Result<(), SpaceError> {
+        self.spaces
+            .get(handle.id())?
+            .update_data(index, data, render.context().queue())?;
+
+        Ok(())
     }
 
     pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {

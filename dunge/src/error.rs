@@ -1,4 +1,6 @@
-use crate::shader_data::lights::UpdateError as LightsUpdateError;
+use crate::shader_data::{
+    lights::UpdateError as LightsUpdateError, spaces::UpdateDataError as SpacesUpdateDataError,
+};
 
 /// The main loop error.
 #[derive(Debug)]
@@ -99,13 +101,13 @@ impl From<TooLargeSize> for Error {
 
 #[derive(Debug)]
 pub enum SourceError {
-    Source(LightsUpdateError),
+    Update(LightsUpdateError),
     ResourceNotFound,
 }
 
 impl From<LightsUpdateError> for SourceError {
     fn from(v: LightsUpdateError) -> Self {
-        Self::Source(v)
+        Self::Update(v)
     }
 }
 
@@ -128,6 +130,24 @@ impl From<TooLargeSize> for TexturesError {
 }
 
 impl From<ResourceNotFound> for TexturesError {
+    fn from(_: ResourceNotFound) -> Self {
+        Self::ResourceNotFound
+    }
+}
+
+#[derive(Debug)]
+pub enum SpaceError {
+    Update(SpacesUpdateDataError),
+    ResourceNotFound,
+}
+
+impl From<SpacesUpdateDataError> for SpaceError {
+    fn from(v: SpacesUpdateDataError) -> Self {
+        Self::Update(v)
+    }
+}
+
+impl From<ResourceNotFound> for SpaceError {
     fn from(_: ResourceNotFound) -> Self {
         Self::ResourceNotFound
     }

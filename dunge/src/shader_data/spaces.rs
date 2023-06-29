@@ -17,7 +17,8 @@ use {
 pub(crate) struct Spaces {
     group: u32,
     bind_group: BindGroup,
-    spaces: SpacesBuffer,
+    #[allow(dead_code)]
+    spaces: Buffer,
     textures: Box<[SpaceTexture]>,
 }
 
@@ -37,14 +38,11 @@ impl Spaces {
             layout,
         } = params;
 
-        let spaces = SpacesBuffer {
-            buffer: device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("spaces buffer"),
-                contents: variables.light_spaces.as_slice().as_bytes(),
-                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            }),
-            size: variables.light_spaces.len() as u32,
-        };
+        let spaces = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("spaces buffer"),
+            contents: variables.light_spaces.as_slice().as_bytes(),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        });
 
         let mut views = vec![];
         let textures: Box<[_]> = variables
@@ -108,7 +106,7 @@ impl Spaces {
 
         let mut entries = vec![BindGroupEntry {
             binding: bindings.bindings.spaces,
-            resource: spaces.buffer.as_entire_binding(),
+            resource: spaces.as_entire_binding(),
         }];
 
         entries.extend(
@@ -135,6 +133,16 @@ impl Spaces {
         }
     }
 
+    pub fn update_data(
+        &self,
+        index: usize,
+        data: Data,
+        queue: &Queue,
+    ) -> Result<(), UpdateDataError> {
+        let texture = self.textures.get(index).ok_or(UpdateDataError::Index)?;
+        texture.update_data(data, queue)
+    }
+
     pub fn bind(&self) -> (u32, &BindGroup) {
         (self.group, &self.bind_group)
     }
@@ -152,14 +160,48 @@ pub(crate) struct Variables<'a> {
     pub textures_data: Vec<Data<'a>>,
 }
 
-struct SpacesBuffer {
-    buffer: Buffer,
-    size: u32,
-}
-
 struct SpaceTexture {
     texture: Texture,
     size: (u8, u8, u8),
+}
+
+impl SpaceTexture {
+    pub fn update_data(&self, data: Data, queue: &Queue) -> Result<(), UpdateDataError> {
+        use wgpu::*;
+
+        if data.size != self.size {
+            return Err(UpdateDataError::Size);
+        }
+
+        let (width, height, depth) = self.size;
+        queue.write_texture(
+            ImageCopyTexture {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: Origin3d::ZERO,
+                aspect: TextureAspect::All,
+            },
+            data.data,
+            ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(data.format.n_channels() as u32 * width as u32),
+                rows_per_image: Some(height as u32),
+            },
+            Extent3d {
+                width: width as u32,
+                height: height as u32,
+                depth_or_array_layers: depth as u32,
+            },
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum UpdateDataError {
+    Index,
+    Size,
 }
 
 pub struct Builder<'a> {
