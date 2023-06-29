@@ -1,5 +1,6 @@
 use {
     crate::{
+        color::IntoLinear,
         error::ResourceNotFound,
         handles::{LayerHandle, LightsHandle},
         layout::Plain,
@@ -92,7 +93,7 @@ impl Lights {
         &mut self,
         index: usize,
         offset: usize,
-        sources: &[Source],
+        sources: &[SourceUniform],
         queue: &Queue,
     ) -> Result<(), UpdateError> {
         use std::mem;
@@ -150,20 +151,20 @@ struct SourceArrayBuffers {
 }
 
 pub(crate) struct Parameters<'a> {
-    pub variables: Variables<'a>,
+    pub variables: Variables,
     pub bindings: &'a Bindings,
     pub layout: &'a BindGroupLayout,
 }
 
 #[derive(Default)]
-pub(crate) struct Variables<'a> {
-    pub source_arrays: Vec<&'a [Source]>,
+pub(crate) struct Variables {
+    pub source_arrays: Vec<Vec<SourceUniform>>,
 }
 
 pub struct Builder<'a> {
     resources: &'a mut Resources,
     render: &'a Render,
-    variables: Variables<'a>,
+    variables: Variables,
 }
 
 impl<'a> Builder<'a> {
@@ -175,8 +176,20 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn with_sources(mut self, sources: &'a [Source]) -> Self {
-        self.variables.source_arrays.push(sources);
+    pub fn with_sources<I, C>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = Source<C>>,
+        C: IntoLinear<3>,
+    {
+        self.variables
+            .source_arrays
+            .push(sources.into_iter().map(Source::into_uniform).collect());
+
+        self
+    }
+
+    pub fn with_sources_empty(mut self) -> Self {
+        self.variables.source_arrays.push(vec![]);
         self
     }
 

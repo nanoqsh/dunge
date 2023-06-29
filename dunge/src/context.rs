@@ -16,7 +16,8 @@ use {
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, InstanceModel,
-            Source, SpaceData, TextureData, _Source, _SourceModel, _Space, _SpaceData, _SpaceModel,
+            Source, SourceUniform, SpaceData, TextureData, _Source, _SourceModel, _Space,
+            _SpaceData, _SpaceModel,
         },
         topology::Topology,
         transform::IntoMat,
@@ -35,7 +36,8 @@ pub struct Context {
     pub(crate) resources: Resources,
     limits: Limits,
     models: Vec<InstanceModel>,
-    sources: Vec<_SourceModel>,
+    sources: Vec<SourceUniform>,
+    _sources: Vec<_SourceModel>,
     spaces: Vec<_SpaceModel>,
     space_data: Vec<_SpaceData<'static>>,
 }
@@ -53,6 +55,7 @@ impl Context {
             limits: Limits::default(),
             models: Vec::with_capacity(DEFAULT_CAPACITY),
             sources: Vec::with_capacity(DEFAULT_CAPACITY),
+            _sources: Vec::with_capacity(DEFAULT_CAPACITY),
             spaces: Vec::with_capacity(DEFAULT_CAPACITY),
             space_data: Vec::with_capacity(DEFAULT_CAPACITY),
         }
@@ -159,22 +162,28 @@ impl Context {
         LightsBuilder::new(&mut self.resources, &self.render)
     }
 
-    pub fn update_lights_sources<S>(
+    pub fn update_lights_sources<S, I, C>(
         &mut self,
         handle: LightsHandle<S>,
         index: usize,
-        sources: &[Source],
+        sources: I,
     ) -> Result<(), SourceError>
     where
         S: Shader,
+        I: IntoIterator<Item = Source<C>>,
+        C: IntoLinear<3>,
     {
         assert!(
             ShaderInfo::new::<S>().source_arrays > 0,
             "the shader has no light sources",
         );
 
+        self.sources.clear();
+        self.sources
+            .extend(sources.into_iter().map(Source::into_uniform));
+
         self.resources
-            .update_lights_sources(&self.render, handle, index, sources)
+            .update_lights_sources(&self.render, handle, index, &self.sources)
     }
 
     pub fn spaces_builder(&mut self) -> SpacesBuilder {
@@ -235,7 +244,7 @@ impl Context {
     }
 
     /// Creates a new texture.
-    pub fn create_texture(&mut self, data: TextureData) -> _TextureHandle {
+    pub fn _create_texture(&mut self, data: TextureData) -> _TextureHandle {
         self.resources.create_texture(&self.render, data)
     }
 
@@ -328,7 +337,7 @@ impl Context {
     }
 
     /// Creates a new view.
-    pub fn create_view<P>(&mut self, view: View<P>) -> _ViewHandle
+    pub fn _create_view<P>(&mut self, view: View<P>) -> _ViewHandle
     where
         P: IntoProjection,
     {
@@ -374,14 +383,14 @@ impl Context {
         I: IntoIterator<Item = _Source<S>>,
         S: IntoLinear<3>,
     {
-        self.sources.clear();
+        self._sources.clear();
         let models = srcs
             .into_iter()
             .map(|src| _SourceModel::new(src.into_linear()));
 
-        self.sources.extend(models);
+        self._sources.extend(models);
         self.resources
-            .create_light(&self.render, ambient.into_linear(), &self.sources)
+            .create_light(&self.render, ambient.into_linear(), &self._sources)
     }
 
     /// Updates the light.
@@ -399,14 +408,14 @@ impl Context {
         I: IntoIterator<Item = _Source<S>>,
         S: IntoLinear<3>,
     {
-        self.sources.clear();
+        self._sources.clear();
         let models = srcs
             .into_iter()
             .map(|src| _SourceModel::new(src.into_linear()));
 
-        self.sources.extend(models);
+        self._sources.extend(models);
         self.resources
-            .update_light(&self.render, handle, ambient.into_linear(), &self.sources)
+            .update_light(&self.render, handle, ambient.into_linear(), &self._sources)
     }
 
     /// Updates nth source in the light.
@@ -444,7 +453,7 @@ impl Context {
     ///
     /// # Errors
     /// Returns the [`TooManySpaces`] when trying to create too many light sources.
-    pub fn create_space<'a, I, M, C>(&mut self, spaces: I) -> Result<_SpaceHandle, TooManySpaces>
+    pub fn _create_space<'a, I, M, C>(&mut self, spaces: I) -> Result<_SpaceHandle, TooManySpaces>
     where
         I: IntoIterator<Item = _Space<'a, M, C>>,
         M: IntoMat,

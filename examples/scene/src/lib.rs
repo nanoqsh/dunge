@@ -2,40 +2,73 @@ mod models;
 
 use {
     dunge::{
-        FrameParameters, LightKind, Loop, MeshData, Orthographic, PixelSize, TextureData, View,
-        _Source, _Space, _SpaceData, _SpaceFormat,
-        _vertex::{ColorVertex, TextureVertex},
         color::{Linear, Standard},
         handles::*,
         input::{Input, Key},
+        shader::*,
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
-        Compare, Context, Error, Frame,
+        Compare, Context, Error, Frame, FrameParameters, Loop, MeshData, Orthographic, PixelSize,
+        Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, View,
     },
     utils::Camera,
 };
 
+#[repr(C)]
+#[derive(Vertex)]
+struct TextureVert {
+    #[position]
+    pos: [f32; 3],
+    #[texture]
+    map: [f32; 2],
+}
+
+struct TextureShader;
+impl Shader for TextureShader {
+    type Vertex = TextureVert;
+    const VIEW: ShaderView = ShaderView::Camera;
+    const AMBIENT: bool = true;
+    const SOURCES: SourceArrays = SourceArrays::new(&[SourceArray::new(SourceKind::Glow, 3)]);
+    const SPACES: LightSpaces = LightSpaces::new(&[SpaceKind::Rgba]);
+}
+
+#[repr(C)]
+#[derive(Vertex)]
+struct ColorVert {
+    #[position]
+    pos: [f32; 3],
+    #[color]
+    col: [f32; 3],
+}
+
+struct ColorShader;
+impl Shader for ColorShader {
+    type Vertex = ColorVert;
+    const VIEW: ShaderView = ShaderView::Camera;
+}
+
 struct Model {
     instance: InstanceHandle,
-    mesh: MeshHandle<TextureVertex>,
+    mesh: MeshHandle<TextureVert>,
     update_view: bool,
     pos: [f32; 3],
 }
 
 struct Cube {
     instance: InstanceHandle,
-    mesh: MeshHandle<ColorVertex, LineStrip>,
+    mesh: MeshHandle<ColorVert, LineStrip>,
 }
 
 pub struct App {
-    texture_layer: LayerHandle<TextureVertex>,
-    color_layer: LayerHandle<ColorVertex, LineStrip>,
-    sprites: _TextureHandle,
+    texture_layer: LayerHandle<TextureShader>,
+    color_layer: LayerHandle<ColorShader, LineStrip>,
+    sprites: TexturesHandle<TextureShader>,
     models: Vec<Model>,
     cubes: Vec<Cube>,
-    light: _LightHandle,
-    lightspace: _SpaceHandle,
-    view: _ViewHandle,
+    texture_globals: GlobalsHandle<TextureShader>,
+    color_globals: GlobalsHandle<ColorShader>,
+    lights: LightsHandle<TextureShader>,
+    spaces: SpacesHandle<TextureShader>,
     camera: Camera,
     time: f32,
     fullscreen: bool,
@@ -43,27 +76,65 @@ pub struct App {
 
 impl App {
     pub fn new(context: &mut Context) -> Self {
+        const AMBIENT_COLOR: Linear<f32, 3> = Linear([0.09; 3]);
+
         context.set_frame_parameters(FrameParameters {
-            pixel_size: PixelSize::X1,
+            pixel_size: PixelSize::X2,
             ..Default::default()
         });
 
-        // Create layer
-        let texture_layer = context._create_layer();
-        let color_layer = context
-            .create_layer_with_parameters()
-            .with_depth_compare(Compare::Always)
-            ._build();
+        // Create shaders and layers
+        let texture_layer = {
+            let shader: ShaderHandle<TextureShader> = context.create_shader();
+            context
+                .create_layer_with_parameters()
+                .build(shader)
+                .expect("create layer")
+        };
+
+        let color_layer = {
+            let shader: ShaderHandle<ColorShader> = context.create_shader();
+            context
+                .create_layer_with_parameters()
+                .with_depth_compare(Compare::Always)
+                .build(shader)
+                .expect("create layer")
+        };
 
         // Create the sprite texture
         let sprites = {
             let image = utils::read_png(include_bytes!("sprites.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
-            context.create_texture(data)
+            context
+                .textures_builder()
+                .with_map(data)
+                .build(texture_layer)
+                .expect("create textures")
         };
 
-        // Create the light space
-        let lightspace = {
+        // Create globals
+        let texture_globals = context
+            .globals_builder()
+            .with_view()
+            .with_ambient(AMBIENT_COLOR)
+            .build(texture_layer)
+            .expect("create texture globals");
+
+        let color_globals = context
+            .globals_builder()
+            .with_view()
+            .build(color_layer)
+            .expect("create color globals");
+
+        // Crate the lights
+        let lights = context
+            .lights_builder()
+            .with_sources_empty()
+            .build(texture_layer)
+            .expect("create light");
+
+        // Create the light spaces
+        let spaces = {
             let layers = [
                 utils::read_png(include_bytes!("lightmap_side.png")),
                 utils::read_png(include_bytes!("lightmap_center.png")),
@@ -80,13 +151,17 @@ impl App {
                 (width as u8, height as u8, layers.len() as u8)
             };
 
-            let space = _Space {
-                data: _SpaceData::new(&map, size, _SpaceFormat::Srgba).expect("create space"),
+            let space = Space {
+                data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
                 transform: Transform::default(),
                 col: Linear([2.5; 3]),
             };
 
-            context.create_space([space]).expect("create space")
+            context
+                .spaces_builder()
+                .with_space(space)
+                .build(texture_layer)
+                .expect("create space")
         };
 
         // Create models
@@ -126,18 +201,16 @@ impl App {
                 .map(|(verts, indxs)| {
                     let verts: Vec<_> = verts
                         .iter()
-                        .map(|&(pos, map)| TextureVertex { pos, map })
+                        .map(|&(pos, map)| TextureVert { pos, map })
                         .collect();
 
                     let indxs = indxs.to_vec();
-
                     let data = MeshData::new(&verts, &indxs).expect("create mesh");
-                    context._create_mesh(&data)
+                    context.create_mesh(&data)
                 })
                 .collect();
 
             let mut model_data = vec![];
-
             for z in 0..N {
                 for x in 0..N {
                     let mut obj = SCENE[z][x];
@@ -192,29 +265,21 @@ impl App {
                     mesh: {
                         let verts: Vec<_> = models::square::VERTICES
                             .iter()
-                            .map(|&pos| ColorVertex {
+                            .map(|&pos| ColorVert {
                                 pos,
                                 col: [0., 1., 0.3],
                             })
                             .collect();
 
                         let data = MeshData::from_verts(&verts);
-                        context._create_mesh(&data)
+                        context.create_mesh(&data)
                     },
                 })
                 .collect()
         };
 
-        // Crate the light
-        let light = {
-            const EMPTY: [_Source; 0] = [];
-
-            context.create_light((), EMPTY).expect("create light")
-        };
-
-        // Create the view
+        // Create the camera
         let camera = Camera::default();
-        let view = context.create_view(camera.view(Orthographic::default()));
 
         Self {
             texture_layer,
@@ -222,9 +287,10 @@ impl App {
             sprites,
             models,
             cubes,
-            light,
-            lightspace,
-            view,
+            texture_globals,
+            color_globals,
+            lights,
+            spaces,
             camera,
             time: 0.,
             fullscreen: false,
@@ -239,7 +305,6 @@ impl Loop for App {
         use {dunge::winit::window::Fullscreen, std::f32::consts::TAU};
 
         const SENSITIVITY: f32 = 0.01;
-        const AMBIENT_COLOR: Linear<f32, 3> = Linear([0.09; 3]);
         const LIGHTS_DISTANCE: f32 = 3.3;
         const LIGHTS_SPEED: f32 = 1.;
         const INTENSITY: f32 = 2.;
@@ -250,7 +315,7 @@ impl Loop for App {
         ];
 
         self.time += input.delta_time * LIGHTS_SPEED;
-        let make_source = |step, col| _Source {
+        let make_source = |step, col| Source {
             pos: {
                 let step: f32 = (self.time + step) % TAU;
                 [
@@ -261,14 +326,15 @@ impl Loop for App {
             },
             rad: 2.,
             col: Linear(col),
-            kind: LightKind::default(),
         };
 
-        context.update_light(
-            self.light,
-            AMBIENT_COLOR,
-            LIGHTS.map(|(step, col)| make_source(step, col)),
-        )?;
+        context
+            .update_lights_sources(
+                self.lights,
+                0,
+                LIGHTS.map(|(step, col)| make_source(step, col)),
+            )
+            .expect("update lights");
 
         // Handle pressed keys
         #[cfg(not(target_arch = "wasm32"))]
@@ -300,7 +366,7 @@ impl Loop for App {
         self.camera.update((x * SENSITIVITY, y, z * SENSITIVITY));
 
         // Set the view
-        let sprite_scale = 8. * 6.;
+        let sprite_scale = 4. * 6.;
         let view = View {
             proj: Orthographic {
                 width_factor: 1. / sprite_scale,
@@ -309,7 +375,8 @@ impl Loop for App {
             },
             ..self.camera.view(Orthographic::default())
         };
-        context.update_view(self.view, view)?;
+        context.update_globals_view(self.texture_globals, view)?;
+        context.update_globals_view(self.color_globals, view)?;
 
         self.models
             .iter()
@@ -336,24 +403,24 @@ impl Loop for App {
                 .layer(self.texture_layer)?
                 .with_clear_color(CLEAR_COLOR)
                 .with_clear_depth()
-                ._start();
+                .start();
 
-            layer.bind_light(self.light)?;
-            layer.bind_space(self.lightspace)?;
-            layer._bind_view(self.view)?;
-            layer.bind_texture(self.sprites)?;
+            layer
+                .bind_globals(self.texture_globals)?
+                .bind_lights(self.lights)?
+                .bind_spaces(self.spaces)?
+                .bind_textures(self.sprites)?;
+
             for model in &self.models {
-                layer._bind_instance(model.instance)?;
-                layer._draw(model.mesh)?;
+                layer.draw(model.mesh, model.instance)?;
             }
         }
 
         {
-            let mut layer = frame.layer(self.color_layer)?._start();
-            layer._bind_view(self.view)?;
+            let mut layer = frame.layer(self.color_layer)?.start();
+            layer.bind_globals(self.color_globals)?;
             for cube in &self.cubes {
-                layer._bind_instance(cube.instance)?;
-                layer._draw(cube.mesh)?;
+                layer.draw(cube.mesh, cube.instance)?;
             }
         }
 

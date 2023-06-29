@@ -2,7 +2,7 @@ mod data;
 
 use {
     dunge::{
-        _vertex::{ColorVertex, TextureVertex},
+        _vertex::{_ColorVertex, _TextureVertex},
         color::Standard,
         handles::*,
         input::{Input, Key},
@@ -18,12 +18,12 @@ enum State {
 }
 
 pub struct App {
-    texture_layer: LayerHandle<TextureVertex>,
-    color_layer: LayerHandle<ColorVertex>,
+    texture_layer: LayerHandle<_TextureVertex>,
+    color_layer: LayerHandle<_ColorVertex>,
     texture: _TextureHandle,
     instance: InstanceHandle,
-    texture_mesh: MeshHandle<TextureVertex>,
-    color_mesh: MeshHandle<ColorVertex>,
+    texture_mesh: MeshHandle<_TextureVertex>,
+    color_mesh: MeshHandle<_ColorVertex>,
     view: _ViewHandle,
     camera: Camera,
     state: State,
@@ -39,7 +39,7 @@ impl App {
         let texture = {
             let image = utils::read_png(include_bytes!("grass.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
-            context.create_texture(data)
+            context._create_texture(data)
         };
 
         // Create a model instance
@@ -50,14 +50,14 @@ impl App {
 
         // Create meshes
         let texture_mesh = {
-            let verts = data::VERTICES.map(|(pos, map)| TextureVertex { pos, map });
+            let verts = data::VERTICES.map(|(pos, map)| _TextureVertex { pos, map });
 
             let data = MeshData::new(&verts, &data::INDICES).expect("create mesh");
             context._create_mesh(&data)
         };
 
         let color_mesh = {
-            let verts = data::VERTICES.map(|(pos, [a, b])| ColorVertex {
+            let verts = data::VERTICES.map(|(pos, [a, b])| _ColorVertex {
                 pos,
                 col: [a, b, 1.],
             });
@@ -68,7 +68,7 @@ impl App {
 
         // Create the view
         let camera = Camera::default();
-        let view = context.create_view(camera.view(Perspective::default()));
+        let view = context._create_view(camera.view(Perspective::default()));
 
         Self {
             texture_layer,

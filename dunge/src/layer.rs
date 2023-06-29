@@ -1,7 +1,7 @@
 use {
     crate::{
         _shader::{self, _Shader},
-        _vertex::{ColorVertex, FlatVertex, TextureVertex, _Vertex},
+        _vertex::{_ColorVertex, _FlatVertex, _TextureVertex, _Vertex},
         color::{IntoLinear, Linear},
         error::{Error, NotSet, ResourceNotFound},
         frame::Frame,
@@ -281,7 +281,7 @@ impl<'l, S, T> Layer<'l, S, T> {
     }
 }
 
-impl<T> Layer<'_, TextureVertex, T> {
+impl<T> Layer<'_, _TextureVertex, T> {
     /// Binds the [view](crate::handles::ViewHandle).
     ///
     /// # Errors
@@ -319,7 +319,7 @@ impl<T> Layer<'_, TextureVertex, T> {
     }
 }
 
-impl<T> Layer<'_, ColorVertex, T> {
+impl<T> Layer<'_, _ColorVertex, T> {
     /// Binds the [view](crate::handles::ViewHandle).
     ///
     /// # Errors
@@ -339,7 +339,7 @@ impl<T> Layer<'_, ColorVertex, T> {
     }
 }
 
-impl<T> Layer<'_, FlatVertex, T> {
+impl<T> Layer<'_, _FlatVertex, T> {
     /// Binds the [texture](crate::handles::TextureHandle).
     ///
     /// # Errors

@@ -1,5 +1,5 @@
 pub use dunge_shader::{
-    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind, View,
+    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind, View as ShaderView,
 };
 
 use {
@@ -9,7 +9,7 @@ use {
 
 pub trait Shader {
     type Vertex: Vertex;
-    const VIEW: View = View::None;
+    const VIEW: ShaderView = ShaderView::None;
     const AMBIENT: bool = false;
     const STATIC_COLOR: Option<Color> = None;
     const SOURCES: SourceArrays = SourceArrays::EMPTY;
@@ -55,7 +55,7 @@ impl ShaderInfo {
         S: Shader,
     {
         Self {
-            has_camera: matches!(S::VIEW, View::Camera),
+            has_camera: matches!(S::VIEW, ShaderView::Camera),
             has_ambient: S::AMBIENT,
             has_map: <S::Vertex as Vertex>::Texture::OPTIONAL_N_FLOATS.is_some(),
             source_arrays: S::SOURCES.len(),

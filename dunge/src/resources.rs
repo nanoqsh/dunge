@@ -19,8 +19,8 @@ use {
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
-            Instance, InstanceModel, Light, Source, SpaceData, Texture, TextureData, _LightSpace,
-            _SourceModel, _SpaceData, _SpaceModel,
+            Instance, InstanceModel, Light, SourceUniform, SpaceData, Texture, TextureData,
+            _LightSpace, _SourceModel, _SpaceData, _SpaceModel,
         },
         storage::Storage,
         topology::Topology,
@@ -47,11 +47,11 @@ pub(crate) struct Resources {
 }
 
 impl Resources {
-    pub fn create_globals<S>(
+    pub fn create_globals<S, T>(
         &mut self,
         render: &Render,
         variables: GlobalsVariables,
-        handle: LayerHandle<S>,
+        handle: LayerHandle<S, T>,
     ) -> Result<GlobalsHandle<S>, ResourceNotFound> {
         let layer = self.layers.get(handle.id())?;
         let globals = layer.globals().expect("the shader has no globals");
@@ -146,7 +146,7 @@ impl Resources {
         render: &Render,
         handle: LightsHandle<S>,
         index: usize,
-        sources: &[Source],
+        sources: &[SourceUniform],
     ) -> Result<(), SourceError> {
         self.lights.get_mut(handle.id())?.update_array(
             index,

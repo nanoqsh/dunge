@@ -1,5 +1,5 @@
 use dunge::{
-    color::Standard,
+    color::{Linear, Standard},
     handles::*,
     input::{Input, Key},
     shader::*,
@@ -15,7 +15,7 @@ struct Vert(#[position] [f32; 2], #[color] [f32; 3], #[texture] [f32; 2]);
 struct TriangleShader;
 impl Shader for TriangleShader {
     type Vertex = Vert;
-    const VIEW: View = View::Camera;
+    const VIEW: ShaderView = ShaderView::Camera;
     const AMBIENT: bool = true;
     const SOURCES: SourceArrays = SourceArrays::new(&SOURCE_ARRAYS);
     const SPACES: LightSpaces = LightSpaces::new(&LIGHT_SPACES);
@@ -90,7 +90,7 @@ impl App {
         // Create lights
         let lights = context
             .lights_builder()
-            .with_sources(&[])
+            .with_sources_empty()
             .build(layer)
             .expect("create lights");
 
@@ -183,24 +183,24 @@ impl Loop for App {
             .update_lights_sources(
                 self.lights,
                 0,
-                &[
+                [
                     Source {
-                        col: [0., 2., 0.],
+                        col: Linear([0., 2., 0.]),
                         pos: calc_position(1.),
                         rad: 80.,
                     },
                     Source {
-                        col: [2., 0., 0.],
+                        col: Linear([2., 0., 0.]),
                         pos: calc_position(2.),
                         rad: 80.,
                     },
                     Source {
-                        col: [0., 0., 2.],
+                        col: Linear([0., 0., 2.]),
                         pos: calc_position(3.),
                         rad: 80.,
                     },
                     Source {
-                        col: [2., 2., 0.],
+                        col: Linear([2., 2., 0.]),
                         pos: calc_position(4.),
                         rad: 80.,
                     },

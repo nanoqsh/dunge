@@ -1,42 +1,48 @@
-use {crate::layout::Plain, std::iter};
+use crate::{
+    color::{IntoLinear, Linear},
+    layout::Plain,
+};
 
 /// Light source parameters.
 #[derive(Clone, Copy)]
-pub struct Source {
-    pub col: [f32; 3],
+pub struct Source<C> {
+    pub col: C,
     pub pos: [f32; 3],
     pub rad: f32,
 }
 
+impl<C> Source<C> {
+    pub(crate) fn into_uniform(self) -> SourceUniform
+    where
+        C: IntoLinear<3>,
+    {
+        let Linear(col) = self.col.into_linear();
+        SourceUniform::new(col, self.rad, self.pos)
+    }
+}
+
 pub(crate) struct SourceArray {
-    buf: Box<[SourceUniform]>,
     len: u32,
+    buf: Box<[SourceUniform]>,
 }
 
 impl SourceArray {
-    pub fn new(sources: &[Source], max_size: usize) -> Self {
+    pub fn new(mut sources: Vec<SourceUniform>, max_size: usize) -> Self {
         assert!(sources.len() <= max_size, "too many light sources");
-        let mut buf = vec![SourceUniform::default(); max_size];
-        for (uniform, &source) in iter::zip(&mut buf, sources) {
-            *uniform = SourceUniform::new(source);
-        }
-
+        sources.resize(max_size, SourceUniform::default());
         Self {
-            buf: buf.into_boxed_slice(),
             len: sources.len() as u32,
+            buf: sources.into_boxed_slice(),
         }
     }
 
-    pub fn update(&mut self, offset: usize, sources: &[Source]) -> Result<(), UpdateError> {
+    pub fn update(&mut self, offset: usize, sources: &[SourceUniform]) -> Result<(), UpdateError> {
         let buf = self.buf.get_mut(offset..).ok_or(UpdateError::Offset)?;
         if sources.len() > buf.len() {
             return Err(UpdateError::Len);
         }
 
-        for (uniform, &source) in iter::zip(buf, sources) {
-            *uniform = SourceUniform::new(source);
-        }
-
+        buf[..sources.len()].copy_from_slice(sources);
         Ok(())
     }
 
@@ -77,11 +83,11 @@ pub(crate) struct SourceUniform {
 }
 
 impl SourceUniform {
-    fn new(Source { col, pos, rad }: Source) -> Self {
+    fn new(col: [f32; 3], rad: f32, pos: [f32; 3]) -> Self {
         Self {
             col,
-            pos,
             rad,
+            pos,
             pad: 0,
         }
     }

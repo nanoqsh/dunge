@@ -1,6 +1,6 @@
 use {
     crate::{
-        _vertex::{ColorVertex, FlatVertex, TextureVertex},
+        _vertex::{_ColorVertex, _FlatVertex, _TextureVertex},
         layout::_Layout,
         shader_data::InstanceModel,
     },
@@ -71,15 +71,15 @@ impl _Shader {
     }
 
     const COLOR_BUFFERS: [VertexBufferLayout<'static>; 2] =
-        [_layout::<ColorVertex>(), _layout::<InstanceModel>()];
+        [_layout::<_ColorVertex>(), _layout::<InstanceModel>()];
 
     const FLAT_BUFFERS: [VertexBufferLayout<'static>; 2] =
-        [_layout::<FlatVertex>(), _layout::<InstanceModel>()];
+        [_layout::<_FlatVertex>(), _layout::<InstanceModel>()];
 
     const POST_BUFFERS: [VertexBufferLayout<'static>; 0] = [];
 
     const TEXTURED_BUFFERS: [VertexBufferLayout<'static>; 2] =
-        [_layout::<TextureVertex>(), _layout::<InstanceModel>()];
+        [_layout::<_TextureVertex>(), _layout::<InstanceModel>()];
 }
 
 pub struct ShaderValue(_Shader);
@@ -96,15 +96,15 @@ pub trait ShaderType {
     const VALUE: ShaderValue;
 }
 
-impl ShaderType for ColorVertex {
+impl ShaderType for _ColorVertex {
     const VALUE: ShaderValue = ShaderValue(_Shader::Color);
 }
 
-impl ShaderType for FlatVertex {
+impl ShaderType for _FlatVertex {
     const VALUE: ShaderValue = ShaderValue(_Shader::Flat);
 }
 
-impl ShaderType for TextureVertex {
+impl ShaderType for _TextureVertex {
     const VALUE: ShaderValue = ShaderValue(_Shader::Textured);
 }
 

@@ -47,7 +47,7 @@ mod shader_data {
         instance::{Instance, InstanceModel},
         light::{Light, _SourceModel},
         post::PostShaderData,
-        source::SourceArray,
+        source::{SourceArray, SourceUniform},
         texture::Texture,
     };
 

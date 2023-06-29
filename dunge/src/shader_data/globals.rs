@@ -147,7 +147,10 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S>(self, handle: LayerHandle<S>) -> Result<GlobalsHandle<S>, ResourceNotFound>
+    pub fn build<S, T>(
+        self,
+        handle: LayerHandle<S, T>,
+    ) -> Result<GlobalsHandle<S>, ResourceNotFound>
     where
         S: Shader,
     {
