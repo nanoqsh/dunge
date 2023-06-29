@@ -2,14 +2,13 @@ mod models;
 
 use {
     dunge::{
-        color::{Linear, Standard},
         handles::*,
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
         transform::{Position, ReverseRotation, Transform},
-        Compare, Context, Error, Frame, FrameParameters, Loop, MeshData, Orthographic, PixelSize,
-        Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, View,
+        Color, Compare, Context, Error, Frame, FrameParameters, Loop, MeshData, Orthographic,
+        PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, View,
     },
     utils::Camera,
 };
@@ -76,7 +75,7 @@ pub struct App {
 
 impl App {
     pub fn new(context: &mut Context) -> Self {
-        const AMBIENT_COLOR: Linear<f32, 3> = Linear([0.09; 3]);
+        const AMBIENT_COLOR: Rgb = Color([0.09; 3]);
 
         context.set_frame_parameters(FrameParameters {
             pixel_size: PixelSize::X2,
@@ -129,7 +128,7 @@ impl App {
         // Crate the lights
         let lights = context
             .lights_builder()
-            .with_sources_empty()
+            .with_sources([])
             .build(texture_layer)
             .expect("create light");
 
@@ -154,7 +153,7 @@ impl App {
             let space = Space {
                 data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
                 transform: Transform::default(),
-                col: Linear([2.5; 3]),
+                col: Color([2.5; 3]),
             };
 
             context
@@ -325,7 +324,7 @@ impl Loop for App {
                 ]
             },
             rad: 2.,
-            col: Linear(col),
+            col: Color(col),
         };
 
         context
@@ -396,12 +395,11 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        const CLEAR_COLOR: Standard<u8> = Standard([46, 34, 47, 255]);
-
         {
+            let clear_color = Rgba::from_standard_bytes([46, 34, 47, 255]);
             let mut layer = frame
                 .layer(self.texture_layer)?
-                .with_clear_color(CLEAR_COLOR)
+                .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start();
 

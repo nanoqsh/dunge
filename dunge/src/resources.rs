@@ -1,8 +1,8 @@
 use {
     crate::{
+        _color::Linear,
         _vertex::_Vertex,
         camera::{Camera, Projection, View, _Camera},
-        color::Linear,
         error::{
             Error, ResourceNotFound, SourceError, SpaceError, TexturesError, TooManySources,
             TooManySpaces,
@@ -80,11 +80,11 @@ impl Resources {
         &self,
         render: &Render,
         handle: GlobalsHandle<S>,
-        color: Linear<f32, 3>,
+        col: [f32; 3],
     ) -> Result<(), ResourceNotFound> {
         self.globals
             .get(handle.id())?
-            .write_ambient(color.0, render.context().queue());
+            .write_ambient(col, render.context().queue());
 
         Ok(())
     }

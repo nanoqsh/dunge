@@ -1,20 +1,12 @@
-//! Color types and traits.
+//! Color types.
 
 /// A linear RGB(A) color.
 #[derive(Clone, Copy)]
-pub struct Linear<C, const N: usize = 4>(pub [C; N]);
+pub struct Color<const N: usize>(pub [f32; N]);
 
-/// A sRGB(A) color.
-#[derive(Clone, Copy)]
-pub struct Standard<C, const N: usize = 4>(pub [C; N]);
-
-/// The trait for color conversion.
-pub trait IntoLinear<const N: usize = 4> {
-    fn into_linear(self) -> Linear<f32, N>;
-}
-
-impl<const N: usize> IntoLinear<N> for Standard<f32, N> {
-    fn into_linear(self) -> Linear<f32, N> {
+impl<const N: usize> Color<N> {
+    /// Creates a linear `Color` from sRGB(A) color.
+    pub fn from_standard(col: [f32; N]) -> Self {
         fn to_linear(c: f32) -> f32 {
             if c > 0.04045 {
                 ((c + 0.055) / 1.055).powf(2.4)
@@ -23,37 +15,26 @@ impl<const N: usize> IntoLinear<N> for Standard<f32, N> {
             }
         }
 
-        Linear(self.0.map(to_linear))
+        Self(col.map(to_linear))
     }
-}
 
-impl<const N: usize> IntoLinear<N> for Linear<f32, N> {
-    fn into_linear(self) -> Self {
-        self
+    /// Creates a linear `Color` from a linear bytes.
+    pub fn from_bytes(col: [u8; N]) -> Self {
+        Self(col.map(to_f32_color))
     }
-}
 
-impl<const N: usize> IntoLinear<N> for Standard<u8, N> {
-    fn into_linear(self) -> Linear<f32, N> {
-        Standard(self.0.map(to_f32_color)).into_linear()
-    }
-}
-
-impl<const N: usize> IntoLinear<N> for Linear<u8, N> {
-    fn into_linear(self) -> Linear<f32, N> {
-        Linear(self.0.map(to_f32_color))
-    }
-}
-
-/// All color channels are zero.
-impl<const N: usize> IntoLinear<N> for () {
-    fn into_linear(self) -> Linear<f32, N> {
-        use std::array;
-
-        Linear(array::from_fn(|_| 0.))
+    /// Creates a linear `Color` from a sRGB(A) bytes.
+    pub fn from_standard_bytes(col: [u8; N]) -> Self {
+        Self::from_standard(col.map(to_f32_color))
     }
 }
 
 fn to_f32_color(c: u8) -> f32 {
     f32::from(c) / u8::MAX as f32
 }
+
+/// A linear RGB color.
+pub type Rgb = Color<3>;
+
+/// A linear RGBA color.
+pub type Rgba = Color<4>;

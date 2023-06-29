@@ -2,7 +2,7 @@ use {
     crate::{
         _shader::{self, _Shader},
         _vertex::{_ColorVertex, _FlatVertex, _TextureVertex, _Vertex},
-        color::{IntoLinear, Linear},
+        color::{Color, Rgba},
         error::{Error, NotSet, ResourceNotFound},
         frame::Frame,
         handles::*,
@@ -362,7 +362,7 @@ struct Groups<'l> {
 pub struct Builder<'l, 'd, S, T> {
     frame: &'l mut Frame<'d>,
     pipeline: &'d Pipeline,
-    clear_color: Option<Linear<f32>>,
+    clear_color: Option<[f64; 4]>,
     clear_depth: bool,
     vertex_type: PhantomData<(S, T)>,
 }
@@ -380,60 +380,13 @@ impl<'l, 'd, S, T> Builder<'l, 'd, S, T> {
 
     /// Sets clear color for the layer.
     ///
-    /// It takes a color parameter, which must implement the [`IntoLinear`] trait.
-    ///
     /// Don't set this setting if you don't want to fill
     /// the previous layer (or frame) with some color.
     /// Or set to clear the current buffer if a layer is already drawn
     /// into the frame by calling [`commit_in_frame`](crate::Frame::commit_in_frame).
-    ///
-    /// # Example
-    /// ```
-    /// # use dunge::color::Standard;
-    /// # #[derive(Debug)]
-    /// # struct Error;
-    /// # struct Frame;
-    /// # impl Frame {
-    /// #     fn layer(self, _: ()) -> Result<Self, Error> { Ok(self) }
-    /// #     fn with_clear_color(self, _: Standard<u8>) -> Self { self }
-    /// #     fn start(self) {}
-    /// # }
-    /// # let frame = Frame;
-    /// # let layer_handle = ();
-    /// let color = Standard([20, 30, 40, !0]);
-    /// let mut layer = frame
-    ///     .layer(layer_handle)?
-    ///     .with_clear_color(color)
-    ///     .start();
-    /// # Ok::<(), Error>(())
-    /// ```
-    ///
-    /// To clear a layer with a transparent color, it is enough to pass `()` as a parameter.
-    ///
-    /// # Example
-    /// ```
-    /// # #[derive(Debug)]
-    /// # struct Error;
-    /// # struct Frame;
-    /// # impl Frame {
-    /// #     fn layer(self, _: ()) -> Result<Self, Error> { Ok(self) }
-    /// #     fn with_clear_color(self, _: ()) -> Self { self }
-    /// #     fn start(self) {}
-    /// # }
-    /// # let frame = Frame;
-    /// # let layer_handle = ();
-    /// let mut layer = frame
-    ///     .layer(layer_handle)?
-    ///     .with_clear_color(())
-    ///     .start();
-    /// # Ok::<(), Error>(())
-    /// ```
-    pub fn with_clear_color<C>(self, color: C) -> Self
-    where
-        C: IntoLinear,
-    {
+    pub fn with_clear_color(self, Color(col): Rgba) -> Self {
         Self {
-            clear_color: Some(color.into_linear()),
+            clear_color: Some(col.map(|v| v as f64)),
             ..self
         }
     }

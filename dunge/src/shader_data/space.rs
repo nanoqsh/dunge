@@ -1,6 +1,6 @@
 use {
     crate::{
-        color::{IntoLinear, Linear},
+        color::{Color, Rgb},
         layout::Plain,
         shader_data::TextureError,
         transform::IntoMat,
@@ -13,19 +13,18 @@ type Mat = [[f32; 4]; 4];
 
 /// Parameters of the light space.
 #[derive(Clone, Copy)]
-pub struct Space<'a, M, C> {
+pub struct Space<'a, M> {
     pub data: Data<'a>,
     pub transform: M,
-    pub col: C,
+    pub col: Rgb,
 }
 
-impl<'a, M, C> Space<'a, M, C> {
+impl<'a, M> Space<'a, M> {
     pub(crate) fn into_uniform(self) -> SpaceUniform
     where
         M: IntoMat,
-        C: IntoLinear<3>,
     {
-        let Linear(col) = self.col.into_linear();
+        let Color(col) = self.col;
         SpaceUniform::new(self.data.size, self.transform.into_mat(), col)
     }
 }

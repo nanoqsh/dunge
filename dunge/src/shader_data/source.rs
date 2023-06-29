@@ -1,23 +1,20 @@
 use crate::{
-    color::{IntoLinear, Linear},
+    color::{Color, Rgb},
     layout::Plain,
     shader_data::len::LenUniform,
 };
 
 /// Light source parameters.
 #[derive(Clone, Copy)]
-pub struct Source<C> {
-    pub col: C,
+pub struct Source {
+    pub col: Rgb,
     pub pos: [f32; 3],
     pub rad: f32,
 }
 
-impl<C> Source<C> {
-    pub(crate) fn into_uniform(self) -> SourceUniform
-    where
-        C: IntoLinear<3>,
-    {
-        let Linear(col) = self.col.into_linear();
+impl Source {
+    pub(crate) fn into_uniform(self) -> SourceUniform {
+        let Color(col) = self.col;
         SourceUniform::new(col, self.rad, self.pos)
     }
 }

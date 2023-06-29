@@ -1,8 +1,9 @@
+pub mod _color;
 mod _shader;
 pub mod _vertex;
 mod camera;
 mod canvas;
-pub mod color;
+mod color;
 mod context;
 mod frame;
 mod framebuffer {
@@ -85,6 +86,7 @@ pub use {
     crate::{
         camera::{Orthographic, Perspective, View},
         canvas::{Backend, Canvas, CanvasConfig, Device, Error as CanvasError, Selector},
+        color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, Limits, PixelSize},
         error::Error,
         frame::Frame,

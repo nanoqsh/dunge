@@ -1,6 +1,5 @@
 use {
     crate::{
-        color::IntoLinear,
         error::ResourceNotFound,
         handles::{LayerHandle, SpacesHandle},
         layout::Plain,
@@ -219,10 +218,9 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn with_space<M, C>(mut self, space: Space<'a, M, C>) -> Self
+    pub fn with_space<M>(mut self, space: Space<'a, M>) -> Self
     where
         M: IntoMat,
-        C: IntoLinear<3>,
     {
         self.variables.textures_data.push(space.data);
         self.variables.light_spaces.push(space.into_uniform());

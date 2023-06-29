@@ -1,7 +1,7 @@
 use {
     crate::{
         camera::{Camera, Projection, View},
-        color::{IntoLinear, Linear},
+        color::{Color, Rgb},
         error::ResourceNotFound,
         handles::{GlobalsHandle, LayerHandle},
         layout::Plain,
@@ -138,12 +138,8 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn with_ambient<C>(mut self, color: C) -> Self
-    where
-        C: IntoLinear<3>,
-    {
-        let Linear(color) = color.into_linear();
-        self.variables.ambient = Some(AmbientUniform::new(color));
+    pub fn with_ambient(mut self, Color(col): Rgb) -> Self {
+        self.variables.ambient = Some(AmbientUniform::new(col));
         self
     }
 

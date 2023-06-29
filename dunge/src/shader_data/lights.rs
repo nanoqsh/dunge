@@ -1,6 +1,5 @@
 use {
     crate::{
-        color::IntoLinear,
         error::ResourceNotFound,
         handles::{LayerHandle, LightsHandle},
         layout::Plain,
@@ -176,20 +175,15 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn with_sources<I, C>(mut self, sources: I) -> Self
+    pub fn with_sources<I>(mut self, sources: I) -> Self
     where
-        I: IntoIterator<Item = Source<C>>,
-        C: IntoLinear<3>,
+        I: IntoIterator<Item = Source>,
     {
         self.variables
             .source_arrays
             .push(sources.into_iter().map(Source::into_uniform).collect());
 
         self
-    }
-
-    pub fn with_sources_empty(self) -> Self {
-        self.with_sources::<_, ()>([])
     }
 
     pub fn build<S>(self, handle: LayerHandle<S>) -> Result<LightsHandle<S>, ResourceNotFound>

@@ -1,9 +1,10 @@
 use {
     crate::{
+        _color::IntoLinear,
         _vertex::_Vertex,
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
-        color::IntoLinear,
+        color::Rgb,
         error::*,
         framebuffer::FrameFilter,
         handles::*,
@@ -119,14 +120,13 @@ impl Context {
             .update_globals_view(handle, view.into_projection_view())
     }
 
-    pub fn update_globals_ambient<S, C>(
+    pub fn update_globals_ambient<S>(
         &mut self,
         handle: GlobalsHandle<S>,
-        color: C,
+        col: Rgb,
     ) -> Result<(), ResourceNotFound>
     where
         S: Shader,
-        C: IntoLinear<3>,
     {
         assert!(
             ShaderInfo::new::<S>().has_ambient,
@@ -134,7 +134,7 @@ impl Context {
         );
 
         self.resources
-            .update_globals_ambient(&self.render, handle, color.into_linear())
+            .update_globals_ambient(&self.render, handle, col.0)
     }
 
     pub fn textures_builder(&mut self) -> TexturesBuilder {
@@ -162,7 +162,7 @@ impl Context {
         LightsBuilder::new(&mut self.resources, &self.render)
     }
 
-    pub fn update_lights_sources<S, I, C>(
+    pub fn update_lights_sources<S, I>(
         &mut self,
         handle: LightsHandle<S>,
         index: usize,
@@ -170,8 +170,7 @@ impl Context {
     ) -> Result<(), SourceError>
     where
         S: Shader,
-        I: IntoIterator<Item = Source<C>>,
-        C: IntoLinear<3>,
+        I: IntoIterator<Item = Source>,
     {
         assert!(
             ShaderInfo::new::<S>().source_arrays > 0,

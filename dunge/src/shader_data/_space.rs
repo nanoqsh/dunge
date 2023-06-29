@@ -1,7 +1,7 @@
 use {
     crate::{
+        _color::{IntoLinear, Linear},
         _shader,
-        color::{IntoLinear, Linear},
         error::{Error, SpaceNotFound, TooLargeSize, TooManySpaces},
         layout::Plain,
         shader_data::TextureError,

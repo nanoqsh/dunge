@@ -1,11 +1,10 @@
 use dunge::{
-    color::{Linear, Standard},
     handles::*,
     input::{Input, Key},
     shader::*,
     transform::{AxisAngle, Position, Transform},
-    CanvasConfig, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData, PixelSize,
-    Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, WindowMode,
+    CanvasConfig, Color, Context, Error, Frame, FrameParameters, InitialState, Loop, MeshData,
+    PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, WindowMode,
 };
 
 #[repr(C)]
@@ -71,7 +70,7 @@ impl App {
         let globals = context
             .globals_builder()
             .with_view()
-            .with_ambient(Standard([0.5; 3]))
+            .with_ambient(Rgb::from_standard([0.5; 3]))
             .build(layer)
             .expect("create globals");
 
@@ -90,7 +89,7 @@ impl App {
         // Create lights
         let lights = context
             .lights_builder()
-            .with_sources_empty()
+            .with_sources([])
             .build(layer)
             .expect("create lights");
 
@@ -111,7 +110,7 @@ impl App {
                         rot: AxisAngle([1., 0., 0.], -FRAC_PI_2),
                         scl: [0.5; 3],
                     },
-                    col: Standard([1.; 3]),
+                    col: Rgb::from_standard([1.; 3]),
                 })
                 .build(layer)
                 .expect("create spaces")
@@ -185,22 +184,22 @@ impl Loop for App {
                 0,
                 [
                     Source {
-                        col: Linear([0., 2., 0.]),
+                        col: Color([0., 2., 0.]),
                         pos: calc_position(1.),
                         rad: 80.,
                     },
                     Source {
-                        col: Linear([2., 0., 0.]),
+                        col: Color([2., 0., 0.]),
                         pos: calc_position(2.),
                         rad: 80.,
                     },
                     Source {
-                        col: Linear([0., 0., 2.]),
+                        col: Color([0., 0., 2.]),
                         pos: calc_position(3.),
                         rad: 80.,
                     },
                     Source {
-                        col: Linear([2., 2., 0.]),
+                        col: Color([2., 2., 0.]),
                         pos: calc_position(4.),
                         rad: 80.,
                     },
@@ -214,7 +213,7 @@ impl Loop for App {
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         frame
             .layer(self.layer)?
-            .with_clear_color(Standard([0, 0, 0, u8::MAX]))
+            .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
             .bind_globals(self.globals)?

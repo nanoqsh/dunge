@@ -3,11 +3,10 @@ mod data;
 use {
     dunge::{
         _vertex::{_ColorVertex, _TextureVertex},
-        color::Standard,
         handles::*,
         input::{Input, Key},
         transform::Position,
-        Context, Error, Frame, Loop, MeshData, Perspective, TextureData,
+        Context, Error, Frame, Loop, MeshData, Perspective, Rgba, TextureData,
     },
     utils::Camera,
 };
@@ -118,13 +117,13 @@ impl Loop for App {
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        let color = Standard([46, 34, 47, 255]);
+        let clear_color = Rgba::from_standard_bytes([46, 34, 47, 255]);
 
         match self.state {
             State::Texture => {
                 let mut layer = frame
                     .layer(self.texture_layer)?
-                    .with_clear_color(color)
+                    .with_clear_color(clear_color)
                     .with_clear_depth()
                     ._start();
 
@@ -136,7 +135,7 @@ impl Loop for App {
             State::Color => {
                 let mut layer = frame
                     .layer(self.color_layer)?
-                    .with_clear_color(color)
+                    .with_clear_color(clear_color)
                     .with_clear_depth()
                     ._start();
 
