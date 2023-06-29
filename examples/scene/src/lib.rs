@@ -343,7 +343,7 @@ impl Loop for App {
             layer._bind_view(self.view)?;
             layer.bind_texture(self.sprites)?;
             for model in &self.models {
-                layer.bind_instance(model.instance)?;
+                layer._bind_instance(model.instance)?;
                 layer._draw(model.mesh)?;
             }
         }
@@ -352,7 +352,7 @@ impl Loop for App {
             let mut layer = frame.layer(self.color_layer)?._start();
             layer._bind_view(self.view)?;
             for cube in &self.cubes {
-                layer.bind_instance(cube.instance)?;
+                layer._bind_instance(cube.instance)?;
                 layer._draw(cube.mesh)?;
             }
         }

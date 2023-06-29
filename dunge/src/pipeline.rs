@@ -158,6 +158,9 @@ pub(crate) struct Pipeline {
 }
 
 impl Pipeline {
+    pub const VERTEX_BUFFER_SLOT: u32 = 0;
+    pub const INSTANCE_BUFFER_SLOT: u32 = 1;
+
     pub fn new(
         device: &Device,
         shader: &ShaderData,

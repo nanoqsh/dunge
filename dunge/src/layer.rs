@@ -25,7 +25,7 @@ pub struct Layer<'l, S, T> {
     resources: &'l Resources,
     drawn_in_frame: &'l mut bool,
     groups: Groups<'l>,
-    instance: Option<&'l Instance>,
+    _instance: Option<&'l Instance>,
     vertex_type: PhantomData<(S, T)>,
 }
 
@@ -44,7 +44,7 @@ impl<'l, S, T> Layer<'l, S, T> {
             resources,
             drawn_in_frame,
             groups: Groups::default(),
-            instance: None,
+            _instance: None,
             vertex_type: PhantomData,
         }
     }
@@ -66,7 +66,7 @@ impl<'l, S, T> Layer<'l, S, T> {
             resources,
             drawn_in_frame,
             groups: Groups::default(),
-            instance: None,
+            _instance: None,
             vertex_type: PhantomData,
         };
 
@@ -147,9 +147,12 @@ impl<'l, S, T> Layer<'l, S, T> {
     /// # Errors
     /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
     /// if given instance handler was deleted.
-    pub fn bind_instance(&mut self, handle: InstanceHandle) -> Result<&mut Self, ResourceNotFound> {
+    pub fn _bind_instance(
+        &mut self,
+        handle: InstanceHandle,
+    ) -> Result<&mut Self, ResourceNotFound> {
         let instance = self.resources.instances.get(handle.0)?;
-        self.instance = Some(instance);
+        self._instance = Some(instance);
         Ok(self)
     }
 
@@ -157,7 +160,11 @@ impl<'l, S, T> Layer<'l, S, T> {
     ///
     /// # Errors
     /// See [`Error`] for details.
-    pub fn draw(&mut self, handle: MeshHandle<S::Vertex, T>) -> Result<(), Error>
+    pub fn draw(
+        &mut self,
+        mesh: MeshHandle<S::Vertex, T>,
+        instance: InstanceHandle,
+    ) -> Result<(), Error>
     where
         S: Shader,
     {
@@ -182,8 +189,9 @@ impl<'l, S, T> Layer<'l, S, T> {
             self.pass.set_bind_group(index, group, &[]);
         }
 
-        let mesh = self.resources.meshes.get(handle.id())?;
-        self.draw_mesh(mesh)?;
+        let mesh = self.resources.meshes.get(mesh.id())?;
+        let instance = self.resources.instances.get(instance.0)?;
+        self.draw_mesh(mesh, instance)?;
         Ok(())
     }
 
@@ -195,19 +203,18 @@ impl<'l, S, T> Layer<'l, S, T> {
     /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
     pub fn _draw(&mut self, handle: MeshHandle<S, T>) -> Result<(), Error> {
         let mesh = self.resources.meshes.get(handle.id())?;
-        self.draw_mesh(mesh)?;
+        let instance = self._instance.expect("instance");
+        self.draw_mesh(mesh, instance)?;
         Ok(())
     }
 
-    fn draw_mesh(&mut self, mesh: &'l Mesh) -> Result<(), NotSet> {
+    fn draw_mesh(&mut self, mesh: &'l Mesh, instance: &'l Instance) -> Result<(), NotSet> {
         use {crate::mesh::Type, wgpu::IndexFormat};
 
-        let instance = self.instance.ok_or(NotSet::Instance)?;
-
         self.pass
-            .set_vertex_buffer(_shader::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
+            .set_vertex_buffer(Pipeline::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
         self.pass
-            .set_vertex_buffer(_shader::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
+            .set_vertex_buffer(Pipeline::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
 
         match mesh.mesh_type() {
             Type::Indexed {

@@ -221,7 +221,6 @@ impl Loop for App {
             .bind_textures(self.textures)?
             .bind_lights(self.lights)?
             .bind_spaces(self.spaces)?
-            .bind_instance(self.instance)?
-            .draw(self.mesh)
+            .draw(self.mesh, self.instance)
     }
 }

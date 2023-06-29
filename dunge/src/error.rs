@@ -35,9 +35,6 @@ pub enum NotSet {
 
     /// Returns when spaces is not set.
     Spaces,
-
-    /// Returns when an instance of rendered resourse is not set.
-    Instance,
 }
 
 /// Returns when a rendered resourse not found.

@@ -33,8 +33,8 @@ pub(crate) const SPACE_SDIFF_BINDING: u32 = 5;
 pub(crate) const MAX_N_SOURCES: u32 = 64;
 pub(crate) const MAX_N_SPACES: u32 = 4;
 
-pub(crate) const VERTEX_BUFFER_SLOT: u32 = 0;
-pub(crate) const INSTANCE_BUFFER_SLOT: u32 = 1;
+pub(crate) const _VERTEX_BUFFER_SLOT: u32 = 0;
+pub(crate) const _INSTANCE_BUFFER_SLOT: u32 = 1;
 
 #[derive(Clone, Copy)]
 pub(crate) enum _Shader {

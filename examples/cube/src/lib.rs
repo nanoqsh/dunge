@@ -129,7 +129,7 @@ impl Loop for App {
                     ._start();
 
                 layer._bind_view(self.view)?;
-                layer.bind_instance(self.instance)?;
+                layer._bind_instance(self.instance)?;
                 layer.bind_texture(self.texture)?;
                 layer._draw(self.texture_mesh)?;
             }
@@ -141,7 +141,7 @@ impl Loop for App {
                     ._start();
 
                 layer._bind_view(self.view)?;
-                layer.bind_instance(self.instance)?;
+                layer._bind_instance(self.instance)?;
                 layer._draw(self.color_mesh)?;
             }
         }
