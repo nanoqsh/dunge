@@ -1,7 +1,9 @@
-use crate::{
-    color::{Color, Rgb},
-    layout::Plain,
-    shader_data::len::LenUniform,
+use {
+    crate::{
+        color::{Color, Rgb},
+        shader_data::len::LenUniform,
+    },
+    bytemuck::{Pod, Zeroable},
 };
 
 /// Light source parameters.
@@ -27,7 +29,7 @@ pub(crate) struct SourceArray {
 impl SourceArray {
     pub fn new(mut sources: Vec<SourceUniform>, max_size: usize) -> Self {
         assert!(sources.len() <= max_size, "too many light sources");
-        sources.resize(max_size, SourceUniform::default());
+        sources.resize(max_size, SourceUniform::zeroed());
         Self {
             len: sources.len() as u32,
             buf: sources.into_boxed_slice(),
@@ -72,7 +74,7 @@ pub enum UpdateError {
 pub struct SetLenError;
 
 #[repr(C)]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub(crate) struct SourceUniform {
     col: [f32; 3],
     rad: f32,
@@ -90,5 +92,3 @@ impl SourceUniform {
         }
     }
 }
-
-unsafe impl Plain for SourceUniform {}

@@ -1,7 +1,7 @@
-use crate::layout::Plain;
+use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub(crate) struct CameraUniform {
     view_proj: [[f32; 4]; 4],
 }
@@ -26,5 +26,3 @@ impl Default for CameraUniform {
         }
     }
 }
-
-unsafe impl Plain for CameraUniform {}

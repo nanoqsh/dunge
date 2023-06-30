@@ -1,6 +1,6 @@
 //! Topology types and traits.
 
-use {crate::layout::Plain, wgpu::PrimitiveTopology};
+use {bytemuck::Pod, wgpu::PrimitiveTopology};
 
 /// The topology type of [`Topology`](crate::topology::Topology) trait.
 pub struct TopologyValue(PrimitiveTopology);
@@ -13,7 +13,7 @@ impl TopologyValue {
 }
 
 pub trait Topology {
-    type Face: Clone + Plain;
+    type Face: Pod;
     const VALUE: TopologyValue;
 }
 

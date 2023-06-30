@@ -1,9 +1,9 @@
 use {
     crate::{
         _color::{IntoLinear, Linear},
+        _layout::Plain,
         _shader,
         error::{SourceNotFound, TooManySources},
-        layout::Plain,
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };

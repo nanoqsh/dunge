@@ -1,7 +1,7 @@
-use crate::layout::Plain;
+use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub(crate) struct LenUniform([u32; 4]);
 
 impl LenUniform {
@@ -14,5 +14,3 @@ impl LenUniform {
         n
     }
 }
-
-unsafe impl Plain for LenUniform {}

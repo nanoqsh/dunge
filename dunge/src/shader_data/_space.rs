@@ -1,9 +1,9 @@
 use {
     crate::{
         _color::{IntoLinear, Linear},
+        _layout::Plain,
         _shader,
         error::{Error, SpaceNotFound, TooLargeSize, TooManySpaces},
-        layout::Plain,
         shader_data::TextureError,
         transform::IntoMat,
     },

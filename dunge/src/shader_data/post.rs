@@ -1,5 +1,6 @@
 use {
-    crate::{layout::Plain, postproc::PostProcessor},
+    crate::postproc::PostProcessor,
+    bytemuck::{Pod, Zeroable},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
@@ -19,7 +20,7 @@ impl PostShaderData {
             let uniform = PostShaderDataUniform::new((1., 1.), (1., 1.));
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("post data buffer"),
-                contents: uniform.as_bytes(),
+                contents: bytemuck::cast_slice(&[uniform]),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         };
@@ -38,7 +39,7 @@ impl PostShaderData {
 
     pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
         let uniform = PostShaderDataUniform::new(size, factor);
-        queue.write_buffer(&self.buffer, 0, uniform.as_bytes());
+        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[uniform]));
     }
 
     pub fn bind_group(&self) -> &BindGroup {
@@ -47,25 +48,23 @@ impl PostShaderData {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 struct PostShaderDataUniform {
-    size: (f32, f32),
-    step: (f32, f32),
-    factor: (f32, f32),
+    size: [f32; 2],
+    step: [f32; 2],
+    factor: [f32; 2],
     pad: u64,
 }
 
 impl PostShaderDataUniform {
-    fn new((width, height): (f32, f32), factor: (f32, f32)) -> Self {
+    fn new((width, height): (f32, f32), (fx, fy): (f32, f32)) -> Self {
         const STEP_FACTOR: f32 = 0.5;
 
         Self {
-            size: (width, height),
-            step: (STEP_FACTOR / width, STEP_FACTOR / height),
-            factor,
+            size: [width, height],
+            step: [STEP_FACTOR / width, STEP_FACTOR / height],
+            factor: [fx, fy],
             pad: 0,
         }
     }
 }
-
-unsafe impl Plain for PostShaderDataUniform {}

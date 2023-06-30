@@ -14,6 +14,7 @@ rust-version = "1.70"
 dunge_macros = { path = "dunge_macros" }
 dunge_shader = { path = "dunge_shader" }
 ahash = "0.8"
+bytemuck = { version = "1.13", features = ["derive"] }
 glam = "0.24"
 log = "0.4"
 wgpu = "0.16"

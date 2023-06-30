@@ -1,10 +1,10 @@
 use {
     crate::{
         color::{Color, Rgb},
-        layout::Plain,
         shader_data::TextureError,
         transform::IntoMat,
     },
+    bytemuck::{Pod, Zeroable},
     dunge_shader::SpaceKind,
     std::fmt,
 };
@@ -96,7 +96,7 @@ impl fmt::Display for Format {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub(crate) struct SpaceUniform {
     model: Mat,
     col: [f32; 3],
@@ -125,5 +125,3 @@ impl SpaceUniform {
         }
     }
 }
-
-unsafe impl Plain for SpaceUniform {}

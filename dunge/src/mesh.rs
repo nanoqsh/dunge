@@ -1,7 +1,7 @@
 use {
     crate::{
+        _layout::Plain,
         _vertex::_Vertex,
-        layout::Plain,
         topology::{Topology, TriangleList},
         vertex::{self, Vertex},
     },
@@ -89,12 +89,9 @@ impl Mesh {
         V: Vertex,
         T: Topology,
     {
-        use {
-            std::slice,
-            wgpu::{
-                util::{BufferInitDescriptor, DeviceExt},
-                BufferUsages,
-            },
+        use wgpu::{
+            util::{BufferInitDescriptor, DeviceExt},
+            BufferUsages,
         };
 
         Self {
@@ -104,10 +101,7 @@ impl Mesh {
                 usage: BufferUsages::VERTEX,
             }),
             ty: match &data.indxs {
-                Some(indxs) => Type::indexed(
-                    unsafe { slice::from_raw_parts(indxs.as_ptr().cast(), indxs.len() * 3) },
-                    device,
-                ),
+                Some(indxs) => Type::indexed(bytemuck::cast_slice(&indxs), device),
                 None => Type::sequential(data.verts),
             },
         }

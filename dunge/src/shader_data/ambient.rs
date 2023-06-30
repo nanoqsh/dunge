@@ -1,7 +1,7 @@
-use crate::layout::Plain;
+use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub(crate) struct AmbientUniform([f32; 4]);
 
 impl AmbientUniform {
@@ -9,5 +9,3 @@ impl AmbientUniform {
         Self([r, g, b, 0.])
     }
 }
-
-unsafe impl Plain for AmbientUniform {}

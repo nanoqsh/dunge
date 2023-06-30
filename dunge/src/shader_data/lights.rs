@@ -2,7 +2,6 @@ use {
     crate::{
         error::ResourceNotFound,
         handles::{LayerHandle, LightsHandle},
-        layout::Plain,
         pipeline::Lights as Bindings,
         render::Render,
         resources::Resources,
@@ -42,13 +41,13 @@ impl Lights {
                 let array = SourceArray::new(var, bind.size as usize);
                 let array_buf = device.create_buffer_init(&BufferInitDescriptor {
                     label: Some("source array buffer"),
-                    contents: array.buf().as_bytes(),
+                    contents: bytemuck::cast_slice(array.buf()),
                     usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                 });
 
                 let len_buf = device.create_buffer_init(&BufferInitDescriptor {
                     label: Some("source len buffer"),
-                    contents: array.len().as_bytes(),
+                    contents: bytemuck::cast_slice(&[array.len()]),
                     usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                 });
 
@@ -107,14 +106,14 @@ impl Lights {
         queue.write_buffer(
             &buffers.array,
             (offset * mem::size_of::<SourceUniform>()) as _,
-            data.as_bytes(),
+            bytemuck::cast_slice(data),
         );
 
         let old_len = array.len();
         let new_len = (offset + sources.len()) as u32;
         if old_len.get() < new_len {
             array.set_len(new_len)?;
-            queue.write_buffer(&buffers.len, 0, array.len().as_bytes());
+            queue.write_buffer(&buffers.len, 0, bytemuck::cast_slice(&[array.len()]));
         }
 
         Ok(())

@@ -4,7 +4,6 @@ use {
         color::{Color, Rgb},
         error::ResourceNotFound,
         handles::{GlobalsHandle, LayerHandle},
-        layout::Plain,
         pipeline::Globals as Bindings,
         render::Render,
         resources::Resources,
@@ -38,7 +37,7 @@ impl Globals {
         let camera = variables.camera.map(|uniform| {
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("camera buffer"),
-                contents: uniform.as_bytes(),
+                contents: bytemuck::cast_slice(&[uniform]),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         });
@@ -46,7 +45,7 @@ impl Globals {
         let ambient = variables.ambient.map(|uniform| {
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("ambient buffer"),
-                contents: uniform.as_bytes(),
+                contents: bytemuck::cast_slice(&[uniform]),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             })
         });
@@ -88,7 +87,7 @@ impl Globals {
         };
 
         let uniform = camera.uniform(size);
-        queue.write_buffer(buf, 0, uniform.as_bytes());
+        queue.write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
     pub fn write_ambient(&self, color: [f32; 3], queue: &Queue) {
@@ -97,7 +96,7 @@ impl Globals {
         };
 
         let uniform = AmbientUniform::new(color);
-        queue.write_buffer(buf, 0, uniform.as_bytes());
+        queue.write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
     pub fn bind(&self) -> (u32, &BindGroup) {

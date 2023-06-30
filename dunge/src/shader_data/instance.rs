@@ -1,8 +1,9 @@
 use {
     crate::{
+        _layout::{Plain, _Layout},
         error::TooLargeSize,
-        layout::{Plain, _Layout},
     },
+    bytemuck::{Pod, Zeroable},
     wgpu::{Buffer, Device, Queue, VertexAttribute, VertexBufferLayout, VertexStepMode},
 };
 
@@ -21,7 +22,7 @@ impl Instance {
         Self {
             buffer: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("instance buffer"),
-                contents: models.as_bytes(),
+                contents: bytemuck::cast_slice(models),
                 usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             }),
             n_instances: models.len().try_into().expect("convert instances len"),
@@ -37,7 +38,7 @@ impl Instance {
             return Err(TooLargeSize);
         }
 
-        queue.write_buffer(&self.buffer, 0, models.as_bytes());
+        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(models));
         Ok(())
     }
 
@@ -51,7 +52,7 @@ impl Instance {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable)]
 pub(crate) struct InstanceModel {
     pub(crate) mat: [[f32; 4]; 4],
 }

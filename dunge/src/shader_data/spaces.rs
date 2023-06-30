@@ -2,7 +2,6 @@ use {
     crate::{
         error::ResourceNotFound,
         handles::{LayerHandle, SpacesHandle},
-        layout::Plain,
         pipeline::Spaces as Bindings,
         render::Render,
         resources::Resources,
@@ -39,7 +38,7 @@ impl Spaces {
 
         let spaces = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("spaces buffer"),
-            contents: variables.light_spaces.as_slice().as_bytes(),
+            contents: bytemuck::cast_slice(&variables.light_spaces),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 

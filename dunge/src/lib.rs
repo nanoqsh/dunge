@@ -1,4 +1,5 @@
 pub mod _color;
+mod _layout;
 mod _shader;
 pub mod _vertex;
 mod camera;
@@ -18,7 +19,6 @@ pub mod error;
 mod groups;
 pub mod handles;
 mod layer;
-mod layout;
 mod r#loop;
 mod mesh;
 mod pipeline;
@@ -27,13 +27,13 @@ mod render;
 mod resources;
 mod screen;
 mod shader_data {
+    mod _light;
     mod _space;
     mod ambient;
     mod camera;
     pub(crate) mod globals;
     mod instance;
     mod len;
-    mod light;
     pub(crate) mod lights;
     mod post;
     mod source;
@@ -43,19 +43,19 @@ mod shader_data {
     pub(crate) mod textures;
 
     pub(crate) use self::{
+        _light::{Light, _SourceModel},
         _space::{_LightSpace, _SpaceModel},
         ambient::AmbientUniform,
         camera::CameraUniform,
         instance::{Instance, InstanceModel},
-        light::{Light, _SourceModel},
         post::PostShaderData,
         source::{SourceArray, SourceUniform},
         texture::Texture,
     };
 
     pub use self::{
+        _light::{LightKind, _Source},
         _space::{Data as _SpaceData, Format as _SpaceFormat, _Space},
-        light::{LightKind, _Source},
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         texture::{Data as TextureData, Error as TextureError},

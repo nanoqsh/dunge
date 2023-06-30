@@ -3,7 +3,6 @@ pub(crate) use self::proj::{IntoProjection, Projection};
 use {
     crate::{
         _shader,
-        layout::Plain,
         shader_data::CameraUniform,
         transform::{IntoQuat, Quat},
     },
@@ -91,7 +90,7 @@ impl _Camera {
         let uniform = CameraUniform::default();
         let buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("camera buffer"),
-            contents: uniform.as_bytes(),
+            contents: bytemuck::cast_slice(&[uniform]),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
@@ -129,7 +128,7 @@ impl _Camera {
         self.size.set(Some(size));
         let mat = self.view.build_mat((width as f32, height as f32));
         let uniform = CameraUniform::new(mat.to_cols_array_2d());
-        queue.write_buffer(&self.buffer, 0, uniform.as_bytes());
+        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[uniform]));
     }
 
     pub fn bind_group(&self) -> &BindGroup {
