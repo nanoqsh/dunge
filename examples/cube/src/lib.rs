@@ -2,14 +2,44 @@ mod data;
 
 use {
     dunge::{
-        _vertex::{_ColorVertex, _TextureVertex},
         handles::*,
         input::{Input, Key},
+        shader::*,
         transform::Position,
-        Context, Error, Frame, Loop, MeshData, Perspective, Rgba, TextureData,
+        Context, Error, Frame, Loop, MeshData, Perspective, Rgba, TextureData, Vertex,
     },
     utils::Camera,
 };
+
+#[repr(C)]
+#[derive(Vertex)]
+struct TextureVert {
+    #[position]
+    pos: [f32; 3],
+    #[texture]
+    map: [f32; 2],
+}
+
+struct TextureShader;
+impl Shader for TextureShader {
+    type Vertex = TextureVert;
+    const VIEW: ShaderView = ShaderView::Camera;
+}
+
+#[repr(C)]
+#[derive(Vertex)]
+struct ColorVert {
+    #[position]
+    pos: [f32; 3],
+    #[color]
+    col: [f32; 3],
+}
+
+struct ColorShader;
+impl Shader for ColorShader {
+    type Vertex = ColorVert;
+    const VIEW: ShaderView = ShaderView::Camera;
+}
 
 enum State {
     Texture,
@@ -17,13 +47,14 @@ enum State {
 }
 
 pub struct App {
-    texture_layer: LayerHandle<_TextureVertex>,
-    color_layer: LayerHandle<_ColorVertex>,
-    texture: _TextureHandle,
+    texture_layer: LayerHandle<TextureShader>,
+    color_layer: LayerHandle<ColorShader>,
+    texture_globals: GlobalsHandle<TextureShader>,
+    color_globals: GlobalsHandle<ColorShader>,
+    textures: TexturesHandle<TextureShader>,
     instance: InstanceHandle,
-    texture_mesh: MeshHandle<_TextureVertex>,
-    color_mesh: MeshHandle<_ColorVertex>,
-    view: _ViewHandle,
+    texture_mesh: MeshHandle<TextureVert>,
+    color_mesh: MeshHandle<ColorVert>,
     camera: Camera,
     state: State,
 }
@@ -31,14 +62,44 @@ pub struct App {
 impl App {
     pub fn new(context: &mut Context) -> Self {
         // Create layers. The vertex type inferred from the context
-        let texture_layer = context._create_layer();
-        let color_layer = context._create_layer();
+        let texture_layer = {
+            let shader: ShaderHandle<TextureShader> = context.create_shader();
+            context
+                .create_layer_with_parameters()
+                .build(shader)
+                .expect("create texture layer")
+        };
 
-        // Create a texture
-        let texture = {
+        let color_layer = {
+            let shader: ShaderHandle<ColorShader> = context.create_shader();
+            context
+                .create_layer_with_parameters()
+                .build(shader)
+                .expect("create color layer")
+        };
+
+        // Create globals
+        let texture_globals = context
+            .globals_builder()
+            .with_view()
+            .build(texture_layer)
+            .expect("create texture globals");
+
+        let color_globals = context
+            .globals_builder()
+            .with_view()
+            .build(color_layer)
+            .expect("create color globals");
+
+        // Create a textures
+        let textures = {
             let image = utils::read_png(include_bytes!("grass.png"));
             let data = TextureData::new(&image, image.dimensions()).expect("create texture");
-            context._create_texture(data)
+            context
+                .textures_builder()
+                .with_map(data)
+                .build(texture_layer)
+                .expect("create textures")
         };
 
         // Create a model instance
@@ -49,34 +110,34 @@ impl App {
 
         // Create meshes
         let texture_mesh = {
-            let verts = data::VERTICES.map(|(pos, map)| _TextureVertex { pos, map });
+            let verts = data::VERTICES.map(|(pos, map)| TextureVert { pos, map });
 
             let data = MeshData::new(&verts, &data::INDICES).expect("create mesh");
-            context._create_mesh(&data)
+            context.create_mesh(&data)
         };
 
         let color_mesh = {
-            let verts = data::VERTICES.map(|(pos, [a, b])| _ColorVertex {
+            let verts = data::VERTICES.map(|(pos, [a, b])| ColorVert {
                 pos,
                 col: [a, b, 1.],
             });
 
             let data = MeshData::new(&verts, &data::INDICES).expect("create mesh");
-            context._create_mesh(&data)
+            context.create_mesh(&data)
         };
 
         // Create the view
         let camera = Camera::default();
-        let view = context._create_view(camera.view(Perspective::default()));
 
         Self {
             texture_layer,
             color_layer,
-            texture,
+            texture_globals,
+            color_globals,
+            textures,
             instance,
             texture_mesh,
             color_mesh,
-            view,
             camera,
             state: State::Texture,
         }
@@ -111,38 +172,29 @@ impl Loop for App {
 
         // Set the view
         let view = self.camera.view(Perspective::default());
-        context.update_view(self.view, view)?;
-
+        context.update_globals_view(self.texture_globals, view)?;
+        context.update_globals_view(self.color_globals, view)?;
         Ok(())
     }
 
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         let clear_color = Rgba::from_standard_bytes([46, 34, 47, 255]);
-
         match self.state {
-            State::Texture => {
-                let mut layer = frame
-                    .layer(self.texture_layer)?
-                    .with_clear_color(clear_color)
-                    .with_clear_depth()
-                    ._start();
-
-                layer._bind_view(self.view)?;
-                layer._bind_instance(self.instance)?;
-                layer.bind_texture(self.texture)?;
-                layer._draw(self.texture_mesh)?;
-            }
-            State::Color => {
-                let mut layer = frame
-                    .layer(self.color_layer)?
-                    .with_clear_color(clear_color)
-                    .with_clear_depth()
-                    ._start();
-
-                layer._bind_view(self.view)?;
-                layer._bind_instance(self.instance)?;
-                layer._draw(self.color_mesh)?;
-            }
+            State::Texture => frame
+                .layer(self.texture_layer)?
+                .with_clear_color(clear_color)
+                .with_clear_depth()
+                .start()
+                .bind_globals(self.texture_globals)?
+                .bind_textures(self.textures)?
+                .draw(self.texture_mesh, self.instance)?,
+            State::Color => frame
+                .layer(self.color_layer)?
+                .with_clear_color(clear_color)
+                .with_clear_depth()
+                .start()
+                .bind_globals(self.color_globals)?
+                .draw(self.color_mesh, self.instance)?,
         }
 
         Ok(())

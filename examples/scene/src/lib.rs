@@ -88,7 +88,7 @@ impl App {
             context
                 .create_layer_with_parameters()
                 .build(shader)
-                .expect("create layer")
+                .expect("create texture layer")
         };
 
         let color_layer = {
@@ -97,7 +97,7 @@ impl App {
                 .create_layer_with_parameters()
                 .with_depth_compare(Compare::Always)
                 .build(shader)
-                .expect("create layer")
+                .expect("create color layer")
         };
 
         // Create the sprite texture
