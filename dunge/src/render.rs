@@ -133,20 +133,17 @@ impl Render {
         self.set_screen({
             let (width, height) = size;
             let screen = self.screen();
-            Some(Screen {
+            Screen {
                 width: NonZeroU32::new(width).unwrap_or(NonZeroU32::MIN),
                 height: NonZeroU32::new(height).unwrap_or(NonZeroU32::MIN),
                 ..screen
-            })
+            }
         });
     }
 
-    pub fn set_screen(&mut self, screen: Option<Screen>) {
-        if let Some(screen) = screen {
-            self.screen.set_screen(screen);
-        }
+    pub fn set_screen(&mut self, screen: Screen) {
+        self.screen.set_screen(screen);
 
-        let screen = self.screen();
         let (width, height) = screen.physical_size().into();
         self.surface_conf.width = width;
         self.surface_conf.height = height;

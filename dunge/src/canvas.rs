@@ -78,7 +78,7 @@ impl Canvas {
 
         event_loop.run(move |ev, _, flow| {
             use {
-                std::time::Duration,
+                std::{num::NonZeroU32, time::Duration},
                 wgpu::SurfaceError,
                 winit::{
                     dpi::PhysicalPosition,
@@ -235,11 +235,9 @@ impl Canvas {
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
                             log::info!("suface error: timeout");
                         }
-                        RenderResult::SurfaceError(SurfaceError::Outdated) => {
-                            log::error!("suface error: outdated");
-                        }
-                        RenderResult::SurfaceError(SurfaceError::Lost) => {
-                            context.render.set_screen(None);
+                        RenderResult::SurfaceError(SurfaceError::Outdated)
+                        | RenderResult::SurfaceError(SurfaceError::Lost) => {
+                            context.render.resize(context.window.inner_size().into());
                         }
                         RenderResult::SurfaceError(SurfaceError::OutOfMemory) => {
                             log::error!("suface error: out of memory");
@@ -260,7 +258,7 @@ impl Canvas {
                 Event::UserEvent(CanvasEvent::SetScreen(screen)) => {
                     log::info!("user event: set screen");
                     if active {
-                        context.render.set_screen(Some(screen));
+                        context.render.set_screen(screen);
                     } else {
                         deferred_screen = Some(screen);
                     }
@@ -279,13 +277,21 @@ impl Canvas {
                     context.render.recreate_surface(&context.window);
 
                     // Set render screen on application start and resume
-                    context.render.resize(context.window.inner_size().into());
+                    let (width, height) = context.window.inner_size().into();
+                    match deferred_screen.take() {
+                        Some(screen) => context.render.set_screen(Screen {
+                            width: NonZeroU32::new(width).unwrap_or(NonZeroU32::MIN),
+                            height: NonZeroU32::new(height).unwrap_or(NonZeroU32::MIN),
+                            ..screen
+                        }),
+                        None => context.render.resize((width, height)),
+                    }
 
                     active = true;
                     context.window.request_redraw();
 
                     if let Some(screen) = deferred_screen.take() {
-                        context.render.set_screen(Some(screen));
+                        context.render.set_screen(screen);
                     }
 
                     // Reset the timer before start the loop
