@@ -226,6 +226,21 @@ impl Context {
         self.create_layer_with_parameters()._build()
     }
 
+    /// Creates a new layer with default parameters.
+    ///
+    /// This is a shortcut for `context.create_layer_with_parameters().build()`.
+    /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
+    pub fn create_layer<S, T>(
+        &mut self,
+        shader: ShaderHandle<S>,
+    ) -> Result<LayerHandle<S, T>, ResourceNotFound>
+    where
+        S: Shader,
+        T: Topology,
+    {
+        self.create_layer_with_parameters().build(shader)
+    }
+
     /// Creates a layer [builder](ParametersBuilder) with custom parameters.
     pub fn create_layer_with_parameters<V, T>(&mut self) -> ParametersBuilder<V, T> {
         ParametersBuilder::new(&self.render, &mut self.resources)

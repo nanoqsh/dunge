@@ -235,8 +235,7 @@ impl Canvas {
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
                             log::info!("suface error: timeout");
                         }
-                        RenderResult::SurfaceError(SurfaceError::Outdated)
-                        | RenderResult::SurfaceError(SurfaceError::Lost) => {
+                        RenderResult::SurfaceError(SurfaceError::Outdated | SurfaceError::Lost) => {
                             context.render.resize(context.window.inner_size().into());
                         }
                         RenderResult::SurfaceError(SurfaceError::OutOfMemory) => {

@@ -14,9 +14,10 @@
 ## Features
 * Simple but flexible API
 * Desktop, WASM and Android support
+* Customizable vertices and shaders
 * Pixel perfect render with custom layers
-* Texture and color vertex modes
 * Primitives for object positioning and camera view out of the box
+* Light sources and light spaces
 
 ## Application area
 The library is for personal use only. I use it to create my applications and I make API suitable exclusively for my problems. Perhaps in the future API will settle down and the library will be self-sufficient for other applications.
@@ -31,13 +32,11 @@ Then, let's create a new window to draw something in it:
 ```rust
 // Import some types
 use dunge::{
-    color::Standard,
     handles::*,
     input::{Input, Key},
+    shader::Shader,
     transform::Position,
-    vertex::ColorVertex,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Perspective, View,
-    WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Rgba, Vertex, WindowMode,
 };
 
 fn main() {
@@ -49,38 +48,54 @@ fn main() {
 
 `make_window` creates a new instance of `Canvas` type and sets up window properties, it allows us to handle an input from users. `run_blocking` runs our application by calling the constructor of it and passes the `Context` object there. Context uses for creation and updating of meshes, textures, views, instances etc.
 
+To be able to draw something, you need to define a vertex type with the `Vertex` trait implementation and a shader type with the `Shader` trait implementation:
+```rust
+// Instead of manually implementing the trait, use a derive macro.
+// Note the struct must have the `repr(C)` attribute
+#[repr(C)]
+#[derive(Vertex)]
+struct Vert(#[position] [f32; 2], #[color] [f32; 3]);
+
+struct TriangleShader;
+impl Shader for TriangleShader {
+    type Vertex = Vert; // Specify the vertex type 
+}
+```
+
 The `App` is our application type, we need to create it:
 ```rust
 struct App {
-    layer: LayerHandle<ColorVertex>,
+    layer: LayerHandle<TriangleShader>,
+    mesh: MeshHandle<Vert>,
     instance: InstanceHandle,
-    mesh: MeshHandle<ColorVertex>,
-    view: ViewHandle,
 }
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Create new layer for `ColorVertex`. The vertex type inferred from the context
-        let layer = context.create_layer();
-
-        // Create a model instance
-        let instance = context.create_instances([Position::default()]);
+        // Create shader and layer
+        let layer = {
+            let shader: ShaderHandle<TriangleShader> = context.create_shader();
+            context.create_layer(shader).expect("create layer")
+        };
 
         // Create a mesh
         let mesh = {
-            // Vertex data describes a position in XYZ coordinates and color in RGB per vertex:
-            const VERTICES: [ColorVertex; 3] = [
-                ColorVertex { pos: [-0.5, -0.5, 0.], col: [1., 0., 0.] },
-                ColorVertex { pos: [ 0.5, -0.5, 0.], col: [0., 1., 0.] },
-                ColorVertex { pos: [ 0.,   0.5, 0.], col: [0., 0., 1.] },
+            const VERTICES: [Vert; 3] = [
+                Vert([-0.5, -0.5], [1., 0., 0.]),
+                Vert([ 0.5, -0.5], [0., 1., 0.]),
+                Vert([ 0.,   0.5], [0., 0., 1.]),
             ];
             let data = MeshData::from_verts(&VERTICES);
             context.create_mesh(&data)
         };
 
-        // Create the view
-        let view = context.create_view::<Perspective>(View::default());
-        Self { layer, instance, mesh, view }
+        // Create a model instance
+        let instance = {
+            let data = Position::default();
+            context.create_instances([data])
+        };
+
+        Self { layer, mesh, instance }
     }
 }
 ```
@@ -99,16 +114,12 @@ impl Loop for App {
 
     // This calls every time the application needs to draw something in the window
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        // Draw a new layer
-        let mut layer = frame
+        frame
             .layer(self.layer)?
-            .with_clear_color(Standard([0, 0, 0, u8::MAX]))
+            .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
             .with_clear_depth()
-            .start();
-
-        layer.bind_view(self.view)?;
-        layer.bind_instance(self.instance)?;
-        layer.draw(self.mesh)
+            .start()
+            .draw(self.mesh, self.instance)
     }
 }
 ```

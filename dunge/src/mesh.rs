@@ -101,7 +101,7 @@ impl Mesh {
                 usage: BufferUsages::VERTEX,
             }),
             ty: match &data.indxs {
-                Some(indxs) => Type::indexed(bytemuck::cast_slice(&indxs), device),
+                Some(indxs) => Type::indexed(bytemuck::cast_slice(indxs), device),
                 None => Type::sequential(data.verts),
             },
         }
