@@ -160,13 +160,6 @@ impl Loop for App {
                 context.plan_to_close();
                 return Ok(());
             }
-
-            if key == Key::P {
-                let shot = context.take_screenshot();
-                utils::create_image(shot.width, shot.height, shot.data)
-                    .save("screen.png")
-                    .expect("save screenshot");
-            }
         }
 
         self.state += input.delta_time * 0.5;

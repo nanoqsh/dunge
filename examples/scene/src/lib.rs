@@ -277,9 +277,6 @@ impl App {
                 .collect()
         };
 
-        // Create the camera
-        let camera = Camera::default();
-
         Self {
             texture_layer,
             color_layer,
@@ -290,7 +287,7 @@ impl App {
             color_globals,
             lights,
             spaces,
-            camera,
+            camera: Camera::default(),
             time: 0.,
             fullscreen: false,
         }

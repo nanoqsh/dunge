@@ -28,12 +28,14 @@ impl Screen {
     /// The virtual size of the frame without antialiasing factor.
     pub fn virtual_size(&self) -> UVec2 {
         let size = self.physical_size();
-        match self.pixel_size {
+        let size = match self.pixel_size {
             PixelSize::Antialiasing | PixelSize::X1 => size,
             PixelSize::X2 => size / 2,
             PixelSize::X3 => size / 3,
             PixelSize::X4 => size / 4,
-        }
+        };
+
+        size.max(UVec2::new(1, 1))
     }
 
     /// The virtual size of the frame.

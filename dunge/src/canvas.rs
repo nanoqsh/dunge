@@ -3,6 +3,7 @@ use {
         context::Context,
         r#loop::{Input, Keys, Loop, Mouse},
         render::{RenderContext, RenderResult},
+        screen::Screen,
         time::Time,
     },
     winit::{
@@ -68,6 +69,7 @@ impl Canvas {
         // Set an initial state
         let mut active = false;
         let mut time = Time::new();
+        let mut deferred_screen = None;
         let mut cursor_position = None;
         let mut last_touch = None;
         let mut mouse = Mouse::default();
@@ -255,6 +257,14 @@ impl Canvas {
                     mouse.motion_delta.0 += x as f32;
                     mouse.motion_delta.1 += y as f32;
                 }
+                Event::UserEvent(CanvasEvent::SetScreen(screen)) => {
+                    log::info!("user event: set screen");
+                    if active {
+                        context.render.set_screen(Some(screen));
+                    } else {
+                        deferred_screen = Some(screen);
+                    }
+                }
                 Event::UserEvent(CanvasEvent::Close) if lp.close_requested() => {
                     log::info!("user event: close");
                     flow.set_exit();
@@ -273,6 +283,10 @@ impl Canvas {
 
                     active = true;
                     context.window.request_redraw();
+
+                    if let Some(screen) = deferred_screen.take() {
+                        context.render.set_screen(Some(screen));
+                    }
 
                     // Reset the timer before start the loop
                     time.reset();
@@ -302,6 +316,7 @@ impl Error {
 }
 
 pub(crate) enum CanvasEvent {
+    SetScreen(Screen),
     Close,
 }
 

@@ -15,7 +15,6 @@ android_logger = "0.13"
 log = "0.4"
 
 [profile.dev]
-panic = "abort"
 split-debuginfo = "unpacked"
 
 [profile.release]

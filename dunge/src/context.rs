@@ -94,7 +94,7 @@ impl Context {
 
     /// Sets context's frame parameters via [`FrameParameters`] struct.
     pub fn set_frame_parameters(&mut self, params: FrameParameters) {
-        self.render.set_screen(Some(Screen {
+        _ = self.proxy.send_event(CanvasEvent::SetScreen(Screen {
             pixel_size: params.pixel_size,
             filter: params.filter,
             ..self.render.screen()

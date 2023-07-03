@@ -12,7 +12,6 @@ impl<T> Storage<T> {
         loop {
             let index = self.counter;
             self.counter = self.counter.wrapping_add(1);
-
             if let Entry::Vacant(en) = self.map.entry(index) {
                 en.insert(value);
                 break index;

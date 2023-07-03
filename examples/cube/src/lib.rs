@@ -126,9 +126,6 @@ impl App {
             context.create_mesh(&data)
         };
 
-        // Create the view
-        let camera = Camera::default();
-
         Self {
             texture_layer,
             color_layer,
@@ -138,7 +135,7 @@ impl App {
             instance,
             texture_mesh,
             color_mesh,
-            camera,
+            camera: Camera::default(),
             state: State::Texture,
         }
     }
