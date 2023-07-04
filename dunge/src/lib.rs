@@ -1,7 +1,3 @@
-pub mod _color;
-mod _layout;
-mod _shader;
-pub mod _vertex;
 mod camera;
 mod canvas;
 mod color;
@@ -16,7 +12,6 @@ mod framebuffer {
     pub use self::render_frame::FrameFilter;
 }
 pub mod error;
-mod groups;
 pub mod handles;
 mod layer;
 mod r#loop;
@@ -27,8 +22,6 @@ mod render;
 mod resources;
 mod screen;
 mod shader_data {
-    mod _light;
-    mod _space;
     mod ambient;
     mod camera;
     pub(crate) mod globals;
@@ -43,8 +36,6 @@ mod shader_data {
     pub(crate) mod textures;
 
     pub(crate) use self::{
-        _light::{Light, _SourceModel},
-        _space::{_LightSpace, _SpaceModel},
         ambient::AmbientUniform,
         camera::CameraUniform,
         instance::{Instance, InstanceModel},
@@ -54,8 +45,6 @@ mod shader_data {
     };
 
     pub use self::{
-        _light::{LightKind, _Source},
-        _space::{Data as _SpaceData, Format as _SpaceFormat, _Space},
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         texture::{Data as TextureData, Error as TextureError},
@@ -95,10 +84,7 @@ pub use {
         mesh::{Data as MeshData, Error as MeshError},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
-        shader_data::{
-            LightKind, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError, _Source,
-            _Space, _SpaceData, _SpaceFormat,
-        },
+        shader_data::{Source, Space, SpaceData, SpaceFormat, TextureData, TextureError},
         vertex::Vertex,
     },
     dunge_macros::Vertex,

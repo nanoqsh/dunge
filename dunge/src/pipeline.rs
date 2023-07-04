@@ -1,26 +1,20 @@
 use {
     crate::{
-        _shader::_Shader,
-        _vertex::_Vertex,
         error::ResourceNotFound,
         framebuffer::Framebuffer,
-        groups::_Groups,
         handles::{LayerHandle, ShaderHandle},
-        render::{Render, Shaders},
+        render::Render,
         resources::Resources,
         shader::Shader,
         shader_data::InstanceModel,
         topology::Topology,
         vertex::Vertex,
     },
-    dunge_shader::{
-        Globals as Gl, Group, Layout, Lights as Lt, Shader as ShaderData, SourceBindings,
-        SpaceBindings, Spaces as Sp, TextureBindings, Textures as Tx,
-    },
+    dunge_shader::{Layout, Shader as ShaderData, SourceBindings, SpaceBindings, TextureBindings},
     std::marker::PhantomData,
     wgpu::{
         BindGroupLayout, BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology,
-        RenderPipeline, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat,
+        RenderPipeline, VertexAttribute, VertexBufferLayout, VertexFormat,
     },
 };
 
@@ -142,14 +136,6 @@ impl<'a, S, T> ParametersBuilder<'a, S, T> {
         self.resources
             .create_layer(self.render, self.params, shader)
     }
-
-    pub fn _build(self) -> LayerHandle<S, T>
-    where
-        S: _Vertex,
-        T: Topology,
-    {
-        self.resources._create_layer(self.render, self.params)
-    }
 }
 
 pub(crate) struct Pipeline {
@@ -226,86 +212,6 @@ impl Pipeline {
                 multiview: None,
             }),
             groups,
-        }
-    }
-
-    pub fn _new(
-        device: &Device,
-        shaders: &Shaders,
-        groups: &_Groups,
-        format: TextureFormat,
-        shader: _Shader,
-        params: Parameters,
-    ) -> Self {
-        use wgpu::*;
-
-        Self {
-            inner: {
-                let module = shaders.module(device, shader);
-                let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-                    label: None,
-                    bind_group_layouts: groups.bind_group_layouts(shader).as_slice(),
-                    push_constant_ranges: &[],
-                });
-
-                device.create_render_pipeline(&RenderPipelineDescriptor {
-                    label: None,
-                    layout: Some(&layout),
-                    vertex: VertexState {
-                        module,
-                        entry_point: "vs_main",
-                        buffers: shader.buffers(),
-                    },
-                    fragment: Some(FragmentState {
-                        module,
-                        entry_point: "fs_main",
-                        targets: &[Some(ColorTargetState {
-                            format,
-                            blend: Some(params.blend),
-                            write_mask: ColorWrites::ALL,
-                        })],
-                    }),
-                    primitive: PrimitiveState {
-                        topology: params.topology,
-                        strip_index_format: None,
-                        front_face: FrontFace::Ccw,
-                        cull_mode: params.cull_faces.then_some(Face::Back),
-                        polygon_mode: params.mode,
-                        unclipped_depth: false,
-                        conservative: false,
-                    },
-                    depth_stencil: params.depth_stencil.map(|depth_compare| DepthStencilState {
-                        format: Framebuffer::DEPTH_FORMAT,
-                        depth_write_enabled: true,
-                        depth_compare,
-                        stencil: StencilState::default(),
-                        bias: DepthBiasState::default(),
-                    }),
-                    multisample: MultisampleState::default(),
-                    multiview: None,
-                })
-            },
-            groups: Groups::new(
-                device,
-                &Layout {
-                    globals: Group {
-                        num: 0,
-                        bindings: Gl::default(),
-                    },
-                    textures: Group {
-                        num: 0,
-                        bindings: Tx::default(),
-                    },
-                    lights: Group {
-                        num: 0,
-                        bindings: Lt::default(),
-                    },
-                    spaces: Group {
-                        num: 0,
-                        bindings: Sp::default(),
-                    },
-                },
-            ),
         }
     }
 

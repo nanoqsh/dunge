@@ -1,7 +1,5 @@
 use {
     crate::{
-        _shader,
-        _vertex::_Vertex,
         error::ResourceNotFound,
         handles::LayerHandle,
         layer::{Builder, Layer},
@@ -108,51 +106,6 @@ impl<'d> Frame<'d> {
         self.encoder.finish(self.render);
     }
 
-    pub fn _commit_in_frame(&mut self) {
-        use wgpu::*;
-
-        if !self.drawn_in_frame {
-            return;
-        }
-
-        self.drawn_in_frame = false;
-
-        {
-            let mut pass = self
-                .encoder
-                .get(self.render)
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[Some(RenderPassColorAttachment {
-                        view: &self.frame_view,
-                        resolve_target: None,
-                        ops: Operations {
-                            load: LoadOp::Load,
-                            store: true,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                });
-
-            pass.set_pipeline(self.render._post_pipeline().as_ref());
-            pass.set_bind_group(
-                _shader::POST_TEXTURE_GROUP,
-                self.render.framebuffer().render_bind_group(),
-                &[],
-            );
-
-            pass.set_bind_group(
-                _shader::POST_DATA_GROUP,
-                self.render._post_shader_data().bind_group(),
-                &[],
-            );
-
-            pass.draw(0..4, 0..1);
-        }
-
-        self.encoder.finish(self.render);
-    }
-
     /// Starts a [layer](crate::handles::LayerHandle).
     ///
     /// # Errors
@@ -213,63 +166,6 @@ impl<'d> Frame<'d> {
         Layer::new(
             pass,
             screen.virtual_size().into(),
-            self.render.context().queue(),
-            self.resources,
-            &mut self.drawn_in_frame,
-        )
-    }
-
-    pub(crate) fn _start_layer<'l, V, T>(
-        &'l mut self,
-        pipeline: &'l Pipeline,
-        clear_color: Option<[f64; 4]>,
-        clear_depth: bool,
-    ) -> Layer<V, T>
-    where
-        V: _Vertex,
-    {
-        use wgpu::*;
-
-        // Before start a new layer, finish the previous one if it exists
-        self.encoder.finish(self.render);
-
-        let mut pass = self
-            .encoder
-            .get(self.render)
-            .begin_render_pass(&RenderPassDescriptor {
-                label: Some("layer render pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: self.render.framebuffer().render_view(),
-                    resolve_target: None,
-                    ops: Operations {
-                        load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
-                            LoadOp::Clear(Color { r, g, b, a })
-                        }),
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: self.render.framebuffer().depth_view(),
-                    depth_ops: Some(Operations {
-                        load: if clear_depth {
-                            LoadOp::Clear(1.)
-                        } else {
-                            LoadOp::Load
-                        },
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
-
-        pass.set_pipeline(pipeline.as_ref());
-
-        let (vw, vh) = self.render.screen().virtual_size().into();
-        pass.set_viewport(0., 0., vw as f32, vh as f32, 0., 1.);
-
-        Layer::_new(
-            pass,
-            (vw, vh),
             self.render.context().queue(),
             self.resources,
             &mut self.drawn_in_frame,

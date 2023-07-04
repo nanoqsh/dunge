@@ -2,13 +2,11 @@ pub(crate) use self::proj::{IntoProjection, Projection};
 
 use {
     crate::{
-        _shader,
         shader_data::CameraUniform,
         transform::{IntoQuat, Quat},
     },
     glam::{Mat4, Vec3},
     std::cell::Cell,
-    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
 
 mod proj {
@@ -71,69 +69,6 @@ impl Camera {
 struct Cache {
     size: (u32, u32),
     uniform: CameraUniform,
-}
-
-pub(crate) struct _Camera {
-    view: View<Projection>,
-    size: Cell<Option<(u32, u32)>>,
-    buffer: Buffer,
-    bind_group: BindGroup,
-}
-
-impl _Camera {
-    pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            *,
-        };
-
-        let uniform = CameraUniform::default();
-        let buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("camera buffer"),
-            contents: bytemuck::cast_slice(&[uniform]),
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-        });
-
-        let bind_group = device.create_bind_group(&BindGroupDescriptor {
-            layout,
-            entries: &[BindGroupEntry {
-                binding: _shader::CAMERA_BINDING,
-                resource: buffer.as_entire_binding(),
-            }],
-            label: Some("camera bind group"),
-        });
-
-        Self {
-            view: View::<Orthographic>::default().into_projection_view(),
-            size: Cell::new(None),
-            buffer,
-            bind_group,
-        }
-    }
-
-    pub fn set_view(&mut self, view: View<Projection>) {
-        self.view = view;
-        self.size.set(None);
-    }
-
-    pub fn resize(&self, size @ (width, height): (u32, u32), queue: &Queue) {
-        if self
-            .size
-            .get()
-            .is_some_and(|(w, h)| width == w && height == h)
-        {
-            return;
-        }
-
-        self.size.set(Some(size));
-        let mat = self.view.build_mat((width as f32, height as f32));
-        let uniform = CameraUniform::new(mat.to_cols_array_2d());
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[uniform]));
-    }
-
-    pub fn bind_group(&self) -> &BindGroup {
-        &self.bind_group
-    }
 }
 
 /// The camera view.

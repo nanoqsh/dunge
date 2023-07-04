@@ -1,12 +1,7 @@
 use {
     crate::{
-        _color::Linear,
-        _vertex::_Vertex,
-        camera::{Camera, Projection, View, _Camera},
-        error::{
-            Error, ResourceNotFound, SourceError, SpaceError, TexturesError, TooManySources,
-            TooManySpaces,
-        },
+        camera::{Camera, Projection, View},
+        error::{Error, ResourceNotFound, SourceError, SpaceError, TexturesError},
         handles::*,
         mesh::{Data as MeshData, Mesh},
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
@@ -19,8 +14,7 @@ use {
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
-            Instance, InstanceModel, Light, SourceUniform, SpaceData, Texture, TextureData,
-            _LightSpace, _SourceModel, _SpaceData, _SpaceModel,
+            Instance, InstanceModel, SourceUniform, SpaceData, TextureData,
         },
         storage::Storage,
         topology::Topology,
@@ -35,15 +29,11 @@ pub(crate) struct Resources {
     pub(crate) globals: Storage<Globals>,
     pub(crate) instances: Storage<Instance>,
     pub(crate) layers: Storage<Pipeline>,
-    pub(crate) _lights: Storage<Light>,
     pub(crate) lights: Storage<Lights>,
     pub(crate) meshes: Storage<Mesh>,
     pub(crate) shaders: Storage<ShaderData>,
-    pub(crate) _spaces: Storage<_LightSpace>,
     pub(crate) spaces: Storage<Spaces>,
-    pub(crate) _textures: Storage<Texture>,
     pub(crate) textures: Storage<Textures>,
-    pub(crate) views: Storage<_Camera>,
 }
 
 impl Resources {
@@ -224,60 +214,11 @@ impl Resources {
         Ok(LayerHandle::new(id))
     }
 
-    pub fn _create_layer<V, T>(
-        &mut self,
-        render: &Render,
-        params: PipelineParameters,
-    ) -> LayerHandle<V, T>
-    where
-        V: _Vertex,
-        T: Topology,
-    {
-        let pipeline = render._create_pipeline(
-            V::VALUE.into_inner(),
-            PipelineParameters {
-                topology: T::VALUE.into_inner(),
-                ..params
-            },
-        );
-
-        let id = self.layers.insert(pipeline);
-        LayerHandle::new(id)
-    }
-
     pub fn delete_layer<V, T>(
         &mut self,
         handle: LayerHandle<V, T>,
     ) -> Result<(), ResourceNotFound> {
         self.layers.remove(handle.id())
-    }
-
-    pub fn create_texture(&mut self, render: &Render, data: TextureData) -> _TextureHandle {
-        let texture = Texture::new(
-            data,
-            render.context().device(),
-            render.context().queue(),
-            &render._groups().textured,
-        );
-
-        let id = self._textures.insert(texture);
-        _TextureHandle(id)
-    }
-
-    pub fn update_texture(
-        &self,
-        render: &Render,
-        handle: _TextureHandle,
-        data: TextureData,
-    ) -> Result<(), Error> {
-        let texture = self._textures.get(handle.0)?;
-        texture.update_data(data, render.context().queue())?;
-
-        Ok(())
-    }
-
-    pub fn delete_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
-        self._textures.remove(handle.0)
     }
 
     pub fn create_instances(
@@ -316,159 +257,7 @@ impl Resources {
         MeshHandle::new(id)
     }
 
-    pub fn _create_mesh<V, T>(&mut self, render: &Render, data: &MeshData<V, T>) -> MeshHandle<V, T>
-    where
-        V: _Vertex,
-        T: Topology,
-    {
-        let mesh = Mesh::_new(data, render.context().device());
-        let id = self.meshes.insert(mesh);
-        MeshHandle::new(id)
-    }
-
     pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
         self.meshes.remove(handle.id())
-    }
-
-    pub fn create_view(&mut self, render: &Render, view: View<Projection>) -> _ViewHandle {
-        let mut camera = _Camera::new(render.context().device(), &render._groups().globals);
-        camera.set_view(view);
-        let id = self.views.insert(camera);
-        _ViewHandle(id)
-    }
-
-    pub fn update_view(
-        &mut self,
-        handle: _ViewHandle,
-        view: View<Projection>,
-    ) -> Result<(), ResourceNotFound> {
-        self.views
-            .get_mut(handle.0)
-            .map(|camera| camera.set_view(view))
-    }
-
-    pub fn delete_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
-        self.views.remove(handle.0)
-    }
-
-    pub fn create_light(
-        &mut self,
-        render: &Render,
-        ambient: Linear<f32, 3>,
-        srcs: &[_SourceModel],
-    ) -> Result<_LightHandle, TooManySources> {
-        let light = Light::new(
-            ambient.0,
-            srcs,
-            render.context().device(),
-            &render._groups().lights,
-        )?;
-
-        let id = self._lights.insert(light);
-        Ok(_LightHandle(id))
-    }
-
-    pub fn update_light(
-        &mut self,
-        render: &Render,
-        handle: _LightHandle,
-        ambient: Linear<f32, 3>,
-        srcs: &[_SourceModel],
-    ) -> Result<(), Error> {
-        let light = self._lights.get_mut(handle.0)?;
-        light.update_sources(ambient.0, srcs, render.context().queue())?;
-
-        Ok(())
-    }
-
-    pub fn update_nth_light(
-        &self,
-        render: &Render,
-        handle: _LightHandle,
-        n: usize,
-        source: _SourceModel,
-    ) -> Result<(), Error> {
-        let light = self._lights.get(handle.0)?;
-        light.update_nth(n, source, render.context().queue())?;
-
-        Ok(())
-    }
-
-    pub fn delete_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
-        self._lights.remove(handle.0)
-    }
-
-    pub fn create_space(
-        &mut self,
-        render: &Render,
-        spaces: &[_SpaceModel],
-        data: &[_SpaceData],
-    ) -> Result<_SpaceHandle, TooManySpaces> {
-        let ls = _LightSpace::new(
-            spaces,
-            data,
-            render.context().device(),
-            render.context().queue(),
-            &render._groups().space,
-        )?;
-
-        let id = self._spaces.insert(ls);
-        Ok(_SpaceHandle(id))
-    }
-
-    pub fn update_space(
-        &mut self,
-        render: &Render,
-        handle: _SpaceHandle,
-        spaces: &[_SpaceModel],
-        data: &[_SpaceData],
-    ) -> Result<(), Error> {
-        let ls = self._spaces.get_mut(handle.0)?;
-        ls.update_spaces(spaces, data, render.context().queue())?;
-
-        Ok(())
-    }
-
-    pub fn update_nth_space(
-        &self,
-        render: &Render,
-        handle: _SpaceHandle,
-        n: usize,
-        space: _SpaceModel,
-    ) -> Result<(), Error> {
-        let ls = self._spaces.get(handle.0)?;
-        ls.update_nth_space(n, space, render.context().queue())?;
-
-        Ok(())
-    }
-
-    pub fn update_nth_space_color(
-        &self,
-        render: &Render,
-        handle: _SpaceHandle,
-        n: usize,
-        color: Linear<f32, 3>,
-    ) -> Result<(), Error> {
-        let ls = self._spaces.get(handle.0)?;
-        ls.update_nth_color(n, color.0, render.context().queue())?;
-
-        Ok(())
-    }
-
-    pub fn update_nth_space_data(
-        &self,
-        render: &Render,
-        handle: _SpaceHandle,
-        n: usize,
-        data: _SpaceData,
-    ) -> Result<(), Error> {
-        let ls = self._spaces.get(handle.0)?;
-        ls.update_nth_data(n, data, render.context().queue())?;
-
-        Ok(())
-    }
-
-    pub fn delete_space(&mut self, handle: _SpaceHandle) -> Result<(), ResourceNotFound> {
-        self._spaces.remove(handle.0)
     }
 }

@@ -71,15 +71,6 @@ impl<S> Clone for LightsHandle<S> {
 
 impl<S> Copy for LightsHandle<S> {}
 
-/// A light handle. May be obtained from the [`create_light`](crate::Context::create_light) method.
-#[must_use]
-#[derive(Clone, Copy)]
-pub struct _LightHandle(pub(crate) u32);
-
-impl _LightHandle {
-    pub(crate) const DEFAULT: Self = Self(0);
-}
-
 /// A mesh handle. May be obtained from the [`create_mesh`](crate::Context::create_mesh) method.
 #[must_use]
 pub struct MeshHandle<V, T = TriangleList>(u32, PhantomData<(V, T)>);
@@ -145,20 +136,6 @@ impl<S> Clone for SpacesHandle<S> {
 
 impl<S> Copy for SpacesHandle<S> {}
 
-/// A space handle. May be obtained from the [`create_space`](crate::Context::create_space) method.
-#[must_use]
-#[derive(Clone, Copy)]
-pub struct _SpaceHandle(pub(crate) u32);
-
-impl _SpaceHandle {
-    pub(crate) const DEFAULT: Self = Self(0);
-}
-
-/// A texture handle. May be obtained from the [`create_texture`](crate::Context::create_texture) method.
-#[must_use]
-#[derive(Clone, Copy)]
-pub struct _TextureHandle(pub(crate) u32);
-
 #[must_use]
 pub struct TexturesHandle<S>(u32, PhantomData<S>);
 
@@ -179,8 +156,3 @@ impl<S> Clone for TexturesHandle<S> {
 }
 
 impl<S> Copy for TexturesHandle<S> {}
-
-/// A view handle. May be obtained from the [`create_view`](crate::Context::create_view) method.
-#[must_use]
-#[derive(Clone, Copy)]
-pub struct _ViewHandle(pub(crate) u32);

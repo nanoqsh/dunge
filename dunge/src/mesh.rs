@@ -1,7 +1,5 @@
 use {
     crate::{
-        _layout::Plain,
-        _vertex::_Vertex,
         topology::{Topology, TriangleList},
         vertex::{self, Vertex},
     },
@@ -107,35 +105,6 @@ impl Mesh {
         }
     }
 
-    pub fn _new<V, T>(data: &Data<V, T>, device: &Device) -> Self
-    where
-        V: _Vertex,
-        T: Topology,
-    {
-        use {
-            std::slice,
-            wgpu::{
-                util::{BufferInitDescriptor, DeviceExt},
-                BufferUsages,
-            },
-        };
-
-        Self {
-            buffer: device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("vertex buffer"),
-                contents: data.verts.as_bytes(),
-                usage: BufferUsages::VERTEX,
-            }),
-            ty: match &data.indxs {
-                Some(indxs) => Type::indexed(
-                    unsafe { slice::from_raw_parts(indxs.as_ptr().cast(), indxs.len() * 3) },
-                    device,
-                ),
-                None => Type::sequential(data.verts),
-            },
-        }
-    }
-
     pub fn vertex_buffer(&self) -> &Buffer {
         &self.buffer
     }
@@ -160,7 +129,7 @@ impl Type {
         Self::Indexed {
             buffer: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("index buffer"),
-                contents: indxs.as_ref().as_bytes(),
+                contents: bytemuck::cast_slice(indxs),
                 usage: BufferUsages::INDEX,
             }),
             n_indices: indxs.len().try_into().expect("too many indexes"),

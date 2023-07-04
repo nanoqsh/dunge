@@ -1,8 +1,6 @@
 use {
-    crate::{_shader, error::TooLargeSize},
-    wgpu::{
-        BindGroup, BindGroupLayout, Device, Queue, Sampler, Texture as WgpuTexture, TextureView,
-    },
+    crate::error::TooLargeSize,
+    wgpu::{Device, Queue, Sampler, Texture as WgpuTexture, TextureView},
 };
 
 /// A data struct for a texture creation.
@@ -46,11 +44,10 @@ pub(crate) struct Texture {
     texture: WgpuTexture,
     view: TextureView,
     sampler: Sampler,
-    _bind_group: BindGroup,
 }
 
 impl Texture {
-    pub fn new(data: Data, device: &Device, queue: &Queue, layout: &BindGroupLayout) -> Self {
+    pub fn new(data: Data, device: &Device, queue: &Queue) -> Self {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -97,27 +94,11 @@ impl Texture {
             ..Default::default()
         });
 
-        let _bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: Some("texture bind group"),
-            layout,
-            entries: &[
-                BindGroupEntry {
-                    binding: _shader::TDIFF_BINDING,
-                    resource: BindingResource::TextureView(&view),
-                },
-                BindGroupEntry {
-                    binding: _shader::SDIFF_BINDING,
-                    resource: BindingResource::Sampler(&sampler),
-                },
-            ],
-        });
-
         Self {
             buf_size: data.size,
             texture,
             view,
             sampler,
-            _bind_group,
         }
     }
 
@@ -159,9 +140,5 @@ impl Texture {
 
     pub fn sampler(&self) -> &Sampler {
         &self.sampler
-    }
-
-    pub fn _bind_group(&self) -> &BindGroup {
-        &self._bind_group
     }
 }

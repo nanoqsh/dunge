@@ -1,7 +1,5 @@
 use {
     crate::{
-        _color::IntoLinear,
-        _vertex::_Vertex,
         camera::{IntoProjection, View},
         canvas::CanvasEvent,
         color::Rgb,
@@ -17,8 +15,7 @@ use {
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, InstanceModel,
-            Source, SourceUniform, SpaceData, TextureData, _Source, _SourceModel, _Space,
-            _SpaceData, _SpaceModel,
+            Source, SourceUniform, SpaceData, TextureData,
         },
         topology::Topology,
         transform::IntoMat,
@@ -38,27 +35,20 @@ pub struct Context {
     limits: Limits,
     models: Vec<InstanceModel>,
     sources: Vec<SourceUniform>,
-    _sources: Vec<_SourceModel>,
-    spaces: Vec<_SpaceModel>,
-    space_data: Vec<_SpaceData<'static>>,
 }
 
 impl Context {
     pub(crate) fn new(window: Window, proxy: Proxy, render_context: RenderContext) -> Self {
         const DEFAULT_CAPACITY: usize = 8;
 
-        let mut resources = Resources::default();
         Self {
             window,
             proxy,
-            render: Render::new(render_context, &mut resources),
-            resources,
+            render: Render::new(render_context),
+            resources: Resources::default(),
             limits: Limits::default(),
             models: Vec::with_capacity(DEFAULT_CAPACITY),
             sources: Vec::with_capacity(DEFAULT_CAPACITY),
-            _sources: Vec::with_capacity(DEFAULT_CAPACITY),
-            spaces: Vec::with_capacity(DEFAULT_CAPACITY),
-            space_data: Vec::with_capacity(DEFAULT_CAPACITY),
         }
     }
 
@@ -218,18 +208,6 @@ impl Context {
     ///
     /// This is a shortcut for `context.create_layer_with_parameters().build()`.
     /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
-    pub fn _create_layer<V, T>(&mut self) -> LayerHandle<V, T>
-    where
-        V: _Vertex,
-        T: Topology,
-    {
-        self.create_layer_with_parameters()._build()
-    }
-
-    /// Creates a new layer with default parameters.
-    ///
-    /// This is a shortcut for `context.create_layer_with_parameters().build()`.
-    /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
     pub fn create_layer<S, T>(
         &mut self,
         shader: ShaderHandle<S>,
@@ -255,31 +233,6 @@ impl Context {
         handle: LayerHandle<V, T>,
     ) -> Result<(), ResourceNotFound> {
         self.resources.delete_layer(handle)
-    }
-
-    /// Creates a new texture.
-    pub fn _create_texture(&mut self, data: TextureData) -> _TextureHandle {
-        self.resources.create_texture(&self.render, data)
-    }
-
-    /// Updates the texture.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_texture(
-        &mut self,
-        handle: _TextureHandle,
-        data: TextureData,
-    ) -> Result<(), Error> {
-        self.resources.update_texture(&self.render, handle, data)
-    }
-
-    /// Deletes the texture.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
-        self.resources.delete_texture(handle)
     }
 
     /// Creates new instances.
@@ -333,269 +286,12 @@ impl Context {
         self.resources.create_mesh(&self.render, data)
     }
 
-    /// Creates a new mesh.
-    pub fn _create_mesh<V, T>(&mut self, data: &MeshData<V, T>) -> MeshHandle<V, T>
-    where
-        V: _Vertex,
-        T: Topology,
-    {
-        self.resources._create_mesh(&self.render, data)
-    }
-
     /// Deletes the mesh.
     ///
     /// # Errors
     /// See [`ResourceNotFound`] for detailed info.
     pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
         self.resources.delete_mesh(handle)
-    }
-
-    /// Creates a new view.
-    pub fn _create_view<P>(&mut self, view: View<P>) -> _ViewHandle
-    where
-        P: IntoProjection,
-    {
-        self.resources
-            .create_view(&self.render, view.into_projection_view())
-    }
-
-    /// Updates the view.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn update_view<P>(
-        &mut self,
-        handle: _ViewHandle,
-        view: View<P>,
-    ) -> Result<(), ResourceNotFound>
-    where
-        P: IntoProjection,
-    {
-        self.resources
-            .update_view(handle, view.into_projection_view())
-    }
-
-    /// Deletes the view.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
-        self.resources.delete_view(handle)
-    }
-
-    /// Creates new light.
-    ///
-    /// # Errors
-    /// Returns the [`TooManySources`] when trying to create too many light sources.
-    pub fn create_light<C, I, S>(
-        &mut self,
-        ambient: C,
-        srcs: I,
-    ) -> Result<_LightHandle, TooManySources>
-    where
-        C: IntoLinear<3>,
-        I: IntoIterator<Item = _Source<S>>,
-        S: IntoLinear<3>,
-    {
-        self._sources.clear();
-        let models = srcs
-            .into_iter()
-            .map(|src| _SourceModel::new(src.into_linear()));
-
-        self._sources.extend(models);
-        self.resources
-            .create_light(&self.render, ambient.into_linear(), &self._sources)
-    }
-
-    /// Updates the light.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_light<C, I, S>(
-        &mut self,
-        handle: _LightHandle,
-        ambient: C,
-        srcs: I,
-    ) -> Result<(), Error>
-    where
-        C: IntoLinear<3>,
-        I: IntoIterator<Item = _Source<S>>,
-        S: IntoLinear<3>,
-    {
-        self._sources.clear();
-        let models = srcs
-            .into_iter()
-            .map(|src| _SourceModel::new(src.into_linear()));
-
-        self._sources.extend(models);
-        self.resources
-            .update_light(&self.render, handle, ambient.into_linear(), &self._sources)
-    }
-
-    /// Updates nth source in the light.
-    ///
-    /// To update all sources at once, call the [`update_light`](crate::Context::update_light) method.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_nth_light<S>(
-        &mut self,
-        handle: _LightHandle,
-        n: usize,
-        src: _Source<S>,
-    ) -> Result<(), Error>
-    where
-        S: IntoLinear<3>,
-    {
-        self.resources.update_nth_light(
-            &self.render,
-            handle,
-            n,
-            _SourceModel::new(src.into_linear()),
-        )
-    }
-
-    /// Deletes the light.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
-        self.resources.delete_light(handle)
-    }
-
-    /// Creates new light space.
-    ///
-    /// # Errors
-    /// Returns the [`TooManySpaces`] when trying to create too many light sources.
-    pub fn _create_space<'a, I, M, C>(&mut self, spaces: I) -> Result<_SpaceHandle, TooManySpaces>
-    where
-        I: IntoIterator<Item = _Space<'a, M, C>>,
-        M: IntoMat,
-        C: IntoLinear<3>,
-    {
-        use std::mem;
-
-        self.spaces.clear();
-        debug_assert!(self.space_data.is_empty(), "`space_data` is already empty");
-
-        let mut space_data = mem::take(&mut self.space_data);
-        for space in spaces {
-            space_data.push(space.data);
-            self.spaces
-                .push(_SpaceModel::new(&space.into_mat_and_linear()));
-        }
-
-        let space = self
-            .resources
-            .create_space(&self.render, &self.spaces, &space_data);
-
-        space_data.clear();
-        self.space_data = space_data.into_iter().map(|_| unreachable!()).collect();
-
-        space
-    }
-
-    /// Updates the light space.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_space<'a, I, M, C>(
-        &mut self,
-        handle: _SpaceHandle,
-        spaces: I,
-    ) -> Result<(), Error>
-    where
-        I: IntoIterator<Item = _Space<'a, M, C>>,
-        M: IntoMat,
-        C: IntoLinear<3>,
-    {
-        use std::mem;
-
-        self.spaces.clear();
-        debug_assert!(self.space_data.is_empty(), "`space_data` is already empty");
-
-        let mut space_data = mem::take(&mut self.space_data);
-        for space in spaces {
-            space_data.push(space.data);
-            self.spaces
-                .push(_SpaceModel::new(&space.into_mat_and_linear()));
-        }
-
-        let updated = self
-            .resources
-            .update_space(&self.render, handle, &self.spaces, &space_data);
-
-        space_data.clear();
-        self.space_data = space_data.into_iter().map(|_| unreachable!()).collect();
-
-        updated
-    }
-
-    /// Updates nth space in the light space.
-    ///
-    /// To update all spaces at once, call the [`update_space`](crate::Context::update_space) method.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_nth_space<M, C>(
-        &mut self,
-        handle: _SpaceHandle,
-        n: usize,
-        space: _Space<M, C>,
-    ) -> Result<(), Error>
-    where
-        M: IntoMat,
-        C: IntoLinear<3>,
-    {
-        self.resources.update_nth_space(
-            &self.render,
-            handle,
-            n,
-            _SpaceModel::new(&space.into_mat_and_linear()),
-        )
-    }
-
-    /// Updates nth color in the light space.
-    ///
-    /// To update all spaces at once, call the [`update_space`](crate::Context::update_space) method.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_nth_space_color<C>(
-        &mut self,
-        handle: _SpaceHandle,
-        n: usize,
-        color: C,
-    ) -> Result<(), Error>
-    where
-        C: IntoLinear<3>,
-    {
-        self.resources
-            .update_nth_space_color(&self.render, handle, n, color.into_linear())
-    }
-
-    /// Updates nth data in the light space.
-    ///
-    /// To update all spaces at once, call the [`update_space`](crate::Context::update_space) method.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_nth_space_data(
-        &mut self,
-        handle: _SpaceHandle,
-        n: usize,
-        data: _SpaceData,
-    ) -> Result<(), Error> {
-        self.resources
-            .update_nth_space_data(&self.render, handle, n, data)
-    }
-
-    /// Deletes the light space.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_space(&mut self, handle: _SpaceHandle) -> Result<(), ResourceNotFound> {
-        self.resources.delete_space(handle)
     }
 
     /// Takes a screenshot of the current frame.

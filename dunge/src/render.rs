@@ -1,22 +1,15 @@
 use {
     crate::{
-        _shader::_Shader,
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
         context::Screenshot,
         frame::Frame,
         framebuffer::{BufferSize, FrameParameters, Framebuffer},
-        groups::_Groups,
-        pipeline::{Parameters as PipelineParameters, Pipeline},
         postproc::PostProcessor,
         r#loop::Loop,
         resources::Resources,
         screen::{RenderScreen, Screen},
-        shader_data::{Light, PostShaderData, _LightSpace},
     },
-    std::cell::OnceCell,
-    wgpu::{
-        Adapter, Device, Instance, Queue, ShaderModule, Surface, SurfaceConfiguration, SurfaceError,
-    },
+    wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
 
@@ -24,16 +17,12 @@ pub(crate) struct Render {
     context: RenderContext,
     surface_conf: SurfaceConfiguration,
     screen: RenderScreen,
-    shaders: Shaders,
-    _groups: _Groups,
-    _post_pipeline: Pipeline,
-    _post_shader_data: PostShaderData,
     postproc: PostProcessor,
     framebuffer: Framebuffer,
 }
 
 impl Render {
-    pub fn new(context: RenderContext, resources: &mut Resources) -> Self {
+    pub fn new(context: RenderContext) -> Self {
         use wgpu::*;
 
         let surface_conf = SurfaceConfiguration {
@@ -47,38 +36,6 @@ impl Render {
         };
 
         let screen = RenderScreen::new(context.device.limits().max_texture_dimension_2d);
-
-        let groups = _Groups::new(&context.device);
-        let post_shader_data = PostShaderData::new(&context.device, &groups.post_shader_data);
-        let shaders = Shaders::default();
-
-        resources._lights.insert({
-            const DEFAULT_AMBIENT: [f32; 3] = [1.; 3];
-
-            Light::new(DEFAULT_AMBIENT, &[], &context.device, &groups.lights)
-                .expect("default light")
-        });
-
-        resources._spaces.insert(
-            _LightSpace::new(&[], &[], &context.device, &context.queue, &groups.space)
-                .expect("default light space"),
-        );
-
-        let post_pipeline = Pipeline::_new(
-            &context.device,
-            &shaders,
-            &groups,
-            surface_conf.format,
-            _Shader::Post,
-            PipelineParameters {
-                blend: BlendState::ALPHA_BLENDING,
-                topology: PrimitiveTopology::TriangleStrip,
-                cull_faces: false,
-                depth_stencil: None,
-                ..Default::default()
-            },
-        );
-
         let postproc = PostProcessor::new(&context.device);
         let framebuffer = Framebuffer::new(&context.device, postproc.layout());
 
@@ -86,11 +43,7 @@ impl Render {
             context,
             surface_conf,
             screen,
-            shaders,
-            _groups: groups,
             postproc,
-            _post_pipeline: post_pipeline,
-            _post_shader_data: post_shader_data,
             framebuffer,
         }
     }
@@ -110,17 +63,6 @@ impl Render {
             surface.configure(&self.context.device, &self.surface_conf);
             surface
         });
-    }
-
-    pub fn _create_pipeline(&self, shader: _Shader, params: PipelineParameters) -> Pipeline {
-        Pipeline::_new(
-            &self.context.device,
-            &self.shaders,
-            &self._groups,
-            self.surface_conf.format,
-            shader,
-            params,
-        )
     }
 
     pub fn screen(&self) -> Screen {
@@ -155,9 +97,6 @@ impl Render {
 
         let buffer_size = self.screen.buffer_size();
         let size_factor = screen.size_factor();
-
-        self._post_shader_data
-            .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
 
         self.postproc
             .set_antialiasing(&self.context.device, screen.is_antialiasing_enabled());
@@ -300,20 +239,8 @@ impl Render {
         &self.context
     }
 
-    pub fn _groups(&self) -> &_Groups {
-        &self._groups
-    }
-
     pub fn post_processor(&self) -> &PostProcessor {
         &self.postproc
-    }
-
-    pub fn _post_pipeline(&self) -> &Pipeline {
-        &self._post_pipeline
-    }
-
-    pub fn _post_shader_data(&self) -> &PostShaderData {
-        &self._post_shader_data
     }
 
     pub fn framebuffer(&self) -> &Framebuffer {
@@ -458,32 +385,4 @@ pub(crate) enum RenderResult<E> {
     Ok,
     SurfaceError(SurfaceError),
     Error(E),
-}
-
-#[derive(Default)]
-pub(crate) struct Shaders {
-    color: OnceCell<ShaderModule>,
-    flat: OnceCell<ShaderModule>,
-    post: OnceCell<ShaderModule>,
-    textured: OnceCell<ShaderModule>,
-}
-
-impl Shaders {
-    pub fn module(&self, device: &Device, shader: _Shader) -> &ShaderModule {
-        use wgpu::{ShaderModuleDescriptor, ShaderSource};
-
-        let cell = match shader {
-            _Shader::Color => &self.color,
-            _Shader::Flat => &self.flat,
-            _Shader::Post => &self.post,
-            _Shader::Textured => &self.textured,
-        };
-
-        cell.get_or_init(|| {
-            device.create_shader_module(ShaderModuleDescriptor {
-                label: None,
-                source: ShaderSource::Wgsl(shader.source().into()),
-            })
-        })
-    }
 }

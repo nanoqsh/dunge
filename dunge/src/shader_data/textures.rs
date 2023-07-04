@@ -27,9 +27,7 @@ impl Textures {
             layout,
         } = params;
 
-        let map = variables
-            .map
-            .map(|data| Texture::new(data, device, queue, layout));
+        let map = variables.map.map(|data| Texture::new(data, device, queue));
 
         let entries = map.as_ref().map(|texture| {
             [

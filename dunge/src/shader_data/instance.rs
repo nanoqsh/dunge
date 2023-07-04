@@ -1,11 +1,10 @@
 use {
-    crate::{
-        _layout::{Plain, _Layout},
-        error::TooLargeSize,
-    },
+    crate::error::TooLargeSize,
     bytemuck::{Pod, Zeroable},
-    wgpu::{Buffer, Device, Queue, VertexAttribute, VertexBufferLayout, VertexStepMode},
+    wgpu::{Buffer, Device, Queue, VertexBufferLayout, VertexStepMode},
 };
+
+type Mat = [[f32; 4]; 4];
 
 pub(crate) struct Instance {
     buffer: Buffer,
@@ -54,7 +53,7 @@ impl Instance {
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub(crate) struct InstanceModel {
-    pub(crate) mat: [[f32; 4]; 4],
+    pub(crate) mat: Mat,
 }
 
 impl InstanceModel {
@@ -75,17 +74,8 @@ impl InstanceModel {
     };
 }
 
-unsafe impl Plain for InstanceModel {}
-
-impl _Layout for InstanceModel {
-    const ATTRIBS: &'static [VertexAttribute] =
-        &wgpu::vertex_attr_array![2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4];
-
-    const VERTEX_STEP_MODE: VertexStepMode = VertexStepMode::Instance;
-}
-
-impl From<[[f32; 4]; 4]> for InstanceModel {
-    fn from(mat: [[f32; 4]; 4]) -> Self {
+impl From<Mat> for InstanceModel {
+    fn from(mat: Mat) -> Self {
         Self { mat }
     }
 }

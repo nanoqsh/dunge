@@ -1,7 +1,5 @@
 use {
     crate::{
-        _shader::{self, _Shader},
-        _vertex::{_ColorVertex, _FlatVertex, _TextureVertex, _Vertex},
         color::{Color, Rgba},
         error::{Error, NotSet, ResourceNotFound},
         frame::Frame,
@@ -25,7 +23,6 @@ pub struct Layer<'l, S, T> {
     resources: &'l Resources,
     drawn_in_frame: &'l mut bool,
     groups: Groups<'l>,
-    _instance: Option<&'l Instance>,
     vertex_type: PhantomData<(S, T)>,
 }
 
@@ -44,50 +41,8 @@ impl<'l, S, T> Layer<'l, S, T> {
             resources,
             drawn_in_frame,
             groups: Groups::default(),
-            _instance: None,
             vertex_type: PhantomData,
         }
-    }
-
-    pub(crate) fn _new(
-        pass: RenderPass<'l>,
-        size: (u32, u32),
-        queue: &'l Queue,
-        resources: &'l Resources,
-        drawn_in_frame: &'l mut bool,
-    ) -> Self
-    where
-        S: _Vertex,
-    {
-        let mut layer = Self {
-            pass,
-            size,
-            queue,
-            resources,
-            drawn_in_frame,
-            groups: Groups::default(),
-            _instance: None,
-            vertex_type: PhantomData,
-        };
-
-        // Bind default light and set default ambient
-        match S::VALUE.into_inner() {
-            _Shader::Color => layer
-                .bind_light_handle(_LightHandle::DEFAULT, _shader::COLOR_SOURCES_GROUP)
-                .expect("bind default light"),
-            _Shader::Textured => {
-                layer
-                    .bind_light_handle(_LightHandle::DEFAULT, _shader::TEXTURED_SOURCES_GROUP)
-                    .expect("bind default light");
-
-                layer
-                    .bind_space_handle(_SpaceHandle::DEFAULT, _shader::TEXTURED_SPACE_GROUP)
-                    .expect("bind default space");
-            }
-            _ => {}
-        }
-
-        layer
     }
 
     /// Binds the [globals](crate::handles::GlobalsHandle).
@@ -142,20 +97,6 @@ impl<'l, S, T> Layer<'l, S, T> {
         Ok(self)
     }
 
-    /// Binds the [instance](crate::handles::InstanceHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given instance handler was deleted.
-    pub fn _bind_instance(
-        &mut self,
-        handle: InstanceHandle,
-    ) -> Result<&mut Self, ResourceNotFound> {
-        let instance = self.resources.instances.get(handle.0)?;
-        self._instance = Some(instance);
-        Ok(self)
-    }
-
     /// Draws the [mesh](crate::handles::MeshHandle).
     ///
     /// # Errors
@@ -195,19 +136,6 @@ impl<'l, S, T> Layer<'l, S, T> {
         Ok(())
     }
 
-    /// Draws the [mesh](crate::handles::MeshHandle).
-    ///
-    /// # Errors
-    /// Returns [`Error::NotFound`] if given mesh handler was deleted.
-    /// Returns [`Error::InstanceNotSet`] if no any [instance](InstanceHandle) is set.
-    /// Call [`bind_instance`](crate::Layer::bind_instance) to set an instance.
-    pub fn _draw(&mut self, handle: MeshHandle<S, T>) -> Result<(), Error> {
-        let mesh = self.resources.meshes.get(handle.id())?;
-        let instance = self._instance.expect("instance");
-        self.draw_mesh(mesh, instance);
-        Ok(())
-    }
-
     fn draw_mesh(&mut self, mesh: &'l Mesh, instance: &'l Instance) {
         use {crate::mesh::Type, wgpu::IndexFormat};
 
@@ -232,120 +160,6 @@ impl<'l, S, T> Layer<'l, S, T> {
         }
 
         *self.drawn_in_frame = true;
-    }
-
-    fn _bind_view_handle(
-        &mut self,
-        handle: _ViewHandle,
-        group: u32,
-    ) -> Result<(), ResourceNotFound> {
-        let camera = self.resources.views.get(handle.0)?;
-        camera.resize(self.size, self.queue);
-        self.pass.set_bind_group(group, camera.bind_group(), &[]);
-
-        Ok(())
-    }
-
-    fn bind_texture_handle(
-        &mut self,
-        handle: _TextureHandle,
-        group: u32,
-    ) -> Result<(), ResourceNotFound> {
-        let texture = self.resources._textures.get(handle.0)?;
-        self.pass.set_bind_group(group, texture._bind_group(), &[]);
-
-        Ok(())
-    }
-
-    fn bind_light_handle(
-        &mut self,
-        handle: _LightHandle,
-        group: u32,
-    ) -> Result<(), ResourceNotFound> {
-        let light = self.resources._lights.get(handle.0)?;
-        self.pass.set_bind_group(group, light.bind_group(), &[]);
-
-        Ok(())
-    }
-
-    fn bind_space_handle(
-        &mut self,
-        handle: _SpaceHandle,
-        group: u32,
-    ) -> Result<(), ResourceNotFound> {
-        let space = self.resources._spaces.get(handle.0)?;
-        self.pass.set_bind_group(group, space.bind_group(), &[]);
-
-        Ok(())
-    }
-}
-
-impl<T> Layer<'_, _TextureVertex, T> {
-    /// Binds the [view](crate::handles::ViewHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given view handler was deleted.
-    pub fn _bind_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
-        self._bind_view_handle(handle, _shader::TEXTURED_GLOBALS_GROUP)
-    }
-
-    /// Binds the [texture](crate::handles::TextureHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given texture handler was deleted.
-    pub fn bind_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
-        self.bind_texture_handle(handle, _shader::TEXTURED_TEXTURE_GROUP)
-    }
-
-    /// Binds the [light](crate::handles::LightHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given light handler was deleted.
-    pub fn bind_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
-        self.bind_light_handle(handle, _shader::TEXTURED_SOURCES_GROUP)
-    }
-
-    /// Binds the [space](crate::handles::SpaceHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given space handler was deleted.
-    pub fn bind_space(&mut self, handle: _SpaceHandle) -> Result<(), ResourceNotFound> {
-        self.bind_space_handle(handle, _shader::TEXTURED_SPACE_GROUP)
-    }
-}
-
-impl<T> Layer<'_, _ColorVertex, T> {
-    /// Binds the [view](crate::handles::ViewHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given view handler was deleted.
-    pub fn _bind_view(&mut self, handle: _ViewHandle) -> Result<(), ResourceNotFound> {
-        self._bind_view_handle(handle, _shader::COLOR_GLOBALS_GROUP)
-    }
-
-    /// Binds the [light](crate::handles::LightHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given light handler was deleted.
-    pub fn bind_light(&mut self, handle: _LightHandle) -> Result<(), ResourceNotFound> {
-        self.bind_light_handle(handle, _shader::COLOR_SOURCES_GROUP)
-    }
-}
-
-impl<T> Layer<'_, _FlatVertex, T> {
-    /// Binds the [texture](crate::handles::TextureHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given texture handler was deleted.
-    pub fn bind_texture(&mut self, handle: _TextureHandle) -> Result<(), ResourceNotFound> {
-        self.bind_texture_handle(handle, _shader::FLAT_TEXTURE_GROUP)
     }
 }
 
@@ -403,14 +217,5 @@ impl<'l, 'd, S, T> Builder<'l, 'd, S, T> {
     pub fn start(self) -> Layer<'l, S, T> {
         self.frame
             .start_layer(self.pipeline, self.clear_color, self.clear_depth)
-    }
-
-    /// Starts draw the layer.
-    pub fn _start(self) -> Layer<'l, S, T>
-    where
-        S: _Vertex,
-    {
-        self.frame
-            ._start_layer(self.pipeline, self.clear_color, self.clear_depth)
     }
 }
