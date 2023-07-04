@@ -46,7 +46,7 @@ fn main() {
 }
 ```
 
-`make_window` creates a new instance of `Canvas` type and sets up window properties, it allows us to handle an input from users. `run_blocking` runs our application by calling the constructor of it and passes the `Context` object there. Context uses for creation and updating of meshes, textures, views, instances etc.
+`make_window` creates a new instance of `Canvas` type and sets up window properties, it allows us to handle an input from users. `run_blocking` runs our application by calling the constructor of it and passes the `Context` object there. Context uses for creation and updating of meshes, textures, instances etc.
 
 To be able to draw something, you need to define a vertex type with the `Vertex` trait implementation and a shader type with the `Shader` trait implementation:
 ```rust
