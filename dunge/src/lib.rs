@@ -36,12 +36,10 @@ mod shader_data {
     pub(crate) mod textures;
 
     pub(crate) use self::{
-        ambient::AmbientUniform,
         camera::CameraUniform,
         instance::{Instance, InstanceModel},
         post::PostShaderData,
-        source::{SourceArray, SourceUniform},
-        texture::Texture,
+        source::SourceUniform,
     };
 
     pub use self::{

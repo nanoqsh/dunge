@@ -8,24 +8,22 @@ pub enum Error {
     /// Returns when a rendered resourse or selected object not found.
     NotFound,
 
-    /// Returns when trying to create too many objects.
-    TooManyObjects,
-
     /// Returned when too large buffer is passed.
     TooLargeSize,
 
     /// Returns when the requested object is not set.
-    NotSet(NotSet),
+    NotSet(NotSetError),
 }
 
-impl From<NotSet> for Error {
-    fn from(v: NotSet) -> Self {
+impl From<NotSetError> for Error {
+    fn from(v: NotSetError) -> Self {
         Self::NotSet(v)
     }
 }
 
+/// The error indicating some object is not set.
 #[derive(Debug)]
-pub enum NotSet {
+pub enum NotSetError {
     /// Returns when globals is not set.
     Globals,
 
@@ -45,46 +43,6 @@ pub struct ResourceNotFound;
 
 impl From<ResourceNotFound> for Error {
     fn from(_: ResourceNotFound) -> Self {
-        Self::NotFound
-    }
-}
-
-/// Returns when trying to create too many light sources.
-#[derive(Debug)]
-pub struct TooManySources;
-
-impl From<TooManySources> for Error {
-    fn from(_: TooManySources) -> Self {
-        Self::TooManyObjects
-    }
-}
-
-/// Returns when a selected light source not found.
-#[derive(Debug)]
-pub struct SourceNotFound;
-
-impl From<SourceNotFound> for Error {
-    fn from(_: SourceNotFound) -> Self {
-        Self::NotFound
-    }
-}
-
-/// Returns when trying to create too many light spaces.
-#[derive(Debug)]
-pub struct TooManySpaces;
-
-impl From<TooManySpaces> for Error {
-    fn from(_: TooManySpaces) -> Self {
-        Self::TooManyObjects
-    }
-}
-
-/// Returns when a selected light space not found.
-#[derive(Debug)]
-pub struct SpaceNotFound;
-
-impl From<SpaceNotFound> for Error {
-    fn from(_: SpaceNotFound) -> Self {
         Self::NotFound
     }
 }

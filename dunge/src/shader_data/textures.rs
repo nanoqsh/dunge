@@ -6,7 +6,7 @@ use {
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::{Texture, TextureData},
+        shader_data::texture::{Data as TextureData, Texture},
     },
     wgpu::{BindGroup, BindGroupLayout, Device, Queue},
 };

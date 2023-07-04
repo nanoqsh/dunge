@@ -8,7 +8,7 @@ use {
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::{AmbientUniform, CameraUniform},
+        shader_data::{ambient::AmbientUniform, camera::CameraUniform},
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };

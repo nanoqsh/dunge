@@ -1,7 +1,7 @@
 use {
     crate::{
         color::{Color, Rgba},
-        error::{Error, NotSet, ResourceNotFound},
+        error::{Error, NotSetError, ResourceNotFound},
         frame::Frame,
         handles::*,
         mesh::Mesh,
@@ -111,22 +111,22 @@ impl<'l, S, T> Layer<'l, S, T> {
     {
         let info = ShaderInfo::new::<S>();
         if info.has_globals() {
-            let (index, group) = self.groups.globals.ok_or(NotSet::Globals)?;
+            let (index, group) = self.groups.globals.ok_or(NotSetError::Globals)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_textures() {
-            let (index, group) = self.groups.textures.ok_or(NotSet::Textures)?;
+            let (index, group) = self.groups.textures.ok_or(NotSetError::Textures)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_lights() {
-            let (index, group) = self.groups.lights.ok_or(NotSet::Lights)?;
+            let (index, group) = self.groups.lights.ok_or(NotSetError::Lights)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_spaces() {
-            let (index, group) = self.groups.spaces.ok_or(NotSet::Spaces)?;
+            let (index, group) = self.groups.spaces.ok_or(NotSetError::Spaces)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 

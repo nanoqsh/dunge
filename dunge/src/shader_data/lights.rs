@@ -7,8 +7,8 @@ use {
         resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::{
-            source::{SetLenError, SourceUniform, UpdateError as ArrayUpdateError},
-            Source, SourceArray,
+            source::{SetLenError, SourceArray, SourceUniform, UpdateError as ArrayUpdateError},
+            Source,
         },
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
