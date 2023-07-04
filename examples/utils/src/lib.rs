@@ -1,5 +1,5 @@
 use {
-    dunge::View,
+    dunge::{Projection, View},
     image::{io::Reader, ImageFormat, RgbaImage},
     std::io::Cursor,
 };
@@ -33,16 +33,18 @@ impl Camera {
     }
 
     #[must_use]
-    pub fn view<P>(&self, proj: P) -> View<P> {
+    pub fn view<P>(&self, proj: P) -> View
+    where
+        P: Into<Projection>,
+    {
         let x = self.distance * self.angle.sin() * self.pitch.cos();
         let y = self.distance * self.pitch.sin();
         let z = self.distance * self.angle.cos() * self.pitch.cos();
 
         View {
-            eye: [x, y, z],
-            look: [0.; 3],
-            up: [0., 1., 0.],
-            proj,
+            eye: [x, y, z].into(),
+            proj: proj.into(),
+            ..Default::default()
         }
     }
 }

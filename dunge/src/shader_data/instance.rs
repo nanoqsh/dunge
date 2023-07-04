@@ -1,10 +1,55 @@
 use {
     crate::error::TooLargeSize,
     bytemuck::{Pod, Zeroable},
+    glam::Mat4,
     wgpu::{Buffer, Device, Queue, VertexBufferLayout, VertexStepMode},
 };
 
 type Mat = [[f32; 4]; 4];
+
+#[repr(transparent)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+pub struct Model(Mat);
+
+impl Model {
+    pub(crate) const LOCATION_OFFSET: u32 = 4;
+    pub(crate) const LAYOUT: VertexBufferLayout<'_> = {
+        use std::mem;
+
+        VertexBufferLayout {
+            array_stride: mem::size_of::<Self>() as _,
+            step_mode: VertexStepMode::Instance,
+            attributes: &wgpu::vertex_attr_array![
+                0 => Float32x4,
+                1 => Float32x4,
+                2 => Float32x4,
+                3 => Float32x4,
+            ],
+        }
+    };
+
+    pub(crate) fn into_inner(self) -> Mat {
+        self.0
+    }
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Self::from(Mat4::IDENTITY)
+    }
+}
+
+impl From<Mat> for Model {
+    fn from(mat: Mat) -> Self {
+        Self(mat)
+    }
+}
+
+impl From<Mat4> for Model {
+    fn from(mat: Mat4) -> Self {
+        Self::from(mat.to_cols_array_2d())
+    }
+}
 
 pub(crate) struct Instance {
     buffer: Buffer,
@@ -12,7 +57,7 @@ pub(crate) struct Instance {
 }
 
 impl Instance {
-    pub fn new(models: &[InstanceModel], device: &Device) -> Self {
+    pub fn new(models: &[Model], device: &Device) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BufferUsages,
@@ -28,11 +73,7 @@ impl Instance {
         }
     }
 
-    pub fn update_models(
-        &self,
-        models: &[InstanceModel],
-        queue: &Queue,
-    ) -> Result<(), TooLargeSize> {
+    pub fn update_models(&self, models: &[Model], queue: &Queue) -> Result<(), TooLargeSize> {
         if self.n_instances as usize != models.len() {
             return Err(TooLargeSize);
         }
@@ -47,35 +88,5 @@ impl Instance {
 
     pub fn n_instances(&self) -> u32 {
         self.n_instances
-    }
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-pub(crate) struct InstanceModel {
-    pub(crate) mat: Mat,
-}
-
-impl InstanceModel {
-    pub const LOCATION_OFFSET: u32 = 4;
-    pub const LAYOUT: VertexBufferLayout<'_> = {
-        use std::mem;
-
-        VertexBufferLayout {
-            array_stride: mem::size_of::<Self>() as _,
-            step_mode: VertexStepMode::Instance,
-            attributes: &wgpu::vertex_attr_array![
-                0 => Float32x4,
-                1 => Float32x4,
-                2 => Float32x4,
-                3 => Float32x4,
-            ],
-        }
-    };
-}
-
-impl From<Mat> for InstanceModel {
-    fn from(mat: Mat) -> Self {
-        Self { mat }
     }
 }

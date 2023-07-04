@@ -16,7 +16,6 @@
 * Desktop, WASM and Android support
 * Customizable vertices and shaders
 * Pixel perfect render with custom layers
-* Primitives for object positioning and camera view out of the box
 * Light sources and light spaces
 
 ## Application area
@@ -35,8 +34,8 @@ use dunge::{
     handles::*,
     input::{Input, Key},
     shader::Shader,
-    transform::Position,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Rgba, Vertex, WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Model, Rgba, Vertex,
+    WindowMode,
 };
 
 fn main() {
@@ -90,11 +89,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = {
-            let data = Position::default();
-            context.create_instances([data])
-        };
-
+        let instance = context.create_instances(&[Model::default()]);
         Self { layer, mesh, instance }
     }
 }

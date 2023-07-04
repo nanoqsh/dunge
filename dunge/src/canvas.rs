@@ -195,7 +195,7 @@ impl Canvas {
                     let delta_time = time.delta();
 
                     // If frame rate is limited, skip drawing until it's time
-                    if let Some(min_delta_time) = context.min_frame_delta_time() {
+                    if let Some(min_delta_time) = context.limits.min_frame_delta_time {
                         if delta_time < min_delta_time {
                             let wait = min_delta_time - delta_time;
                             flow.set_wait_timeout(Duration::from_secs_f32(wait));

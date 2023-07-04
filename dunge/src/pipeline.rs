@@ -6,7 +6,7 @@ use {
         render::Render,
         resources::Resources,
         shader::Shader,
-        shader_data::InstanceModel,
+        shader_data::Model,
         topology::Topology,
         vertex::Vertex,
     },
@@ -177,7 +177,7 @@ impl Pipeline {
                     entry_point: ShaderData::VERTEX_ENTRY_POINT,
                     buffers: match vert {
                         Some(vl) => {
-                            layouts = [vl.buffer_layout(), InstanceModel::LAYOUT];
+                            layouts = [vl.buffer_layout(), Model::LAYOUT];
                             &layouts[..]
                         }
                         None => &[],
@@ -452,7 +452,7 @@ impl VertexLayout {
             let attr = VertexAttribute {
                 format,
                 offset,
-                shader_location: location + InstanceModel::LOCATION_OFFSET,
+                shader_location: location + Model::LOCATION_OFFSET,
             };
 
             offset += new_offset;

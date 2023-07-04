@@ -1,115 +1,71 @@
-pub(crate) use self::proj::{IntoProjection, Projection};
-
 use {
-    crate::{
-        shader_data::CameraUniform,
-        transform::{IntoQuat, Quat},
-    },
-    glam::{Mat4, Vec3},
+    crate::shader_data::Model,
+    glam::{Mat4, Quat, Vec3},
     std::cell::Cell,
 };
 
-mod proj {
-    use super::{Orthographic, Perspective};
-
-    #[derive(Clone, Copy)]
-    pub enum Projection {
-        Perspective(Perspective),
-        Orthographic(Orthographic),
-    }
-
-    impl Default for Projection {
-        fn default() -> Self {
-            Self::Orthographic(Orthographic::default())
-        }
-    }
-
-    pub trait IntoProjection {
-        fn into_projection(self) -> Projection;
-    }
-}
-
+#[derive(Default)]
 pub(crate) struct Camera {
-    view: View<Projection>,
+    view: View,
     cache: Cell<Option<Cache>>,
 }
 
 impl Camera {
-    pub fn new() -> Self {
-        Self {
-            view: View::default().into_projection_view(),
-            cache: Cell::default(),
-        }
-    }
-
-    pub fn set_view(&mut self, view: View<Projection>) {
+    pub fn set_view(&mut self, view: View) {
         self.view = view;
         self.cache.set(None);
     }
 
-    pub fn uniform(&self, (width, height): (u32, u32)) -> CameraUniform {
+    pub fn model(&self, (width, height): (u32, u32)) -> Model {
         match self.cache.get() {
             Some(Cache { size: (w, h), .. }) if width != w || height != h => {}
-            Some(Cache { uniform, .. }) => return uniform,
+            Some(Cache { model, .. }) => return model,
             None => {}
         }
 
-        let mat = self.view.build_mat((width as f32, height as f32));
-        let uniform = CameraUniform::new(mat.to_cols_array_2d());
+        let model = self.view.model((width as f32, height as f32));
         self.cache.set(Some(Cache {
             size: (width, height),
-            uniform,
+            model,
         }));
 
-        uniform
+        model
     }
 }
 
 #[derive(Clone, Copy)]
 struct Cache {
     size: (u32, u32),
-    uniform: CameraUniform,
+    model: Model,
 }
 
 /// The camera view.
 #[derive(Clone, Copy)]
-pub struct View<P = Orthographic> {
+pub struct View {
     /// Eye 3d point.
-    pub eye: [f32; 3],
+    pub eye: Vec3,
 
     /// Look at 3d point.
-    pub look: [f32; 3],
+    pub look: Vec3,
 
     /// Up direction.
-    pub up: [f32; 3],
+    pub up: Vec3,
 
     /// Camera projection.
-    /// Can be a [`Perspective`] or [`Orthographic`].
-    pub proj: P,
+    pub proj: Projection,
 }
 
-impl<P> View<P> {
-    pub fn into_projection_view(self) -> View<Projection>
-    where
-        P: IntoProjection,
-    {
-        View {
-            eye: self.eye,
-            look: self.look,
-            up: self.up,
-            proj: self.proj.into_projection(),
-        }
-    }
-
-    pub fn rotation_quat(&self) -> Quat {
-        let mat = Mat4::look_at_rh(Vec3::from(self.eye), Vec3::from(self.look), Vec3::Y);
+impl View {
+    #[must_use]
+    pub fn rotation(&self) -> Quat {
+        let mat = Mat4::look_at_rh(self.eye, self.look, self.up);
         let (_, rot, _) = mat.to_scale_rotation_translation();
-        Quat(rot.to_array())
+        rot
     }
 }
 
-impl View<Projection> {
-    fn build_mat(&self, (width, height): (f32, f32)) -> Mat4 {
+impl View {
+    fn model(&self, (width, height): (f32, f32)) -> Model {
         let proj = match self.proj {
             Projection::Perspective(Perspective { fovy, znear, zfar }) => {
                 Mat4::perspective_rh(fovy, width / height, znear, zfar)
@@ -132,25 +88,43 @@ impl View<Projection> {
             }
         };
 
-        let view = Mat4::look_at_rh(self.eye.into(), self.look.into(), self.up.into());
-        proj * view
+        let view = Mat4::look_at_rh(self.eye, self.look, self.up);
+        Model::from(proj * view)
     }
 }
 
-impl Default for View<Orthographic> {
+impl Default for View {
     fn default() -> Self {
         Self {
-            eye: [0., 0., 1.],
-            look: [0.; 3],
-            up: [0., 1., 0.],
-            proj: Orthographic::default(),
+            eye: Vec3::Z,
+            look: Vec3::ZERO,
+            up: Vec3::Y,
+            proj: Projection::default(),
         }
     }
 }
 
-impl<P> IntoQuat for View<P> {
-    fn into_quat(self) -> Quat {
-        self.rotation_quat()
+#[derive(Clone, Copy)]
+pub enum Projection {
+    Perspective(Perspective),
+    Orthographic(Orthographic),
+}
+
+impl Default for Projection {
+    fn default() -> Self {
+        Self::Orthographic(Orthographic::default())
+    }
+}
+
+impl From<Perspective> for Projection {
+    fn from(v: Perspective) -> Self {
+        Self::Perspective(v)
+    }
+}
+
+impl From<Orthographic> for Projection {
+    fn from(v: Orthographic) -> Self {
+        Self::Orthographic(v)
     }
 }
 
@@ -172,12 +146,6 @@ impl Default for Perspective {
     }
 }
 
-impl IntoProjection for Perspective {
-    fn into_projection(self) -> Projection {
-        Projection::Perspective(self)
-    }
-}
-
 /// Orthographic projection.
 #[derive(Clone, Copy)]
 pub struct Orthographic {
@@ -195,11 +163,5 @@ impl Default for Orthographic {
             near: -100.,
             far: 100.,
         }
-    }
-}
-
-impl IntoProjection for Orthographic {
-    fn into_projection(self) -> Projection {
-        Projection::Orthographic(self)
     }
 }

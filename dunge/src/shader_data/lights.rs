@@ -6,10 +6,7 @@ use {
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::{
-            source::{SetLenError, SourceArray, SourceUniform, UpdateError as ArrayUpdateError},
-            Source,
-        },
+        shader_data::source::{SetLenError, Source, SourceArray, UpdateError as ArrayUpdateError},
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -91,7 +88,7 @@ impl Lights {
         &mut self,
         index: usize,
         offset: usize,
-        sources: &[SourceUniform],
+        sources: &[Source],
         queue: &Queue,
     ) -> Result<(), UpdateError> {
         use std::mem;
@@ -105,7 +102,7 @@ impl Lights {
         let data = &array.buf()[offset..];
         queue.write_buffer(
             &buffers.array,
-            (offset * mem::size_of::<SourceUniform>()) as _,
+            (offset * mem::size_of::<Source>()) as _,
             bytemuck::cast_slice(data),
         );
 
@@ -156,7 +153,7 @@ pub(crate) struct Parameters<'a> {
 
 #[derive(Default)]
 pub(crate) struct Variables {
-    pub source_arrays: Vec<Vec<SourceUniform>>,
+    pub source_arrays: Vec<Vec<Source>>,
 }
 
 pub struct Builder<'a> {
@@ -174,14 +171,8 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn with_sources<I>(mut self, sources: I) -> Self
-    where
-        I: IntoIterator<Item = Source>,
-    {
-        self.variables
-            .source_arrays
-            .push(sources.into_iter().map(Source::into_uniform).collect());
-
+    pub fn with_sources(mut self, sources: Vec<Source>) -> Self {
+        self.variables.source_arrays.push(sources);
         self
     }
 

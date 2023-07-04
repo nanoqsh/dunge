@@ -1,6 +1,6 @@
 use {
     crate::{
-        camera::{Camera, Projection, View},
+        camera::{Camera, View},
         error::{Error, ResourceNotFound, SourceError, SpaceError, TexturesError},
         handles::*,
         mesh::{Data as MeshData, Mesh},
@@ -14,7 +14,7 @@ use {
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
-            Instance, InstanceModel, SourceUniform, SpaceData, TextureData,
+            Instance, Model, Source, SpaceData, TextureData,
         },
         storage::Storage,
         topology::Topology,
@@ -46,7 +46,7 @@ impl Resources {
         let layer = self.layers.get(handle.id())?;
         let globals = layer.globals().expect("the shader has no globals");
         let params = GlobalsParameters {
-            camera: Camera::new(),
+            camera: Camera::default(),
             variables,
             bindings: &globals.bindings,
             layout: &globals.layout,
@@ -60,7 +60,7 @@ impl Resources {
     pub fn update_globals_view<S>(
         &mut self,
         handle: GlobalsHandle<S>,
-        view: View<Projection>,
+        view: View,
     ) -> Result<(), ResourceNotFound> {
         self.globals.get_mut(handle.id())?.set_view(view);
         Ok(())
@@ -136,7 +136,7 @@ impl Resources {
         render: &Render,
         handle: LightsHandle<S>,
         index: usize,
-        sources: &[SourceUniform],
+        sources: &[Source],
     ) -> Result<(), SourceError> {
         self.lights.get_mut(handle.id())?.update_array(
             index,
@@ -221,11 +221,7 @@ impl Resources {
         self.layers.remove(handle.id())
     }
 
-    pub fn create_instances(
-        &mut self,
-        render: &Render,
-        models: &[InstanceModel],
-    ) -> InstanceHandle {
+    pub fn create_instances(&mut self, render: &Render, models: &[Model]) -> InstanceHandle {
         let instance = Instance::new(models, render.context().device());
         let id = self.instances.insert(instance);
         InstanceHandle(id)
@@ -235,7 +231,7 @@ impl Resources {
         &self,
         render: &Render,
         handle: InstanceHandle,
-        models: &[InstanceModel],
+        models: &[Model],
     ) -> Result<(), Error> {
         let instances = self.instances.get(handle.0)?;
         instances.update_models(models, render.context().queue())?;

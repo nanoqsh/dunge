@@ -2,8 +2,8 @@ use dunge::{
     handles::*,
     input::{Input, Key},
     shader::Shader,
-    transform::Position,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Rgba, Vertex, WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Model, Rgba, Vertex,
+    WindowMode,
 };
 
 #[repr(C)]
@@ -56,11 +56,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = {
-            let data = Position::default();
-            context.create_instances([data])
-        };
-
+        let instance = context.create_instances(&[Model::default()]);
         Self {
             layer,
             mesh,

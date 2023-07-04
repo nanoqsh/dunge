@@ -23,7 +23,6 @@ mod resources;
 mod screen;
 mod shader_data {
     mod ambient;
-    mod camera;
     pub(crate) mod globals;
     mod instance;
     mod len;
@@ -35,14 +34,10 @@ mod shader_data {
     mod texture;
     pub(crate) mod textures;
 
-    pub(crate) use self::{
-        camera::CameraUniform,
-        instance::{Instance, InstanceModel},
-        post::PostShaderData,
-        source::SourceUniform,
-    };
+    pub(crate) use self::{instance::Instance, post::PostShaderData};
 
     pub use self::{
+        instance::Model,
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         texture::{Data as TextureData, Error as TextureError},
@@ -52,7 +47,7 @@ pub mod shader;
 mod storage;
 mod time;
 pub mod topology;
-pub mod transform;
+mod transform;
 pub mod vertex;
 
 pub mod input {
@@ -71,7 +66,7 @@ pub use crate::canvas::android::from_app;
 
 pub use {
     crate::{
-        camera::{Orthographic, Perspective, View},
+        camera::{Orthographic, Perspective, Projection, View},
         canvas::{Backend, Canvas, CanvasConfig, Device, Error as CanvasError, Selector},
         color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, Limits, PixelSize},
@@ -82,7 +77,8 @@ pub use {
         mesh::{Data as MeshData, Error as MeshError},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
-        shader_data::{Source, Space, SpaceData, SpaceFormat, TextureData, TextureError},
+        shader_data::{Model, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError},
+        transform::Transform,
         vertex::Vertex,
     },
     dunge_macros::Vertex,

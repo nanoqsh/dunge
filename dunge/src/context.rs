@@ -1,6 +1,6 @@
 use {
     crate::{
-        camera::{IntoProjection, View},
+        camera::View,
         canvas::CanvasEvent,
         color::Rgb,
         error::*,
@@ -14,11 +14,10 @@ use {
         shader::{self, Shader, ShaderInfo},
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
-            spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, InstanceModel,
-            Source, SourceUniform, SpaceData, TextureData,
+            spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Model, Source,
+            SpaceData, TextureData,
         },
         topology::Topology,
-        transform::IntoMat,
         vertex::Vertex,
     },
     winit::{event_loop::EventLoopProxy, window::Window},
@@ -32,28 +31,18 @@ pub struct Context {
     pub(crate) proxy: Proxy,
     pub(crate) render: Render,
     pub(crate) resources: Resources,
-    limits: Limits,
-    models: Vec<InstanceModel>,
-    sources: Vec<SourceUniform>,
+    pub(crate) limits: Limits,
 }
 
 impl Context {
     pub(crate) fn new(window: Window, proxy: Proxy, render_context: RenderContext) -> Self {
-        const DEFAULT_CAPACITY: usize = 8;
-
         Self {
             window,
             proxy,
             render: Render::new(render_context),
             resources: Resources::default(),
             limits: Limits::default(),
-            models: Vec::with_capacity(DEFAULT_CAPACITY),
-            sources: Vec::with_capacity(DEFAULT_CAPACITY),
         }
-    }
-
-    pub(crate) fn min_frame_delta_time(&self) -> Option<f32> {
-        self.limits.min_frame_delta_time
     }
 
     /// Returns the window.
@@ -95,19 +84,16 @@ impl Context {
         GlobalsBuilder::new(&mut self.resources, &self.render)
     }
 
-    pub fn update_globals_view<S, P>(
+    pub fn update_globals_view<S>(
         &mut self,
         handle: GlobalsHandle<S>,
-        view: View<P>,
+        view: View,
     ) -> Result<(), ResourceNotFound>
     where
         S: Shader,
-        P: IntoProjection,
     {
         assert!(ShaderInfo::new::<S>().has_camera, "the shader has no view");
-
-        self.resources
-            .update_globals_view(handle, view.into_projection_view())
+        self.resources.update_globals_view(handle, view)
     }
 
     pub fn update_globals_ambient<S>(
@@ -152,27 +138,22 @@ impl Context {
         LightsBuilder::new(&mut self.resources, &self.render)
     }
 
-    pub fn update_lights_sources<S, I>(
+    pub fn update_lights_sources<S>(
         &mut self,
         handle: LightsHandle<S>,
         index: usize,
-        sources: I,
+        sources: &[Source],
     ) -> Result<(), SourceError>
     where
         S: Shader,
-        I: IntoIterator<Item = Source>,
     {
         assert!(
             ShaderInfo::new::<S>().source_arrays > 0,
             "the shader has no light sources",
         );
 
-        self.sources.clear();
-        self.sources
-            .extend(sources.into_iter().map(Source::into_uniform));
-
         self.resources
-            .update_lights_sources(&self.render, handle, index, &self.sources)
+            .update_lights_sources(&self.render, handle, index, sources)
     }
 
     pub fn spaces_builder(&mut self) -> SpacesBuilder {
@@ -236,37 +217,21 @@ impl Context {
     }
 
     /// Creates new instances.
-    pub fn create_instances<I>(&mut self, data: I) -> InstanceHandle
-    where
-        I: IntoIterator,
-        I::Item: IntoMat,
-    {
-        self.models.clear();
-        let models = data
-            .into_iter()
-            .map(|transform| InstanceModel::from(transform.into_mat()));
-
-        self.models.extend(models);
-        self.resources.create_instances(&self.render, &self.models)
+    pub fn create_instances(&mut self, models: &[Model]) -> InstanceHandle {
+        self.resources.create_instances(&self.render, models)
     }
 
     /// Updates instances.
     ///
     /// # Errors
     /// See [`Error`] for detailed info.
-    pub fn update_instances<I>(&mut self, handle: InstanceHandle, data: I) -> Result<(), Error>
-    where
-        I: IntoIterator,
-        I::Item: IntoMat,
-    {
-        self.models.clear();
-        let models = data
-            .into_iter()
-            .map(|transform| InstanceModel::from(transform.into_mat()));
-
-        self.models.extend(models);
+    pub fn update_instances(
+        &mut self,
+        handle: InstanceHandle,
+        models: &[Model],
+    ) -> Result<(), Error> {
         self.resources
-            .update_instances(&self.render, handle, &self.models)
+            .update_instances(&self.render, handle, models)
     }
 
     /// Deletes instances.

@@ -5,8 +5,7 @@ use {
         handles::*,
         input::{Input, Key},
         shader::*,
-        transform::Position,
-        Context, Error, Frame, Loop, MeshData, Perspective, Rgba, TextureData, Vertex,
+        Context, Error, Frame, Loop, MeshData, Model, Perspective, Rgba, TextureData, Vertex,
     },
     utils::Camera,
 };
@@ -103,10 +102,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = {
-            let data = Position::default();
-            context.create_instances([data])
-        };
+        let instance = context.create_instances(&[Model::default()]);
 
         // Create meshes
         let texture_mesh = {

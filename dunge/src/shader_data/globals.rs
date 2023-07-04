@@ -1,6 +1,6 @@
 use {
     crate::{
-        camera::{Camera, Projection, View},
+        camera::{Camera, View},
         color::{Color, Rgb},
         error::ResourceNotFound,
         handles::{GlobalsHandle, LayerHandle},
@@ -8,7 +8,7 @@ use {
         render::Render,
         resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::{ambient::AmbientUniform, camera::CameraUniform},
+        shader_data::{ambient::AmbientUniform, Model},
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -76,7 +76,7 @@ impl Globals {
         }
     }
 
-    pub fn set_view(&mut self, view: View<Projection>) {
+    pub fn set_view(&mut self, view: View) {
         let (camera, _) = self.camera.as_mut().expect("camera");
         camera.set_view(view);
     }
@@ -86,7 +86,7 @@ impl Globals {
             return;
         };
 
-        let uniform = camera.uniform(size);
+        let uniform = camera.model(size);
         queue.write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
@@ -113,7 +113,7 @@ pub(crate) struct Parameters<'a> {
 
 #[derive(Default)]
 pub(crate) struct Variables {
-    pub camera: Option<CameraUniform>,
+    pub camera: Option<Model>,
     pub ambient: Option<AmbientUniform>,
 }
 
@@ -133,7 +133,7 @@ impl<'a> Builder<'a> {
     }
 
     pub fn with_view(mut self) -> Self {
-        self.variables.camera = Some(CameraUniform::default());
+        self.variables.camera = Some(Model::default());
         self
     }
 

@@ -6,9 +6,9 @@ use {
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
-        transform::{Position, ReverseRotation, Transform},
-        Color, Compare, Context, Error, Frame, FrameParameters, Loop, MeshData, Orthographic,
-        PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat, TextureData, Vertex, View,
+        Color, Compare, Context, Error, Frame, FrameParameters, Loop, MeshData, Model,
+        Orthographic, PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat, TextureData,
+        Transform, Vertex,
     },
     utils::Camera,
 };
@@ -46,7 +46,7 @@ impl Shader for ColorShader {
     const VIEW: ShaderView = ShaderView::Camera;
 }
 
-struct Model {
+struct Mesh {
     instance: InstanceHandle,
     mesh: MeshHandle<TextureVert>,
     update_view: bool,
@@ -62,7 +62,7 @@ pub struct App {
     texture_layer: LayerHandle<TextureShader>,
     color_layer: LayerHandle<ColorShader, LineStrip>,
     sprites: TexturesHandle<TextureShader>,
-    models: Vec<Model>,
+    meshes: Vec<Mesh>,
     cubes: Vec<Cube>,
     texture_globals: GlobalsHandle<TextureShader>,
     color_globals: GlobalsHandle<ColorShader>,
@@ -128,7 +128,7 @@ impl App {
         // Crate the lights
         let lights = context
             .lights_builder()
-            .with_sources([])
+            .with_sources(vec![])
             .build(texture_layer)
             .expect("create light");
 
@@ -152,7 +152,7 @@ impl App {
 
             let space = Space {
                 data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
-                transform: Transform::default(),
+                model: Model::default(),
                 col: Color([2.5; 3]),
             };
 
@@ -165,7 +165,7 @@ impl App {
 
         // Create models
         #[allow(clippy::needless_range_loop)]
-        let models = {
+        let meshes = {
             const D: u8 = 0;
             const E: u8 = 1;
             const W: u8 = 2;
@@ -186,7 +186,7 @@ impl App {
                 [0, 0, 0, V, F, V, 0, 0, 0],
             ];
 
-            let meshes = [
+            let vertices = [
                 (models::diamond::VERTICES, models::diamond::INDICES),
                 (models::enemy::VERTICES, models::enemy::INDICES),
                 (models::wall::VERTICES, models::wall::INDICES),
@@ -195,7 +195,7 @@ impl App {
                 (models::floor_dark::VERTICES, models::floor_dark::INDICES),
             ];
 
-            let mesh_handles: Vec<_> = meshes
+            let mesh_handles: Vec<_> = vertices
                 .into_iter()
                 .map(|(verts, indxs)| {
                     let verts: Vec<_> = verts
@@ -209,7 +209,7 @@ impl App {
                 })
                 .collect();
 
-            let mut model_data = vec![];
+            let mut mesh_data = vec![];
             for z in 0..N {
                 for x in 0..N {
                     let mut obj = SCENE[z][x];
@@ -222,15 +222,15 @@ impl App {
                     let y = f32::from(u8::from(obj == F || obj == L)) * -0.5;
 
                     if obj == V {
-                        model_data.push((obj, [x, y + 1., z]));
+                        mesh_data.push((obj, [x, y + 1., z]));
                         obj = W;
                     }
 
-                    model_data.push((obj, [x, y, z]));
+                    mesh_data.push((obj, [x, y, z]));
                 }
             }
 
-            model_data.extend([
+            mesh_data.extend([
                 (E, [1., 0., 0.]),
                 (E, [-1., 0., -1.]),
                 (D, [-2., 0., 2.]),
@@ -238,14 +238,13 @@ impl App {
                 (D, [-1., 0., 2.]),
             ]);
 
-            model_data
+            mesh_data
                 .into_iter()
                 .map(|(n, pos)| {
-                    let mesh = mesh_handles[n as usize];
-                    let instance = context.create_instances([Position(pos)]);
-                    Model {
-                        instance,
-                        mesh,
+                    let transform = Transform::from_position(pos);
+                    Mesh {
+                        instance: context.create_instances(&[Model::from(transform)]),
+                        mesh: mesh_handles[n as usize],
                         update_view: n == D || n == E,
                         pos,
                     }
@@ -259,20 +258,23 @@ impl App {
 
             POSITIONS
                 .into_iter()
-                .map(|pos| Cube {
-                    instance: context.create_instances([Position(pos)]),
-                    mesh: {
-                        let verts: Vec<_> = models::square::VERTICES
-                            .iter()
-                            .map(|&pos| ColorVert {
-                                pos,
-                                col: [0., 1., 0.3],
-                            })
-                            .collect();
+                .map(|pos| {
+                    let transform = Transform::from_position(pos);
+                    Cube {
+                        instance: context.create_instances(&[Model::from(transform)]),
+                        mesh: {
+                            let verts: Vec<_> = models::square::VERTICES
+                                .iter()
+                                .map(|&pos| ColorVert {
+                                    pos,
+                                    col: [0., 1., 0.3],
+                                })
+                                .collect();
 
-                        let data = MeshData::from_verts(&verts);
-                        context.create_mesh(&data)
-                    },
+                            let data = MeshData::from_verts(&verts);
+                            context.create_mesh(&data)
+                        },
+                    }
                 })
                 .collect()
         };
@@ -281,7 +283,7 @@ impl App {
             texture_layer,
             color_layer,
             sprites,
-            models,
+            meshes,
             cubes,
             texture_globals,
             color_globals,
@@ -311,24 +313,24 @@ impl Loop for App {
         ];
 
         self.time += input.delta_time * LIGHTS_SPEED;
-        let make_source = |step, col| Source {
-            pos: {
-                let step: f32 = (self.time + step) % TAU;
+        let make_source = |step, col| {
+            let step = (self.time + step) % TAU;
+            Source::new(
+                Color(col),
                 [
-                    step.sin() * LIGHTS_DISTANCE,
+                    f32::sin(step) * LIGHTS_DISTANCE,
                     0.,
-                    step.cos() * LIGHTS_DISTANCE,
-                ]
-            },
-            rad: 2.,
-            col: Color(col),
+                    f32::cos(step) * LIGHTS_DISTANCE,
+                ],
+                2.,
+            )
         };
 
         context
             .update_lights_sources(
                 self.lights,
                 0,
-                LIGHTS.map(|(step, col)| make_source(step, col)),
+                &LIGHTS.map(|(step, col)| make_source(step, col)),
             )
             .expect("update lights");
 
@@ -363,29 +365,26 @@ impl Loop for App {
 
         // Set the view
         let sprite_scale = 4. * 6.;
-        let view = View {
-            proj: Orthographic {
-                width_factor: 1. / sprite_scale,
-                height_factor: 1. / sprite_scale,
-                ..Default::default()
-            },
-            ..self.camera.view(Orthographic::default())
-        };
+        let view = self.camera.view(Orthographic {
+            width_factor: 1. / sprite_scale,
+            height_factor: 1. / sprite_scale,
+            ..Default::default()
+        });
+
         context.update_globals_view(self.texture_globals, view)?;
         context.update_globals_view(self.color_globals, view)?;
 
-        self.models
+        self.meshes
             .iter()
-            .filter(|model| model.update_view)
-            .try_for_each(|model| {
-                context.update_instances(
-                    model.instance,
-                    [Transform {
-                        pos: model.pos,
-                        rot: ReverseRotation(view),
-                        scl: [1.; 3],
-                    }],
-                )
+            .filter(|mesh| mesh.update_view)
+            .try_for_each(|mesh| {
+                let transform = Transform {
+                    pos: mesh.pos.into(),
+                    rot: view.rotation().conjugate(),
+                    ..Default::default()
+                };
+
+                context.update_instances(mesh.instance, &[Model::from(transform)])
             })?;
 
         Ok(())
@@ -406,7 +405,7 @@ impl Loop for App {
                 .bind_spaces(self.spaces)?
                 .bind_textures(self.sprites)?;
 
-            for model in &self.models {
+            for model in &self.meshes {
                 layer.draw(model.mesh, model.instance)?;
             }
         }

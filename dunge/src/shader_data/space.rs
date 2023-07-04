@@ -1,8 +1,7 @@
 use {
     crate::{
         color::{Color, Rgb},
-        shader_data::TextureError,
-        transform::IntoMat,
+        shader_data::{Model, TextureError},
     },
     bytemuck::{Pod, Zeroable},
     dunge_shader::SpaceKind,
@@ -13,19 +12,16 @@ type Mat = [[f32; 4]; 4];
 
 /// Parameters of the light space.
 #[derive(Clone, Copy)]
-pub struct Space<'a, M> {
+pub struct Space<'a> {
     pub data: Data<'a>,
-    pub transform: M,
+    pub model: Model,
     pub col: Rgb,
 }
 
-impl<'a, M> Space<'a, M> {
-    pub(crate) fn into_uniform(self) -> SpaceUniform
-    where
-        M: IntoMat,
-    {
+impl Space<'_> {
+    pub(crate) fn into_uniform(self) -> SpaceUniform {
         let Color(col) = self.col;
-        SpaceUniform::new(self.data.size, self.transform.into_mat(), col)
+        SpaceUniform::new(self.data.size, self.model.into_inner(), col)
     }
 }
 

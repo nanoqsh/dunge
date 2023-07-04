@@ -7,7 +7,6 @@ use {
         resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::space::{Data, Format, Space, SpaceUniform},
-        transform::IntoMat,
     },
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture},
 };
@@ -217,10 +216,7 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn with_space<M>(mut self, space: Space<'a, M>) -> Self
-    where
-        M: IntoMat,
-    {
+    pub fn with_space(mut self, space: Space<'a>) -> Self {
         self.variables.textures_data.push(space.data);
         self.variables.light_spaces.push(space.into_uniform());
         self
