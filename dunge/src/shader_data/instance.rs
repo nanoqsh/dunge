@@ -1,5 +1,5 @@
 use {
-    crate::error::TooLargeSize,
+    crate::{buffer::BufferView, error::TooLargeSize},
     bytemuck::{Pod, Zeroable},
     glam::Mat4,
     wgpu::{Buffer, Device, Queue, VertexBufferLayout, VertexStepMode},
@@ -51,10 +51,7 @@ impl From<Mat4> for Model {
     }
 }
 
-pub(crate) struct Instance {
-    buf: Buffer,
-    len: u32,
-}
+pub(crate) struct Instance(Buffer);
 
 impl Instance {
     pub fn new(models: &[Model], device: &Device) -> Self {
@@ -63,30 +60,26 @@ impl Instance {
             BufferUsages,
         };
 
-        Self {
-            buf: device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("instance buffer"),
-                contents: bytemuck::cast_slice(models),
-                usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
-            }),
-            len: models.len().try_into().expect("convert instances len"),
-        }
+        Self(device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("instance buffer"),
+            contents: bytemuck::cast_slice(models),
+            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+        }))
     }
 
-    pub fn update_models(&self, models: &[Model], queue: &Queue) -> Result<(), TooLargeSize> {
-        if self.len as usize != models.len() {
+    pub fn update(&self, models: &[Model], queue: &Queue) -> Result<(), TooLargeSize> {
+        use std::mem;
+
+        let Self(buf) = self;
+        if buf.size() != mem::size_of_val(models) as u64 {
             return Err(TooLargeSize);
         }
 
-        queue.write_buffer(&self.buf, 0, bytemuck::cast_slice(models));
+        queue.write_buffer(buf, 0, bytemuck::cast_slice(models));
         Ok(())
     }
 
-    pub fn buffer(&self) -> &Buffer {
-        &self.buf
-    }
-
-    pub fn len(&self) -> u32 {
-        self.len
+    pub fn buffer(&self) -> BufferView<Model> {
+        BufferView::new(&self.0)
     }
 }

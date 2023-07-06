@@ -234,7 +234,7 @@ impl Resources {
         models: &[Model],
     ) -> Result<(), Error> {
         let instances = self.instances.get(handle.0)?;
-        instances.update_models(models, render.context().queue())?;
+        instances.update(models, render.context().queue())?;
         Ok(())
     }
 

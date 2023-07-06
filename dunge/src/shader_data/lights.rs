@@ -38,7 +38,7 @@ impl Lights {
                 let array = SourceArray::new(var, bind.size as usize);
                 let array_buf = device.create_buffer_init(&BufferInitDescriptor {
                     label: Some("source array buffer"),
-                    contents: bytemuck::cast_slice(array.buf()),
+                    contents: bytemuck::cast_slice(array.sources()),
                     usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                 });
 
@@ -99,7 +99,7 @@ impl Lights {
             .ok_or(UpdateError::Index)?;
 
         array.update(offset, sources)?;
-        let data = &array.buf()[offset..];
+        let data = &array.sources()[offset..];
         queue.write_buffer(
             &buffers.array,
             (offset * mem::size_of::<Source>()) as _,

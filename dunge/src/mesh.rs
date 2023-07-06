@@ -1,10 +1,11 @@
 use {
     crate::{
+        buffer::DynamicBufferView,
         topology::{Topology, TriangleList},
         vertex::{self, Vertex},
     },
     std::borrow::Cow,
-    wgpu::{Buffer, Device, Queue},
+    wgpu::{Buffer, Device, PrimitiveTopology, Queue},
 };
 
 /// A data struct for a mesh creation.
@@ -77,9 +78,10 @@ pub enum Error {
 }
 
 pub(crate) struct Mesh {
-    buf: Buffer,
-    len: u32,
-    kind: Kind,
+    verts: Buffer,
+    indxs: Option<Buffer>,
+    vert_size: usize,
+    topology: PrimitiveTopology,
 }
 
 impl Mesh {
@@ -88,22 +90,29 @@ impl Mesh {
         V: Vertex,
         T: Topology,
     {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            BufferUsages,
+        use {
+            std::mem,
+            wgpu::{
+                util::{BufferInitDescriptor, DeviceExt},
+                BufferUsages,
+            },
         };
 
         Self {
-            buf: device.create_buffer_init(&BufferInitDescriptor {
+            verts: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("vertex buffer"),
                 contents: vertex::verts_as_bytes(data.verts),
                 usage: BufferUsages::VERTEX,
             }),
-            len: data.verts.len() as u32,
-            kind: match &data.indxs {
-                Some(indxs) => Kind::indexed(bytemuck::cast_slice(indxs), device),
-                None => Kind::sequential(data.verts.len()),
-            },
+            indxs: data.indxs.as_deref().map(|indxs| {
+                device.create_buffer_init(&BufferInitDescriptor {
+                    label: Some("index buffer"),
+                    contents: bytemuck::cast_slice(indxs),
+                    usage: BufferUsages::INDEX,
+                })
+            }),
+            vert_size: mem::size_of::<V>(),
+            topology: T::VALUE.into_inner(),
         }
     }
 
@@ -112,36 +121,39 @@ impl Mesh {
         V: Vertex,
         T: Topology,
     {
+        use std::mem;
+
+        assert_eq!(self.vert_size, mem::size_of::<V>(), "invalid vertex type");
+        assert_eq!(self.topology, T::VALUE.into_inner(), "invalid topology");
+
         let verts = data.verts;
-        if verts.len() > self.len as usize {
+        if self.verts.size() != verts.len() as u64 {
             return Err(UpdateError::VertexSize);
         }
 
-        match &mut self.kind {
-            Kind::Indexed { buf, len } => {
-                let indxs = data.indxs.as_deref().ok_or(UpdateError::Kind)?;
-                if indxs.len() > *len as usize {
-                    return Err(UpdateError::IndexSize);
-                }
-
-                *len = indxs.len() as u32;
-                queue.write_buffer(buf, 0, bytemuck::cast_slice(indxs));
+        if let Some(indxs) = &data.indxs {
+            let buf = self.indxs.as_ref().ok_or(UpdateError::Kind)?;
+            if buf.size() != indxs.len() as u64 {
+                return Err(UpdateError::IndexSize);
             }
-            Kind::Sequential { .. } if data.indxs.is_some() => return Err(UpdateError::Kind),
-            Kind::Sequential { len } => *len = verts.len() as u32,
+
+            queue.write_buffer(buf, 0, bytemuck::cast_slice(indxs));
         }
 
-        self.len = verts.len() as u32;
-        queue.write_buffer(&self.buf, 0, vertex::verts_as_bytes(verts));
+        queue.write_buffer(&self.verts, 0, vertex::verts_as_bytes(verts));
         Ok(())
     }
 
-    pub fn vertex_buffer(&self) -> &Buffer {
-        &self.buf
+    pub fn vertex_buffer(&self) -> DynamicBufferView {
+        DynamicBufferView::new(&self.verts, self.vert_size as u32)
     }
 
-    pub fn kind(&self) -> &Kind {
-        &self.kind
+    pub fn index_buffer(&self) -> Option<DynamicBufferView> {
+        use std::mem;
+
+        self.indxs
+            .as_ref()
+            .map(|buf| DynamicBufferView::new(buf, mem::size_of::<u16>() as u32))
     }
 }
 
@@ -150,35 +162,6 @@ pub enum UpdateError {
     IndexSize,
     VertexSize,
     Kind,
-}
-
-pub(crate) enum Kind {
-    Indexed { buf: Buffer, len: u32 },
-    Sequential { len: u32 },
-}
-
-impl Kind {
-    fn indexed(indxs: &[u16], device: &Device) -> Self {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            BufferUsages,
-        };
-
-        Self::Indexed {
-            buf: device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("index buffer"),
-                contents: bytemuck::cast_slice(indxs),
-                usage: BufferUsages::INDEX,
-            }),
-            len: indxs.len().try_into().expect("too many indexes"),
-        }
-    }
-
-    fn sequential(len: usize) -> Self {
-        Self::Sequential {
-            len: len.try_into().expect("too many vertices"),
-        }
-    }
 }
 
 #[cfg(test)]

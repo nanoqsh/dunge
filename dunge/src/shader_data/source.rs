@@ -31,22 +31,24 @@ impl Source {
 }
 
 pub(crate) struct SourceArray {
+    sources: Box<[Source]>,
     len: u32,
-    buf: Box<[Source]>,
 }
 
 impl SourceArray {
     pub fn new(mut sources: Vec<Source>, max_size: usize) -> Self {
         assert!(sources.len() <= max_size, "too many light sources");
         sources.resize(max_size, Source::zeroed());
+
+        let len = sources.len() as u32;
         Self {
-            len: sources.len() as u32,
-            buf: sources.into_boxed_slice(),
+            sources: sources.into_boxed_slice(),
+            len,
         }
     }
 
     pub fn update(&mut self, offset: usize, sources: &[Source]) -> Result<(), UpdateError> {
-        let buf = self.buf.get_mut(offset..).ok_or(UpdateError::Offset)?;
+        let buf = self.sources.get_mut(offset..).ok_or(UpdateError::Offset)?;
         if sources.len() > buf.len() {
             return Err(UpdateError::Len);
         }
@@ -56,7 +58,7 @@ impl SourceArray {
     }
 
     pub fn set_len(&mut self, len: u32) -> Result<(), SetLenError> {
-        if len as usize > self.buf.len() {
+        if len as usize > self.sources.len() {
             return Err(SetLenError);
         }
 
@@ -64,8 +66,8 @@ impl SourceArray {
         Ok(())
     }
 
-    pub fn buf(&self) -> &[Source] {
-        &self.buf
+    pub fn sources(&self) -> &[Source] {
+        &self.sources
     }
 
     pub fn len(&self) -> LenUniform {

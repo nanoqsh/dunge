@@ -40,7 +40,6 @@ pub enum Error {
 }
 
 pub(crate) struct Texture {
-    buf_size: (u32, u32),
     texture: WgpuTexture,
     view: TextureView,
     sampler: Sampler,
@@ -95,7 +94,6 @@ impl Texture {
         });
 
         Self {
-            buf_size: data.size,
             texture,
             view,
             sampler,
@@ -106,8 +104,13 @@ impl Texture {
         use wgpu::*;
 
         let (width, height) = data.size;
-        let (buf_width, buf_height) = self.buf_size;
-        if width > buf_width || height > buf_height {
+        let size = Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+
+        if size != self.texture.size() {
             return Err(TooLargeSize);
         }
 
@@ -124,11 +127,7 @@ impl Texture {
                 bytes_per_row: Some(4 * width),
                 rows_per_image: Some(height),
             },
-            Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
+            size,
         );
 
         Ok(())

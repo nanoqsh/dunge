@@ -137,22 +137,22 @@ impl<'l, S, T> Layer<'l, S, T> {
     }
 
     fn draw_mesh(&mut self, mesh: &'l Mesh, instance: &'l Instance) {
-        use {crate::mesh::Kind, wgpu::IndexFormat};
+        use wgpu::IndexFormat;
 
+        let instances = instance.buffer();
         self.pass
-            .set_vertex_buffer(Pipeline::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
-        self.pass
-            .set_vertex_buffer(Pipeline::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
+            .set_vertex_buffer(Pipeline::INSTANCE_BUFFER_SLOT, instances.slice());
 
-        match mesh.kind() {
-            Kind::Indexed { buf, len } => {
-                self.pass
-                    .set_index_buffer(buf.slice(..), IndexFormat::Uint16);
-                self.pass.draw_indexed(0..*len, 0, 0..instance.len());
+        let verts = mesh.vertex_buffer();
+        self.pass
+            .set_vertex_buffer(Pipeline::VERTEX_BUFFER_SLOT, verts.slice());
+
+        match mesh.index_buffer() {
+            Some(buf) => {
+                self.pass.set_index_buffer(buf.slice(), IndexFormat::Uint16);
+                self.pass.draw_indexed(0..buf.len(), 0, 0..instances.len());
             }
-            Kind::Sequential { len } => {
-                self.pass.draw(0..*len, 0..instance.len());
-            }
+            None => self.pass.draw(0..verts.len(), 0..instances.len()),
         }
 
         *self.drawn_in_frame = true;
