@@ -137,25 +137,21 @@ impl<'l, S, T> Layer<'l, S, T> {
     }
 
     fn draw_mesh(&mut self, mesh: &'l Mesh, instance: &'l Instance) {
-        use {crate::mesh::Type, wgpu::IndexFormat};
+        use {crate::mesh::Kind, wgpu::IndexFormat};
 
         self.pass
             .set_vertex_buffer(Pipeline::VERTEX_BUFFER_SLOT, mesh.vertex_buffer().slice(..));
         self.pass
             .set_vertex_buffer(Pipeline::INSTANCE_BUFFER_SLOT, instance.buffer().slice(..));
 
-        match mesh.mesh_type() {
-            Type::Indexed {
-                buffer: index_buffer,
-                n_indices,
-            } => {
+        match mesh.kind() {
+            Kind::Indexed { buf, len } => {
                 self.pass
-                    .set_index_buffer(index_buffer.slice(..), IndexFormat::Uint16);
-                self.pass
-                    .draw_indexed(0..*n_indices, 0, 0..instance.n_instances());
+                    .set_index_buffer(buf.slice(..), IndexFormat::Uint16);
+                self.pass.draw_indexed(0..*len, 0, 0..instance.len());
             }
-            Type::Sequential { n_vertices } => {
-                self.pass.draw(0..*n_vertices, 0..instance.n_instances());
+            Kind::Sequential { len } => {
+                self.pass.draw(0..*len, 0..instance.len());
             }
         }
 

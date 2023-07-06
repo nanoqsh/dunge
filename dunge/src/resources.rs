@@ -26,14 +26,14 @@ use {
 /// A container of resources for render.
 #[derive(Default)]
 pub(crate) struct Resources {
-    pub(crate) globals: Storage<Globals>,
-    pub(crate) instances: Storage<Instance>,
-    pub(crate) layers: Storage<Pipeline>,
-    pub(crate) lights: Storage<Lights>,
-    pub(crate) meshes: Storage<Mesh>,
-    pub(crate) shaders: Storage<ShaderData>,
-    pub(crate) spaces: Storage<Spaces>,
-    pub(crate) textures: Storage<Textures>,
+    pub globals: Storage<Globals>,
+    pub instances: Storage<Instance>,
+    pub layers: Storage<Pipeline>,
+    pub lights: Storage<Lights>,
+    pub meshes: Storage<Mesh>,
+    pub shaders: Storage<ShaderData>,
+    pub spaces: Storage<Spaces>,
+    pub textures: Storage<Textures>,
 }
 
 impl Resources {

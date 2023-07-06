@@ -77,8 +77,8 @@ pub enum Error {
 }
 
 pub(crate) struct Mesh {
-    buffer: Buffer,
-    ty: Type,
+    buf: Buffer,
+    kind: Kind,
 }
 
 impl Mesh {
@@ -93,33 +93,33 @@ impl Mesh {
         };
 
         Self {
-            buffer: device.create_buffer_init(&BufferInitDescriptor {
+            buf: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("vertex buffer"),
                 contents: vertex::verts_as_bytes(data.verts),
                 usage: BufferUsages::VERTEX,
             }),
-            ty: match &data.indxs {
-                Some(indxs) => Type::indexed(bytemuck::cast_slice(indxs), device),
-                None => Type::sequential(data.verts),
+            kind: match &data.indxs {
+                Some(indxs) => Kind::indexed(bytemuck::cast_slice(indxs), device),
+                None => Kind::sequential(data.verts.len()),
             },
         }
     }
 
     pub fn vertex_buffer(&self) -> &Buffer {
-        &self.buffer
+        &self.buf
     }
 
-    pub fn mesh_type(&self) -> &Type {
-        &self.ty
+    pub fn kind(&self) -> &Kind {
+        &self.kind
     }
 }
 
-pub(crate) enum Type {
-    Indexed { buffer: Buffer, n_indices: u32 },
-    Sequential { n_vertices: u32 },
+pub(crate) enum Kind {
+    Indexed { buf: Buffer, len: u32 },
+    Sequential { len: u32 },
 }
 
-impl Type {
+impl Kind {
     fn indexed(indxs: &[u16], device: &Device) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -127,18 +127,18 @@ impl Type {
         };
 
         Self::Indexed {
-            buffer: device.create_buffer_init(&BufferInitDescriptor {
+            buf: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("index buffer"),
                 contents: bytemuck::cast_slice(indxs),
                 usage: BufferUsages::INDEX,
             }),
-            n_indices: indxs.len().try_into().expect("too many indexes"),
+            len: indxs.len().try_into().expect("too many indexes"),
         }
     }
 
-    fn sequential<V>(verts: &[V]) -> Self {
+    fn sequential(len: usize) -> Self {
         Self::Sequential {
-            n_vertices: verts.len().try_into().expect("too many vertices"),
+            len: len.try_into().expect("too many vertices"),
         }
     }
 }

@@ -52,8 +52,8 @@ impl From<Mat4> for Model {
 }
 
 pub(crate) struct Instance {
-    buffer: Buffer,
-    n_instances: u32,
+    buf: Buffer,
+    len: u32,
 }
 
 impl Instance {
@@ -64,29 +64,29 @@ impl Instance {
         };
 
         Self {
-            buffer: device.create_buffer_init(&BufferInitDescriptor {
+            buf: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("instance buffer"),
                 contents: bytemuck::cast_slice(models),
                 usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             }),
-            n_instances: models.len().try_into().expect("convert instances len"),
+            len: models.len().try_into().expect("convert instances len"),
         }
     }
 
     pub fn update_models(&self, models: &[Model], queue: &Queue) -> Result<(), TooLargeSize> {
-        if self.n_instances as usize != models.len() {
+        if self.len as usize != models.len() {
             return Err(TooLargeSize);
         }
 
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(models));
+        queue.write_buffer(&self.buf, 0, bytemuck::cast_slice(models));
         Ok(())
     }
 
     pub fn buffer(&self) -> &Buffer {
-        &self.buffer
+        &self.buf
     }
 
-    pub fn n_instances(&self) -> u32 {
-        self.n_instances
+    pub fn len(&self) -> u32 {
+        self.len
     }
 }

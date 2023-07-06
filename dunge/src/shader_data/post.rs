@@ -6,7 +6,7 @@ use {
 
 pub(crate) struct PostShaderData {
     bind_group: BindGroup,
-    buffer: Buffer,
+    buf: Buffer,
 }
 
 impl PostShaderData {
@@ -16,7 +16,7 @@ impl PostShaderData {
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
-        let buffer = {
+        let buf = {
             let uniform = PostShaderDataUniform::new((1., 1.), (1., 1.));
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("post data buffer"),
@@ -29,17 +29,17 @@ impl PostShaderData {
             layout,
             entries: &[BindGroupEntry {
                 binding: PostProcessor::DATA_BINDING,
-                resource: buffer.as_entire_binding(),
+                resource: buf.as_entire_binding(),
             }],
             label: Some("post bind group"),
         });
 
-        Self { bind_group, buffer }
+        Self { bind_group, buf }
     }
 
     pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
         let uniform = PostShaderDataUniform::new(size, factor);
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[uniform]));
+        queue.write_buffer(&self.buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
     pub fn bind_group(&self) -> &BindGroup {
