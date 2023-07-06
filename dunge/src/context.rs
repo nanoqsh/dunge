@@ -251,6 +251,22 @@ impl Context {
         self.resources.create_mesh(&self.render, data)
     }
 
+    /// Updates a mesh.
+    ///
+    /// # Errors
+    /// See [`MeshError`] for detailed info.
+    pub fn update_mesh<V, T>(
+        &mut self,
+        handle: MeshHandle<V, T>,
+        data: &MeshData<V, T>,
+    ) -> Result<(), MeshError>
+    where
+        V: Vertex,
+        T: Topology,
+    {
+        self.resources.update_mesh(&self.render, handle, data)
+    }
+
     /// Deletes the mesh.
     ///
     /// # Errors

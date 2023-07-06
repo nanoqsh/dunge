@@ -102,7 +102,7 @@ impl Texture {
         }
     }
 
-    pub fn update_data(&self, data: Data, queue: &Queue) -> Result<(), TooLargeSize> {
+    pub fn update(&self, data: Data, queue: &Queue) -> Result<(), TooLargeSize> {
         use wgpu::*;
 
         let (width, height) = data.size;

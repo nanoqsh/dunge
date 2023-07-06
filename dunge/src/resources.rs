@@ -1,7 +1,7 @@
 use {
     crate::{
         camera::{Camera, View},
-        error::{Error, ResourceNotFound, SourceError, SpaceError, TexturesError},
+        error::{Error, MeshError, ResourceNotFound, SourceError, SpaceError, TexturesError},
         handles::*,
         mesh::{Data as MeshData, Mesh},
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
@@ -235,7 +235,6 @@ impl Resources {
     ) -> Result<(), Error> {
         let instances = self.instances.get(handle.0)?;
         instances.update_models(models, render.context().queue())?;
-
         Ok(())
     }
 
@@ -251,6 +250,21 @@ impl Resources {
         let mesh = Mesh::new(data, render.context().device());
         let id = self.meshes.insert(mesh);
         MeshHandle::new(id)
+    }
+
+    pub fn update_mesh<V, T>(
+        &mut self,
+        render: &Render,
+        handle: MeshHandle<V, T>,
+        data: &MeshData<V, T>,
+    ) -> Result<(), MeshError>
+    where
+        V: Vertex,
+        T: Topology,
+    {
+        let mesh = self.meshes.get_mut(handle.id())?;
+        mesh.update(data, render.context().queue())?;
+        Ok(())
     }
 
     pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {

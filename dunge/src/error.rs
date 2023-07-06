@@ -1,5 +1,8 @@
-use crate::shader_data::{
-    lights::UpdateError as LightsUpdateError, spaces::UpdateDataError as SpacesUpdateDataError,
+use crate::{
+    mesh::UpdateError as MeshUpdateError,
+    shader_data::{
+        lights::UpdateError as LightsUpdateError, spaces::UpdateDataError as SpacesUpdateDataError,
+    },
 };
 
 /// The main loop error.
@@ -106,6 +109,24 @@ impl From<SpacesUpdateDataError> for SpaceError {
 }
 
 impl From<ResourceNotFound> for SpaceError {
+    fn from(_: ResourceNotFound) -> Self {
+        Self::ResourceNotFound
+    }
+}
+
+#[derive(Debug)]
+pub enum MeshError {
+    Update(MeshUpdateError),
+    ResourceNotFound,
+}
+
+impl From<MeshUpdateError> for MeshError {
+    fn from(v: MeshUpdateError) -> Self {
+        Self::Update(v)
+    }
+}
+
+impl From<ResourceNotFound> for MeshError {
     fn from(_: ResourceNotFound) -> Self {
         Self::ResourceNotFound
     }

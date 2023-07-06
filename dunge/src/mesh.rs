@@ -4,7 +4,7 @@ use {
         vertex::{self, Vertex},
     },
     std::borrow::Cow,
-    wgpu::{Buffer, Device},
+    wgpu::{Buffer, Device, Queue},
 };
 
 /// A data struct for a mesh creation.
@@ -78,6 +78,7 @@ pub enum Error {
 
 pub(crate) struct Mesh {
     buf: Buffer,
+    len: u32,
     kind: Kind,
 }
 
@@ -98,11 +99,41 @@ impl Mesh {
                 contents: vertex::verts_as_bytes(data.verts),
                 usage: BufferUsages::VERTEX,
             }),
+            len: data.verts.len() as u32,
             kind: match &data.indxs {
                 Some(indxs) => Kind::indexed(bytemuck::cast_slice(indxs), device),
                 None => Kind::sequential(data.verts.len()),
             },
         }
+    }
+
+    pub fn update<V, T>(&mut self, data: &Data<V, T>, queue: &Queue) -> Result<(), UpdateError>
+    where
+        V: Vertex,
+        T: Topology,
+    {
+        let verts = data.verts;
+        if verts.len() > self.len as usize {
+            return Err(UpdateError::VertexSize);
+        }
+
+        match &mut self.kind {
+            Kind::Indexed { buf, len } => {
+                let indxs = data.indxs.as_deref().ok_or(UpdateError::Kind)?;
+                if indxs.len() > *len as usize {
+                    return Err(UpdateError::IndexSize);
+                }
+
+                *len = indxs.len() as u32;
+                queue.write_buffer(buf, 0, bytemuck::cast_slice(indxs));
+            }
+            Kind::Sequential { .. } if data.indxs.is_some() => return Err(UpdateError::Kind),
+            Kind::Sequential { len } => *len = verts.len() as u32,
+        }
+
+        self.len = verts.len() as u32;
+        queue.write_buffer(&self.buf, 0, vertex::verts_as_bytes(verts));
+        Ok(())
     }
 
     pub fn vertex_buffer(&self) -> &Buffer {
@@ -112,6 +143,13 @@ impl Mesh {
     pub fn kind(&self) -> &Kind {
         &self.kind
     }
+}
+
+#[derive(Debug)]
+pub enum UpdateError {
+    IndexSize,
+    VertexSize,
+    Kind,
 }
 
 pub(crate) enum Kind {
