@@ -71,28 +71,6 @@ impl<S> Clone for LightsHandle<S> {
 
 impl<S> Copy for LightsHandle<S> {}
 
-/// A mesh handle. May be obtained from the [`create_mesh`](crate::Context::create_mesh) method.
-#[must_use]
-pub struct MeshHandle<V, T = TriangleList>(u32, PhantomData<(V, T)>);
-
-impl<V, T> MeshHandle<V, T> {
-    pub(crate) fn new(id: u32) -> Self {
-        Self(id, PhantomData)
-    }
-
-    pub(crate) fn id(self) -> u32 {
-        self.0
-    }
-}
-
-impl<V, T> Clone for MeshHandle<V, T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<V, T> Copy for MeshHandle<V, T> {}
-
 /// A shader handle. May be obtained from the [`create_shader`](crate::Context::create_shader) method.
 #[must_use]
 pub struct ShaderHandle<S>(u32, PhantomData<S>);

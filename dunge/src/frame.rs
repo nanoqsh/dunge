@@ -166,7 +166,7 @@ impl<'d> Frame<'d> {
         Layer::new(
             pass,
             screen.virtual_size().into(),
-            self.render.context().queue(),
+            self.render.state().queue(),
             self.resources,
             &mut self.drawn_in_frame,
         )
@@ -182,7 +182,7 @@ impl Encoder {
 
         self.0.get_or_insert_with(|| {
             render
-                .context()
+                .state()
                 .device()
                 .create_command_encoder(&CommandEncoderDescriptor::default())
         })
@@ -190,7 +190,7 @@ impl Encoder {
 
     fn finish(&mut self, render: &Render) {
         if let Some(encoder) = self.0.take() {
-            render.context().queue().submit([encoder.finish()]);
+            render.state().queue().submit([encoder.finish()]);
         }
     }
 }

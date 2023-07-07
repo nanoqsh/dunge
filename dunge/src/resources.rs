@@ -1,9 +1,8 @@
 use {
     crate::{
         camera::{Camera, View},
-        error::{Error, MeshError, ResourceNotFound, SourceError, SpaceError, TexturesError},
+        error::{Error, ResourceNotFound, SourceError, SpaceError, TexturesError},
         handles::*,
-        mesh::{Data as MeshData, Mesh},
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
         render::Render,
         shader::Shader,
@@ -18,7 +17,6 @@ use {
         },
         storage::Storage,
         topology::Topology,
-        vertex::Vertex,
     },
     dunge_shader::{Scheme, Shader as ShaderData},
 };
@@ -30,7 +28,6 @@ pub(crate) struct Resources {
     pub instances: Storage<Instance>,
     pub layers: Storage<Pipeline>,
     pub lights: Storage<Lights>,
-    pub meshes: Storage<Mesh>,
     pub shaders: Storage<ShaderData>,
     pub spaces: Storage<Spaces>,
     pub textures: Storage<Textures>,
@@ -52,7 +49,7 @@ impl Resources {
             layout: &globals.layout,
         };
 
-        let globals = Globals::new(params, render.context().device());
+        let globals = Globals::new(params, render.state().device());
         let id = self.globals.insert(globals);
         Ok(GlobalsHandle::new(id))
     }
@@ -74,7 +71,7 @@ impl Resources {
     ) -> Result<(), ResourceNotFound> {
         self.globals
             .get(handle.id())?
-            .write_ambient(col, render.context().queue());
+            .write_ambient(col, render.state().queue());
 
         Ok(())
     }
@@ -93,7 +90,7 @@ impl Resources {
             layout: &textures.layout,
         };
 
-        let context = render.context();
+        let context = render.state();
         let textures = Textures::new(params, context.device(), context.queue());
         let id = self.textures.insert(textures);
         Ok(TexturesHandle::new(id))
@@ -107,7 +104,7 @@ impl Resources {
     ) -> Result<(), TexturesError> {
         self.textures
             .get(handle.id())?
-            .update_data(data, render.context().queue())?;
+            .update_data(data, render.state().queue())?;
 
         Ok(())
     }
@@ -126,7 +123,7 @@ impl Resources {
             layout: &lights.layout,
         };
 
-        let lights = Lights::new(params, render.context().device());
+        let lights = Lights::new(params, render.state().device());
         let id = self.lights.insert(lights);
         Ok(LightsHandle::new(id))
     }
@@ -142,7 +139,7 @@ impl Resources {
             index,
             0,
             sources,
-            render.context().queue(),
+            render.state().queue(),
         )?;
 
         Ok(())
@@ -162,7 +159,7 @@ impl Resources {
             layout: &spaces.layout,
         };
 
-        let context = render.context();
+        let context = render.state();
         let spaces = Spaces::new(params, context.device(), context.queue());
         let id = self.spaces.insert(spaces);
         Ok(SpacesHandle::new(id))
@@ -177,7 +174,7 @@ impl Resources {
     ) -> Result<(), SpaceError> {
         self.spaces
             .get(handle.id())?
-            .update_data(index, data, render.context().queue())?;
+            .update_data(index, data, render.state().queue())?;
 
         Ok(())
     }
@@ -201,7 +198,7 @@ impl Resources {
     {
         let vert = VertexLayout::new::<S::Vertex>();
         let pipeline = Pipeline::new(
-            render.context().device(),
+            render.state().device(),
             self.shaders.get(handle.id())?,
             Some(&vert),
             PipelineParameters {
@@ -222,7 +219,7 @@ impl Resources {
     }
 
     pub fn create_instances(&mut self, render: &Render, models: &[Model]) -> InstanceHandle {
-        let instance = Instance::new(models, render.context().device());
+        let instance = Instance::new(models, render.state().device());
         let id = self.instances.insert(instance);
         InstanceHandle(id)
     }
@@ -234,40 +231,11 @@ impl Resources {
         models: &[Model],
     ) -> Result<(), Error> {
         let instances = self.instances.get(handle.0)?;
-        instances.update(models, render.context().queue())?;
+        instances.update(models, render.state().queue())?;
         Ok(())
     }
 
     pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
         self.instances.remove(handle.0)
-    }
-
-    pub fn create_mesh<V, T>(&mut self, render: &Render, data: &MeshData<V, T>) -> MeshHandle<V, T>
-    where
-        V: Vertex,
-        T: Topology,
-    {
-        let mesh = Mesh::new(data, render.context().device());
-        let id = self.meshes.insert(mesh);
-        MeshHandle::new(id)
-    }
-
-    pub fn update_mesh<V, T>(
-        &mut self,
-        render: &Render,
-        handle: MeshHandle<V, T>,
-        data: &MeshData<V, T>,
-    ) -> Result<(), MeshError>
-    where
-        V: Vertex,
-        T: Topology,
-    {
-        let mesh = self.meshes.get_mut(handle.id())?;
-        mesh.update(data, render.context().queue())?;
-        Ok(())
-    }
-
-    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
-        self.meshes.remove(handle.id())
     }
 }

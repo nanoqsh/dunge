@@ -6,7 +6,7 @@ use {
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
-        Color, Compare, Context, Error, Frame, FrameParameters, Loop, MeshData, Model,
+        Color, Compare, Context, Error, Frame, FrameParameters, Loop, Mesh, MeshData, Model,
         Orthographic, PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat, TextureData,
         Transform, Vertex,
     },
@@ -46,23 +46,23 @@ impl Shader for ColorShader {
     const VIEW: ShaderView = ShaderView::Camera;
 }
 
-struct Mesh {
+struct Sprite {
     instance: InstanceHandle,
-    mesh: MeshHandle<TextureVert>,
+    mesh: &'static Mesh<TextureVert>,
     update_view: bool,
     pos: [f32; 3],
 }
 
 struct Cube {
     instance: InstanceHandle,
-    mesh: MeshHandle<ColorVert, LineStrip>,
+    mesh: Mesh<ColorVert, LineStrip>,
 }
 
 pub struct App {
     texture_layer: LayerHandle<TextureShader>,
     color_layer: LayerHandle<ColorShader, LineStrip>,
     sprites: TexturesHandle<TextureShader>,
-    meshes: Vec<Mesh>,
+    sprite_meshes: Vec<Sprite>,
     cubes: Vec<Cube>,
     texture_globals: GlobalsHandle<TextureShader>,
     color_globals: GlobalsHandle<ColorShader>,
@@ -165,7 +165,7 @@ impl App {
 
         // Create models
         #[allow(clippy::needless_range_loop)]
-        let meshes = {
+        let sprite_meshes = {
             const D: u8 = 0;
             const E: u8 = 1;
             const W: u8 = 2;
@@ -195,7 +195,7 @@ impl App {
                 (models::floor_dark::VERTICES, models::floor_dark::INDICES),
             ];
 
-            let mesh_handles: Vec<_> = vertices
+            let meshes: Vec<&'static _> = vertices
                 .into_iter()
                 .map(|(verts, indxs)| {
                     let verts: Vec<_> = verts
@@ -205,7 +205,8 @@ impl App {
 
                     let indxs = indxs.to_vec();
                     let data = MeshData::new(&verts, &indxs).expect("create mesh");
-                    context.create_mesh(&data)
+                    let mesh = context.create_mesh(&data);
+                    Box::leak(mesh.into()) as &'static _
                 })
                 .collect();
 
@@ -242,9 +243,9 @@ impl App {
                 .into_iter()
                 .map(|(n, pos)| {
                     let transform = Transform::from_position(pos);
-                    Mesh {
+                    Sprite {
                         instance: context.create_instances(&[Model::from(transform)]),
-                        mesh: mesh_handles[n as usize],
+                        mesh: meshes[n as usize],
                         update_view: n == D || n == E,
                         pos,
                     }
@@ -283,7 +284,7 @@ impl App {
             texture_layer,
             color_layer,
             sprites,
-            meshes,
+            sprite_meshes,
             cubes,
             texture_globals,
             color_globals,
@@ -374,17 +375,17 @@ impl Loop for App {
         context.update_globals_view(self.texture_globals, view)?;
         context.update_globals_view(self.color_globals, view)?;
 
-        self.meshes
+        self.sprite_meshes
             .iter()
-            .filter(|mesh| mesh.update_view)
-            .try_for_each(|mesh| {
+            .filter(|sprite| sprite.update_view)
+            .try_for_each(|sprite| {
                 let transform = Transform {
-                    pos: mesh.pos.into(),
+                    pos: sprite.pos.into(),
                     rot: view.rotation().conjugate(),
                     ..Default::default()
                 };
 
-                context.update_instances(mesh.instance, &[Model::from(transform)])
+                context.update_instances(sprite.instance, &[Model::from(transform)])
             })?;
 
         Ok(())
@@ -405,7 +406,7 @@ impl Loop for App {
                 .bind_spaces(self.spaces)?
                 .bind_textures(self.sprites)?;
 
-            for model in &self.meshes {
+            for model in &self.sprite_meshes {
                 layer.draw(model.mesh, model.instance)?;
             }
         }
@@ -414,7 +415,7 @@ impl Loop for App {
             let mut layer = frame.layer(self.color_layer)?.start();
             layer.bind_globals(self.color_globals)?;
             for cube in &self.cubes {
-                layer.draw(cube.mesh, cube.instance)?;
+                layer.draw(&cube.mesh, cube.instance)?;
             }
         }
 

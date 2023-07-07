@@ -9,12 +9,13 @@ use {
         resources::Resources,
         screen::{RenderScreen, Screen},
     },
+    std::sync::Arc,
     wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
 
 pub(crate) struct Render {
-    context: RenderContext,
+    state: State,
     surface_conf: SurfaceConfiguration,
     screen: RenderScreen,
     postproc: PostProcessor,
@@ -22,7 +23,7 @@ pub(crate) struct Render {
 }
 
 impl Render {
-    pub fn new(context: RenderContext) -> Self {
+    pub fn new(state: State) -> Self {
         use wgpu::*;
 
         let surface_conf = SurfaceConfiguration {
@@ -35,12 +36,12 @@ impl Render {
             view_formats: vec![],
         };
 
-        let screen = RenderScreen::new(context.device.limits().max_texture_dimension_2d);
-        let postproc = PostProcessor::new(&context.device);
-        let framebuffer = Framebuffer::new(&context.device, postproc.layout());
+        let screen = RenderScreen::new(state.device.limits().max_texture_dimension_2d);
+        let postproc = PostProcessor::new(&state.device);
+        let framebuffer = Framebuffer::new(&state.device, postproc.layout());
 
         Self {
-            context,
+            state,
             surface_conf,
             screen,
             postproc,
@@ -49,18 +50,18 @@ impl Render {
     }
 
     pub fn drop_surface(&mut self) {
-        self.context.surface.take();
+        self.state.surface.take();
     }
 
     pub fn recreate_surface(&mut self, window: &Window) {
-        self.context.surface.get_or_insert_with(|| unsafe {
+        self.state.surface.get_or_insert_with(|| unsafe {
             let surface = self
-                .context
+                .state
                 .instance
                 .create_surface(&window)
                 .expect("create surface");
 
-            surface.configure(&self.context.device, &self.surface_conf);
+            surface.configure(&self.state.device, &self.surface_conf);
             surface
         });
     }
@@ -89,27 +90,27 @@ impl Render {
         let (width, height) = screen.physical_size().into();
         self.surface_conf.width = width;
         self.surface_conf.height = height;
-        self.context
+        self.state
             .surface
             .as_mut()
             .expect("surface")
-            .configure(&self.context.device, &self.surface_conf);
+            .configure(&self.state.device, &self.surface_conf);
 
         let buffer_size = self.screen.buffer_size();
         let size_factor = screen.size_factor();
 
         self.postproc
-            .set_antialiasing(&self.context.device, screen.is_antialiasing_enabled());
+            .set_antialiasing(&self.state.device, screen.is_antialiasing_enabled());
 
         self.postproc
-            .resize(buffer_size.into(), size_factor.into(), &self.context.queue);
+            .resize(buffer_size.into(), size_factor.into(), &self.state.queue);
 
         self.framebuffer.set_params(
             FrameParameters {
                 size: buffer_size,
                 filter: screen.filter,
             },
-            &self.context.device,
+            &self.state.device,
             self.postproc.layout(),
         );
     }
@@ -121,7 +122,7 @@ impl Render {
         use wgpu::*;
 
         let output = match self
-            .context
+            .state
             .surface
             .as_ref()
             .expect("surface")
@@ -159,7 +160,7 @@ impl Render {
         };
 
         let BufferSize(width, height) = self.screen.buffer_size();
-        let buffer = self.context.device.create_buffer(&BufferDescriptor {
+        let buffer = self.state.device.create_buffer(&BufferDescriptor {
             label: Some("copy buffer"),
             size: width as u64 * height as u64 * N_COLOR_CHANNELS as u64,
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
@@ -182,18 +183,18 @@ impl Render {
         };
 
         let mut encoder = self
-            .context
+            .state
             .device
             .create_command_encoder(&CommandEncoderDescriptor::default());
 
         encoder.copy_texture_to_buffer(image, buffer, size);
-        self.context.queue.submit([encoder.finish()]);
+        self.state.queue.submit([encoder.finish()]);
 
         let (sender, receiver) = mpsc::channel();
         let buffer_slice = buffer.buffer.slice(..);
         buffer_slice.map_async(MapMode::Read, move |res| _ = sender.send(res));
 
-        self.context.device.poll(Maintain::Wait);
+        self.state.device.poll(Maintain::Wait);
         if receiver
             .recv()
             .expect("wait until the buffer maps")
@@ -235,8 +236,8 @@ impl Render {
         }
     }
 
-    pub fn context(&self) -> &RenderContext {
-        &self.context
+    pub fn state(&self) -> &State {
+        &self.state
     }
 
     pub fn post_processor(&self) -> &PostProcessor {
@@ -248,14 +249,20 @@ impl Render {
     }
 }
 
-pub(crate) struct RenderContext {
+pub(crate) enum RenderResult<E> {
+    Ok,
+    SurfaceError(SurfaceError),
+    Error(E),
+}
+
+pub(crate) struct State {
     instance: Instance,
-    device: Device,
-    queue: Queue,
+    device: Arc<Device>,
+    queue: Arc<Queue>,
     surface: Option<Surface>,
 }
 
-impl RenderContext {
+impl State {
     pub async fn new(conf: CanvasConfig, window: &Window) -> Result<Self, CanvasError> {
         use wgpu::*;
 
@@ -308,17 +315,16 @@ impl RenderContext {
                 label: None,
             };
 
-            let Ok(dev) = adapter.request_device(&desc, None).await else {
-                return Err(CanvasError::RequestDevice);
-            };
-
-            dev
+            adapter
+                .request_device(&desc, None)
+                .await
+                .map_err(|_| CanvasError::RequestDevice)?
         };
 
         Ok(Self {
             instance,
-            device,
-            queue,
+            device: Arc::new(device),
+            queue: Arc::new(queue),
             surface,
         })
     }
@@ -372,17 +378,11 @@ impl RenderContext {
         }
     }
 
-    pub fn device(&self) -> &Device {
+    pub fn device(&self) -> &Arc<Device> {
         &self.device
     }
 
-    pub fn queue(&self) -> &Queue {
+    pub fn queue(&self) -> &Arc<Queue> {
         &self.queue
     }
-}
-
-pub(crate) enum RenderResult<E> {
-    Ok,
-    SurfaceError(SurfaceError),
-    Error(E),
 }

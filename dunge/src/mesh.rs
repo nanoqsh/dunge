@@ -1,11 +1,12 @@
 use {
     crate::{
-        buffer::DynamicBufferView,
+        buffer::BufferView,
+        render::State,
         topology::{Topology, TriangleList},
         vertex::{self, Vertex},
     },
-    std::borrow::Cow,
-    wgpu::{Buffer, Device, PrimitiveTopology, Queue},
+    std::{borrow::Cow, marker::PhantomData, sync::Arc},
+    wgpu::{Buffer, Queue},
 };
 
 /// A data struct for a mesh creation.
@@ -77,27 +78,25 @@ pub enum Error {
     WrongIndex,
 }
 
-pub(crate) struct Mesh {
+pub struct Mesh<V, T = TriangleList> {
     verts: Buffer,
     indxs: Option<Buffer>,
-    vert_size: usize,
-    topology: PrimitiveTopology,
+    queue: Arc<Queue>,
+    ty: PhantomData<(V, T)>,
 }
 
-impl Mesh {
-    pub fn new<V, T>(data: &Data<V, T>, device: &Device) -> Self
+impl<V, T> Mesh<V, T> {
+    pub(crate) fn new(data: &Data<V, T>, state: &State) -> Self
     where
         V: Vertex,
         T: Topology,
     {
-        use {
-            std::mem,
-            wgpu::{
-                util::{BufferInitDescriptor, DeviceExt},
-                BufferUsages,
-            },
+        use wgpu::{
+            util::{BufferInitDescriptor, DeviceExt},
+            BufferUsages,
         };
 
+        let device = state.device();
         Self {
             verts: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("vertex buffer"),
@@ -111,21 +110,16 @@ impl Mesh {
                     usage: BufferUsages::INDEX,
                 })
             }),
-            vert_size: mem::size_of::<V>(),
-            topology: T::VALUE.into_inner(),
+            queue: Arc::clone(state.queue()),
+            ty: PhantomData,
         }
     }
 
-    pub fn update<V, T>(&mut self, data: &Data<V, T>, queue: &Queue) -> Result<(), UpdateError>
+    pub fn update(&mut self, data: &Data<V, T>) -> Result<(), UpdateError>
     where
         V: Vertex,
         T: Topology,
     {
-        use std::mem;
-
-        assert_eq!(self.vert_size, mem::size_of::<V>(), "invalid vertex type");
-        assert_eq!(self.topology, T::VALUE.into_inner(), "invalid topology");
-
         let verts = data.verts;
         if self.verts.size() != verts.len() as u64 {
             return Err(UpdateError::VertexSize);
@@ -137,23 +131,21 @@ impl Mesh {
                 return Err(UpdateError::IndexSize);
             }
 
-            queue.write_buffer(buf, 0, bytemuck::cast_slice(indxs));
+            self.queue.write_buffer(buf, 0, bytemuck::cast_slice(indxs));
         }
 
-        queue.write_buffer(&self.verts, 0, vertex::verts_as_bytes(verts));
+        self.queue
+            .write_buffer(&self.verts, 0, vertex::verts_as_bytes(verts));
+
         Ok(())
     }
 
-    pub fn vertex_buffer(&self) -> DynamicBufferView {
-        DynamicBufferView::new(&self.verts, self.vert_size as u32)
+    pub(crate) fn vertex_buffer(&self) -> BufferView<V> {
+        BufferView::new(&self.verts)
     }
 
-    pub fn index_buffer(&self) -> Option<DynamicBufferView> {
-        use std::mem;
-
-        self.indxs
-            .as_ref()
-            .map(|buf| DynamicBufferView::new(buf, mem::size_of::<u16>() as u32))
+    pub(crate) fn index_buffer(&self) -> Option<BufferView<u16>> {
+        self.indxs.as_ref().map(BufferView::new)
     }
 }
 

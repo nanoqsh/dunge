@@ -2,7 +2,7 @@ use {
     crate::{
         context::Context,
         r#loop::{Input, Keys, Loop, Mouse},
-        render::{RenderContext, RenderResult},
+        render::{RenderResult, State},
         screen::Screen,
         time::Time,
     },
@@ -50,17 +50,13 @@ impl Canvas {
 
         // Create the context
         let mut context = {
-            // Create the render context
-            let render_context = match RenderContext::new(config, &window).await {
+            // Create the render state
+            let state = match State::new(config, &window).await {
                 Ok(render) => render,
                 Err(err) => return err,
             };
 
-            Box::new(Context::new(
-                window,
-                event_loop.create_proxy(),
-                render_context,
-            ))
+            Box::new(Context::new(window, event_loop.create_proxy(), state))
         };
 
         // Create the loop object

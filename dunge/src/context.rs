@@ -6,9 +6,9 @@ use {
         error::*,
         framebuffer::FrameFilter,
         handles::*,
-        mesh::Data as MeshData,
+        mesh::{Data as MeshData, Mesh},
         pipeline::ParametersBuilder,
-        render::{Render, RenderContext},
+        render::{Render, State},
         resources::Resources,
         screen::Screen,
         shader::{self, Shader, ShaderInfo},
@@ -35,11 +35,11 @@ pub struct Context {
 }
 
 impl Context {
-    pub(crate) fn new(window: Window, proxy: Proxy, render_context: RenderContext) -> Self {
+    pub(crate) fn new(window: Window, proxy: Proxy, state: State) -> Self {
         Self {
             window,
             proxy,
-            render: Render::new(render_context),
+            render: Render::new(state),
             resources: Resources::default(),
             limits: Limits::default(),
         }
@@ -243,36 +243,12 @@ impl Context {
     }
 
     /// Creates a new mesh.
-    pub fn create_mesh<V, T>(&mut self, data: &MeshData<V, T>) -> MeshHandle<V, T>
+    pub fn create_mesh<V, T>(&self, data: &MeshData<V, T>) -> Mesh<V, T>
     where
         V: Vertex,
         T: Topology,
     {
-        self.resources.create_mesh(&self.render, data)
-    }
-
-    /// Updates a mesh.
-    ///
-    /// # Errors
-    /// See [`MeshError`] for detailed info.
-    pub fn update_mesh<V, T>(
-        &mut self,
-        handle: MeshHandle<V, T>,
-        data: &MeshData<V, T>,
-    ) -> Result<(), MeshError>
-    where
-        V: Vertex,
-        T: Topology,
-    {
-        self.resources.update_mesh(&self.render, handle, data)
-    }
-
-    /// Deletes the mesh.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_mesh<V, T>(&mut self, handle: MeshHandle<V, T>) -> Result<(), ResourceNotFound> {
-        self.resources.delete_mesh(handle)
+        Mesh::new(data, self.render.state())
     }
 
     /// Takes a screenshot of the current frame.

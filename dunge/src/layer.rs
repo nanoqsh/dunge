@@ -23,7 +23,7 @@ pub struct Layer<'l, S, T> {
     resources: &'l Resources,
     drawn_in_frame: &'l mut bool,
     groups: Groups<'l>,
-    vertex_type: PhantomData<(S, T)>,
+    ty: PhantomData<(S, T)>,
 }
 
 impl<'l, S, T> Layer<'l, S, T> {
@@ -41,7 +41,7 @@ impl<'l, S, T> Layer<'l, S, T> {
             resources,
             drawn_in_frame,
             groups: Groups::default(),
-            vertex_type: PhantomData,
+            ty: PhantomData,
         }
     }
 
@@ -103,7 +103,7 @@ impl<'l, S, T> Layer<'l, S, T> {
     /// See [`Error`] for details.
     pub fn draw(
         &mut self,
-        mesh: MeshHandle<S::Vertex, T>,
+        mesh: &'l Mesh<S::Vertex, T>,
         instance: InstanceHandle,
     ) -> Result<(), Error>
     where
@@ -130,13 +130,15 @@ impl<'l, S, T> Layer<'l, S, T> {
             self.pass.set_bind_group(index, group, &[]);
         }
 
-        let mesh = self.resources.meshes.get(mesh.id())?;
         let instance = self.resources.instances.get(instance.0)?;
         self.draw_mesh(mesh, instance);
         Ok(())
     }
 
-    fn draw_mesh(&mut self, mesh: &'l Mesh, instance: &'l Instance) {
+    fn draw_mesh(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance)
+    where
+        S: Shader,
+    {
         use wgpu::IndexFormat;
 
         let instances = instance.buffer();
