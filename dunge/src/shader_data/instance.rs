@@ -1,8 +1,9 @@
 use {
-    crate::{buffer::BufferView, error::TooLargeSize},
+    crate::{buffer::BufferView, error::TooLargeSize, render::State},
     bytemuck::{Pod, Zeroable},
     glam::Mat4,
-    wgpu::{Buffer, Device, Queue, VertexBufferLayout, VertexStepMode},
+    std::sync::Arc,
+    wgpu::{Buffer, Queue, VertexBufferLayout, VertexStepMode},
 };
 
 type Mat = [[f32; 4]; 4];
@@ -51,35 +52,42 @@ impl From<Mat4> for Model {
     }
 }
 
-pub(crate) struct Instance(Buffer);
+pub struct Instance {
+    buf: Buffer,
+    queue: Arc<Queue>,
+}
 
 impl Instance {
-    pub fn new(models: &[Model], device: &Device) -> Self {
+    pub(crate) fn new(models: &[Model], state: &State) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BufferUsages,
         };
 
-        Self(device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("instance buffer"),
-            contents: bytemuck::cast_slice(models),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
-        }))
+        Self {
+            buf: state.device().create_buffer_init(&BufferInitDescriptor {
+                label: Some("instance buffer"),
+                contents: bytemuck::cast_slice(models),
+                usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+            }),
+            queue: Arc::clone(state.queue()),
+        }
     }
 
-    pub fn update(&self, models: &[Model], queue: &Queue) -> Result<(), TooLargeSize> {
+    pub fn update(&self, models: &[Model]) -> Result<(), TooLargeSize> {
         use std::mem;
 
-        let Self(buf) = self;
-        if buf.size() != mem::size_of_val(models) as u64 {
+        if self.buf.size() != mem::size_of_val(models) as u64 {
             return Err(TooLargeSize);
         }
 
-        queue.write_buffer(buf, 0, bytemuck::cast_slice(models));
+        self.queue
+            .write_buffer(&self.buf, 0, bytemuck::cast_slice(models));
+
         Ok(())
     }
 
-    pub fn buffer(&self) -> BufferView<Model> {
-        BufferView::new(&self.0)
+    pub(crate) fn buffer(&self) -> BufferView<Model> {
+        BufferView::new(&self.buf)
     }
 }

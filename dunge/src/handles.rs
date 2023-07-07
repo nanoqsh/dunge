@@ -23,11 +23,6 @@ impl<S> Clone for GlobalsHandle<S> {
 
 impl<S> Copy for GlobalsHandle<S> {}
 
-/// An instance handle. May be obtained from the [`create_instances`](crate::Context::create_instances) method.
-#[must_use]
-#[derive(Clone, Copy)]
-pub struct InstanceHandle(pub(crate) u32);
-
 /// A layer handle. May be obtained from the [`create_layer`](crate::Context::create_layer) method.
 #[must_use]
 pub struct LayerHandle<V, T = TriangleList>(u32, PhantomData<(V, T)>);

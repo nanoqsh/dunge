@@ -2,8 +2,8 @@ use dunge::{
     handles::*,
     input::{Input, Key},
     shader::Shader,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, Mesh, MeshData, Model, Rgba, Vertex,
-    WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Instance, Loop, Mesh, MeshData, Model, Rgba,
+    Vertex, WindowMode,
 };
 
 #[repr(C)]
@@ -32,7 +32,7 @@ fn main() {
 struct App {
     layer: LayerHandle<TriangleShader>,
     mesh: Mesh<Vert>,
-    instance: InstanceHandle,
+    instance: Instance,
 }
 
 impl App {
@@ -86,6 +86,6 @@ impl Loop for App {
             .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
-            .draw(&self.mesh, self.instance)
+            .draw(&self.mesh, &self.instance)
     }
 }

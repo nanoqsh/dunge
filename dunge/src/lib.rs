@@ -35,10 +35,10 @@ mod shader_data {
     mod texture;
     pub(crate) mod textures;
 
-    pub(crate) use self::{instance::Instance, post::PostShaderData};
+    pub(crate) use self::post::PostShaderData;
 
     pub use self::{
-        instance::Model,
+        instance::{Instance, Model},
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         texture::{Data as TextureData, Error as TextureError},
@@ -78,7 +78,9 @@ pub use {
         mesh::{Data as MeshData, Error as MeshError, Mesh},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
-        shader_data::{Model, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError},
+        shader_data::{
+            Instance, Model, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
+        },
         transform::Transform,
         vertex::Vertex,
     },

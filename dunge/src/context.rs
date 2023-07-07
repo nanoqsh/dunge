@@ -14,8 +14,8 @@ use {
         shader::{self, Shader, ShaderInfo},
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
-            spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Model, Source,
-            SpaceData, TextureData,
+            spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Instance,
+            Model, Source, SpaceData, TextureData,
         },
         topology::Topology,
         vertex::Vertex,
@@ -217,29 +217,8 @@ impl Context {
     }
 
     /// Creates new instances.
-    pub fn create_instances(&mut self, models: &[Model]) -> InstanceHandle {
-        self.resources.create_instances(&self.render, models)
-    }
-
-    /// Updates instances.
-    ///
-    /// # Errors
-    /// See [`Error`] for detailed info.
-    pub fn update_instances(
-        &mut self,
-        handle: InstanceHandle,
-        models: &[Model],
-    ) -> Result<(), Error> {
-        self.resources
-            .update_instances(&self.render, handle, models)
-    }
-
-    /// Deletes instances.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
-        self.resources.delete_instances(handle)
+    pub fn create_instances(&mut self, models: &[Model]) -> Instance {
+        Instance::new(models, self.render.state())
     }
 
     /// Creates a new mesh.

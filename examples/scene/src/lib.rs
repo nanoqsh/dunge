@@ -6,9 +6,9 @@ use {
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
-        Color, Compare, Context, Error, Frame, FrameParameters, Loop, Mesh, MeshData, Model,
-        Orthographic, PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat, TextureData,
-        Transform, Vertex,
+        Color, Compare, Context, Error, Frame, FrameParameters, Instance, Loop, Mesh, MeshData,
+        Model, Orthographic, PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat,
+        TextureData, Transform, Vertex,
     },
     utils::Camera,
 };
@@ -47,14 +47,14 @@ impl Shader for ColorShader {
 }
 
 struct Sprite {
-    instance: InstanceHandle,
+    instance: Instance,
     mesh: &'static Mesh<TextureVert>,
     update_view: bool,
     pos: [f32; 3],
 }
 
 struct Cube {
-    instance: InstanceHandle,
+    instance: Instance,
     mesh: Mesh<ColorVert, LineStrip>,
 }
 
@@ -385,7 +385,7 @@ impl Loop for App {
                     ..Default::default()
                 };
 
-                context.update_instances(sprite.instance, &[Model::from(transform)])
+                sprite.instance.update(&[Model::from(transform)])
             })?;
 
         Ok(())
@@ -407,7 +407,7 @@ impl Loop for App {
                 .bind_textures(self.sprites)?;
 
             for model in &self.sprite_meshes {
-                layer.draw(model.mesh, model.instance)?;
+                layer.draw(model.mesh, &model.instance)?;
             }
         }
 
@@ -415,7 +415,7 @@ impl Loop for App {
             let mut layer = frame.layer(self.color_layer)?.start();
             layer.bind_globals(self.color_globals)?;
             for cube in &self.cubes {
-                layer.draw(&cube.mesh, cube.instance)?;
+                layer.draw(&cube.mesh, &cube.instance)?;
             }
         }
 

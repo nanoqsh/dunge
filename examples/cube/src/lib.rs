@@ -5,7 +5,8 @@ use {
         handles::*,
         input::{Input, Key},
         shader::*,
-        Context, Error, Frame, Loop, Mesh, MeshData, Model, Perspective, Rgba, TextureData, Vertex,
+        Context, Error, Frame, Instance, Loop, Mesh, MeshData, Model, Perspective, Rgba,
+        TextureData, Vertex,
     },
     utils::Camera,
 };
@@ -51,7 +52,7 @@ pub struct App {
     texture_globals: GlobalsHandle<TextureShader>,
     color_globals: GlobalsHandle<ColorShader>,
     textures: TexturesHandle<TextureShader>,
-    instance: InstanceHandle,
+    instance: Instance,
     texture_mesh: Mesh<TextureVert>,
     color_mesh: Mesh<ColorVert>,
     camera: Camera,
@@ -180,14 +181,14 @@ impl Loop for App {
                 .start()
                 .bind_globals(self.texture_globals)?
                 .bind_textures(self.textures)?
-                .draw(&self.texture_mesh, self.instance)?,
+                .draw(&self.texture_mesh, &self.instance)?,
             State::Color => frame
                 .layer(self.color_layer)?
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start()
                 .bind_globals(self.color_globals)?
-                .draw(&self.color_mesh, self.instance)?,
+                .draw(&self.color_mesh, &self.instance)?,
         }
 
         Ok(())

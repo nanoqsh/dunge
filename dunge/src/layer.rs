@@ -104,7 +104,7 @@ impl<'l, S, T> Layer<'l, S, T> {
     pub fn draw(
         &mut self,
         mesh: &'l Mesh<S::Vertex, T>,
-        instance: InstanceHandle,
+        instance: &'l Instance,
     ) -> Result<(), Error>
     where
         S: Shader,
@@ -130,7 +130,6 @@ impl<'l, S, T> Layer<'l, S, T> {
             self.pass.set_bind_group(index, group, &[]);
         }
 
-        let instance = self.resources.instances.get(instance.0)?;
         self.draw_mesh(mesh, instance);
         Ok(())
     }

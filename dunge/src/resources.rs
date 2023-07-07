@@ -1,7 +1,7 @@
 use {
     crate::{
         camera::{Camera, View},
-        error::{Error, ResourceNotFound, SourceError, SpaceError, TexturesError},
+        error::{ResourceNotFound, SourceError, SpaceError, TexturesError},
         handles::*,
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
         render::Render,
@@ -13,7 +13,7 @@ use {
             textures::{
                 Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
             },
-            Instance, Model, Source, SpaceData, TextureData,
+            Source, SpaceData, TextureData,
         },
         storage::Storage,
         topology::Topology,
@@ -25,7 +25,6 @@ use {
 #[derive(Default)]
 pub(crate) struct Resources {
     pub globals: Storage<Globals>,
-    pub instances: Storage<Instance>,
     pub layers: Storage<Pipeline>,
     pub lights: Storage<Lights>,
     pub shaders: Storage<ShaderData>,
@@ -216,26 +215,5 @@ impl Resources {
         handle: LayerHandle<V, T>,
     ) -> Result<(), ResourceNotFound> {
         self.layers.remove(handle.id())
-    }
-
-    pub fn create_instances(&mut self, render: &Render, models: &[Model]) -> InstanceHandle {
-        let instance = Instance::new(models, render.state().device());
-        let id = self.instances.insert(instance);
-        InstanceHandle(id)
-    }
-
-    pub fn update_instances(
-        &self,
-        render: &Render,
-        handle: InstanceHandle,
-        models: &[Model],
-    ) -> Result<(), Error> {
-        let instances = self.instances.get(handle.0)?;
-        instances.update(models, render.state().queue())?;
-        Ok(())
-    }
-
-    pub fn delete_instances(&mut self, handle: InstanceHandle) -> Result<(), ResourceNotFound> {
-        self.instances.remove(handle.0)
     }
 }
