@@ -26,10 +26,6 @@ impl<T> Storage<T> {
     pub fn get_mut(&mut self, index: u32) -> Result<&mut T, ResourceNotFound> {
         self.map.get_mut(&index).ok_or(ResourceNotFound)
     }
-
-    pub fn remove(&mut self, index: u32) -> Result<(), ResourceNotFound> {
-        self.map.remove(&index).map(drop).ok_or(ResourceNotFound)
-    }
 }
 
 impl<T> Default for Storage<T> {

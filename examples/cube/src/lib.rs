@@ -5,7 +5,7 @@ use {
         handles::*,
         input::{Input, Key},
         shader::*,
-        Context, Error, Frame, Instance, Loop, Mesh, MeshData, Model, Perspective, Rgba,
+        Context, Error, Frame, Instance, Layer, Loop, Mesh, MeshData, Model, Perspective, Rgba,
         TextureData, Vertex,
     },
     utils::Camera,
@@ -47,8 +47,8 @@ enum State {
 }
 
 pub struct App {
-    texture_layer: LayerHandle<TextureShader>,
-    color_layer: LayerHandle<ColorShader>,
+    texture_layer: Layer<TextureShader>,
+    color_layer: Layer<ColorShader>,
     texture_globals: GlobalsHandle<TextureShader>,
     color_globals: GlobalsHandle<ColorShader>,
     textures: TexturesHandle<TextureShader>,
@@ -79,17 +79,9 @@ impl App {
         };
 
         // Create globals
-        let texture_globals = context
-            .globals_builder()
-            .with_view()
-            .build(texture_layer)
-            .expect("create texture globals");
+        let texture_globals = context.globals_builder().with_view().build(&texture_layer);
 
-        let color_globals = context
-            .globals_builder()
-            .with_view()
-            .build(color_layer)
-            .expect("create color globals");
+        let color_globals = context.globals_builder().with_view().build(&color_layer);
 
         // Create a textures
         let textures = {
@@ -98,8 +90,7 @@ impl App {
             context
                 .textures_builder()
                 .with_map(data)
-                .build(texture_layer)
-                .expect("create textures")
+                .build(&texture_layer)
         };
 
         // Create a model instance
@@ -175,7 +166,7 @@ impl Loop for App {
         let clear_color = Rgba::from_standard_bytes([46, 34, 47, 255]);
         match self.state {
             State::Texture => frame
-                .layer(self.texture_layer)?
+                .layer(&self.texture_layer)
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start()
@@ -183,7 +174,7 @@ impl Loop for App {
                 .bind_textures(self.textures)?
                 .draw(&self.texture_mesh, &self.instance)?,
             State::Color => frame
-                .layer(self.color_layer)?
+                .layer(&self.color_layer)
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start()

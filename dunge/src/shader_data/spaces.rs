@@ -1,7 +1,7 @@
 use {
     crate::{
-        error::ResourceNotFound,
-        handles::{LayerHandle, SpacesHandle},
+        handles::SpacesHandle,
+        layer::Layer,
         pipeline::Spaces as Bindings,
         render::Render,
         resources::Resources,
@@ -222,7 +222,7 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S>(self, handle: LayerHandle<S>) -> Result<SpacesHandle<S>, ResourceNotFound>
+    pub fn build<S, T>(self, layer: &Layer<S, T>) -> SpacesHandle<S>
     where
         S: Shader,
     {
@@ -245,6 +245,6 @@ impl<'a> Builder<'a> {
         }
 
         self.resources
-            .create_spaces(self.render, self.variables, handle)
+            .create_spaces(self.render, self.variables, layer)
     }
 }

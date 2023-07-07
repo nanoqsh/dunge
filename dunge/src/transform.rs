@@ -8,13 +8,12 @@ use {
 /// An instance transform.
 ///
 /// It descrides position, rotation and scale.
-/// The rotation may be any type that implements [`IntoQuat`].
 #[derive(Clone, Copy)]
 pub struct Transform {
     /// The position in X, Y, Z coordinates.
     pub pos: Vec3,
 
-    /// The rotation is one of an [`IntoQuat`] type.
+    /// The rotation expressed by a quaternion.
     pub rot: Quat,
 
     /// The scale in X, Y, Z axes.

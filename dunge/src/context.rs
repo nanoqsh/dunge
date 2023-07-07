@@ -6,6 +6,7 @@ use {
         error::*,
         framebuffer::FrameFilter,
         handles::*,
+        layer::Layer,
         mesh::{Data as MeshData, Mesh},
         pipeline::ParametersBuilder,
         render::{Render, State},
@@ -192,7 +193,7 @@ impl Context {
     pub fn create_layer<S, T>(
         &mut self,
         shader: ShaderHandle<S>,
-    ) -> Result<LayerHandle<S, T>, ResourceNotFound>
+    ) -> Result<Layer<S, T>, ResourceNotFound>
     where
         S: Shader,
         T: Topology,
@@ -201,19 +202,8 @@ impl Context {
     }
 
     /// Creates a layer [builder](ParametersBuilder) with custom parameters.
-    pub fn create_layer_with_parameters<V, T>(&mut self) -> ParametersBuilder<V, T> {
+    pub fn create_layer_with_parameters<S, T>(&mut self) -> ParametersBuilder<S, T> {
         ParametersBuilder::new(&self.render, &mut self.resources)
-    }
-
-    /// Deletes the layer.
-    ///
-    /// # Errors
-    /// See [`ResourceNotFound`] for detailed info.
-    pub fn delete_layer<V, T>(
-        &mut self,
-        handle: LayerHandle<V, T>,
-    ) -> Result<(), ResourceNotFound> {
-        self.resources.delete_layer(handle)
     }
 
     /// Creates new instances.

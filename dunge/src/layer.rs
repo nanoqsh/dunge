@@ -5,18 +5,54 @@ use {
         frame::Frame,
         handles::*,
         mesh::Mesh,
-        pipeline::Pipeline,
+        pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
         resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::Instance,
+        topology::{Topology, TriangleList},
     },
+    dunge_shader::Shader as ShaderData,
     std::marker::PhantomData,
-    wgpu::{BindGroup, Queue, RenderPass},
+    wgpu::{BindGroup, Device, Queue, RenderPass},
 };
 
-/// The frame layer. Can be created from a [`Frame`] instance.
 #[must_use]
-pub struct Layer<'l, S, T> {
+pub struct Layer<S, T = TriangleList> {
+    pipeline: Pipeline,
+    ty: PhantomData<(S, T)>,
+}
+
+impl<S, T> Layer<S, T> {
+    pub(crate) fn new(device: &Device, shader: &ShaderData, params: PipelineParameters) -> Self
+    where
+        S: Shader,
+        T: Topology,
+    {
+        let vert = VertexLayout::new::<S::Vertex>();
+        Self {
+            pipeline: Pipeline::new(
+                device,
+                shader,
+                Some(&vert),
+                PipelineParameters {
+                    topology: T::VALUE.into_inner(),
+                    ..params
+                },
+            ),
+            ty: PhantomData,
+        }
+    }
+
+    pub(crate) fn pipeline(&self) -> &Pipeline {
+        &self.pipeline
+    }
+}
+
+/// The frame's active layer.
+///
+/// Can be created from a [`Frame`] instance by calling a [`layer`](Frame::layer) function.
+#[must_use]
+pub struct ActiveLayer<'l, S, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),
     queue: &'l Queue,
@@ -26,7 +62,7 @@ pub struct Layer<'l, S, T> {
     ty: PhantomData<(S, T)>,
 }
 
-impl<'l, S, T> Layer<'l, S, T> {
+impl<'l, S, T> ActiveLayer<'l, S, T> {
     pub(crate) fn new(
         pass: RenderPass<'l>,
         size: (u32, u32),
@@ -97,7 +133,7 @@ impl<'l, S, T> Layer<'l, S, T> {
         Ok(self)
     }
 
-    /// Draws the [mesh](crate::handles::MeshHandle).
+    /// Draws the [mesh](crate::Mesh).
     ///
     /// # Errors
     /// See [`Error`] for details.
@@ -168,18 +204,18 @@ struct Groups<'l> {
     spaces: Option<(u32, &'l BindGroup)>,
 }
 
-/// The layer builder. It creates a configured [`Layer`].
+/// The layer builder. It creates a configured [`ActiveLayer`].
 #[must_use]
-pub struct Builder<'l, 'd, S, T> {
+pub struct Builder<'d, 'l, S, T> {
     frame: &'l mut Frame<'d>,
-    pipeline: &'d Pipeline,
+    pipeline: &'l Pipeline,
     clear_color: Option<[f64; 4]>,
     clear_depth: bool,
     vertex_type: PhantomData<(S, T)>,
 }
 
-impl<'l, 'd, S, T> Builder<'l, 'd, S, T> {
-    pub(crate) fn new(frame: &'l mut Frame<'d>, pipeline: &'d Pipeline) -> Self {
+impl<'d, 'l, S, T> Builder<'d, 'l, S, T> {
+    pub(crate) fn new(frame: &'l mut Frame<'d>, pipeline: &'l Pipeline) -> Self {
         Self {
             frame,
             pipeline,
@@ -211,7 +247,7 @@ impl<'l, 'd, S, T> Builder<'l, 'd, S, T> {
     }
 
     /// Starts draw the layer.
-    pub fn start(self) -> Layer<'l, S, T> {
+    pub fn start(self) -> ActiveLayer<'l, S, T> {
         self.frame
             .start_layer(self.pipeline, self.clear_color, self.clear_depth)
     }

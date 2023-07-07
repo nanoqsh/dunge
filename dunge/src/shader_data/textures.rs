@@ -1,7 +1,8 @@
 use {
     crate::{
-        error::{ResourceNotFound, TooLargeSize},
-        handles::{LayerHandle, TexturesHandle},
+        error::TooLargeSize,
+        handles::TexturesHandle,
+        layer::Layer,
         pipeline::Textures as Bindings,
         render::Render,
         resources::Resources,
@@ -96,7 +97,7 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S>(self, handle: LayerHandle<S>) -> Result<TexturesHandle<S>, ResourceNotFound>
+    pub fn build<S, T>(self, handle: &Layer<S, T>) -> TexturesHandle<S>
     where
         S: Shader,
     {

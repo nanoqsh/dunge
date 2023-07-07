@@ -3,9 +3,8 @@ use {
         camera::{Camera, View},
         error::{ResourceNotFound, SourceError, SpaceError, TexturesError},
         handles::*,
-        pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
+        layer::Layer,
         render::Render,
-        shader::Shader,
         shader_data::{
             globals::{Globals, Parameters as GlobalsParameters, Variables as GlobalsVariables},
             lights::{Lights, Parameters as LightsParameters, Variables as LightsVariables},
@@ -16,7 +15,6 @@ use {
             Source, SpaceData, TextureData,
         },
         storage::Storage,
-        topology::Topology,
     },
     dunge_shader::{Scheme, Shader as ShaderData},
 };
@@ -25,7 +23,6 @@ use {
 #[derive(Default)]
 pub(crate) struct Resources {
     pub globals: Storage<Globals>,
-    pub layers: Storage<Pipeline>,
     pub lights: Storage<Lights>,
     pub shaders: Storage<ShaderData>,
     pub spaces: Storage<Spaces>,
@@ -37,10 +34,13 @@ impl Resources {
         &mut self,
         render: &Render,
         variables: GlobalsVariables,
-        handle: LayerHandle<S, T>,
-    ) -> Result<GlobalsHandle<S>, ResourceNotFound> {
-        let layer = self.layers.get(handle.id())?;
-        let globals = layer.globals().expect("the shader has no globals");
+        layer: &Layer<S, T>,
+    ) -> GlobalsHandle<S> {
+        let globals = layer
+            .pipeline()
+            .globals()
+            .expect("the shader has no globals");
+
         let params = GlobalsParameters {
             camera: Camera::default(),
             variables,
@@ -50,7 +50,7 @@ impl Resources {
 
         let globals = Globals::new(params, render.state().device());
         let id = self.globals.insert(globals);
-        Ok(GlobalsHandle::new(id))
+        GlobalsHandle::new(id)
     }
 
     pub fn update_globals_view<S>(
@@ -75,14 +75,17 @@ impl Resources {
         Ok(())
     }
 
-    pub fn create_textures<S>(
+    pub fn create_textures<S, T>(
         &mut self,
         render: &Render,
         variables: TexturesVariables,
-        handle: LayerHandle<S>,
-    ) -> Result<TexturesHandle<S>, ResourceNotFound> {
-        let layer = self.layers.get(handle.id())?;
-        let textures = layer.textures().expect("the shader has no textures");
+        layer: &Layer<S, T>,
+    ) -> TexturesHandle<S> {
+        let textures = layer
+            .pipeline()
+            .textures()
+            .expect("the shader has no textures");
+
         let params = TexturesParameters {
             variables,
             bindings: &textures.bindings,
@@ -92,7 +95,7 @@ impl Resources {
         let context = render.state();
         let textures = Textures::new(params, context.device(), context.queue());
         let id = self.textures.insert(textures);
-        Ok(TexturesHandle::new(id))
+        TexturesHandle::new(id)
     }
 
     pub fn update_textures_map<S>(
@@ -108,14 +111,13 @@ impl Resources {
         Ok(())
     }
 
-    pub fn create_lights<S>(
+    pub fn create_lights<S, T>(
         &mut self,
         render: &Render,
         variables: LightsVariables,
-        handle: LayerHandle<S>,
-    ) -> Result<LightsHandle<S>, ResourceNotFound> {
-        let layer = self.layers.get(handle.id())?;
-        let lights = layer.lights().expect("the shader has no lights");
+        layer: &Layer<S, T>,
+    ) -> LightsHandle<S> {
+        let lights = layer.pipeline().lights().expect("the shader has no lights");
         let params = LightsParameters {
             variables,
             bindings: &lights.bindings,
@@ -124,7 +126,7 @@ impl Resources {
 
         let lights = Lights::new(params, render.state().device());
         let id = self.lights.insert(lights);
-        Ok(LightsHandle::new(id))
+        LightsHandle::new(id)
     }
 
     pub fn update_lights_sources<S>(
@@ -144,14 +146,13 @@ impl Resources {
         Ok(())
     }
 
-    pub fn create_spaces<S>(
+    pub fn create_spaces<S, T>(
         &mut self,
         render: &Render,
         variables: SpacesVariables,
-        handle: LayerHandle<S>,
-    ) -> Result<SpacesHandle<S>, ResourceNotFound> {
-        let layer = self.layers.get(handle.id())?;
-        let spaces = layer.spaces().expect("the shader has no spaces");
+        layer: &Layer<S, T>,
+    ) -> SpacesHandle<S> {
+        let spaces = layer.pipeline().spaces().expect("the shader has no spaces");
         let params = SpacesParameters {
             variables,
             bindings: &spaces.bindings,
@@ -161,7 +162,7 @@ impl Resources {
         let context = render.state();
         let spaces = Spaces::new(params, context.device(), context.queue());
         let id = self.spaces.insert(spaces);
-        Ok(SpacesHandle::new(id))
+        SpacesHandle::new(id)
     }
 
     pub fn update_spaces_data<S>(
@@ -183,37 +184,5 @@ impl Resources {
         log::debug!("generated shader:\n{}", shader.source);
         let id = self.shaders.insert(shader);
         ShaderHandle::new(id)
-    }
-
-    pub fn create_layer<S, T>(
-        &mut self,
-        render: &Render,
-        params: PipelineParameters,
-        handle: ShaderHandle<S>,
-    ) -> Result<LayerHandle<S, T>, ResourceNotFound>
-    where
-        S: Shader,
-        T: Topology,
-    {
-        let vert = VertexLayout::new::<S::Vertex>();
-        let pipeline = Pipeline::new(
-            render.state().device(),
-            self.shaders.get(handle.id())?,
-            Some(&vert),
-            PipelineParameters {
-                topology: T::VALUE.into_inner(),
-                ..params
-            },
-        );
-
-        let id = self.layers.insert(pipeline);
-        Ok(LayerHandle::new(id))
-    }
-
-    pub fn delete_layer<V, T>(
-        &mut self,
-        handle: LayerHandle<V, T>,
-    ) -> Result<(), ResourceNotFound> {
-        self.layers.remove(handle.id())
     }
 }

@@ -6,8 +6,8 @@ use {
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
-        Color, Compare, Context, Error, Frame, FrameParameters, Instance, Loop, Mesh, MeshData,
-        Model, Orthographic, PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat,
+        Color, Compare, Context, Error, Frame, FrameParameters, Instance, Layer, Loop, Mesh,
+        MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat,
         TextureData, Transform, Vertex,
     },
     utils::Camera,
@@ -59,8 +59,8 @@ struct Cube {
 }
 
 pub struct App {
-    texture_layer: LayerHandle<TextureShader>,
-    color_layer: LayerHandle<ColorShader, LineStrip>,
+    texture_layer: Layer<TextureShader>,
+    color_layer: Layer<ColorShader, LineStrip>,
     sprites: TexturesHandle<TextureShader>,
     sprite_meshes: Vec<Sprite>,
     cubes: Vec<Cube>,
@@ -107,8 +107,7 @@ impl App {
             context
                 .textures_builder()
                 .with_map(data)
-                .build(texture_layer)
-                .expect("create textures")
+                .build(&texture_layer)
         };
 
         // Create globals
@@ -116,21 +115,15 @@ impl App {
             .globals_builder()
             .with_view()
             .with_ambient(AMBIENT_COLOR)
-            .build(texture_layer)
-            .expect("create texture globals");
+            .build(&texture_layer);
 
-        let color_globals = context
-            .globals_builder()
-            .with_view()
-            .build(color_layer)
-            .expect("create color globals");
+        let color_globals = context.globals_builder().with_view().build(&color_layer);
 
         // Crate the lights
         let lights = context
             .lights_builder()
             .with_sources(vec![])
-            .build(texture_layer)
-            .expect("create light");
+            .build(&texture_layer);
 
         // Create the light spaces
         let spaces = {
@@ -159,8 +152,7 @@ impl App {
             context
                 .spaces_builder()
                 .with_space(space)
-                .build(texture_layer)
-                .expect("create space")
+                .build(&texture_layer)
         };
 
         // Create models
@@ -395,7 +387,7 @@ impl Loop for App {
         {
             let clear_color = Rgba::from_standard_bytes([46, 34, 47, 255]);
             let mut layer = frame
-                .layer(self.texture_layer)?
+                .layer(&self.texture_layer)
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start();
@@ -412,7 +404,7 @@ impl Loop for App {
         }
 
         {
-            let mut layer = frame.layer(self.color_layer)?.start();
+            let mut layer = frame.layer(&self.color_layer).start();
             layer.bind_globals(self.color_globals)?;
             for cube in &self.cubes {
                 layer.draw(&cube.mesh, &cube.instance)?;

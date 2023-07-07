@@ -1,8 +1,6 @@
 use {
     crate::{
-        error::ResourceNotFound,
-        handles::LayerHandle,
-        layer::{Builder, Layer},
+        layer::{ActiveLayer, Builder, Layer},
         pipeline::Pipeline,
         postproc::PostProcessor,
         render::Render,
@@ -12,7 +10,7 @@ use {
 };
 
 /// The type that represented a current frame
-/// and creates new [layers](crate::Layer).
+/// and creates new [layers](crate::ActiveLayer).
 pub struct Frame<'d> {
     render: &'d Render,
     resources: &'d Resources,
@@ -106,23 +104,17 @@ impl<'d> Frame<'d> {
         self.encoder.finish(self.render);
     }
 
-    /// Starts a [layer](crate::handles::LayerHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`] if given instance handler was deleted.
-    pub fn layer<V, T>(
-        &mut self,
-        handle: LayerHandle<V, T>,
-    ) -> Result<Builder<'_, 'd, V, T>, ResourceNotFound> {
-        Ok(Builder::new(self, self.resources.layers.get(handle.id())?))
+    /// Starts the [layer](crate::Layer).
+    pub fn layer<'l, S, T>(&'l mut self, layer: &'l Layer<S, T>) -> Builder<'d, 'l, S, T> {
+        Builder::new(self, layer.pipeline())
     }
 
-    pub(crate) fn start_layer<'l, V, T>(
+    pub(crate) fn start_layer<'l, S, T>(
         &'l mut self,
         pipeline: &'l Pipeline,
         clear_color: Option<[f64; 4]>,
         clear_depth: bool,
-    ) -> Layer<V, T> {
+    ) -> ActiveLayer<'l, S, T> {
         use wgpu::*;
 
         // Before start a new layer, finish the previous one if it exists
@@ -163,7 +155,7 @@ impl<'d> Frame<'d> {
         let view_size = screen.virtual_size_with_antialiasing().as_vec2();
         pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
 
-        Layer::new(
+        ActiveLayer::new(
             pass,
             screen.virtual_size().into(),
             self.render.state().queue(),

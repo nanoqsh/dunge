@@ -1,7 +1,7 @@
 use {
     crate::{
-        error::ResourceNotFound,
-        handles::{LayerHandle, LightsHandle},
+        handles::LightsHandle,
+        layer::Layer,
         pipeline::Lights as Bindings,
         render::Render,
         resources::Resources,
@@ -176,7 +176,7 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S>(self, handle: LayerHandle<S>) -> Result<LightsHandle<S>, ResourceNotFound>
+    pub fn build<S, T>(self, layer: &Layer<S, T>) -> LightsHandle<S>
     where
         S: Shader,
     {
@@ -189,6 +189,6 @@ impl<'a> Builder<'a> {
         );
 
         self.resources
-            .create_lights(self.render, self.variables, handle)
+            .create_lights(self.render, self.variables, layer)
     }
 }

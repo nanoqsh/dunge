@@ -1,14 +1,8 @@
 use {
     crate::{
-        error::ResourceNotFound,
-        framebuffer::Framebuffer,
-        handles::{LayerHandle, ShaderHandle},
-        render::Render,
-        resources::Resources,
-        shader::Shader,
-        shader_data::Model,
-        topology::Topology,
-        vertex::Vertex,
+        error::ResourceNotFound, framebuffer::Framebuffer, handles::ShaderHandle, layer::Layer,
+        render::Render, resources::Resources, shader::Shader, shader_data::Model,
+        topology::Topology, vertex::Vertex,
     },
     dunge_shader::{Layout, Shader as ShaderData, SourceBindings, SpaceBindings, TextureBindings},
     std::marker::PhantomData,
@@ -128,13 +122,17 @@ impl<'a, S, T> ParametersBuilder<'a, S, T> {
     ///
     /// # Errors
     /// Returns [`ResourceNotFound`] if given shader handler was deleted.
-    pub fn build(self, shader: ShaderHandle<S>) -> Result<LayerHandle<S, T>, ResourceNotFound>
+    pub fn build(self, shader: ShaderHandle<S>) -> Result<Layer<S, T>, ResourceNotFound>
     where
         S: Shader,
         T: Topology,
     {
-        self.resources
-            .create_layer(self.render, self.params, shader)
+        let shader = self.resources.shaders.get(shader.id())?;
+        Ok(Layer::new(
+            self.render.state().device(),
+            shader,
+            self.params,
+        ))
     }
 }
 

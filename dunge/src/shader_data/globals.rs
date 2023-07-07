@@ -2,8 +2,8 @@ use {
     crate::{
         camera::{Camera, View},
         color::{Color, Rgb},
-        error::ResourceNotFound,
-        handles::{GlobalsHandle, LayerHandle},
+        handles::GlobalsHandle,
+        layer::Layer,
         pipeline::Globals as Bindings,
         render::Render,
         resources::Resources,
@@ -142,10 +142,7 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S, T>(
-        self,
-        handle: LayerHandle<S, T>,
-    ) -> Result<GlobalsHandle<S>, ResourceNotFound>
+    pub fn build<S, T>(self, layer: &Layer<S, T>) -> GlobalsHandle<S>
     where
         S: Shader,
     {
@@ -165,6 +162,6 @@ impl<'a> Builder<'a> {
         }
 
         self.resources
-            .create_globals(self.render, self.variables, handle)
+            .create_globals(self.render, self.variables, layer)
     }
 }

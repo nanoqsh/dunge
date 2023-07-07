@@ -74,7 +74,7 @@ pub use {
         error::Error,
         frame::Frame,
         framebuffer::FrameFilter,
-        layer::{Builder as LayerBuilder, Layer},
+        layer::{ActiveLayer, Builder as LayerBuilder, Layer},
         mesh::{Data as MeshData, Error as MeshError, Mesh},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
