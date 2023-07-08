@@ -39,6 +39,7 @@ mod shader_data {
     pub(crate) use self::post::PostShaderData;
 
     pub use self::{
+        globals::{Builder as GlobalsBuilder, Globals},
         instance::{Instance, Model},
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
@@ -81,7 +82,8 @@ pub use {
         r#loop::Loop,
         scheme::ShaderScheme,
         shader_data::{
-            Instance, Model, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
+            Globals, GlobalsBuilder, Instance, Model, Source, Space, SpaceData, SpaceFormat,
+            TextureData, TextureError,
         },
         transform::Transform,
         vertex::Vertex,

@@ -6,9 +6,9 @@ use {
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
-        Color, Compare, Context, Error, Frame, FrameParameters, Instance, Layer, Loop, Mesh,
-        MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space,
-        SpaceData, SpaceFormat, TextureData, Transform, Vertex,
+        Color, Compare, Context, Error, Frame, FrameParameters, Globals, Instance, Layer, Loop,
+        Mesh, MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space,
+        SpaceData, SpaceFormat, TextureData, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -64,8 +64,8 @@ pub struct App {
     sprites: TexturesHandle<TextureShader>,
     sprite_meshes: Vec<Sprite>,
     cubes: Vec<Cube>,
-    texture_globals: GlobalsHandle<TextureShader>,
-    color_globals: GlobalsHandle<ColorShader>,
+    texture_globals: Globals<TextureShader>,
+    color_globals: Globals<ColorShader>,
     lights: LightsHandle<TextureShader>,
     spaces: SpacesHandle<TextureShader>,
     camera: Camera,
@@ -105,11 +105,14 @@ impl App {
         // Create globals
         let texture_globals = context
             .globals_builder()
-            .with_view()
+            .with_view(View::default())
             .with_ambient(AMBIENT_COLOR)
             .build(&texture_layer);
 
-        let color_globals = context.globals_builder().with_view().build(&color_layer);
+        let color_globals = context
+            .globals_builder()
+            .with_view(View::default())
+            .build(&color_layer);
 
         // Crate the lights
         let lights = context
@@ -356,8 +359,8 @@ impl Loop for App {
             ..Default::default()
         });
 
-        context.update_globals_view(self.texture_globals, view)?;
-        context.update_globals_view(self.color_globals, view)?;
+        self.texture_globals.update_view(view);
+        self.color_globals.update_view(view);
 
         self.sprite_meshes
             .iter()
@@ -385,7 +388,7 @@ impl Loop for App {
                 .start();
 
             layer
-                .bind_globals(self.texture_globals)?
+                .bind_globals(&self.texture_globals)
                 .bind_lights(self.lights)?
                 .bind_spaces(self.spaces)?
                 .bind_textures(self.sprites)?;
@@ -397,7 +400,7 @@ impl Loop for App {
 
         {
             let mut layer = frame.layer(&self.color_layer).start();
-            layer.bind_globals(self.color_globals)?;
+            layer.bind_globals(&self.color_globals);
             for cube in &self.cubes {
                 layer.draw(&cube.mesh, &cube.instance)?;
             }

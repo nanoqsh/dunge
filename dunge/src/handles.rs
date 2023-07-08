@@ -3,27 +3,6 @@
 use std::marker::PhantomData;
 
 #[must_use]
-pub struct GlobalsHandle<S>(u32, PhantomData<S>);
-
-impl<S> GlobalsHandle<S> {
-    pub(crate) fn new(id: u32) -> Self {
-        Self(id, PhantomData)
-    }
-
-    pub(crate) fn id(self) -> u32 {
-        self.0
-    }
-}
-
-impl<S> Clone for GlobalsHandle<S> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<S> Copy for GlobalsHandle<S> {}
-
-#[must_use]
 pub struct LightsHandle<S>(u32, PhantomData<S>);
 
 impl<S> LightsHandle<S> {

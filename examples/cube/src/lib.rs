@@ -5,8 +5,8 @@ use {
         handles::*,
         input::{Input, Key},
         shader::*,
-        Context, Error, Frame, Instance, Layer, Loop, Mesh, MeshData, Model, Perspective, Rgba,
-        TextureData, Vertex,
+        Context, Error, Frame, Globals, Instance, Layer, Loop, Mesh, MeshData, Model, Perspective,
+        Rgba, TextureData, Vertex, View,
     },
     utils::Camera,
 };
@@ -49,8 +49,8 @@ enum State {
 pub struct App {
     texture_layer: Layer<TextureShader>,
     color_layer: Layer<ColorShader>,
-    texture_globals: GlobalsHandle<TextureShader>,
-    color_globals: GlobalsHandle<ColorShader>,
+    texture_globals: Globals<TextureShader>,
+    color_globals: Globals<ColorShader>,
     textures: TexturesHandle<TextureShader>,
     instance: Instance,
     texture_mesh: Mesh<TextureVert>,
@@ -66,9 +66,15 @@ impl App {
         let color_layer = context.create_layer();
 
         // Create globals
-        let texture_globals = context.globals_builder().with_view().build(&texture_layer);
+        let texture_globals = context
+            .globals_builder()
+            .with_view(View::default())
+            .build(&texture_layer);
 
-        let color_globals = context.globals_builder().with_view().build(&color_layer);
+        let color_globals = context
+            .globals_builder()
+            .with_view(View::default())
+            .build(&color_layer);
 
         // Create a textures
         let textures = {
@@ -144,8 +150,9 @@ impl Loop for App {
 
         // Set the view
         let view = self.camera.view(Perspective::default());
-        context.update_globals_view(self.texture_globals, view)?;
-        context.update_globals_view(self.color_globals, view)?;
+        self.texture_globals.update_view(view);
+        self.color_globals.update_view(view);
+
         Ok(())
     }
 
@@ -157,7 +164,7 @@ impl Loop for App {
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start()
-                .bind_globals(self.texture_globals)?
+                .bind_globals(&self.texture_globals)
                 .bind_textures(self.textures)?
                 .draw(&self.texture_mesh, &self.instance)?,
             State::Color => frame
@@ -165,7 +172,7 @@ impl Loop for App {
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start()
-                .bind_globals(self.color_globals)?
+                .bind_globals(&self.color_globals)
                 .draw(&self.color_mesh, &self.instance)?,
         }
 

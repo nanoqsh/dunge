@@ -2,28 +2,27 @@ use {
     crate::{
         camera::{Camera, View},
         color::{Color, Rgb},
-        handles::GlobalsHandle,
         layer::Layer,
         pipeline::Globals as Bindings,
         render::State,
-        resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::{ambient::AmbientUniform, Model},
     },
-    std::sync::Arc,
+    std::{marker::PhantomData, sync::Arc},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
 };
 
-pub(crate) struct Globals {
+pub struct Globals<S> {
     group: u32,
     bind_group: BindGroup,
     camera: Option<(Camera, Buffer)>,
     ambient: Option<Buffer>,
     queue: Arc<Queue>,
+    ty: PhantomData<S>,
 }
 
-impl Globals {
-    pub fn new(params: Parameters, state: &State) -> Self {
+impl<S> Globals<S> {
+    fn new(params: Parameters, state: &State) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
@@ -37,12 +36,17 @@ impl Globals {
         } = params;
 
         let device = state.device();
-        let camera = variables.camera.map(|uniform| {
-            device.create_buffer_init(&BufferInitDescriptor {
+        let camera = variables.view.map(|view| {
+            let model = Model::default();
+            let buf = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("camera buffer"),
-                contents: bytemuck::cast_slice(&[uniform]),
+                contents: bytemuck::cast_slice(&[model]),
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            })
+            });
+
+            let mut camera = Camera::default();
+            camera.update_view(view);
+            (camera, buf)
         });
 
         let ambient = variables.ambient.map(|uniform| {
@@ -54,7 +58,7 @@ impl Globals {
         });
 
         let entries: Vec<_> = [
-            camera.as_ref().map(|buf| BindGroupEntry {
+            camera.as_ref().map(|(_, buf)| BindGroupEntry {
                 binding: bindings.camera,
                 resource: buf.as_entire_binding(),
             }),
@@ -74,18 +78,38 @@ impl Globals {
                 entries: &entries,
                 label: Some("globals bind group"),
             }),
-            camera: camera.map(|buf| (params.camera, buf)),
+            camera,
             ambient,
             queue: Arc::clone(state.queue()),
+            ty: PhantomData,
         }
     }
 
-    pub fn set_view(&mut self, view: View) {
+    pub fn update_view(&mut self, view: View)
+    where
+        S: Shader,
+    {
+        let info = ShaderInfo::new::<S>();
+        assert!(info.has_camera, "the shader has no view");
+
         let (camera, _) = self.camera.as_mut().expect("camera");
-        camera.set_view(view);
+        camera.update_view(view);
     }
 
-    pub fn write_camera(&self, size: (u32, u32)) {
+    pub fn update_ambient(&self, Color(col): Rgb)
+    where
+        S: Shader,
+    {
+        let info = ShaderInfo::new::<S>();
+        assert!(info.has_ambient, "the shader has no ambient");
+
+        let buf = self.ambient.as_ref().expect("ambient");
+        let uniform = AmbientUniform::new(col);
+        self.queue
+            .write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
+    }
+
+    pub(crate) fn update_size(&self, size: (u32, u32)) {
         let Some((camera, buf)) = &self.camera else {
             return;
         };
@@ -95,51 +119,38 @@ impl Globals {
             .write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
-    pub fn write_ambient(&self, color: [f32; 3]) {
-        let Some(buf) = &self.ambient else {
-            return;
-        };
-
-        let uniform = AmbientUniform::new(color);
-        self.queue
-            .write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
-    }
-
-    pub fn bind(&self) -> (u32, &BindGroup) {
+    pub(crate) fn bind(&self) -> (u32, &BindGroup) {
         (self.group, &self.bind_group)
     }
 }
 
-pub(crate) struct Parameters<'a> {
-    pub camera: Camera,
-    pub variables: Variables,
-    pub bindings: &'a Bindings,
-    pub layout: &'a BindGroupLayout,
+struct Parameters<'a> {
+    variables: Variables,
+    bindings: &'a Bindings,
+    layout: &'a BindGroupLayout,
 }
 
 #[derive(Default)]
-pub(crate) struct Variables {
-    pub camera: Option<Model>,
-    pub ambient: Option<AmbientUniform>,
+struct Variables {
+    view: Option<View>,
+    ambient: Option<AmbientUniform>,
 }
 
 pub struct Builder<'a> {
-    resources: &'a mut Resources,
     state: &'a State,
     variables: Variables,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(resources: &'a mut Resources, state: &'a State) -> Self {
+    pub(crate) fn new(state: &'a State) -> Self {
         Self {
-            resources,
             state,
             variables: Variables::default(),
         }
     }
 
-    pub fn with_view(mut self) -> Self {
-        self.variables.camera = Some(Model::default());
+    pub fn with_view(mut self, view: View) -> Self {
+        self.variables.view = Some(view);
         self
     }
 
@@ -148,14 +159,14 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S, T>(self, layer: &Layer<S, T>) -> GlobalsHandle<S>
+    pub fn build<S, T>(self, layer: &Layer<S, T>) -> Globals<S>
     where
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
         if info.has_camera {
             assert!(
-                self.variables.camera.is_some(),
+                self.variables.view.is_some(),
                 "the shader requires `view`, but it's not set",
             );
         }
@@ -167,7 +178,17 @@ impl<'a> Builder<'a> {
             );
         }
 
-        self.resources
-            .create_globals(self.state, self.variables, layer)
+        let globals = layer
+            .pipeline()
+            .globals()
+            .expect("the shader has no globals");
+
+        let params = Parameters {
+            variables: self.variables,
+            bindings: &globals.bindings,
+            layout: &globals.layout,
+        };
+
+        Globals::new(params, self.state)
     }
 }

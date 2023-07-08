@@ -8,7 +8,7 @@ use {
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
         resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::Instance,
+        shader_data::{globals::Globals, Instance},
         topology::{Topology, TriangleList},
     },
     dunge_shader::Shader as ShaderData,
@@ -71,27 +71,12 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         }
     }
 
-    /// Binds the [globals](crate::handles::GlobalsHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given globals handler was deleted.
-    pub fn bind_globals(
-        &mut self,
-        handle: GlobalsHandle<S>,
-    ) -> Result<&mut Self, ResourceNotFound> {
-        let globals = self.resources.globals.get(handle.id())?;
-        globals.write_camera(self.size);
-
+    pub fn bind_globals(&mut self, globals: &'l Globals<S>) -> &mut Self {
+        globals.update_size(self.size);
         self.groups.globals = Some(globals.bind());
-        Ok(self)
+        self
     }
 
-    /// Binds the [textures](crate::handles::TexturesHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given textures handler was deleted.
     pub fn bind_textures(
         &mut self,
         handle: TexturesHandle<S>,
@@ -101,22 +86,12 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         Ok(self)
     }
 
-    /// Binds the [lights](crate::handles::LightsHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given lights handler was deleted.
     pub fn bind_lights(&mut self, handle: LightsHandle<S>) -> Result<&mut Self, ResourceNotFound> {
         let lights = self.resources.lights.get(handle.id())?;
         self.groups.lights = Some(lights.bind());
         Ok(self)
     }
 
-    /// Binds the [spaces](crate::handles::SpacesHandle).
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`](crate::error::ResourceNotFound)
-    /// if given spaces handler was deleted.
     pub fn bind_spaces(&mut self, handle: SpacesHandle<S>) -> Result<&mut Self, ResourceNotFound> {
         let spaces = self.resources.spaces.get(handle.id())?;
         self.groups.spaces = Some(spaces.bind());

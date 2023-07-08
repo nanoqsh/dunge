@@ -1,8 +1,6 @@
 use {
     crate::{
-        camera::View,
         canvas::CanvasEvent,
-        color::Rgb,
         error::*,
         framebuffer::FrameFilter,
         handles::*,
@@ -83,35 +81,7 @@ impl Context {
     }
 
     pub fn globals_builder(&mut self) -> GlobalsBuilder {
-        GlobalsBuilder::new(&mut self.resources, self.render.state())
-    }
-
-    pub fn update_globals_view<S>(
-        &mut self,
-        handle: GlobalsHandle<S>,
-        view: View,
-    ) -> Result<(), ResourceNotFound>
-    where
-        S: Shader,
-    {
-        assert!(ShaderInfo::new::<S>().has_camera, "the shader has no view");
-        self.resources.update_globals_view(handle, view)
-    }
-
-    pub fn update_globals_ambient<S>(
-        &mut self,
-        handle: GlobalsHandle<S>,
-        col: Rgb,
-    ) -> Result<(), ResourceNotFound>
-    where
-        S: Shader,
-    {
-        assert!(
-            ShaderInfo::new::<S>().has_ambient,
-            "the shader has no ambient",
-        );
-
-        self.resources.update_globals_ambient(handle, col.0)
+        GlobalsBuilder::new(self.render.state())
     }
 
     pub fn textures_builder(&mut self) -> TexturesBuilder {

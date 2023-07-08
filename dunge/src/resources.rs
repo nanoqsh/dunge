@@ -1,11 +1,9 @@
 use crate::{
-    camera::{Camera, View},
-    error::{ResourceNotFound, SourceError, SpaceError, TexturesError},
+    error::{SourceError, SpaceError, TexturesError},
     handles::*,
     layer::Layer,
     render::State,
     shader_data::{
-        globals::{Globals, Parameters as GlobalsParameters, Variables as GlobalsVariables},
         lights::{Lights, Parameters as LightsParameters, Variables as LightsVariables},
         spaces::{Parameters as SpacesParameters, Spaces, Variables as SpacesVariables},
         textures::{Parameters as TexturesParameters, Textures, Variables as TexturesVariables},
@@ -17,54 +15,12 @@ use crate::{
 /// A container of resources for render.
 #[derive(Default)]
 pub(crate) struct Resources {
-    pub globals: Storage<Globals>,
     pub lights: Storage<Lights>,
     pub spaces: Storage<Spaces>,
     pub textures: Storage<Textures>,
 }
 
 impl Resources {
-    pub fn create_globals<S, T>(
-        &mut self,
-        state: &State,
-        variables: GlobalsVariables,
-        layer: &Layer<S, T>,
-    ) -> GlobalsHandle<S> {
-        let globals = layer
-            .pipeline()
-            .globals()
-            .expect("the shader has no globals");
-
-        let params = GlobalsParameters {
-            camera: Camera::default(),
-            variables,
-            bindings: &globals.bindings,
-            layout: &globals.layout,
-        };
-
-        let globals = Globals::new(params, state);
-        let id = self.globals.insert(globals);
-        GlobalsHandle::new(id)
-    }
-
-    pub fn update_globals_view<S>(
-        &mut self,
-        handle: GlobalsHandle<S>,
-        view: View,
-    ) -> Result<(), ResourceNotFound> {
-        self.globals.get_mut(handle.id())?.set_view(view);
-        Ok(())
-    }
-
-    pub fn update_globals_ambient<S>(
-        &self,
-        handle: GlobalsHandle<S>,
-        col: [f32; 3],
-    ) -> Result<(), ResourceNotFound> {
-        self.globals.get(handle.id())?.write_ambient(col);
-        Ok(())
-    }
-
     pub fn create_textures<S, T>(
         &mut self,
         state: &State,

@@ -11,7 +11,7 @@ pub(crate) struct Camera {
 }
 
 impl Camera {
-    pub fn set_view(&mut self, view: View) {
+    pub fn update_view(&mut self, view: View) {
         self.view = view;
         self.cache.set(None);
     }
