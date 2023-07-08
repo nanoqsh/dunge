@@ -1,13 +1,12 @@
 use crate::{
-    error::{SourceError, SpaceError, TexturesError},
+    error::{SourceError, SpaceError},
     handles::*,
     layer::Layer,
     render::State,
     shader_data::{
         lights::{Lights, Parameters as LightsParameters, Variables as LightsVariables},
         spaces::{Parameters as SpacesParameters, Spaces, Variables as SpacesVariables},
-        textures::{Parameters as TexturesParameters, Textures, Variables as TexturesVariables},
-        Source, SpaceData, TextureData,
+        Source, SpaceData,
     },
     storage::Storage,
 };
@@ -17,41 +16,9 @@ use crate::{
 pub(crate) struct Resources {
     pub lights: Storage<Lights>,
     pub spaces: Storage<Spaces>,
-    pub textures: Storage<Textures>,
 }
 
 impl Resources {
-    pub fn create_textures<S, T>(
-        &mut self,
-        state: &State,
-        variables: TexturesVariables,
-        layer: &Layer<S, T>,
-    ) -> TexturesHandle<S> {
-        let textures = layer
-            .pipeline()
-            .textures()
-            .expect("the shader has no textures");
-
-        let params = TexturesParameters {
-            variables,
-            bindings: &textures.bindings,
-            layout: &textures.layout,
-        };
-
-        let textures = Textures::new(params, state);
-        let id = self.textures.insert(textures);
-        TexturesHandle::new(id)
-    }
-
-    pub fn update_textures_map<S>(
-        &self,
-        handle: TexturesHandle<S>,
-        data: TextureData,
-    ) -> Result<(), TexturesError> {
-        self.textures.get(handle.id())?.update_data(data)?;
-        Ok(())
-    }
-
     pub fn create_lights<S, T>(
         &mut self,
         state: &State,

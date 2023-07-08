@@ -43,24 +43,3 @@ impl<S> Clone for SpacesHandle<S> {
 }
 
 impl<S> Copy for SpacesHandle<S> {}
-
-#[must_use]
-pub struct TexturesHandle<S>(u32, PhantomData<S>);
-
-impl<S> TexturesHandle<S> {
-    pub(crate) fn new(id: u32) -> Self {
-        Self(id, PhantomData)
-    }
-
-    pub(crate) fn id(self) -> u32 {
-        self.0
-    }
-}
-
-impl<S> Clone for TexturesHandle<S> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<S> Copy for TexturesHandle<S> {}

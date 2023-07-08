@@ -8,7 +8,7 @@ use {
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
         resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::{globals::Globals, Instance},
+        shader_data::{globals::Globals, textures::Textures, Instance},
         topology::{Topology, TriangleList},
     },
     dunge_shader::Shader as ShaderData,
@@ -77,13 +77,9 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         self
     }
 
-    pub fn bind_textures(
-        &mut self,
-        handle: TexturesHandle<S>,
-    ) -> Result<&mut Self, ResourceNotFound> {
-        let textures = self.resources.textures.get(handle.id())?;
+    pub fn bind_textures(&mut self, textures: &'l Textures<S>) -> &mut Self {
         self.groups.textures = Some(textures.bind());
-        Ok(self)
+        self
     }
 
     pub fn bind_lights(&mut self, handle: LightsHandle<S>) -> Result<&mut Self, ResourceNotFound> {

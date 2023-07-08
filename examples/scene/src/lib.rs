@@ -8,7 +8,7 @@ use {
         topology::LineStrip,
         Color, Compare, Context, Error, Frame, FrameParameters, Globals, Instance, Layer, Loop,
         Mesh, MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space,
-        SpaceData, SpaceFormat, TextureData, Transform, Vertex, View,
+        SpaceData, SpaceFormat, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -61,13 +61,13 @@ struct Cube {
 pub struct App {
     texture_layer: Layer<TextureShader>,
     color_layer: Layer<ColorShader, LineStrip>,
-    sprites: TexturesHandle<TextureShader>,
-    sprite_meshes: Vec<Sprite>,
-    cubes: Vec<Cube>,
     texture_globals: Globals<TextureShader>,
     color_globals: Globals<ColorShader>,
+    sprites: Textures<TextureShader>,
     lights: LightsHandle<TextureShader>,
     spaces: SpacesHandle<TextureShader>,
+    sprite_meshes: Vec<Sprite>,
+    cubes: Vec<Cube>,
     camera: Camera,
     time: f32,
     fullscreen: bool,
@@ -270,13 +270,13 @@ impl App {
         Self {
             texture_layer,
             color_layer,
-            sprites,
-            sprite_meshes,
-            cubes,
             texture_globals,
             color_globals,
+            sprites,
             lights,
             spaces,
+            sprite_meshes,
+            cubes,
             camera: Camera::default(),
             time: 0.,
             fullscreen: false,
@@ -389,9 +389,9 @@ impl Loop for App {
 
             layer
                 .bind_globals(&self.texture_globals)
+                .bind_textures(&self.sprites)
                 .bind_lights(self.lights)?
-                .bind_spaces(self.spaces)?
-                .bind_textures(self.sprites)?;
+                .bind_spaces(self.spaces)?;
 
             for model in &self.sprite_meshes {
                 layer.draw(model.mesh, &model.instance)?;

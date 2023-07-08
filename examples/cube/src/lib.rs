@@ -2,11 +2,10 @@ mod data;
 
 use {
     dunge::{
-        handles::*,
         input::{Input, Key},
         shader::*,
         Context, Error, Frame, Globals, Instance, Layer, Loop, Mesh, MeshData, Model, Perspective,
-        Rgba, TextureData, Vertex, View,
+        Rgba, TextureData, Textures, Vertex, View,
     },
     utils::Camera,
 };
@@ -51,7 +50,7 @@ pub struct App {
     color_layer: Layer<ColorShader>,
     texture_globals: Globals<TextureShader>,
     color_globals: Globals<ColorShader>,
-    textures: TexturesHandle<TextureShader>,
+    textures: Textures<TextureShader>,
     instance: Instance,
     texture_mesh: Mesh<TextureVert>,
     color_mesh: Mesh<ColorVert>,
@@ -165,7 +164,7 @@ impl Loop for App {
                 .with_clear_depth()
                 .start()
                 .bind_globals(&self.texture_globals)
-                .bind_textures(self.textures)?
+                .bind_textures(&self.textures)
                 .draw(&self.texture_mesh, &self.instance)?,
             State::Color => frame
                 .layer(&self.color_layer)

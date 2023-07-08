@@ -44,6 +44,7 @@ mod shader_data {
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         texture::{Data as TextureData, Error as TextureError},
+        textures::{Builder as TexturesBuilder, Textures},
     };
 }
 pub mod shader;
@@ -83,7 +84,7 @@ pub use {
         scheme::ShaderScheme,
         shader_data::{
             Globals, GlobalsBuilder, Instance, Model, Source, Space, SpaceData, SpaceFormat,
-            TextureData, TextureError,
+            TextureData, TextureError, Textures, TexturesBuilder,
         },
         transform::Transform,
         vertex::Vertex,

@@ -15,7 +15,7 @@ use {
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Instance,
-            Model, Source, SpaceData, TextureData,
+            Model, Source, SpaceData,
         },
         topology::Topology,
         vertex::Vertex,
@@ -85,23 +85,7 @@ impl Context {
     }
 
     pub fn textures_builder(&mut self) -> TexturesBuilder {
-        TexturesBuilder::new(&mut self.resources, self.render.state())
-    }
-
-    pub fn update_textures_map<S>(
-        &mut self,
-        handle: TexturesHandle<S>,
-        data: TextureData,
-    ) -> Result<(), TexturesError>
-    where
-        S: Shader,
-    {
-        assert!(
-            ShaderInfo::new::<S>().has_map,
-            "the shader has no texture map",
-        );
-
-        self.resources.update_textures_map(handle, data)
+        TexturesBuilder::new(self.render.state())
     }
 
     pub fn lights_builder(&mut self) -> LightsBuilder {
