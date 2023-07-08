@@ -136,6 +136,7 @@ struct Variables {
     ambient: Option<AmbientUniform>,
 }
 
+#[must_use]
 pub struct Builder<'a> {
     state: &'a State,
     variables: Variables,
@@ -159,6 +160,7 @@ impl<'a> Builder<'a> {
         self
     }
 
+    #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Globals<S>
     where
         S: Shader,

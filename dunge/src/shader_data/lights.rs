@@ -1,26 +1,25 @@
 use {
     crate::{
-        handles::LightsHandle,
         layer::Layer,
         pipeline::Lights as Bindings,
         render::State,
-        resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::source::{SetLenError, Source, SourceArray, UpdateError as ArrayUpdateError},
     },
-    std::sync::Arc,
+    std::{marker::PhantomData, sync::Arc},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
 };
 
-pub(crate) struct Lights {
+pub struct Lights<S> {
     group: u32,
     bind_group: BindGroup,
     source_arrays: Vec<(SourceArray, SourceArrayBuffers)>,
     queue: Arc<Queue>,
+    ty: PhantomData<S>,
 }
 
-impl Lights {
-    pub fn new(params: Parameters, state: &State) -> Self {
+impl<S> Lights<S> {
+    fn new(params: Parameters, state: &State) -> Self {
         use {
             std::iter,
             wgpu::{
@@ -85,16 +84,25 @@ impl Lights {
             }),
             source_arrays,
             queue: Arc::clone(state.queue()),
+            ty: PhantomData,
         }
     }
 
-    pub fn update_array(
+    pub fn update_sources(
         &mut self,
         index: usize,
         offset: usize,
         sources: &[Source],
-    ) -> Result<(), UpdateError> {
+    ) -> Result<(), UpdateError>
+    where
+        S: Shader,
+    {
         use std::mem;
+
+        assert!(
+            ShaderInfo::new::<S>().source_arrays > 0,
+            "the shader has no light sources",
+        );
 
         let (array, buffers) = self
             .source_arrays
@@ -120,7 +128,7 @@ impl Lights {
         Ok(())
     }
 
-    pub fn bind(&self) -> (u32, &BindGroup) {
+    pub(crate) fn bind(&self) -> (u32, &BindGroup) {
         (self.group, &self.bind_group)
     }
 }
@@ -149,27 +157,26 @@ struct SourceArrayBuffers {
     len: Buffer,
 }
 
-pub(crate) struct Parameters<'a> {
-    pub variables: Variables,
-    pub bindings: &'a Bindings,
-    pub layout: &'a BindGroupLayout,
+struct Parameters<'a> {
+    variables: Variables,
+    bindings: &'a Bindings,
+    layout: &'a BindGroupLayout,
 }
 
 #[derive(Default)]
-pub(crate) struct Variables {
-    pub source_arrays: Vec<Vec<Source>>,
+struct Variables {
+    source_arrays: Vec<Vec<Source>>,
 }
 
+#[must_use]
 pub struct Builder<'a> {
-    resources: &'a mut Resources,
     state: &'a State,
     variables: Variables,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(resources: &'a mut Resources, state: &'a State) -> Self {
+    pub(crate) fn new(state: &'a State) -> Self {
         Self {
-            resources,
             state,
             variables: Variables::default(),
         }
@@ -180,7 +187,8 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S, T>(self, layer: &Layer<S, T>) -> LightsHandle<S>
+    #[must_use]
+    pub fn build<S, T>(self, layer: &Layer<S, T>) -> Lights<S>
     where
         S: Shader,
     {
@@ -192,7 +200,13 @@ impl<'a> Builder<'a> {
             "the shader requires {expected} source arrays, but {actual} is set",
         );
 
-        self.resources
-            .create_lights(self.state, self.variables, layer)
+        let lights = layer.pipeline().lights().expect("the shader has no lights");
+        let params = Parameters {
+            variables: self.variables,
+            bindings: &lights.bindings,
+            layout: &lights.layout,
+        };
+
+        Lights::new(params, self.state)
     }
 }

@@ -226,7 +226,7 @@ impl Canvas {
                     pressed_keys.clear();
                     released_keys.clear();
 
-                    match context.render.draw_frame(&lp, &context.resources) {
+                    match context.render.draw_frame(&lp) {
                         RenderResult::Ok => {}
                         RenderResult::SurfaceError(SurfaceError::Timeout) => {
                             log::info!("suface error: timeout");

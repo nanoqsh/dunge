@@ -1,28 +1,27 @@
 use {
     crate::{
-        handles::SpacesHandle,
         layer::Layer,
         pipeline::Spaces as Bindings,
         render::State,
-        resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::space::{Data, Format, Space, SpaceUniform},
     },
-    std::sync::Arc,
+    std::{marker::PhantomData, sync::Arc},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue, Texture},
 };
 
-pub(crate) struct Spaces {
+pub struct Spaces<S> {
     group: u32,
     bind_group: BindGroup,
     #[allow(dead_code)]
     spaces: Buffer,
     textures: Box<[SpaceTexture]>,
     queue: Arc<Queue>,
+    ty: PhantomData<S>,
 }
 
-impl Spaces {
-    pub fn new(params: Parameters, state: &State) -> Self {
+impl<S> Spaces<S> {
+    fn new(params: Parameters, state: &State) -> Self {
         use {
             std::iter,
             wgpu::{
@@ -131,29 +130,27 @@ impl Spaces {
             spaces,
             textures,
             queue: Arc::clone(state.queue()),
+            ty: PhantomData,
         }
     }
 
-    pub fn update_data(&self, index: usize, data: Data) -> Result<(), UpdateDataError> {
-        let texture = self.textures.get(index).ok_or(UpdateDataError::Index)?;
-        texture.update_data(data, &self.queue)
+    pub fn update(&self, index: usize, data: Data) -> Result<(), UpdateError>
+    where
+        S: Shader,
+    {
+        let info = ShaderInfo::new::<S>();
+        assert!(
+            !info.light_spaces.is_empty(),
+            "the shader has no light spaces",
+        );
+
+        let texture = self.textures.get(index).ok_or(UpdateError::Index)?;
+        texture.update(data, &self.queue)
     }
 
-    pub fn bind(&self) -> (u32, &BindGroup) {
+    pub(crate) fn bind(&self) -> (u32, &BindGroup) {
         (self.group, &self.bind_group)
     }
-}
-
-pub(crate) struct Parameters<'a> {
-    pub variables: Variables<'a>,
-    pub bindings: &'a Bindings,
-    pub layout: &'a BindGroupLayout,
-}
-
-#[derive(Default)]
-pub(crate) struct Variables<'a> {
-    pub light_spaces: Vec<SpaceUniform>,
-    pub textures_data: Vec<Data<'a>>,
 }
 
 struct SpaceTexture {
@@ -162,11 +159,11 @@ struct SpaceTexture {
 }
 
 impl SpaceTexture {
-    pub fn update_data(&self, data: Data, queue: &Queue) -> Result<(), UpdateDataError> {
+    fn update(&self, data: Data, queue: &Queue) -> Result<(), UpdateError> {
         use wgpu::*;
 
         if data.size != self.size {
-            return Err(UpdateDataError::Size);
+            return Err(UpdateError::Size);
         }
 
         let (width, height, depth) = self.size;
@@ -195,21 +192,32 @@ impl SpaceTexture {
 }
 
 #[derive(Debug)]
-pub enum UpdateDataError {
+pub enum UpdateError {
     Index,
     Size,
 }
 
+struct Parameters<'a> {
+    variables: Variables<'a>,
+    bindings: &'a Bindings,
+    layout: &'a BindGroupLayout,
+}
+
+#[derive(Default)]
+struct Variables<'a> {
+    light_spaces: Vec<SpaceUniform>,
+    textures_data: Vec<Data<'a>>,
+}
+
+#[must_use]
 pub struct Builder<'a> {
-    resources: &'a mut Resources,
     state: &'a State,
     variables: Variables<'a>,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(resources: &'a mut Resources, state: &'a State) -> Self {
+    pub(crate) fn new(state: &'a State) -> Self {
         Self {
-            resources,
             state,
             variables: Variables::default(),
         }
@@ -221,7 +229,8 @@ impl<'a> Builder<'a> {
         self
     }
 
-    pub fn build<S, T>(self, layer: &Layer<S, T>) -> SpacesHandle<S>
+    #[must_use]
+    pub fn build<S, T>(self, layer: &Layer<S, T>) -> Spaces<S>
     where
         S: Shader,
     {
@@ -243,7 +252,13 @@ impl<'a> Builder<'a> {
             );
         }
 
-        self.resources
-            .create_spaces(self.state, self.variables, layer)
+        let spaces = layer.pipeline().spaces().expect("the shader has no spaces");
+        let params = Parameters {
+            variables: self.variables,
+            bindings: &spaces.bindings,
+            layout: &spaces.layout,
+        };
+
+        Spaces::new(params, self.state)
     }
 }

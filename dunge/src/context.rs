@@ -1,21 +1,18 @@
 use {
     crate::{
         canvas::CanvasEvent,
-        error::*,
         framebuffer::FrameFilter,
-        handles::*,
         layer::Layer,
         mesh::{Data as MeshData, Mesh},
         pipeline::ParametersBuilder,
         render::{Render, State},
-        resources::Resources,
         scheme::ShaderScheme,
         screen::Screen,
-        shader::{Shader, ShaderInfo},
+        shader::Shader,
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Instance,
-            Model, Source, SpaceData,
+            Model,
         },
         topology::Topology,
         vertex::Vertex,
@@ -30,7 +27,6 @@ pub struct Context {
     pub(crate) window: Window,
     pub(crate) proxy: Proxy,
     pub(crate) render: Render,
-    pub(crate) resources: Resources,
     pub(crate) limits: Limits,
 }
 
@@ -40,7 +36,6 @@ impl Context {
             window,
             proxy,
             render: Render::new(state),
-            resources: Resources::default(),
             limits: Limits::default(),
         }
     }
@@ -89,45 +84,11 @@ impl Context {
     }
 
     pub fn lights_builder(&mut self) -> LightsBuilder {
-        LightsBuilder::new(&mut self.resources, self.render.state())
-    }
-
-    pub fn update_lights_sources<S>(
-        &mut self,
-        handle: LightsHandle<S>,
-        index: usize,
-        sources: &[Source],
-    ) -> Result<(), SourceError>
-    where
-        S: Shader,
-    {
-        assert!(
-            ShaderInfo::new::<S>().source_arrays > 0,
-            "the shader has no light sources",
-        );
-
-        self.resources.update_lights_sources(handle, index, sources)
+        LightsBuilder::new(self.render.state())
     }
 
     pub fn spaces_builder(&mut self) -> SpacesBuilder {
-        SpacesBuilder::new(&mut self.resources, self.render.state())
-    }
-
-    pub fn update_spaces_data<S>(
-        &mut self,
-        handle: SpacesHandle<S>,
-        index: usize,
-        data: SpaceData,
-    ) -> Result<(), SpaceError>
-    where
-        S: Shader,
-    {
-        assert!(
-            !ShaderInfo::new::<S>().light_spaces.is_empty(),
-            "the shader has no light spaces",
-        );
-
-        self.resources.update_spaces_data(handle, index, data)
+        SpacesBuilder::new(self.render.state())
     }
 
     pub fn create_scheme<S>(&mut self) -> ShaderScheme<S>

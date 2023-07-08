@@ -13,14 +13,12 @@ mod framebuffer {
     pub use self::render_frame::FrameFilter;
 }
 pub mod error;
-pub mod handles;
 mod layer;
 mod r#loop;
 mod mesh;
 mod pipeline;
 mod postproc;
 mod render;
-mod resources;
 mod scheme;
 mod screen;
 mod shader_data {
@@ -41,14 +39,15 @@ mod shader_data {
     pub use self::{
         globals::{Builder as GlobalsBuilder, Globals},
         instance::{Instance, Model},
+        lights::{Builder as LightsBuilder, Lights, UpdateError as LightsUpdateError},
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
+        spaces::{Builder as SpacesBuilder, Spaces, UpdateError as SpacesUpdateError},
         texture::{Data as TextureData, Error as TextureError},
         textures::{Builder as TexturesBuilder, Textures},
     };
 }
 pub mod shader;
-mod storage;
 mod time;
 pub mod topology;
 mod transform;
@@ -83,7 +82,8 @@ pub use {
         r#loop::Loop,
         scheme::ShaderScheme,
         shader_data::{
-            Globals, GlobalsBuilder, Instance, Model, Source, Space, SpaceData, SpaceFormat,
+            Globals, GlobalsBuilder, Instance, Lights, LightsBuilder, LightsUpdateError, Model,
+            Source, Space, SpaceData, SpaceFormat, Spaces, SpacesBuilder, SpacesUpdateError,
             TextureData, TextureError, Textures, TexturesBuilder,
         },
         transform::Transform,

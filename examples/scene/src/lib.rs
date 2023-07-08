@@ -2,13 +2,12 @@ mod models;
 
 use {
     dunge::{
-        handles::*,
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
-        Color, Compare, Context, Error, Frame, FrameParameters, Globals, Instance, Layer, Loop,
-        Mesh, MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space,
-        SpaceData, SpaceFormat, TextureData, Textures, Transform, Vertex, View,
+        Color, Compare, Context, Error, Frame, FrameParameters, Globals, Instance, Layer, Lights,
+        Loop, Mesh, MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source,
+        Space, SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -64,8 +63,8 @@ pub struct App {
     texture_globals: Globals<TextureShader>,
     color_globals: Globals<ColorShader>,
     sprites: Textures<TextureShader>,
-    lights: LightsHandle<TextureShader>,
-    spaces: SpacesHandle<TextureShader>,
+    lights: Lights<TextureShader>,
+    spaces: Spaces<TextureShader>,
     sprite_meshes: Vec<Sprite>,
     cubes: Vec<Cube>,
     camera: Camera,
@@ -314,13 +313,10 @@ impl Loop for App {
             )
         };
 
-        context
-            .update_lights_sources(
-                self.lights,
-                0,
-                &LIGHTS.map(|(step, col)| make_source(step, col)),
-            )
-            .expect("update lights");
+        let sources = LIGHTS.map(|(step, col)| make_source(step, col));
+        self.lights
+            .update_sources(0, 0, &sources)
+            .expect("update sources");
 
         // Handle pressed keys
         #[cfg(not(target_arch = "wasm32"))]
@@ -373,7 +369,8 @@ impl Loop for App {
                 };
 
                 sprite.instance.update(&[Model::from(transform)])
-            })?;
+            })
+            .expect("update instances");
 
         Ok(())
     }
@@ -390,8 +387,8 @@ impl Loop for App {
             layer
                 .bind_globals(&self.texture_globals)
                 .bind_textures(&self.sprites)
-                .bind_lights(self.lights)?
-                .bind_spaces(self.spaces)?;
+                .bind_lights(&self.lights)
+                .bind_spaces(&self.spaces);
 
             for model in &self.sprite_meshes {
                 layer.draw(model.mesh, &model.instance)?;
@@ -401,6 +398,7 @@ impl Loop for App {
         {
             let mut layer = frame.layer(&self.color_layer).start();
             layer.bind_globals(&self.color_globals);
+
             for cube in &self.cubes {
                 layer.draw(&cube.mesh, &cube.instance)?;
             }

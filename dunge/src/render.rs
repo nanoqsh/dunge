@@ -6,7 +6,6 @@ use {
         framebuffer::{BufferSize, FrameParameters, Framebuffer},
         postproc::PostProcessor,
         r#loop::Loop,
-        resources::Resources,
         screen::{RenderScreen, Screen},
     },
     std::sync::Arc,
@@ -115,7 +114,7 @@ impl Render {
         );
     }
 
-    pub fn draw_frame<L>(&mut self, lp: &L, resources: &Resources) -> RenderResult<L::Error>
+    pub fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
     where
         L: Loop,
     {
@@ -136,7 +135,7 @@ impl Render {
             .texture
             .create_view(&TextureViewDescriptor::default());
 
-        let mut frame = Frame::new(self, resources, frame_view);
+        let mut frame = Frame::new(self, frame_view);
         if let Err(err) = lp.render(&mut frame) {
             return RenderResult::Error(err);
         }

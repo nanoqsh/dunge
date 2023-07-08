@@ -1,14 +1,14 @@
 use {
     crate::{
         color::{Color, Rgba},
-        error::{Error, NotSetError, ResourceNotFound},
+        error::{Error, NotSetError},
         frame::Frame,
-        handles::*,
         mesh::Mesh,
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
-        resources::Resources,
         shader::{Shader, ShaderInfo},
-        shader_data::{globals::Globals, textures::Textures, Instance},
+        shader_data::{
+            globals::Globals, lights::Lights, spaces::Spaces, textures::Textures, Instance,
+        },
         topology::{Topology, TriangleList},
     },
     dunge_shader::Shader as ShaderData,
@@ -55,17 +55,15 @@ impl<S, T> Layer<S, T> {
 pub struct ActiveLayer<'l, S, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),
-    resources: &'l Resources,
     groups: Groups<'l>,
     ty: PhantomData<(S, T)>,
 }
 
 impl<'l, S, T> ActiveLayer<'l, S, T> {
-    pub(crate) fn new(pass: RenderPass<'l>, size: (u32, u32), resources: &'l Resources) -> Self {
+    pub(crate) fn new(pass: RenderPass<'l>, size: (u32, u32)) -> Self {
         Self {
             pass,
             size,
-            resources,
             groups: Groups::default(),
             ty: PhantomData,
         }
@@ -82,16 +80,14 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         self
     }
 
-    pub fn bind_lights(&mut self, handle: LightsHandle<S>) -> Result<&mut Self, ResourceNotFound> {
-        let lights = self.resources.lights.get(handle.id())?;
+    pub fn bind_lights(&mut self, lights: &'l Lights<S>) -> &mut Self {
         self.groups.lights = Some(lights.bind());
-        Ok(self)
+        self
     }
 
-    pub fn bind_spaces(&mut self, handle: SpacesHandle<S>) -> Result<&mut Self, ResourceNotFound> {
-        let spaces = self.resources.spaces.get(handle.id())?;
+    pub fn bind_spaces(&mut self, spaces: &'l Spaces<S>) -> &mut Self {
         self.groups.spaces = Some(spaces.bind());
-        Ok(self)
+        self
     }
 
     /// Draws the [mesh](crate::Mesh).

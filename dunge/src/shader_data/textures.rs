@@ -88,6 +88,7 @@ struct Variables<'a> {
     map: Option<TextureData<'a>>,
 }
 
+#[must_use]
 pub struct Builder<'a> {
     state: &'a State,
     variables: Variables<'a>,
@@ -106,6 +107,7 @@ impl<'a> Builder<'a> {
         self
     }
 
+    #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Textures<S>
     where
         S: Shader,
