@@ -1,5 +1,4 @@
 use dunge::{
-    handles::*,
     input::{Input, Key},
     shader::Shader,
     CanvasConfig, Context, Error, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData,
@@ -37,11 +36,8 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Create shader and layer
-        let layer = {
-            let shader: ShaderHandle<TriangleShader> = context.create_shader();
-            context.create_layer(shader).expect("create layer")
-        };
+        // Create a layer
+        let layer = context.create_layer();
 
         // Create a mesh
         let mesh = {

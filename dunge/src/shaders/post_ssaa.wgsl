@@ -14,7 +14,7 @@ struct VertexOutput {
 }
 
 @vertex
-fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
+fn vsmain(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
     var out: VertexOutput;
     switch in_vertex_index {
         case 0u {
@@ -44,7 +44,7 @@ var tdiff: texture_2d<f32>;
 var sdiff: sampler;
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fsmain(in: VertexOutput) -> @location(0) vec4<f32> {
     let s0 = vec2(data.step.x, data.step.y);
     let s1 = vec2(-data.step.x, data.step.y);
     let s2 = vec2(data.step.x, -data.step.y);

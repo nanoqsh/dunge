@@ -7,8 +7,8 @@ use {
         shader::*,
         topology::LineStrip,
         Color, Compare, Context, Error, Frame, FrameParameters, Instance, Layer, Loop, Mesh,
-        MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, Source, Space, SpaceData, SpaceFormat,
-        TextureData, Transform, Vertex,
+        MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space,
+        SpaceData, SpaceFormat, TextureData, Transform, Vertex,
     },
     utils::Camera,
 };
@@ -83,21 +83,13 @@ impl App {
         });
 
         // Create shaders and layers
-        let texture_layer = {
-            let shader: ShaderHandle<TextureShader> = context.create_shader();
-            context
-                .create_layer_with_parameters()
-                .build(shader)
-                .expect("create texture layer")
-        };
-
+        let texture_layer = context.create_layer();
         let color_layer = {
-            let shader: ShaderHandle<ColorShader> = context.create_shader();
+            let scheme: ShaderScheme<ColorShader> = context.create_scheme();
             context
                 .create_layer_with_parameters()
                 .with_depth_compare(Compare::Always)
-                .build(shader)
-                .expect("create color layer")
+                .build(&scheme)
         };
 
         // Create the sprite texture

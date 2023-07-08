@@ -21,6 +21,7 @@ mod pipeline;
 mod postproc;
 mod render;
 mod resources;
+mod scheme;
 mod screen;
 mod shader_data {
     mod ambient;
@@ -78,6 +79,7 @@ pub use {
         mesh::{Data as MeshData, Error as MeshError, Mesh},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
+        scheme::ShaderScheme,
         shader_data::{
             Instance, Model, Source, Space, SpaceData, SpaceFormat, TextureData, TextureError,
         },

@@ -1,4 +1,4 @@
 fn main() {
-    let path = format!("{}/static/", env!("CARGO_MANIFEST_DIR"));
+    let path = format!("{dir}/static/", dir = env!("CARGO_MANIFEST_DIR"));
     serve::run(path);
 }

@@ -31,11 +31,10 @@ Then, let's create a new window to draw something in it:
 ```rust
 // Import some types
 use dunge::{
-    handles::*,
     input::{Input, Key},
     shader::Shader,
-    CanvasConfig, Context, Error, Frame, InitialState, Loop, MeshData, Model, Rgba, Vertex,
-    WindowMode,
+    CanvasConfig, Context, Error, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData,
+    Model, Rgba, Vertex, WindowMode,
 };
 
 fn main() {
@@ -71,11 +70,8 @@ struct App {
 
 impl App {
     fn new(context: &mut Context) -> Self {
-        // Create shader and layer
-        let layer = {
-            let shader: ShaderHandle<TriangleShader> = context.create_shader();
-            context.create_layer(shader).expect("create layer")
-        };
+        // Create a layer
+        let layer = context.create_layer();
 
         // Create a mesh
         let mesh = {
@@ -110,11 +106,11 @@ impl Loop for App {
     // This calls every time the application needs to draw something in the window
     fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
         frame
-            .layer(self.layer)?
+            .layer(&self.layer)
             .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
-            .draw(self.mesh, self.instance)
+            .draw(&self.mesh, &self.instance)
     }
 }
 ```

@@ -14,7 +14,7 @@ struct VertexOutput {
 }
 
 @vertex
-fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
+fn vsmain(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
     var out: VertexOutput;
     switch in_vertex_index {
         case 0u {
@@ -44,6 +44,6 @@ var tdiff: texture_2d<f32>;
 var sdiff: sampler;
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fsmain(in: VertexOutput) -> @location(0) vec4<f32> {
     return textureSample(tdiff, sdiff, in.map);
 }

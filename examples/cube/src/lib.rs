@@ -61,22 +61,9 @@ pub struct App {
 
 impl App {
     pub fn new(context: &mut Context) -> Self {
-        // Create layers. The vertex type inferred from the context
-        let texture_layer = {
-            let shader: ShaderHandle<TextureShader> = context.create_shader();
-            context
-                .create_layer_with_parameters()
-                .build(shader)
-                .expect("create texture layer")
-        };
-
-        let color_layer = {
-            let shader: ShaderHandle<ColorShader> = context.create_shader();
-            context
-                .create_layer_with_parameters()
-                .build(shader)
-                .expect("create color layer")
-        };
+        // Create layers.
+        let texture_layer = context.create_layer();
+        let color_layer = context.create_layer();
 
         // Create globals
         let texture_globals = context.globals_builder().with_view().build(&texture_layer);

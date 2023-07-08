@@ -1,8 +1,7 @@
 use {
     crate::{
-        error::ResourceNotFound, framebuffer::Framebuffer, handles::ShaderHandle, layer::Layer,
-        render::Render, resources::Resources, shader::Shader, shader_data::Model,
-        topology::Topology, vertex::Vertex,
+        framebuffer::Framebuffer, layer::Layer, render::State, scheme::ShaderScheme,
+        shader::Shader, shader_data::Model, topology::Topology, vertex::Vertex,
     },
     dunge_shader::{Layout, Shader as ShaderData, SourceBindings, SpaceBindings, TextureBindings},
     std::marker::PhantomData,
@@ -67,17 +66,15 @@ pub enum Compare {
 /// Builds new layer with specific parameters.
 #[must_use]
 pub struct ParametersBuilder<'a, S, T> {
-    render: &'a Render,
-    resources: &'a mut Resources,
+    state: &'a State,
     params: Parameters,
     vertex_type: PhantomData<(S, T)>,
 }
 
 impl<'a, S, T> ParametersBuilder<'a, S, T> {
-    pub(crate) fn new(render: &'a Render, resources: &'a mut Resources) -> Self {
+    pub(crate) fn new(state: &'a State) -> Self {
         Self {
-            render,
-            resources,
+            state,
             params: Parameters::default(),
             vertex_type: PhantomData,
         }
@@ -119,20 +116,12 @@ impl<'a, S, T> ParametersBuilder<'a, S, T> {
     }
 
     /// Builds new layer.
-    ///
-    /// # Errors
-    /// Returns [`ResourceNotFound`] if given shader handler was deleted.
-    pub fn build(self, shader: ShaderHandle<S>) -> Result<Layer<S, T>, ResourceNotFound>
+    pub fn build(self, scheme: &ShaderScheme<S>) -> Layer<S, T>
     where
         S: Shader,
         T: Topology,
     {
-        let shader = self.resources.shaders.get(shader.id())?;
-        Ok(Layer::new(
-            self.render.state().device(),
-            shader,
-            self.params,
-        ))
+        Layer::new(self.state.device(), scheme.data(), self.params)
     }
 }
 

@@ -1,22 +1,17 @@
-use {
-    crate::{
-        camera::{Camera, View},
-        error::{ResourceNotFound, SourceError, SpaceError, TexturesError},
-        handles::*,
-        layer::Layer,
-        render::Render,
-        shader_data::{
-            globals::{Globals, Parameters as GlobalsParameters, Variables as GlobalsVariables},
-            lights::{Lights, Parameters as LightsParameters, Variables as LightsVariables},
-            spaces::{Parameters as SpacesParameters, Spaces, Variables as SpacesVariables},
-            textures::{
-                Parameters as TexturesParameters, Textures, Variables as TexturesVariables,
-            },
-            Source, SpaceData, TextureData,
-        },
-        storage::Storage,
+use crate::{
+    camera::{Camera, View},
+    error::{ResourceNotFound, SourceError, SpaceError, TexturesError},
+    handles::*,
+    layer::Layer,
+    render::Render,
+    shader_data::{
+        globals::{Globals, Parameters as GlobalsParameters, Variables as GlobalsVariables},
+        lights::{Lights, Parameters as LightsParameters, Variables as LightsVariables},
+        spaces::{Parameters as SpacesParameters, Spaces, Variables as SpacesVariables},
+        textures::{Parameters as TexturesParameters, Textures, Variables as TexturesVariables},
+        Source, SpaceData, TextureData,
     },
-    dunge_shader::{Scheme, Shader as ShaderData},
+    storage::Storage,
 };
 
 /// A container of resources for render.
@@ -24,7 +19,6 @@ use {
 pub(crate) struct Resources {
     pub globals: Storage<Globals>,
     pub lights: Storage<Lights>,
-    pub shaders: Storage<ShaderData>,
     pub spaces: Storage<Spaces>,
     pub textures: Storage<Textures>,
 }
@@ -177,12 +171,5 @@ impl Resources {
             .update_data(index, data, render.state().queue())?;
 
         Ok(())
-    }
-
-    pub fn create_shader<S>(&mut self, scheme: Scheme) -> ShaderHandle<S> {
-        let shader = ShaderData::generate(scheme);
-        log::debug!("generated shader:\n{}", shader.source);
-        let id = self.shaders.insert(shader);
-        ShaderHandle::new(id)
     }
 }

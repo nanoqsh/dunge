@@ -2,7 +2,7 @@
 [[groups]]
 
 @vertex
-fn vs_main(input: VertexInput, inst: InstanceInput) -> VertexOutput {
+fn vsmain(input: VertexInput, inst: InstanceInput) -> VertexOutput {
     let model = mat4x4<f32>(
         inst.r0,
         inst.r1,
@@ -16,7 +16,7 @@ fn vs_main(input: VertexInput, inst: InstanceInput) -> VertexOutput {
 }
 
 @fragment
-fn fs_main(out: VertexOutput) -> @location(0) vec4<f32> {
+fn fsmain(out: VertexOutput) -> @location(0) vec4<f32> {
     var col: vec3<f32>;
     [[fragment_col]]
     return vec4(col, 1.);

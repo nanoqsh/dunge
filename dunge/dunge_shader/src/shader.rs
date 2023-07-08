@@ -28,8 +28,8 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub const VERTEX_ENTRY_POINT: &str = "vs_main";
-    pub const FRAGMENT_ENTRY_POINT: &str = "fs_main";
+    pub const VERTEX_ENTRY_POINT: &str = "vsmain";
+    pub const FRAGMENT_ENTRY_POINT: &str = "fsmain";
 
     pub fn generate(scheme: Scheme) -> Self {
         let Scheme {

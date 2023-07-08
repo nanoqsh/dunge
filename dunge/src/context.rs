@@ -11,8 +11,9 @@ use {
         pipeline::ParametersBuilder,
         render::{Render, State},
         resources::Resources,
+        scheme::ShaderScheme,
         screen::Screen,
-        shader::{self, Shader, ShaderInfo},
+        shader::{Shader, ShaderInfo},
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Instance,
@@ -179,31 +180,31 @@ impl Context {
             .update_spaces_data(&self.render, handle, index, data)
     }
 
-    pub fn create_shader<S>(&mut self) -> ShaderHandle<S>
+    pub fn create_scheme<S>(&mut self) -> ShaderScheme<S>
     where
         S: Shader,
     {
-        self.resources.create_shader(shader::scheme::<S>())
+        ShaderScheme::new()
     }
 
     /// Creates a new layer with default parameters.
     ///
-    /// This is a shortcut for `context.create_layer_with_parameters().build()`.
-    /// See [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters) for more info.
-    pub fn create_layer<S, T>(
-        &mut self,
-        shader: ShaderHandle<S>,
-    ) -> Result<Layer<S, T>, ResourceNotFound>
+    /// This is a shortcut for `context.create_layer_with_parameters().build(scheme)`
+    /// with an automatically generated shader scheme.
+    /// Use the [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters)
+    /// function to create a custom layer.
+    pub fn create_layer<S, T>(&mut self) -> Layer<S, T>
     where
         S: Shader,
         T: Topology,
     {
-        self.create_layer_with_parameters().build(shader)
+        let scheme = self.create_scheme();
+        self.create_layer_with_parameters().build(&scheme)
     }
 
     /// Creates a layer [builder](ParametersBuilder) with custom parameters.
     pub fn create_layer_with_parameters<S, T>(&mut self) -> ParametersBuilder<S, T> {
-        ParametersBuilder::new(&self.render, &mut self.resources)
+        ParametersBuilder::new(self.render.state())
     }
 
     /// Creates new instances.
