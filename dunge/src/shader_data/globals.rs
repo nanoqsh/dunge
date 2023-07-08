@@ -5,12 +5,13 @@ use {
         handles::GlobalsHandle,
         layer::Layer,
         pipeline::Globals as Bindings,
-        render::Render,
+        render::State,
         resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::{ambient::AmbientUniform, Model},
     },
-    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
+    std::sync::Arc,
+    wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
 };
 
 pub(crate) struct Globals {
@@ -18,10 +19,11 @@ pub(crate) struct Globals {
     bind_group: BindGroup,
     camera: Option<(Camera, Buffer)>,
     ambient: Option<Buffer>,
+    queue: Arc<Queue>,
 }
 
 impl Globals {
-    pub fn new(params: Parameters, device: &Device) -> Self {
+    pub fn new(params: Parameters, state: &State) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
@@ -34,6 +36,7 @@ impl Globals {
             ..
         } = params;
 
+        let device = state.device();
         let camera = variables.camera.map(|uniform| {
             device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("camera buffer"),
@@ -73,6 +76,7 @@ impl Globals {
             }),
             camera: camera.map(|buf| (params.camera, buf)),
             ambient,
+            queue: Arc::clone(state.queue()),
         }
     }
 
@@ -81,22 +85,24 @@ impl Globals {
         camera.set_view(view);
     }
 
-    pub fn write_camera(&self, size: (u32, u32), queue: &Queue) {
+    pub fn write_camera(&self, size: (u32, u32)) {
         let Some((camera, buf)) = &self.camera else {
             return;
         };
 
         let uniform = camera.model(size);
-        queue.write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
+        self.queue
+            .write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
-    pub fn write_ambient(&self, color: [f32; 3], queue: &Queue) {
+    pub fn write_ambient(&self, color: [f32; 3]) {
         let Some(buf) = &self.ambient else {
             return;
         };
 
         let uniform = AmbientUniform::new(color);
-        queue.write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
+        self.queue
+            .write_buffer(buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
     pub fn bind(&self) -> (u32, &BindGroup) {
@@ -119,15 +125,15 @@ pub(crate) struct Variables {
 
 pub struct Builder<'a> {
     resources: &'a mut Resources,
-    render: &'a Render,
+    state: &'a State,
     variables: Variables,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(resources: &'a mut Resources, render: &'a Render) -> Self {
+    pub(crate) fn new(resources: &'a mut Resources, state: &'a State) -> Self {
         Self {
             resources,
-            render,
+            state,
             variables: Variables::default(),
         }
     }
@@ -162,6 +168,6 @@ impl<'a> Builder<'a> {
         }
 
         self.resources
-            .create_globals(self.render, self.variables, layer)
+            .create_globals(self.state, self.variables, layer)
     }
 }

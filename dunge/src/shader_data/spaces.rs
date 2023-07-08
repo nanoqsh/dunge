@@ -3,12 +3,13 @@ use {
         handles::SpacesHandle,
         layer::Layer,
         pipeline::Spaces as Bindings,
-        render::Render,
+        render::State,
         resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::space::{Data, Format, Space, SpaceUniform},
     },
-    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue, Texture},
+    std::sync::Arc,
+    wgpu::{BindGroup, BindGroupLayout, Buffer, Queue, Texture},
 };
 
 pub(crate) struct Spaces {
@@ -17,10 +18,11 @@ pub(crate) struct Spaces {
     #[allow(dead_code)]
     spaces: Buffer,
     textures: Box<[SpaceTexture]>,
+    queue: Arc<Queue>,
 }
 
 impl Spaces {
-    pub fn new(params: Parameters, device: &Device, queue: &Queue) -> Self {
+    pub fn new(params: Parameters, state: &State) -> Self {
         use {
             std::iter,
             wgpu::{
@@ -35,6 +37,7 @@ impl Spaces {
             layout,
         } = params;
 
+        let device = state.device();
         let spaces = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("spaces buffer"),
             contents: bytemuck::cast_slice(&variables.light_spaces),
@@ -68,7 +71,7 @@ impl Spaces {
                     view_formats: &[],
                 });
 
-                queue.write_texture(
+                state.queue().write_texture(
                     ImageCopyTexture {
                         texture: &texture,
                         mip_level: 0,
@@ -127,17 +130,13 @@ impl Spaces {
             }),
             spaces,
             textures,
+            queue: Arc::clone(state.queue()),
         }
     }
 
-    pub fn update_data(
-        &self,
-        index: usize,
-        data: Data,
-        queue: &Queue,
-    ) -> Result<(), UpdateDataError> {
+    pub fn update_data(&self, index: usize, data: Data) -> Result<(), UpdateDataError> {
         let texture = self.textures.get(index).ok_or(UpdateDataError::Index)?;
-        texture.update_data(data, queue)
+        texture.update_data(data, &self.queue)
     }
 
     pub fn bind(&self) -> (u32, &BindGroup) {
@@ -203,15 +202,15 @@ pub enum UpdateDataError {
 
 pub struct Builder<'a> {
     resources: &'a mut Resources,
-    render: &'a Render,
+    state: &'a State,
     variables: Variables<'a>,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(resources: &'a mut Resources, render: &'a Render) -> Self {
+    pub(crate) fn new(resources: &'a mut Resources, state: &'a State) -> Self {
         Self {
             resources,
-            render,
+            state,
             variables: Variables::default(),
         }
     }
@@ -245,6 +244,6 @@ impl<'a> Builder<'a> {
         }
 
         self.resources
-            .create_spaces(self.render, self.variables, layer)
+            .create_spaces(self.state, self.variables, layer)
     }
 }

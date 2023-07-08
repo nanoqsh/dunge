@@ -16,7 +16,6 @@ pub struct Frame<'d> {
     resources: &'d Resources,
     encoder: Encoder,
     frame_view: TextureView,
-    drawn_in_frame: bool,
 }
 
 impl<'d> Frame<'d> {
@@ -30,47 +29,11 @@ impl<'d> Frame<'d> {
             resources,
             encoder: Encoder::default(),
             frame_view,
-            drawn_in_frame: false,
         }
     }
 
-    /// Draws the frame in the screen buffer.
-    ///
-    /// You usually don't need to call this method manually.
-    /// It is called automatically at the end of the [`Frame`] lifetime.
-    /// It can be useful if you want to partially render a frame in multiple layers.
-    ///
-    /// # Example
-    /// ```
-    /// # #[derive(Clone, Copy)]
-    /// # struct Frame;
-    /// # impl Frame {
-    /// #     fn texture_layer(self) -> Self { self }
-    /// #     fn start(self) -> Self { self }
-    /// #     fn commit_in_frame(self) {}
-    /// # }
-    /// # let frame = Frame;
-    /// // Create a new layer
-    /// let mut layer = frame
-    ///     .texture_layer()
-    ///     .start();
-    ///
-    /// // Draw something in the layer
-    ///
-    /// // Drop the layer to release a frame
-    /// drop(layer);
-    ///
-    /// // Commit the layer in frame
-    /// frame.commit_in_frame();
-    /// ```
-    pub fn commit_in_frame(&mut self) {
+    pub(crate) fn commit_in_frame(&mut self) {
         use wgpu::*;
-
-        if !self.drawn_in_frame {
-            return;
-        }
-
-        self.drawn_in_frame = false;
 
         {
             let mut pass = self
@@ -155,13 +118,7 @@ impl<'d> Frame<'d> {
         let view_size = screen.virtual_size_with_antialiasing().as_vec2();
         pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
 
-        ActiveLayer::new(
-            pass,
-            screen.virtual_size().into(),
-            self.render.state().queue(),
-            self.resources,
-            &mut self.drawn_in_frame,
-        )
+        ActiveLayer::new(pass, screen.virtual_size().into(), self.resources)
     }
 }
 

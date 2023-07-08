@@ -1,6 +1,6 @@
 use {
-    crate::error::TooLargeSize,
-    wgpu::{Device, Queue, Sampler, Texture as WgpuTexture, TextureView},
+    crate::{error::TooLargeSize, render::State},
+    wgpu::{Queue, Sampler, Texture as WgpuTexture, TextureView},
 };
 
 /// A data struct for a texture creation.
@@ -46,7 +46,7 @@ pub(crate) struct Texture {
 }
 
 impl Texture {
-    pub fn new(data: Data, device: &Device, queue: &Queue) -> Self {
+    pub fn new(data: Data, state: &State) -> Self {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -56,6 +56,7 @@ impl Texture {
             depth_or_array_layers: 1,
         };
 
+        let device = state.device();
         let texture = device.create_texture(&TextureDescriptor {
             label: None,
             size,
@@ -67,7 +68,7 @@ impl Texture {
             view_formats: &[],
         });
 
-        queue.write_texture(
+        state.queue().write_texture(
             ImageCopyTexture {
                 texture: &texture,
                 mip_level: 0,

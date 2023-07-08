@@ -83,7 +83,7 @@ impl Context {
     }
 
     pub fn globals_builder(&mut self) -> GlobalsBuilder {
-        GlobalsBuilder::new(&mut self.resources, &self.render)
+        GlobalsBuilder::new(&mut self.resources, self.render.state())
     }
 
     pub fn update_globals_view<S>(
@@ -111,12 +111,11 @@ impl Context {
             "the shader has no ambient",
         );
 
-        self.resources
-            .update_globals_ambient(&self.render, handle, col.0)
+        self.resources.update_globals_ambient(handle, col.0)
     }
 
     pub fn textures_builder(&mut self) -> TexturesBuilder {
-        TexturesBuilder::new(&mut self.resources, &self.render)
+        TexturesBuilder::new(&mut self.resources, self.render.state())
     }
 
     pub fn update_textures_map<S>(
@@ -132,12 +131,11 @@ impl Context {
             "the shader has no texture map",
         );
 
-        self.resources
-            .update_textures_map(&self.render, handle, data)
+        self.resources.update_textures_map(handle, data)
     }
 
     pub fn lights_builder(&mut self) -> LightsBuilder {
-        LightsBuilder::new(&mut self.resources, &self.render)
+        LightsBuilder::new(&mut self.resources, self.render.state())
     }
 
     pub fn update_lights_sources<S>(
@@ -154,12 +152,11 @@ impl Context {
             "the shader has no light sources",
         );
 
-        self.resources
-            .update_lights_sources(&self.render, handle, index, sources)
+        self.resources.update_lights_sources(handle, index, sources)
     }
 
     pub fn spaces_builder(&mut self) -> SpacesBuilder {
-        SpacesBuilder::new(&mut self.resources, &self.render)
+        SpacesBuilder::new(&mut self.resources, self.render.state())
     }
 
     pub fn update_spaces_data<S>(
@@ -176,8 +173,7 @@ impl Context {
             "the shader has no light spaces",
         );
 
-        self.resources
-            .update_spaces_data(&self.render, handle, index, data)
+        self.resources.update_spaces_data(handle, index, data)
     }
 
     pub fn create_scheme<S>(&mut self) -> ShaderScheme<S>

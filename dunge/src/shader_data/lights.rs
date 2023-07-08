@@ -3,22 +3,24 @@ use {
         handles::LightsHandle,
         layer::Layer,
         pipeline::Lights as Bindings,
-        render::Render,
+        render::State,
         resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::source::{SetLenError, Source, SourceArray, UpdateError as ArrayUpdateError},
     },
-    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
+    std::sync::Arc,
+    wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
 };
 
 pub(crate) struct Lights {
     group: u32,
     bind_group: BindGroup,
     source_arrays: Vec<(SourceArray, SourceArrayBuffers)>,
+    queue: Arc<Queue>,
 }
 
 impl Lights {
-    pub fn new(params: Parameters, device: &Device) -> Self {
+    pub fn new(params: Parameters, state: &State) -> Self {
         use {
             std::iter,
             wgpu::{
@@ -33,6 +35,7 @@ impl Lights {
             layout,
         } = params;
 
+        let device = state.device();
         let source_arrays: Vec<_> = iter::zip(variables.source_arrays, &bindings.source_arrays)
             .map(|(var, bind)| {
                 let array = SourceArray::new(var, bind.size as usize);
@@ -81,6 +84,7 @@ impl Lights {
                 label: Some("lights bind group"),
             }),
             source_arrays,
+            queue: Arc::clone(state.queue()),
         }
     }
 
@@ -89,7 +93,6 @@ impl Lights {
         index: usize,
         offset: usize,
         sources: &[Source],
-        queue: &Queue,
     ) -> Result<(), UpdateError> {
         use std::mem;
 
@@ -100,7 +103,7 @@ impl Lights {
 
         array.update(offset, sources)?;
         let data = &array.sources()[offset..];
-        queue.write_buffer(
+        self.queue.write_buffer(
             &buffers.array,
             (offset * mem::size_of::<Source>()) as _,
             bytemuck::cast_slice(data),
@@ -110,7 +113,8 @@ impl Lights {
         let new_len = (offset + sources.len()) as u32;
         if old_len.get() < new_len {
             array.set_len(new_len)?;
-            queue.write_buffer(&buffers.len, 0, bytemuck::cast_slice(&[array.len()]));
+            self.queue
+                .write_buffer(&buffers.len, 0, bytemuck::cast_slice(&[array.len()]));
         }
 
         Ok(())
@@ -158,15 +162,15 @@ pub(crate) struct Variables {
 
 pub struct Builder<'a> {
     resources: &'a mut Resources,
-    render: &'a Render,
+    state: &'a State,
     variables: Variables,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(resources: &'a mut Resources, render: &'a Render) -> Self {
+    pub(crate) fn new(resources: &'a mut Resources, state: &'a State) -> Self {
         Self {
             resources,
-            render,
+            state,
             variables: Variables::default(),
         }
     }
@@ -189,6 +193,6 @@ impl<'a> Builder<'a> {
         );
 
         self.resources
-            .create_lights(self.render, self.variables, layer)
+            .create_lights(self.state, self.variables, layer)
     }
 }

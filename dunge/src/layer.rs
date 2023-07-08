@@ -13,7 +13,7 @@ use {
     },
     dunge_shader::Shader as ShaderData,
     std::marker::PhantomData,
-    wgpu::{BindGroup, Device, Queue, RenderPass},
+    wgpu::{BindGroup, Device, RenderPass},
 };
 
 #[must_use]
@@ -55,27 +55,17 @@ impl<S, T> Layer<S, T> {
 pub struct ActiveLayer<'l, S, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),
-    queue: &'l Queue,
     resources: &'l Resources,
-    drawn_in_frame: &'l mut bool,
     groups: Groups<'l>,
     ty: PhantomData<(S, T)>,
 }
 
 impl<'l, S, T> ActiveLayer<'l, S, T> {
-    pub(crate) fn new(
-        pass: RenderPass<'l>,
-        size: (u32, u32),
-        queue: &'l Queue,
-        resources: &'l Resources,
-        drawn_in_frame: &'l mut bool,
-    ) -> Self {
+    pub(crate) fn new(pass: RenderPass<'l>, size: (u32, u32), resources: &'l Resources) -> Self {
         Self {
             pass,
             size,
-            queue,
             resources,
-            drawn_in_frame,
             groups: Groups::default(),
             ty: PhantomData,
         }
@@ -91,7 +81,7 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         handle: GlobalsHandle<S>,
     ) -> Result<&mut Self, ResourceNotFound> {
         let globals = self.resources.globals.get(handle.id())?;
-        globals.write_camera(self.size, self.queue);
+        globals.write_camera(self.size);
 
         self.groups.globals = Some(globals.bind());
         Ok(self)
@@ -191,8 +181,6 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
             }
             None => self.pass.draw(0..verts.len(), 0..instances.len()),
         }
-
-        *self.drawn_in_frame = true;
     }
 }
 

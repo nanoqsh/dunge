@@ -4,22 +4,24 @@ use {
         handles::TexturesHandle,
         layer::Layer,
         pipeline::Textures as Bindings,
-        render::Render,
+        render::State,
         resources::Resources,
         shader::{Shader, ShaderInfo},
         shader_data::texture::{Data as TextureData, Texture},
     },
-    wgpu::{BindGroup, BindGroupLayout, Device, Queue},
+    std::sync::Arc,
+    wgpu::{BindGroup, BindGroupLayout, Queue},
 };
 
 pub(crate) struct Textures {
     group: u32,
     bind_group: BindGroup,
     map: Option<Texture>,
+    queue: Arc<Queue>,
 }
 
 impl Textures {
-    pub fn new(params: Parameters, device: &Device, queue: &Queue) -> Self {
+    pub fn new(params: Parameters, state: &State) -> Self {
         use wgpu::{BindGroupDescriptor, BindGroupEntry, BindingResource};
 
         let Parameters {
@@ -28,8 +30,7 @@ impl Textures {
             layout,
         } = params;
 
-        let map = variables.map.map(|data| Texture::new(data, device, queue));
-
+        let map = variables.map.map(|data| Texture::new(data, state));
         let entries = map.as_ref().map(|texture| {
             [
                 BindGroupEntry {
@@ -45,7 +46,7 @@ impl Textures {
 
         Self {
             group: bindings.group,
-            bind_group: device.create_bind_group(&BindGroupDescriptor {
+            bind_group: state.device().create_bind_group(&BindGroupDescriptor {
                 layout,
                 entries: match &entries {
                     Some(bind) => bind,
@@ -54,11 +55,15 @@ impl Textures {
                 label: Some("texture bind group"),
             }),
             map,
+            queue: Arc::clone(state.queue()),
         }
     }
 
-    pub fn update_data(&self, data: TextureData, queue: &Queue) -> Result<(), TooLargeSize> {
-        self.map.as_ref().expect("texture map").update(data, queue)
+    pub fn update_data(&self, data: TextureData) -> Result<(), TooLargeSize> {
+        self.map
+            .as_ref()
+            .expect("texture map")
+            .update(data, &self.queue)
     }
 
     pub fn bind(&self) -> (u32, &BindGroup) {
@@ -79,15 +84,15 @@ pub(crate) struct Variables<'a> {
 
 pub struct Builder<'a> {
     resources: &'a mut Resources,
-    render: &'a Render,
+    state: &'a State,
     variables: Variables<'a>,
 }
 
 impl<'a> Builder<'a> {
-    pub(crate) fn new(resources: &'a mut Resources, render: &'a Render) -> Self {
+    pub(crate) fn new(resources: &'a mut Resources, state: &'a State) -> Self {
         Self {
             resources,
-            render,
+            state,
             variables: Variables::default(),
         }
     }
@@ -110,6 +115,6 @@ impl<'a> Builder<'a> {
         }
 
         self.resources
-            .create_textures(self.render, self.variables, handle)
+            .create_textures(self.state, self.variables, handle)
     }
 }

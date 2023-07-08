@@ -3,7 +3,7 @@ use crate::{
     error::{ResourceNotFound, SourceError, SpaceError, TexturesError},
     handles::*,
     layer::Layer,
-    render::Render,
+    render::State,
     shader_data::{
         globals::{Globals, Parameters as GlobalsParameters, Variables as GlobalsVariables},
         lights::{Lights, Parameters as LightsParameters, Variables as LightsVariables},
@@ -26,7 +26,7 @@ pub(crate) struct Resources {
 impl Resources {
     pub fn create_globals<S, T>(
         &mut self,
-        render: &Render,
+        state: &State,
         variables: GlobalsVariables,
         layer: &Layer<S, T>,
     ) -> GlobalsHandle<S> {
@@ -42,7 +42,7 @@ impl Resources {
             layout: &globals.layout,
         };
 
-        let globals = Globals::new(params, render.state().device());
+        let globals = Globals::new(params, state);
         let id = self.globals.insert(globals);
         GlobalsHandle::new(id)
     }
@@ -58,20 +58,16 @@ impl Resources {
 
     pub fn update_globals_ambient<S>(
         &self,
-        render: &Render,
         handle: GlobalsHandle<S>,
         col: [f32; 3],
     ) -> Result<(), ResourceNotFound> {
-        self.globals
-            .get(handle.id())?
-            .write_ambient(col, render.state().queue());
-
+        self.globals.get(handle.id())?.write_ambient(col);
         Ok(())
     }
 
     pub fn create_textures<S, T>(
         &mut self,
-        render: &Render,
+        state: &State,
         variables: TexturesVariables,
         layer: &Layer<S, T>,
     ) -> TexturesHandle<S> {
@@ -86,28 +82,23 @@ impl Resources {
             layout: &textures.layout,
         };
 
-        let context = render.state();
-        let textures = Textures::new(params, context.device(), context.queue());
+        let textures = Textures::new(params, state);
         let id = self.textures.insert(textures);
         TexturesHandle::new(id)
     }
 
     pub fn update_textures_map<S>(
         &self,
-        render: &Render,
         handle: TexturesHandle<S>,
         data: TextureData,
     ) -> Result<(), TexturesError> {
-        self.textures
-            .get(handle.id())?
-            .update_data(data, render.state().queue())?;
-
+        self.textures.get(handle.id())?.update_data(data)?;
         Ok(())
     }
 
     pub fn create_lights<S, T>(
         &mut self,
-        render: &Render,
+        state: &State,
         variables: LightsVariables,
         layer: &Layer<S, T>,
     ) -> LightsHandle<S> {
@@ -118,31 +109,27 @@ impl Resources {
             layout: &lights.layout,
         };
 
-        let lights = Lights::new(params, render.state().device());
+        let lights = Lights::new(params, state);
         let id = self.lights.insert(lights);
         LightsHandle::new(id)
     }
 
     pub fn update_lights_sources<S>(
         &mut self,
-        render: &Render,
         handle: LightsHandle<S>,
         index: usize,
         sources: &[Source],
     ) -> Result<(), SourceError> {
-        self.lights.get_mut(handle.id())?.update_array(
-            index,
-            0,
-            sources,
-            render.state().queue(),
-        )?;
+        self.lights
+            .get_mut(handle.id())?
+            .update_array(index, 0, sources)?;
 
         Ok(())
     }
 
     pub fn create_spaces<S, T>(
         &mut self,
-        render: &Render,
+        state: &State,
         variables: SpacesVariables,
         layer: &Layer<S, T>,
     ) -> SpacesHandle<S> {
@@ -153,23 +140,18 @@ impl Resources {
             layout: &spaces.layout,
         };
 
-        let context = render.state();
-        let spaces = Spaces::new(params, context.device(), context.queue());
+        let spaces = Spaces::new(params, state);
         let id = self.spaces.insert(spaces);
         SpacesHandle::new(id)
     }
 
     pub fn update_spaces_data<S>(
         &self,
-        render: &Render,
         handle: SpacesHandle<S>,
         index: usize,
         data: SpaceData,
     ) -> Result<(), SpaceError> {
-        self.spaces
-            .get(handle.id())?
-            .update_data(index, data, render.state().queue())?;
-
+        self.spaces.get(handle.id())?.update_data(index, data)?;
         Ok(())
     }
 }
