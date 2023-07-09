@@ -2,10 +2,8 @@ mod data;
 
 use {
     dunge::{
-        input::{Input, Key},
-        shader::*,
-        Context, Frame, Globals, Instance, Layer, Loop, Mesh, MeshData, Perspective, Rgba,
-        TextureData, Textures, Vertex, View,
+        input::Key, shader::*, Context, Frame, Globals, Input, Instance, Layer, Loop, Mesh,
+        MeshData, Perspective, Rgba, TextureData, Textures, Vertex, View,
     },
     utils::Camera,
 };

@@ -1,8 +1,6 @@
 use dunge::{
-    input::{Input, Key},
-    shader::Shader,
-    CanvasConfig, Context, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData, Rgba,
-    Vertex, WindowMode,
+    input::Key, CanvasConfig, Context, Frame, InitialState, Input, Instance, Layer, Loop, Mesh,
+    MeshData, Rgba, Shader, Vertex, WindowMode,
 };
 
 #[repr(C)]

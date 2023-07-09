@@ -74,11 +74,13 @@ pub use {
         context::{Context, FrameParameters, Limits, PixelSize},
         frame::Frame,
         framebuffer::FrameFilter,
+        input::Input,
         layer::{ActiveLayer, Builder as LayerBuilder, Layer},
         mesh::{Data as MeshData, Error as MeshError, Mesh},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
         scheme::ShaderScheme,
+        shader::Shader,
         shader_data::{
             Globals, GlobalsBuilder, Instance, InvalidMapSize, Lights, LightsBuilder,
             LightsUpdateError, Model, Source, Space, SpaceData, SpaceFormat, Spaces, SpacesBuilder,

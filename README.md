@@ -29,13 +29,7 @@ cargo add dunge
 
 Then, let's create a new window to draw something in it:
 ```rust
-// Import some types
-use dunge::{
-    input::Input,
-    shader::Shader,
-    CanvasConfig, Context, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData, Rgba,
-    Vertex,
-};
+use dunge::{CanvasConfig, InitialState};
 
 fn main() {
     dunge::make_window(InitialState::default())
@@ -48,6 +42,8 @@ fn main() {
 
 To be able to draw something, you need to define a vertex type with the `Vertex` trait implementation and a shader type with the `Shader` trait implementation:
 ```rust
+use dunge::{Shader, Vertex};
+
 // Instead of manually implementing the trait, use a derive macro.
 // Note the struct must have the `repr(C)` attribute
 #[repr(C)]
@@ -62,10 +58,12 @@ impl Shader for TriangleShader {
 
 The `App` is our application type, we need to create it:
 ```rust
+use dunge::{Context, Instance, Layer, Mesh, MeshData};
+
 struct App {
-    layer: LayerHandle<TriangleShader>,
-    mesh: MeshHandle<Vert>,
-    instance: InstanceHandle,
+    layer: Layer<TriangleShader>,
+    mesh: Mesh<Vert>,
+    instance: Instance,
 }
 
 impl App {
@@ -93,6 +91,8 @@ impl App {
 
 To be able to pass the `App` in `run_blocking` we need to implement a `Loop` trait for it:
 ```rust
+use dunge::{Input, Frame, Loop, Rgba};
+
 impl Loop for App {
     // This calls once before every `render`
     fn update(&mut self, context: &mut Context, input: &Input) {

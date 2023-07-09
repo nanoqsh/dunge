@@ -2,12 +2,10 @@ mod models;
 
 use {
     dunge::{
-        input::{Input, Key},
-        shader::*,
-        topology::LineStrip,
-        Color, Compare, Context, Frame, FrameParameters, Globals, Instance, Layer, Lights, Loop,
-        Mesh, MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space,
-        SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex, View,
+        input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Frame,
+        FrameParameters, Globals, Input, Instance, Layer, Lights, Loop, Mesh, MeshData, Model,
+        Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space, SpaceData, SpaceFormat,
+        Spaces, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
