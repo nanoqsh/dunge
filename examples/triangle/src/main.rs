@@ -1,5 +1,4 @@
 use dunge::{
-    error::NotSet,
     input::{Input, Key},
     shader::Shader,
     CanvasConfig, Context, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData, Rgba,
@@ -63,26 +62,21 @@ impl App {
 }
 
 impl Loop for App {
-    type Error = NotSet;
-
-    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+    fn update(&mut self, context: &mut Context, input: &Input) {
         // Handle pressed keys
         for key in input.pressed_keys {
             if key == Key::Escape {
                 context.plan_to_close();
-                return Ok(());
             }
         }
-
-        Ok(())
     }
 
-    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+    fn render(&self, frame: &mut Frame) {
         frame
             .layer(&self.layer)
             .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
-            .draw(&self.mesh, &self.instance)
+            .draw(&self.mesh, &self.instance);
     }
 }

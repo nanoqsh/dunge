@@ -140,12 +140,11 @@ impl<V, T> Mesh<V, T> {
         Ok(())
     }
 
-    pub(crate) fn vertex_buffer(&self) -> BufferView<V> {
-        BufferView::new(&self.verts)
-    }
-
-    pub(crate) fn index_buffer(&self) -> Option<BufferView<u16>> {
-        self.indxs.as_ref().map(BufferView::new)
+    pub(crate) fn buffer(&self) -> MeshBuffer {
+        MeshBuffer {
+            verts: BufferView::new::<V>(&self.verts),
+            indxs: self.indxs.as_ref().map(BufferView::new::<u16>),
+        }
     }
 }
 
@@ -154,6 +153,11 @@ pub enum UpdateError {
     IndexSize,
     VertexSize,
     Kind,
+}
+
+pub(crate) struct MeshBuffer<'a> {
+    pub verts: BufferView<'a>,
+    pub indxs: Option<BufferView<'a>>,
 }
 
 #[cfg(test)]

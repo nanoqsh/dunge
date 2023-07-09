@@ -1,22 +1,17 @@
-use {
-    std::marker::PhantomData,
-    wgpu::{Buffer, BufferSlice},
-};
+use wgpu::{Buffer, BufferSlice};
 
-pub(crate) struct BufferView<'a, T> {
+pub(crate) struct BufferView<'a> {
     buf: &'a Buffer,
     len: u32,
-    ty: PhantomData<T>,
 }
 
-impl<'a, T> BufferView<'a, T> {
-    pub fn new(buf: &'a Buffer) -> Self {
+impl<'a> BufferView<'a> {
+    pub fn new<T>(buf: &'a Buffer) -> Self {
         use std::mem;
 
         Self {
             buf,
             len: (buf.size() / mem::size_of::<T>() as u64) as u32,
-            ty: PhantomData,
         }
     }
 

@@ -1,36 +1,23 @@
 pub use winit::event::VirtualKeyCode as Key;
 
 use {
-    crate::{context::Context, error::NotSet, frame::Frame},
-    std::{fmt, iter, slice},
+    crate::{context::Context, frame::Frame},
+    std::{iter, slice},
 };
 
 /// The main application loop.
 pub trait Loop {
-    type Error: From<NotSet> + fmt::Debug;
-
     /// Calls before render a frame to update the state.
     ///
     /// It accepts the [`Context`] and an [`Input`].
     /// The context uses to update the application state, create or delete any resources.
     /// The input contains an inputed data like a mouse position and etc.
-    ///
-    /// # Errors
-    /// Return [`Error`](crate::Loop::Error) if this fails.
-    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error>;
+    fn update(&mut self, context: &mut Context, input: &Input);
 
     /// Calls on render a frame.
     ///
     /// It accepts a [`Frame`] to draw something on the canvas.
-    ///
-    /// # Errors
-    /// Return [`Error`](crate::Loop::Error) if this fails.
-    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error>;
-
-    /// Calls when an error has occurred.
-    fn error_occurred(&mut self, err: Self::Error) {
-        log::error!("{err:?}");
-    }
+    fn render(&self, frame: &mut Frame);
 
     /// Calls when a close is requested.
     ///
@@ -44,18 +31,12 @@ impl<L> Loop for &mut L
 where
     L: Loop,
 {
-    type Error = L::Error;
-
-    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
-        (**self).update(context, input)
+    fn update(&mut self, context: &mut Context, input: &Input) {
+        (**self).update(context, input);
     }
 
-    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        (**self).render(frame)
-    }
-
-    fn error_occurred(&mut self, err: Self::Error) {
-        (**self).error_occurred(err);
+    fn render(&self, frame: &mut Frame) {
+        (**self).render(frame);
     }
 
     fn close_requested(&mut self) -> bool {
@@ -67,18 +48,12 @@ impl<L> Loop for Box<L>
 where
     L: Loop,
 {
-    type Error = L::Error;
-
-    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
-        self.as_mut().update(context, input)
+    fn update(&mut self, context: &mut Context, input: &Input) {
+        self.as_mut().update(context, input);
     }
 
-    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
-        self.as_ref().render(frame)
-    }
-
-    fn error_occurred(&mut self, err: Self::Error) {
-        self.as_mut().error_occurred(err);
+    fn render(&self, frame: &mut Frame) {
+        self.as_ref().render(frame);
     }
 
     fn close_requested(&mut self) -> bool {

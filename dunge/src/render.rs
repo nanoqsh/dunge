@@ -114,36 +114,29 @@ impl Render {
         );
     }
 
-    pub fn draw_frame<L>(&mut self, lp: &L) -> RenderResult<L::Error>
+    pub fn draw_frame<L>(&mut self, lp: &L) -> Result<(), SurfaceError>
     where
         L: Loop,
     {
         use wgpu::*;
 
-        let output = match self
+        let output = self
             .state
             .surface
             .as_ref()
             .expect("surface")
-            .get_current_texture()
-        {
-            Ok(output) => output,
-            Err(err) => return RenderResult::SurfaceError(err),
-        };
+            .get_current_texture()?;
 
         let frame_view = output
             .texture
             .create_view(&TextureViewDescriptor::default());
 
         let mut frame = Frame::new(self, frame_view);
-        if let Err(err) = lp.render(&mut frame) {
-            return RenderResult::Error(err);
-        }
+        lp.render(&mut frame);
 
         frame.commit_in_frame();
         output.present();
-
-        RenderResult::Ok
+        Ok(())
     }
 
     pub fn take_screenshot(&self) -> Screenshot {
@@ -246,12 +239,6 @@ impl Render {
     pub fn framebuffer(&self) -> &Framebuffer {
         &self.framebuffer
     }
-}
-
-pub(crate) enum RenderResult<E> {
-    Ok,
-    SurfaceError(SurfaceError),
-    Error(E),
 }
 
 pub(crate) struct State {

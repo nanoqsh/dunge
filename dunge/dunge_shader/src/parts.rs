@@ -294,6 +294,7 @@ pub struct Fragment {
     pub vertex_texture: bool,
 }
 
+/// The color in a shader.
 #[derive(Clone, Copy)]
 pub struct Color {
     pub r: f32,
@@ -350,6 +351,7 @@ impl Ambient {
     }
 }
 
+/// The shader view.
 #[derive(Clone, Copy)]
 pub enum View {
     None,
@@ -395,12 +397,18 @@ impl View {
     }
 }
 
+/// Light source arrays. Described by a slice of [source arrays](SourceArray).
 #[derive(Clone, Copy)]
 pub struct SourceArrays(&'static [SourceArray]);
 
 impl SourceArrays {
+    /// Empty light sources.
     pub const EMPTY: Self = Self(&[]);
 
+    /// Creates a new [`SourceArrays`] from the slice of [`SourceArray`].
+    ///
+    /// # Panics
+    /// Panic if there are too many arrays.
     #[must_use]
     pub const fn new(arrays: &'static [SourceArray]) -> Self {
         assert!(
@@ -411,11 +419,13 @@ impl SourceArrays {
         Self(arrays)
     }
 
+    /// Returns the length of light source arrays.
     #[must_use]
     pub const fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Checks if light source arrays is empty.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -517,6 +527,7 @@ impl SourceArrays {
     }
 }
 
+/// The light source array.
 #[derive(Clone, Copy)]
 pub struct SourceArray {
     kind: SourceKind,
@@ -524,6 +535,10 @@ pub struct SourceArray {
 }
 
 impl SourceArray {
+    /// Creates a new [`SourceArray`].
+    ///
+    /// # Panics
+    /// This function will panic if the source array have a zero size or is larger than 127.
     #[must_use]
     pub const fn new(kind: SourceKind, size: u8) -> Self {
         assert!(size != 0, "source array cannot have size equal to zero");
@@ -532,6 +547,7 @@ impl SourceArray {
     }
 }
 
+/// The lights source kind. Describes the nature of light.
 #[derive(Clone, Copy)]
 pub enum SourceKind {
     Glow,

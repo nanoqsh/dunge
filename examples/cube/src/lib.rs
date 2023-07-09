@@ -2,7 +2,6 @@ mod data;
 
 use {
     dunge::{
-        error::NotSet,
         input::{Input, Key},
         shader::*,
         Context, Frame, Globals, Instance, Layer, Loop, Mesh, MeshData, Perspective, Rgba,
@@ -123,18 +122,13 @@ impl App {
 }
 
 impl Loop for App {
-    type Error = NotSet;
-
-    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+    fn update(&mut self, context: &mut Context, input: &Input) {
         const SENSITIVITY: f32 = 0.01;
 
         // Handle pressed keys
         for key in input.pressed_keys {
             match key {
-                Key::Escape => {
-                    context.plan_to_close();
-                    return Ok(());
-                }
+                Key::Escape => context.plan_to_close(),
                 Key::Space => match self.state {
                     State::Texture => self.state = State::Color,
                     State::Color => self.state = State::Texture,
@@ -152,11 +146,9 @@ impl Loop for App {
         let view = self.camera.view(Perspective::default());
         self.texture_globals.update_view(view);
         self.color_globals.update_view(view);
-
-        Ok(())
     }
 
-    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+    fn render(&self, frame: &mut Frame) {
         let clear_color = Rgba::from_standard_bytes([46, 34, 47, 255]);
         match self.state {
             State::Texture => frame
@@ -166,16 +158,14 @@ impl Loop for App {
                 .start()
                 .bind_globals(&self.texture_globals)
                 .bind_textures(&self.textures)
-                .draw(&self.texture_mesh, &self.instance)?,
+                .draw(&self.texture_mesh, &self.instance),
             State::Color => frame
                 .layer(&self.color_layer)
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start()
                 .bind_globals(&self.color_globals)
-                .draw(&self.color_mesh, &self.instance)?,
+                .draw(&self.color_mesh, &self.instance),
         }
-
-        Ok(())
     }
 }

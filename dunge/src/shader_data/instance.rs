@@ -1,5 +1,5 @@
 use {
-    crate::{buffer::BufferView, error::InvalidSize, render::State},
+    crate::{buffer::BufferView, render::State},
     bytemuck::{Pod, Zeroable},
     glam::Mat4,
     std::sync::Arc,
@@ -87,7 +87,11 @@ impl Instance {
         Ok(())
     }
 
-    pub(crate) fn buffer(&self) -> BufferView<Model> {
-        BufferView::new(&self.buf)
+    pub(crate) fn buffer(&self) -> BufferView {
+        BufferView::new::<Model>(&self.buf)
     }
 }
+
+/// Returned when an invalid buffer size is provided.
+#[derive(Debug)]
+pub struct InvalidSize;

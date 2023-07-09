@@ -2,7 +2,6 @@ mod models;
 
 use {
     dunge::{
-        error::NotSet,
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
@@ -285,9 +284,7 @@ impl App {
 }
 
 impl Loop for App {
-    type Error = NotSet;
-
-    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+    fn update(&mut self, context: &mut Context, input: &Input) {
         use {dunge::winit::window::Fullscreen, std::f32::consts::TAU};
 
         const SENSITIVITY: f32 = 0.01;
@@ -323,10 +320,7 @@ impl Loop for App {
         #[cfg(not(target_arch = "wasm32"))]
         for key in input.pressed_keys {
             match key {
-                Key::Escape => {
-                    context.plan_to_close();
-                    return Ok(());
-                }
+                Key::Escape => context.plan_to_close(),
                 Key::P => {
                     let shot = context.take_screenshot();
                     utils::create_image(shot.width, shot.height, shot.data)
@@ -372,11 +366,9 @@ impl Loop for App {
                 sprite.instance.update(&[Model::from(transform)])
             })
             .expect("update instances");
-
-        Ok(())
     }
 
-    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+    fn render(&self, frame: &mut Frame) {
         {
             let clear_color = Rgba::from_standard_bytes([46, 34, 47, 255]);
             let mut layer = frame
@@ -392,7 +384,7 @@ impl Loop for App {
                 .bind_spaces(&self.spaces);
 
             for model in &self.sprite_meshes {
-                layer.draw(model.mesh, &model.instance)?;
+                layer.draw(model.mesh, &model.instance);
             }
         }
 
@@ -401,10 +393,8 @@ impl Loop for App {
             layer.bind_globals(&self.color_globals);
 
             for cube in &self.cubes {
-                layer.draw(&cube.mesh, &cube.instance)?;
+                layer.draw(&cube.mesh, &cube.instance);
             }
         }
-
-        Ok(())
     }
 }

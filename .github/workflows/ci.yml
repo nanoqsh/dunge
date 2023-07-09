@@ -9,7 +9,7 @@ env:
     CARGO_TERM_COLOR: always
     RUSTFLAGS: -Dwarnings
     RUST_BACKTRACE: full
-    MSRV: 1.69
+    MSRV: 1.70
     RUSTDOCFLAGS: -Dwarnings
     CACHE_SUFFIX: c
 jobs:
@@ -23,18 +23,20 @@ jobs:
             run: >
                 cargo clippy --
                 -W clippy::use_self
-                -W clippy::unwrap_used
-                -W clippy::perf
                 -W clippy::pedantic
-                -A clippy::cast_precision_loss
-                -A clippy::cast_sign_loss
-                -A clippy::cast_possible_truncation
-                -A clippy::cast_lossless
-                -A clippy::wildcard_imports
-                -A clippy::module_name_repetitions
-                -A clippy::many_single_char_names
-                -A clippy::too_many_lines
-                -A clippy::similar_names
+                -W clippy::unwrap-used
+                -W clippy::perf
+                -W clippy::missing-assert-message
+                -A clippy::needless_collect
+                -A clippy::cast-precision-loss
+                -A clippy::cast-sign-loss
+                -A clippy::cast-possible-truncation
+                -A clippy::cast-lossless
+                -A clippy::wildcard-imports
+                -A clippy::module_name-repetitions
+                -A clippy::many-single-char-names
+                -A clippy::too-many-lines
+                -A clippy::similar-names
 
           - name: Tests
             run: cargo test --verbose

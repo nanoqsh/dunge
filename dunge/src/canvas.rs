@@ -2,7 +2,7 @@ use {
     crate::{
         context::Context,
         r#loop::{Input, Keys, Loop, Mouse},
-        render::{RenderResult, State},
+        render::State,
         screen::Screen,
         time::Time,
     },
@@ -215,9 +215,8 @@ impl Canvas {
                     // Reset delta time
                     time.reset();
 
-                    if let Err(err) = lp.update(&mut context, &input) {
-                        lp.error_occurred(err);
-                    }
+                    // Update the loop
+                    lp.update(&mut context, &input);
 
                     // Reset mouse delta
                     mouse = Mouse::default();
@@ -227,18 +226,17 @@ impl Canvas {
                     released_keys.clear();
 
                     match context.render.draw_frame(&lp) {
-                        RenderResult::Ok => {}
-                        RenderResult::SurfaceError(SurfaceError::Timeout) => {
+                        Ok(()) => {}
+                        Err(SurfaceError::Timeout) => {
                             log::info!("suface error: timeout");
                         }
-                        RenderResult::SurfaceError(SurfaceError::Outdated | SurfaceError::Lost) => {
+                        Err(SurfaceError::Outdated | SurfaceError::Lost) => {
                             context.render.resize(context.window.inner_size().into());
                         }
-                        RenderResult::SurfaceError(SurfaceError::OutOfMemory) => {
+                        Err(SurfaceError::OutOfMemory) => {
                             log::error!("suface error: out of memory");
                             flow.set_exit();
                         }
-                        RenderResult::Error(err) => lp.error_occurred(err),
                     }
                 }
                 Event::DeviceEvent {

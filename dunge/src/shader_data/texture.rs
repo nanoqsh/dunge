@@ -1,5 +1,5 @@
 use {
-    crate::{error::InvalidSize, render::State},
+    crate::render::State,
     wgpu::{Queue, Sampler, Texture as WgpuTexture, TextureView},
 };
 
@@ -142,3 +142,7 @@ impl Texture {
         &self.sampler
     }
 }
+
+/// Returned when an invalid buffer size is provided.
+#[derive(Debug)]
+pub struct InvalidSize;

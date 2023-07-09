@@ -12,7 +12,6 @@ mod framebuffer {
     pub(crate) use self::buffer::{BufferSize, Framebuffer, Parameters as FrameParameters};
     pub use self::render_frame::FrameFilter;
 }
-pub mod error;
 mod layer;
 mod r#loop;
 mod mesh;
@@ -43,7 +42,7 @@ mod shader_data {
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         spaces::{Builder as SpacesBuilder, Spaces, UpdateError as SpacesUpdateError},
-        texture::{Data as TextureData, Error as TextureError},
+        texture::{Data as TextureData, Error as TextureError, InvalidSize as InvalidMapSize},
         textures::{Builder as TexturesBuilder, Textures},
     };
 }
@@ -81,9 +80,9 @@ pub use {
         r#loop::Loop,
         scheme::ShaderScheme,
         shader_data::{
-            Globals, GlobalsBuilder, Instance, Lights, LightsBuilder, LightsUpdateError, Model,
-            Source, Space, SpaceData, SpaceFormat, Spaces, SpacesBuilder, SpacesUpdateError,
-            TextureData, TextureError, Textures, TexturesBuilder,
+            Globals, GlobalsBuilder, Instance, InvalidMapSize, Lights, LightsBuilder,
+            LightsUpdateError, Model, Source, Space, SpaceData, SpaceFormat, Spaces, SpacesBuilder,
+            SpacesUpdateError, TextureData, TextureError, Textures, TexturesBuilder,
         },
         transform::Transform,
         vertex::Vertex,

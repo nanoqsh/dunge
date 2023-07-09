@@ -1,9 +1,8 @@
 use {
     crate::{
         color::{Color, Rgba},
-        error::NotSet,
         frame::Frame,
-        mesh::Mesh,
+        mesh::{Mesh, MeshBuffer},
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
         shader::{Shader, ShaderInfo},
         shader_data::{
@@ -91,62 +90,50 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
     }
 
     /// Draws the [mesh](crate::Mesh).
-    ///
-    /// # Errors
-    /// See [`NotSet`] for details.
-    pub fn draw(
-        &mut self,
-        mesh: &'l Mesh<S::Vertex, T>,
-        instance: &'l Instance,
-    ) -> Result<(), NotSet>
+    pub fn draw(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance)
     where
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
         if info.has_globals() {
-            let (index, group) = self.groups.globals.ok_or(NotSet::Globals)?;
+            let (index, group) = self.groups.globals.expect("globals is not set");
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_textures() {
-            let (index, group) = self.groups.textures.ok_or(NotSet::Textures)?;
+            let (index, group) = self.groups.textures.expect("textures is not set");
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_lights() {
-            let (index, group) = self.groups.lights.ok_or(NotSet::Lights)?;
+            let (index, group) = self.groups.lights.expect("lights is not set");
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_spaces() {
-            let (index, group) = self.groups.spaces.ok_or(NotSet::Spaces)?;
+            let (index, group) = self.groups.spaces.expect("spaces is not set");
             self.pass.set_bind_group(index, group, &[]);
         }
 
-        self.draw_mesh(mesh, instance);
-        Ok(())
+        self.draw_mesh(mesh.buffer(), instance);
     }
 
-    fn draw_mesh(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance)
-    where
-        S: Shader,
-    {
+    fn draw_mesh(&mut self, mesh: MeshBuffer<'l>, instance: &'l Instance) {
         use wgpu::IndexFormat;
 
         let instances = instance.buffer();
         self.pass
             .set_vertex_buffer(Pipeline::INSTANCE_BUFFER_SLOT, instances.slice());
 
-        let verts = mesh.vertex_buffer();
         self.pass
-            .set_vertex_buffer(Pipeline::VERTEX_BUFFER_SLOT, verts.slice());
+            .set_vertex_buffer(Pipeline::VERTEX_BUFFER_SLOT, mesh.verts.slice());
 
-        match mesh.index_buffer() {
+        match mesh.indxs {
             Some(buf) => {
                 self.pass.set_index_buffer(buf.slice(), IndexFormat::Uint16);
                 self.pass.draw_indexed(0..buf.len(), 0, 0..instances.len());
             }
-            None => self.pass.draw(0..verts.len(), 0..instances.len()),
+            None => self.pass.draw(0..mesh.verts.len(), 0..instances.len()),
         }
     }
 }
@@ -184,8 +171,6 @@ impl<'d, 'l, S, T> Builder<'d, 'l, S, T> {
     ///
     /// Don't set this setting if you don't want to fill
     /// the previous layer (or frame) with some color.
-    /// Or set to clear the current buffer if a layer is already drawn
-    /// into the frame by calling [`commit_in_frame`](crate::Frame::commit_in_frame).
     pub fn with_clear_color(self, Color(col): Rgba) -> Self {
         Self {
             clear_color: Some(col.map(|v| v as f64)),

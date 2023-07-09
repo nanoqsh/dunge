@@ -1,11 +1,10 @@
 use {
     crate::{
-        error::InvalidSize,
         layer::Layer,
         pipeline::Textures as Bindings,
         render::State,
         shader::{Shader, ShaderInfo},
-        shader_data::texture::{Data as TextureData, Texture},
+        shader_data::texture::{Data as TextureData, InvalidSize, Texture},
     },
     std::{marker::PhantomData, sync::Arc},
     wgpu::{BindGroup, BindGroupLayout, Queue},
@@ -59,6 +58,14 @@ impl<S> Textures<S> {
         }
     }
 
+    /// Updates the texture map with a new [data](`TextureData`).
+    ///
+    /// # Errors
+    /// Will return [`InvalidSize`] if the size of the new [data](`TextureData`)
+    /// doesn't match the current texture size.
+    ///
+    /// # Panics
+    /// Panics if the shader has no texture map.
     pub fn update_map(&self, data: TextureData) -> Result<(), InvalidSize>
     where
         S: Shader,
