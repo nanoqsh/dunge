@@ -1,13 +1,13 @@
 pub use winit::event::VirtualKeyCode as Key;
 
 use {
-    crate::{context::Context, error::Error, frame::Frame},
+    crate::{context::Context, error::NotSet, frame::Frame},
     std::{fmt, iter, slice},
 };
 
 /// The main application loop.
 pub trait Loop {
-    type Error: From<Error> + fmt::Debug;
+    type Error: From<NotSet> + fmt::Debug;
 
     /// Calls before render a frame to update the state.
     ///

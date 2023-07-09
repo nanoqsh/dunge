@@ -73,7 +73,6 @@ pub use {
         canvas::{Backend, Canvas, CanvasConfig, Device, Error as CanvasError, Selector},
         color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, Limits, PixelSize},
-        error::Error,
         frame::Frame,
         framebuffer::FrameFilter,
         layer::{ActiveLayer, Builder as LayerBuilder, Layer},

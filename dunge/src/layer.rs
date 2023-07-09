@@ -1,7 +1,7 @@
 use {
     crate::{
         color::{Color, Rgba},
-        error::{Error, NotSetError},
+        error::NotSet,
         frame::Frame,
         mesh::Mesh,
         pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
@@ -93,33 +93,33 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
     /// Draws the [mesh](crate::Mesh).
     ///
     /// # Errors
-    /// See [`Error`] for details.
+    /// See [`NotSet`] for details.
     pub fn draw(
         &mut self,
         mesh: &'l Mesh<S::Vertex, T>,
         instance: &'l Instance,
-    ) -> Result<(), Error>
+    ) -> Result<(), NotSet>
     where
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
         if info.has_globals() {
-            let (index, group) = self.groups.globals.ok_or(NotSetError::Globals)?;
+            let (index, group) = self.groups.globals.ok_or(NotSet::Globals)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_textures() {
-            let (index, group) = self.groups.textures.ok_or(NotSetError::Textures)?;
+            let (index, group) = self.groups.textures.ok_or(NotSet::Textures)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_lights() {
-            let (index, group) = self.groups.lights.ok_or(NotSetError::Lights)?;
+            let (index, group) = self.groups.lights.ok_or(NotSet::Lights)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_spaces() {
-            let (index, group) = self.groups.spaces.ok_or(NotSetError::Spaces)?;
+            let (index, group) = self.groups.spaces.ok_or(NotSet::Spaces)?;
             self.pass.set_bind_group(index, group, &[]);
         }
 

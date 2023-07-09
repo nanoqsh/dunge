@@ -1,5 +1,5 @@
 use {
-    crate::{error::TooLargeSize, render::State},
+    crate::{error::InvalidSize, render::State},
     wgpu::{Queue, Sampler, Texture as WgpuTexture, TextureView},
 };
 
@@ -101,7 +101,7 @@ impl Texture {
         }
     }
 
-    pub fn update(&self, data: Data, queue: &Queue) -> Result<(), TooLargeSize> {
+    pub fn update(&self, data: Data, queue: &Queue) -> Result<(), InvalidSize> {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -112,7 +112,7 @@ impl Texture {
         };
 
         if size != self.texture.size() {
-            return Err(TooLargeSize);
+            return Err(InvalidSize);
         }
 
         queue.write_texture(

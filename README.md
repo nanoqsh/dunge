@@ -31,10 +31,11 @@ Then, let's create a new window to draw something in it:
 ```rust
 // Import some types
 use dunge::{
-    input::{Input, Key},
+    error::NotSet,
+    input::Input,
     shader::Shader,
-    CanvasConfig, Context, Error, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData,
-    Model, Rgba, Vertex, WindowMode,
+    CanvasConfig, Context, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData, Rgba,
+    Vertex,
 };
 
 fn main() {
@@ -85,7 +86,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = context.create_instances(&[Model::default()]);
+        let instance = context.create_default_instance();
         Self { layer, mesh, instance }
     }
 }
@@ -94,7 +95,7 @@ impl App {
 To be able to pass the `App` in `run_blocking` we need to implement a `Loop` trait for it:
 ```rust
 impl Loop for App {
-    type Error = Error; // Define the error type
+    type Error = NotSet; // Define the error type
 
     // This calls once before every `render`
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {

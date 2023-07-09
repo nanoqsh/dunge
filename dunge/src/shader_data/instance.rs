@@ -1,5 +1,5 @@
 use {
-    crate::{buffer::BufferView, error::TooLargeSize, render::State},
+    crate::{buffer::BufferView, error::InvalidSize, render::State},
     bytemuck::{Pod, Zeroable},
     glam::Mat4,
     std::sync::Arc,
@@ -74,11 +74,11 @@ impl Instance {
         }
     }
 
-    pub fn update(&self, models: &[Model]) -> Result<(), TooLargeSize> {
+    pub fn update(&self, models: &[Model]) -> Result<(), InvalidSize> {
         use std::mem;
 
         if self.buf.size() != mem::size_of_val(models) as u64 {
-            return Err(TooLargeSize);
+            return Err(InvalidSize);
         }
 
         self.queue

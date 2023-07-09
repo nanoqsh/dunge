@@ -2,12 +2,13 @@ mod models;
 
 use {
     dunge::{
+        error::NotSet,
         input::{Input, Key},
         shader::*,
         topology::LineStrip,
-        Color, Compare, Context, Error, Frame, FrameParameters, Globals, Instance, Layer, Lights,
-        Loop, Mesh, MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source,
-        Space, SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex, View,
+        Color, Compare, Context, Frame, FrameParameters, Globals, Instance, Layer, Lights, Loop,
+        Mesh, MeshData, Model, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space,
+        SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -284,7 +285,7 @@ impl App {
 }
 
 impl Loop for App {
-    type Error = Error;
+    type Error = NotSet;
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
         use {dunge::winit::window::Fullscreen, std::f32::consts::TAU};

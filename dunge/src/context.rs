@@ -91,6 +91,7 @@ impl Context {
         SpacesBuilder::new(self.render.state())
     }
 
+    /// Creates a new shader [scheme](ShaderScheme).
     pub fn create_scheme<S>(&mut self) -> ShaderScheme<S>
     where
         S: Shader,
@@ -98,10 +99,10 @@ impl Context {
         ShaderScheme::new()
     }
 
-    /// Creates a new layer with default parameters.
+    /// Creates a new [layer](Layer) with default parameters.
     ///
     /// This is a shortcut for `context.create_layer_with_parameters().build(scheme)`
-    /// with an automatically generated shader scheme.
+    /// with an automatically generated shader [scheme](ShaderScheme).
     /// Use the [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters)
     /// function to create a custom layer.
     pub fn create_layer<S, T>(&mut self) -> Layer<S, T>
@@ -118,12 +119,17 @@ impl Context {
         ParametersBuilder::new(self.render.state())
     }
 
-    /// Creates new instances.
+    /// Creates new [instances](Instance).
     pub fn create_instances(&mut self, models: &[Model]) -> Instance {
         Instance::new(models, self.render.state())
     }
 
-    /// Creates a new mesh.
+    /// Creates a new default [instance](Instance).
+    pub fn create_default_instance(&mut self) -> Instance {
+        self.create_instances(&[Model::default()])
+    }
+
+    /// Creates a new [mesh](Mesh).
     pub fn create_mesh<V, T>(&self, data: &MeshData<V, T>) -> Mesh<V, T>
     where
         V: Vertex,

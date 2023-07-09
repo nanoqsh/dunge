@@ -1,22 +1,6 @@
-/// The main loop error.
-#[derive(Debug)]
-pub enum Error {
-    /// Returns when a rendered resourse or selected object not found.
-    NotFound,
-
-    /// Returns when the requested object is not set.
-    NotSet(NotSetError),
-}
-
-impl From<NotSetError> for Error {
-    fn from(v: NotSetError) -> Self {
-        Self::NotSet(v)
-    }
-}
-
 /// The error indicating some object is not set.
 #[derive(Debug)]
-pub enum NotSetError {
+pub enum NotSet {
     /// Returns when globals is not set.
     Globals,
 
@@ -30,6 +14,6 @@ pub enum NotSetError {
     Spaces,
 }
 
-/// Returned when too large buffer is passed.
+/// Returned when an invalid buffer size is provided.
 #[derive(Debug)]
-pub struct TooLargeSize;
+pub struct InvalidSize;

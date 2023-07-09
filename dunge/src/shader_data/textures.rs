@@ -1,6 +1,6 @@
 use {
     crate::{
-        error::TooLargeSize,
+        error::InvalidSize,
         layer::Layer,
         pipeline::Textures as Bindings,
         render::State,
@@ -59,7 +59,7 @@ impl<S> Textures<S> {
         }
     }
 
-    pub fn update_map(&self, data: TextureData) -> Result<(), TooLargeSize>
+    pub fn update_map(&self, data: TextureData) -> Result<(), InvalidSize>
     where
         S: Shader,
     {

@@ -2,10 +2,11 @@ mod data;
 
 use {
     dunge::{
+        error::NotSet,
         input::{Input, Key},
         shader::*,
-        Context, Error, Frame, Globals, Instance, Layer, Loop, Mesh, MeshData, Model, Perspective,
-        Rgba, TextureData, Textures, Vertex, View,
+        Context, Frame, Globals, Instance, Layer, Loop, Mesh, MeshData, Perspective, Rgba,
+        TextureData, Textures, Vertex, View,
     },
     utils::Camera,
 };
@@ -86,7 +87,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = context.create_instances(&[Model::default()]);
+        let instance = context.create_default_instance();
 
         // Create meshes
         let texture_mesh = {
@@ -122,7 +123,7 @@ impl App {
 }
 
 impl Loop for App {
-    type Error = Error;
+    type Error = NotSet;
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
         const SENSITIVITY: f32 = 0.01;

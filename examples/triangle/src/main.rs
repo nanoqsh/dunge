@@ -1,8 +1,9 @@
 use dunge::{
+    error::NotSet,
     input::{Input, Key},
     shader::Shader,
-    CanvasConfig, Context, Error, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData,
-    Model, Rgba, Vertex, WindowMode,
+    CanvasConfig, Context, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData, Rgba,
+    Vertex, WindowMode,
 };
 
 #[repr(C)]
@@ -52,7 +53,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = context.create_instances(&[Model::default()]);
+        let instance = context.create_default_instance();
         Self {
             layer,
             mesh,
@@ -62,7 +63,7 @@ impl App {
 }
 
 impl Loop for App {
-    type Error = Error;
+    type Error = NotSet;
 
     fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
         // Handle pressed keys
