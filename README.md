@@ -31,7 +31,6 @@ Then, let's create a new window to draw something in it:
 ```rust
 // Import some types
 use dunge::{
-    error::NotSet,
     input::Input,
     shader::Shader,
     CanvasConfig, Context, Frame, InitialState, Instance, Layer, Loop, Mesh, MeshData, Rgba,
@@ -95,23 +94,20 @@ impl App {
 To be able to pass the `App` in `run_blocking` we need to implement a `Loop` trait for it:
 ```rust
 impl Loop for App {
-    type Error = NotSet; // Define the error type
-
     // This calls once before every `render`
-    fn update(&mut self, context: &mut Context, input: &Input) -> Result<(), Self::Error> {
+    fn update(&mut self, context: &mut Context, input: &Input) {
         // You can update the context here. For example create and delete meshes.
         // Also you may want to handle an user's input here.
-        Ok(())
     }
 
     // This calls every time the application needs to draw something in the window
-    fn render(&self, frame: &mut Frame) -> Result<(), Self::Error> {
+    fn render(&self, frame: &mut Frame) {
         frame
             .layer(&self.layer)
             .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
-            .draw(&self.mesh, &self.instance)
+            .draw(&self.mesh, &self.instance);
     }
 }
 ```

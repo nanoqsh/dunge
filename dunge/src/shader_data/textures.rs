@@ -61,7 +61,7 @@ impl<S> Textures<S> {
     /// Updates the texture map with a new [data](`TextureData`).
     ///
     /// # Errors
-    /// Will return [`InvalidSize`] if the size of the new [data](`TextureData`)
+    /// Will return [`InvalidSize`] if the size of the [data](`TextureData`)
     /// doesn't match the current texture size.
     ///
     /// # Panics
@@ -114,6 +114,10 @@ impl<'a> Builder<'a> {
         self
     }
 
+    /// Builds the textures.
+    ///
+    /// # Panics
+    /// Panics if the shader requires texture `map`, but it's not set.
     #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Textures<S>
     where

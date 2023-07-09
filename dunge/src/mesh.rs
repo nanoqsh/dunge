@@ -115,6 +115,13 @@ impl<V, T> Mesh<V, T> {
         }
     }
 
+    /// Updates the mesh with a new [data](`Data`).
+    ///
+    /// # Errors
+    /// Will return
+    /// - [`UpdateError::VertexSize`] if a slice of vertices is passed with a wrong length.
+    /// - [`UpdateError::IndexSize`] if a slice of indices is passed with a wrong length.
+    /// - [`UpdateError::NoIndices`] if no indices are passed but they are required.
     pub fn update(&mut self, data: &Data<V, T>) -> Result<(), UpdateError>
     where
         V: Vertex,
@@ -126,7 +133,7 @@ impl<V, T> Mesh<V, T> {
         }
 
         if let Some(indxs) = &data.indxs {
-            let buf = self.indxs.as_ref().ok_or(UpdateError::Kind)?;
+            let buf = self.indxs.as_ref().ok_or(UpdateError::NoIndices)?;
             if buf.size() != indxs.len() as u64 {
                 return Err(UpdateError::IndexSize);
             }
@@ -148,11 +155,17 @@ impl<V, T> Mesh<V, T> {
     }
 }
 
+/// An error returned from the [`update`](Mesh::update) function.
 #[derive(Debug)]
 pub enum UpdateError {
-    IndexSize,
+    /// A slice of vertices is passed with a wrong length.
     VertexSize,
-    Kind,
+
+    /// A slice of indices is passed with a wrong length.
+    IndexSize,
+
+    /// No indices are passed but they are required.
+    NoIndices,
 }
 
 pub(crate) struct MeshBuffer<'a> {

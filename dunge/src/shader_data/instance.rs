@@ -74,6 +74,11 @@ impl Instance {
         }
     }
 
+    /// Updates the instance with new [models](`Model`).
+    ///
+    /// # Errors
+    /// Will return [`InvalidSize`] if the size of the [models](`Model`)
+    /// slice doesn't match the current instance size.
     pub fn update(&self, models: &[Model]) -> Result<(), InvalidSize> {
         use std::mem;
 

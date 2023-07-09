@@ -408,7 +408,7 @@ impl SourceArrays {
     /// Creates a new [`SourceArrays`] from the slice of [`SourceArray`].
     ///
     /// # Panics
-    /// Panic if there are too many arrays.
+    /// Panic if the number of source arrays exceeds the maximum allowed.
     #[must_use]
     pub const fn new(arrays: &'static [SourceArray]) -> Self {
         assert!(
@@ -425,7 +425,7 @@ impl SourceArrays {
         self.0.len()
     }
 
-    /// Checks if light source arrays is empty.
+    /// Checks if the light source arrays is empty.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -561,12 +561,18 @@ pub struct SourceBindings {
     pub size: u8,
 }
 
+/// Light spaces. Described by a slice of [space kinds](SpaceKind).
 #[derive(Clone, Copy)]
 pub struct LightSpaces(&'static [SpaceKind]);
 
 impl LightSpaces {
+    /// Empty light spaces.
     pub const EMPTY: Self = Self(&[]);
 
+    /// Creates a new [`LightSpaces`] from the slice of [`SpaceKind`].
+    ///
+    /// # Panics
+    /// Panic if the number of spaces exceeds the maximum allowed.
     #[must_use]
     pub const fn new(spaces: &'static [SpaceKind]) -> Self {
         assert!(
@@ -577,11 +583,13 @@ impl LightSpaces {
         Self(spaces)
     }
 
+    /// Returns the length of light space.
     #[must_use]
     pub const fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Checks if the light space is empty.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()

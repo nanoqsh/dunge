@@ -134,6 +134,14 @@ impl<S> Spaces<S> {
         }
     }
 
+    /// Updates the spaces with a new [data](`Data`).
+    ///
+    /// # Errors
+    /// Will return [`UpdateError::Index`] if the index is invalid or
+    /// [`UpdateError::Size`] if the [data](`Data`) doesn't match the current size.
+    ///
+    /// # Panics
+    /// Panics if the shader has no light spaces.
     pub fn update(&self, index: usize, data: Data) -> Result<(), UpdateError>
     where
         S: Shader,
@@ -191,9 +199,13 @@ impl SpaceTexture {
     }
 }
 
+/// An error returned from the [`update`](Spaces::update) function.
 #[derive(Debug)]
 pub enum UpdateError {
+    /// The index is invalid.
     Index,
+
+    /// [`Data`] size doesn't match the current size.
     Size,
 }
 
@@ -223,12 +235,18 @@ impl<'a> Builder<'a> {
         }
     }
 
+    /// Set a [space](Space) to shader.
     pub fn with_space(mut self, space: Space<'a>) -> Self {
         self.variables.textures_data.push(space.data);
         self.variables.light_spaces.push(space.into_uniform());
         self
     }
 
+    /// Builds the spaces.
+    ///
+    /// # Panics
+    /// Panics if the shader requires light spaces, but they aren't set
+    /// or some light space format doesn't match.
     #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Spaces<S>
     where

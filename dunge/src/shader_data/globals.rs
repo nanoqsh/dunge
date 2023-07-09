@@ -85,6 +85,10 @@ impl<S> Globals<S> {
         }
     }
 
+    /// Updates the view with a new [view](`View`).
+    ///
+    /// # Panics
+    /// Panics if the shader has no view.
     pub fn update_view(&mut self, view: View)
     where
         S: Shader,
@@ -96,6 +100,10 @@ impl<S> Globals<S> {
         camera.update_view(view);
     }
 
+    /// Updates the ambient with a new [color](`Rgb`).
+    ///
+    /// # Panics
+    /// Panics if the shader has no ambient.
     pub fn update_ambient(&self, Color(col): Rgb)
     where
         S: Shader,
@@ -160,6 +168,11 @@ impl<'a> Builder<'a> {
         self
     }
 
+    /// Builds the globals.
+    ///
+    /// # Panics
+    /// Panics if the shader requires view or ambient, but they aren't set. They can be set by the
+    /// [`with_view`](Builder::with_view) or the [`with_ambient`](Builder::with_ambient) functions.
     #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Globals<S>
     where
@@ -169,14 +182,14 @@ impl<'a> Builder<'a> {
         if info.has_camera {
             assert!(
                 self.variables.view.is_some(),
-                "the shader requires `view`, but it's not set",
+                "the shader requires view, but it's not set",
             );
         }
 
         if info.has_ambient {
             assert!(
                 self.variables.ambient.is_some(),
-                "the shader requires `ambient`, but it's not set",
+                "the shader requires ambient, but it's not set",
             );
         }
 

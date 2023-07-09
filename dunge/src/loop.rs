@@ -61,16 +61,16 @@ where
     }
 }
 
-/// The user input data.
+/// User input.
 pub struct Input<'a> {
     /// Seconds since previous [update](crate::Loop::update) was called.
     pub delta_time: f32,
 
     /// The cursor XY position on the screen.
-    /// `None` if the cursor out of screen.
+    /// [`None`] if the cursor out of screen.
     pub cursor_position: Option<(f32, f32)>,
 
-    /// The mouse input data.
+    /// The mouse input.
     pub mouse: Mouse,
 
     /// The pressed keys.
@@ -80,7 +80,7 @@ pub struct Input<'a> {
     pub released_keys: Keys<'a>,
 }
 
-/// The mouse input data.
+/// The mouse input.
 #[derive(Clone, Copy, Default)]
 pub struct Mouse {
     pub motion_delta: (f32, f32),
@@ -90,7 +90,7 @@ pub struct Mouse {
     pub pressed_right: bool,
 }
 
-/// Keys input data.
+/// Keys input.
 #[derive(Clone, Copy)]
 pub struct Keys<'a> {
     pub(crate) keys: &'a [Key],
@@ -107,7 +107,7 @@ impl<'a> IntoIterator for Keys<'a> {
     }
 }
 
-/// Keys iterator.
+/// An iterator over [keys](Key).
 pub struct KeysIterator<'a> {
     iter: iter::Copied<slice::Iter<'a, Key>>,
 }

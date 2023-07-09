@@ -88,6 +88,16 @@ impl<S> Lights<S> {
         }
     }
 
+    /// Updates the lights with new [sources](`Source`).
+    ///
+    /// # Errors
+    /// Will return
+    /// - [`UpdateError::Index`] if the index is invalid.
+    /// - [`UpdateError::Array`] if wrong offset or slice with wrong length is passed.
+    /// - [`UpdateError::SetLen`] if the new length exceeds the maximum available.
+    ///
+    /// # Panics
+    /// Panics if the shader has no light sources.
     pub fn update_sources(
         &mut self,
         index: usize,
@@ -133,10 +143,16 @@ impl<S> Lights<S> {
     }
 }
 
+/// An error returned from the [`update_sources`](Lights::update_sources) function.
 #[derive(Debug)]
 pub enum UpdateError {
+    /// The index is invalid.
     Index,
+
+    /// Wrong offset or slice with wrong length.
     Array(ArrayUpdateError),
+
+    /// The new length exceeds the maximum available.
     SetLen(SetLenError),
 }
 
@@ -187,6 +203,10 @@ impl<'a> Builder<'a> {
         self
     }
 
+    /// Builds the lights.
+    ///
+    /// # Panics
+    /// Panics if the shader requires source arrays, but they aren't set.
     #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Lights<S>
     where
