@@ -22,7 +22,7 @@ impl Canvas {
     /// Calls [`run`](crate::Canvas::run) but blocking instead of async.
     ///
     /// # Errors
-    /// Returns [`CanvasError`](crate::CanvasError) if backend selection or request device failed.
+    /// Returns [`CanvasError`](crate::error::CanvasError) if backend selection or request device failed.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_blocking<M, L>(self, config: CanvasConfig, make_loop: M) -> Error
     where
@@ -40,7 +40,7 @@ impl Canvas {
     /// implements the [`Loop`] trait.
     ///
     /// # Errors
-    /// Returns [`CanvasError`](crate::CanvasError) if backend selection or request device failed.
+    /// Returns [`CanvasError`](crate::error::CanvasError) if backend selection or request device failed.
     pub async fn run<M, L>(self, config: CanvasConfig, make_loop: M) -> Error
     where
         M: FnOnce(&mut Context) -> L,
@@ -296,7 +296,7 @@ impl Canvas {
     }
 }
 
-/// The error type of the [`Context`] creation.
+/// An error returned from the [`Context`] constructors.
 #[derive(Clone, Copy, Debug)]
 #[must_use]
 pub enum Error {

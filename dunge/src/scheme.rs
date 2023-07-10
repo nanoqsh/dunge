@@ -4,12 +4,13 @@ use {
     std::marker::PhantomData,
 };
 
-pub struct ShaderScheme<S> {
+/// The shader scheme.
+pub struct Scheme<S> {
     data: ShaderData,
     ty: PhantomData<S>,
 }
 
-impl<S> ShaderScheme<S> {
+impl<S> Scheme<S> {
     pub(crate) fn new() -> Self
     where
         S: Shader,

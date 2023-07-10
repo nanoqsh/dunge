@@ -3,6 +3,17 @@ mod camera;
 mod canvas;
 mod color;
 mod context;
+pub mod error {
+    //! Error types.
+
+    pub use crate::{
+        canvas::Error as CanvasError,
+        mesh::{Error as MeshError, UpdateError as MeshUpdateError},
+        shader_data::{
+            InvalidInstanceSize, InvalidMapSize, LightsUpdateError, SpacesUpdateError, TextureError,
+        },
+    };
+}
 mod frame;
 mod framebuffer {
     mod buffer;
@@ -12,6 +23,7 @@ mod framebuffer {
     pub(crate) use self::buffer::{BufferSize, Framebuffer, Parameters as FrameParameters};
     pub use self::render_frame::FrameFilter;
 }
+
 mod layer;
 mod r#loop;
 mod mesh;
@@ -71,23 +83,22 @@ pub use crate::canvas::android::from_app;
 pub use {
     crate::{
         camera::{Orthographic, Perspective, Projection, View},
-        canvas::{Backend, Canvas, CanvasConfig, Device, Error as CanvasError, Selector},
+        canvas::{Backend, Canvas, CanvasConfig, Device, Selector},
         color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, Limits, PixelSize},
         frame::Frame,
         framebuffer::FrameFilter,
         input::Input,
         layer::{ActiveLayer, Builder as LayerBuilder, Layer},
-        mesh::{Data as MeshData, Error as MeshError, Mesh},
+        mesh::{Data as MeshData, Mesh},
         pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
         r#loop::Loop,
-        scheme::ShaderScheme,
+        scheme::Scheme,
         shader::Shader,
         shader_data::{
-            Globals, GlobalsBuilder, Instance, InstanceColor, InvalidInstanceSize, InvalidMapSize,
-            Lights, LightsBuilder, LightsUpdateError, ModelColor, ModelTransform, Source, Space,
-            SpaceData, SpaceFormat, Spaces, SpacesBuilder, SpacesUpdateError, TextureData,
-            TextureError, Textures, TexturesBuilder,
+            Globals, GlobalsBuilder, Instance, InstanceColor, Lights, LightsBuilder, ModelColor,
+            ModelTransform, Source, Space, SpaceData, SpaceFormat, Spaces, SpacesBuilder,
+            TextureData, Textures, TexturesBuilder,
         },
         transform::Transform,
         vertex::Vertex,

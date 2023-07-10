@@ -15,7 +15,11 @@ impl<'a> Data<'a> {
     /// Creates a new [`TextureData`](crate::TextureData).
     ///
     /// # Errors
-    /// See [`TextureError`](crate::TextureError) for detailed info.
+    /// Will return
+    /// - [`TextureError::EmptyData`](crate::error::TextureError::EmptyData)
+    ///   if the data is empty.
+    /// - [`TextureError::SizeDoesNotMatch`](crate::error::TextureError::SizeDoesNotMatch)
+    ///   if the data length doesn't match with size * number of channels.
     pub const fn new(data: &'a [u8], size: (u32, u32)) -> Result<Self, Error> {
         if data.is_empty() {
             return Err(Error::EmptyData);
@@ -30,12 +34,13 @@ impl<'a> Data<'a> {
     }
 }
 
+/// Texture error.
 #[derive(Debug)]
 pub enum Error {
-    /// Returns when the data is empty.
+    /// The data is empty.
     EmptyData,
 
-    /// Returns when the data length doesn't match with size * number of channels.
+    /// The data length doesn't match with size * number of channels.
     SizeDoesNotMatch,
 }
 
@@ -143,6 +148,6 @@ impl Texture {
     }
 }
 
-/// Returned when an invalid buffer size is provided.
+/// An error returned from the texture updation.
 #[derive(Debug)]
 pub struct InvalidSize;

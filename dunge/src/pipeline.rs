@@ -3,7 +3,7 @@ use {
         framebuffer::Framebuffer,
         layer::Layer,
         render::State,
-        scheme::ShaderScheme,
+        scheme::Scheme,
         shader::Shader,
         shader_data::{ModelColor, ModelTransform},
         topology::Topology,
@@ -122,7 +122,7 @@ impl<'a, S, T> ParametersBuilder<'a, S, T> {
     }
 
     /// Builds new layer.
-    pub fn build(self, scheme: &ShaderScheme<S>) -> Layer<S, T>
+    pub fn build(self, scheme: &Scheme<S>) -> Layer<S, T>
     where
         S: Shader,
         T: Topology,

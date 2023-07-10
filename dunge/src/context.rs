@@ -6,7 +6,7 @@ use {
         mesh::{Data as MeshData, Mesh},
         pipeline::ParametersBuilder,
         render::{Render, State},
-        scheme::ShaderScheme,
+        scheme::Scheme,
         screen::Screen,
         shader::Shader,
         shader_data::{
@@ -92,11 +92,11 @@ impl Context {
     }
 
     /// Creates a new shader [scheme](ShaderScheme).
-    pub fn create_scheme<S>(&mut self) -> ShaderScheme<S>
+    pub fn create_scheme<S>(&mut self) -> Scheme<S>
     where
         S: Shader,
     {
-        ShaderScheme::new()
+        Scheme::new()
     }
 
     /// Creates a new [layer](Layer) with default parameters.

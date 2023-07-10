@@ -9,7 +9,7 @@ use {
 pub trait Loop {
     /// Calls before render a frame to update the state.
     ///
-    /// It accepts the [`Context`] and an [`Input`].
+    /// It accepts the [`Context`] and the [`Input`].
     /// The context uses to update the application state, create or delete any resources.
     /// The input contains an inputed data like a mouse position and etc.
     fn update(&mut self, context: &mut Context, input: &Input);

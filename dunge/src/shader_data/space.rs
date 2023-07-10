@@ -1,7 +1,7 @@
 use {
     crate::{
         color::{Color, Rgb},
-        shader_data::{ModelTransform, TextureError},
+        shader_data::{texture::Error, ModelTransform},
     },
     bytemuck::{Pod, Zeroable},
     dunge_shader::SpaceKind,
@@ -38,19 +38,19 @@ impl<'a> Data<'a> {
     /// Creates a new [`SpaceData`](crate::SpaceData).
     ///
     /// # Errors
-    /// See [`TextureError`](crate::TextureError) for detailed info.
-    pub const fn new(
-        data: &'a [u8],
-        size: (u8, u8, u8),
-        format: Format,
-    ) -> Result<Self, TextureError> {
+    /// Will return
+    /// - [`TextureError::EmptyData`](crate::error::TextureError::EmptyData)
+    ///   if the data is empty.
+    /// - [`TextureError::SizeDoesNotMatch`](crate::error::TextureError::SizeDoesNotMatch)
+    ///   if the data length doesn't match with size * number of channels.
+    pub const fn new(data: &'a [u8], size: (u8, u8, u8), format: Format) -> Result<Self, Error> {
         if data.is_empty() {
-            return Err(TextureError::EmptyData);
+            return Err(Error::EmptyData);
         }
 
         let (width, height, depth) = size;
         if data.len() != width as usize * height as usize * depth as usize * format.n_channels() {
-            return Err(TextureError::SizeDoesNotMatch);
+            return Err(Error::SizeDoesNotMatch);
         }
 
         Ok(Self { data, size, format })

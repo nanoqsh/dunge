@@ -171,6 +171,6 @@ impl<M> Inner<M> {
     }
 }
 
-/// Returned when an invalid buffer size is provided.
+/// An error returned from the instance updation.
 #[derive(Debug)]
 pub struct InvalidSize;

@@ -33,7 +33,11 @@ impl<'a, V> Data<'a, V> {
     /// Creates a new [`MeshData`](crate::MeshData) from given vertices and indices.
     ///
     /// # Errors
-    /// See [`MeshError`](crate::MeshError) for detailed info.
+    /// Will return
+    /// - [`MeshError::TooManyVertices`](crate::error::MeshError::TooManyVertices)
+    ///   if vertices length doesn't fit in `u16`.
+    /// - [`MeshError::WrongIndex`](crate::error::MeshError::WrongIndex)
+    ///   if the vertex index is out of bounds of the vertex slice.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Result<Self, Error> {
         let len: u16 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
 
@@ -50,7 +54,9 @@ impl<'a, V> Data<'a, V> {
     /// Creates a new [`MeshData`](crate::MeshData) from given quadrangles.
     ///
     /// # Errors
-    /// See [`MeshError`](crate::MeshError) for detailed info.
+    /// Will return
+    /// - [`MeshError::TooManyVertices`](crate::error::MeshError::TooManyVertices)
+    ///   if vertices length doesn't fit in `u16`.
     pub fn from_quads(verts: &'a [[V; 4]]) -> Result<Self, Error> {
         use std::slice;
 
@@ -69,12 +75,13 @@ impl<'a, V> Data<'a, V> {
     }
 }
 
+/// An error returned from the [`MeshData`](crate::MeshData) constructors.
 #[derive(Debug)]
 pub enum Error {
-    /// Returns when the vertices length too big and doesn't fit in `u16`.
+    /// Vertices length doesn't fit in `u16`.
     TooManyVertices,
 
-    /// Returns when the vertex index is out of bounds of the vertex slice.
+    /// The vertex index is out of bounds of the vertex slice.
     WrongIndex,
 }
 
@@ -119,9 +126,12 @@ impl<V, T> Mesh<V, T> {
     ///
     /// # Errors
     /// Will return
-    /// - [`UpdateError::VertexSize`] if a slice of vertices is passed with a wrong length.
-    /// - [`UpdateError::IndexSize`] if a slice of indices is passed with a wrong length.
-    /// - [`UpdateError::NoIndices`] if no indices are passed but they are required.
+    /// - [`MeshUpdateError::VertexSize`](crate::error::MeshUpdateError::VertexSize)
+    ///   if a slice of vertices is passed with a wrong length.
+    /// - [`MeshUpdateError::IndexSize`](crate::error::MeshUpdateError::IndexSize)
+    ///   if a slice of indices is passed with a wrong length.
+    /// - [`MeshUpdateError::NoIndices`](crate::error::MeshUpdateError::NoIndices)
+    ///   if no indices are passed but they are required.
     pub fn update(&mut self, data: &Data<V, T>) -> Result<(), UpdateError>
     where
         V: Vertex,

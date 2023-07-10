@@ -4,9 +4,8 @@ use {
     dunge::{
         input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Frame,
         FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights, Loop, Mesh,
-        MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme,
-        Source, Space, SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex,
-        View,
+        MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, Rgb, Rgba, Scheme, Source,
+        Space, SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -84,7 +83,7 @@ impl App {
         // Create shaders and layers
         let texture_layer = context.create_layer();
         let color_layer = {
-            let scheme: ShaderScheme<ColorShader> = context.create_scheme();
+            let scheme: Scheme<ColorShader> = context.create_scheme();
             context
                 .create_layer_with_parameters()
                 .with_depth_compare(Compare::Always)
