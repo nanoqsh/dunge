@@ -109,10 +109,8 @@ impl<S> Lights<S> {
     {
         use std::mem;
 
-        assert!(
-            ShaderInfo::new::<S>().source_arrays > 0,
-            "the shader has no light sources",
-        );
+        let info = ShaderInfo::new::<S>();
+        assert!(info.has_lights(), "the shader has no light sources");
 
         let (array, buffers) = self
             .source_arrays
@@ -213,7 +211,8 @@ impl<'a> Builder<'a> {
         S: Shader,
     {
         let actual = self.variables.source_arrays.len();
-        let expected = ShaderInfo::new::<S>().source_arrays;
+        let info = ShaderInfo::new::<S>();
+        let expected = info.source_arrays();
 
         assert_eq!(
             actual, expected,

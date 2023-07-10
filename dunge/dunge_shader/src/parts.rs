@@ -6,7 +6,6 @@ pub enum Dimension {
     D3,
 }
 
-#[derive(Clone, Copy)]
 pub(crate) struct InstanceInput;
 
 impl InstanceInput {
@@ -24,6 +23,36 @@ impl InstanceInput {
                 })
                 .collect(),
         });
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct InstanceColorInput {
+    enable: bool,
+}
+
+impl InstanceColorInput {
+    pub fn new(enable: bool) -> Self {
+        Self { enable }
+    }
+
+    pub fn define_type(self, location: &mut Location, o: &mut Out) {
+        if self.enable {
+            o.write(Struct {
+                name: "InstanceColorInput",
+                fields: vec![Field {
+                    location: location.next(),
+                    name: Name::Str("col"),
+                    ty: Type::VEC3,
+                }],
+            });
+        }
+    }
+
+    pub fn define_input(self, o: &mut Out) {
+        if self.enable {
+            o.write_str(" instcol: InstanceColorInput,");
+        }
     }
 }
 
@@ -79,6 +108,7 @@ pub(crate) struct VertexOutput {
     pub ambient: bool,
     pub source_arrays: SourceArrays,
     pub light_spaces: LightSpaces,
+    pub instance_colors: bool,
 }
 
 impl VertexOutput {
@@ -102,6 +132,14 @@ impl VertexOutput {
                 location: location.next(),
                 name: Name::Str("map"),
                 ty: Type::VEC2,
+            });
+        }
+
+        if self.instance_colors {
+            fields.push(Field {
+                location: location.next(),
+                name: Name::Str("instcol"),
+                ty: Type::VEC3,
             });
         }
 
@@ -142,6 +180,10 @@ impl VertexOutput {
 
         if self.fragment.vertex_texture {
             o.write_str("    out.map = input.map;\n");
+        }
+
+        if self.instance_colors {
+            o.write_str("    out.instcol = instcol.col;\n");
         }
 
         if self.has_sources() {
@@ -190,6 +232,10 @@ impl VertexOutput {
 
         if self.fragment.vertex_texture {
             col.out().write_str("tex.rgb");
+        }
+
+        if self.instance_colors {
+            col.out().write_str("out.instcol");
         }
 
         col.write_default("vec3(0.)");

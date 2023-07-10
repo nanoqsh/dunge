@@ -3,9 +3,10 @@ mod models;
 use {
     dunge::{
         input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Frame,
-        FrameParameters, Globals, Input, Instance, Layer, Lights, Loop, Mesh, MeshData, Model,
-        Orthographic, PixelSize, Rgb, Rgba, ShaderScheme, Source, Space, SpaceData, SpaceFormat,
-        Spaces, TextureData, Textures, Transform, Vertex, View,
+        FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights, Loop, Mesh,
+        MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, Rgb, Rgba, ShaderScheme,
+        Source, Space, SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex,
+        View,
     },
     utils::Camera,
 };
@@ -33,14 +34,13 @@ impl Shader for TextureShader {
 struct ColorVert {
     #[position]
     pos: [f32; 3],
-    #[color]
-    col: [f32; 3],
 }
 
 struct ColorShader;
 impl Shader for ColorShader {
     type Vertex = ColorVert;
     const VIEW: ShaderView = ShaderView::Camera;
+    const INSTANCE_COLORS: bool = true;
 }
 
 struct Sprite {
@@ -50,9 +50,11 @@ struct Sprite {
     pos: [f32; 3],
 }
 
-struct Cube {
+struct Squares {
     instance: Instance,
+    color: InstanceColor,
     mesh: Mesh<ColorVert, LineStrip>,
+    len: usize,
 }
 
 pub struct App {
@@ -64,7 +66,7 @@ pub struct App {
     lights: Lights<TextureShader>,
     spaces: Spaces<TextureShader>,
     sprite_meshes: Vec<Sprite>,
-    cubes: Vec<Cube>,
+    squares: Squares,
     camera: Camera,
     time: f32,
     fullscreen: bool,
@@ -137,7 +139,7 @@ impl App {
 
             let space = Space {
                 data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
-                model: Model::default(),
+                model: ModelTransform::default(),
                 col: Color([2.5; 3]),
             };
 
@@ -228,7 +230,7 @@ impl App {
                 .map(|(n, pos)| {
                     let transform = Transform::from_position(pos);
                     Sprite {
-                        instance: context.create_instances(&[Model::from(transform)]),
+                        instance: context.create_instances(&[ModelTransform::from(transform)]),
                         mesh: meshes[n as usize],
                         update_view: n == D || n == E,
                         pos,
@@ -237,31 +239,31 @@ impl App {
                 .collect()
         };
 
-        // Create cube models
-        let cubes = {
+        // Create square models
+        let squares = {
             const POSITIONS: [[f32; 3]; 2] = [[1., 0., 0.], [-1., 0., -1.]];
 
-            POSITIONS
+            let transforms: Vec<_> = POSITIONS
                 .into_iter()
-                .map(|pos| {
-                    let transform = Transform::from_position(pos);
-                    Cube {
-                        instance: context.create_instances(&[Model::from(transform)]),
-                        mesh: {
-                            let verts: Vec<_> = models::square::VERTICES
-                                .iter()
-                                .map(|&pos| ColorVert {
-                                    pos,
-                                    col: [0., 1., 0.3],
-                                })
-                                .collect();
+                .map(Transform::from_position)
+                .map(ModelTransform::from)
+                .collect();
 
-                            let data = MeshData::from_verts(&verts);
-                            context.create_mesh(&data)
-                        },
-                    }
-                })
-                .collect()
+            let colors = vec![ModelColor::default(); POSITIONS.len()];
+            Squares {
+                instance: context.create_instances(&transforms),
+                color: context.create_instances_color(&colors),
+                mesh: {
+                    let verts: Vec<_> = models::square::VERTICES
+                        .iter()
+                        .map(|&pos| ColorVert { pos })
+                        .collect();
+
+                    let data = MeshData::from_verts(&verts);
+                    context.create_mesh(&data)
+                },
+                len: POSITIONS.len(),
+            }
         };
 
         Self {
@@ -273,7 +275,7 @@ impl App {
             lights,
             spaces,
             sprite_meshes,
-            cubes,
+            squares,
             camera: Camera::default(),
             time: 0.,
             fullscreen: false,
@@ -313,6 +315,14 @@ impl Loop for App {
         self.lights
             .update_sources(0, 0, &sources)
             .expect("update sources");
+
+        let g = self.time.sin() * 0.5 + 0.5;
+        let col = Color([0.2, g, 0.5]);
+        let colors = vec![ModelColor::from(col); self.squares.len];
+        self.squares
+            .color
+            .update(&colors)
+            .expect("update color instance");
 
         // Handle pressed keys
         #[cfg(not(target_arch = "wasm32"))]
@@ -361,7 +371,7 @@ impl Loop for App {
                     ..Default::default()
                 };
 
-                sprite.instance.update(&[Model::from(transform)])
+                sprite.instance.update(&[ModelTransform::from(transform)])
             })
             .expect("update instances");
     }
@@ -387,12 +397,12 @@ impl Loop for App {
         }
 
         {
-            let mut layer = frame.layer(&self.color_layer).start();
-            layer.bind_globals(&self.color_globals);
-
-            for cube in &self.cubes {
-                layer.draw(&cube.mesh, &cube.instance);
-            }
+            frame
+                .layer(&self.color_layer)
+                .start()
+                .bind_globals(&self.color_globals)
+                .bind_instance_color(&self.squares.color)
+                .draw(&self.squares.mesh, &self.squares.instance);
         }
     }
 }

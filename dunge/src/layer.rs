@@ -3,11 +3,9 @@ use {
         color::{Color, Rgba},
         frame::Frame,
         mesh::{Mesh, MeshBuffer},
-        pipeline::{Parameters as PipelineParameters, Pipeline, VertexLayout},
+        pipeline::{Inputs, Parameters as PipelineParameters, Pipeline, Slots},
         shader::{Shader, ShaderInfo},
-        shader_data::{
-            globals::Globals, lights::Lights, spaces::Spaces, textures::Textures, Instance,
-        },
+        shader_data::{Globals, Instance, InstanceColor, Lights, Spaces, Textures},
         topology::{Topology, TriangleList},
     },
     dunge_shader::Shader as ShaderData,
@@ -17,7 +15,7 @@ use {
 
 #[must_use]
 pub struct Layer<S, T = TriangleList> {
-    pipeline: Pipeline,
+    pipeline: Box<Pipeline>,
     ty: PhantomData<(S, T)>,
 }
 
@@ -27,17 +25,17 @@ impl<S, T> Layer<S, T> {
         S: Shader,
         T: Topology,
     {
-        let vert = VertexLayout::new::<S::Vertex>();
+        let inputs = Inputs::new::<S::Vertex>(S::INSTANCE_COLORS);
         Self {
-            pipeline: Pipeline::new(
+            pipeline: Box::new(Pipeline::new(
                 device,
                 shader,
-                Some(&vert),
+                Some(&inputs),
                 PipelineParameters {
                     topology: T::VALUE.into_inner(),
                     ..params
                 },
-            ),
+            )),
             ty: PhantomData,
         }
     }
@@ -54,42 +52,75 @@ impl<S, T> Layer<S, T> {
 pub struct ActiveLayer<'l, S, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),
+    slots: Slots,
+    instance_color: Option<&'l InstanceColor>,
     groups: Groups<'l>,
     ty: PhantomData<(S, T)>,
 }
 
 impl<'l, S, T> ActiveLayer<'l, S, T> {
-    pub(crate) fn new(pass: RenderPass<'l>, size: (u32, u32)) -> Self {
+    pub(crate) fn new(pass: RenderPass<'l>, size: (u32, u32), slots: Slots) -> Self {
         Self {
             pass,
             size,
+            slots,
+            instance_color: None,
             groups: Groups::default(),
             ty: PhantomData,
         }
     }
 
+    /// Binds the globals.
     pub fn bind_globals(&mut self, globals: &'l Globals<S>) -> &mut Self {
         globals.update_size(self.size);
         self.groups.globals = Some(globals.bind());
         self
     }
 
+    /// Binds the textures.
     pub fn bind_textures(&mut self, textures: &'l Textures<S>) -> &mut Self {
         self.groups.textures = Some(textures.bind());
         self
     }
 
+    /// Binds the light sources.
     pub fn bind_lights(&mut self, lights: &'l Lights<S>) -> &mut Self {
         self.groups.lights = Some(lights.bind());
         self
     }
 
+    /// Binds the light spaces.
     pub fn bind_spaces(&mut self, spaces: &'l Spaces<S>) -> &mut Self {
         self.groups.spaces = Some(spaces.bind());
         self
     }
 
+    /// Binds the color instance.
+    ///
+    /// # Panics
+    /// Panics if the shader has no instance colors.
+    pub fn bind_instance_color(&mut self, cols: &'l InstanceColor) -> &mut Self
+    where
+        S: Shader,
+    {
+        let info = ShaderInfo::new::<S>();
+        assert!(
+            info.has_instance_colors(),
+            "the shader has no instance colors",
+        );
+
+        self.instance_color = Some(cols);
+        self
+    }
+
     /// Draws the [mesh](crate::Mesh).
+    ///
+    /// # Panics
+    /// - If globals is not set but required.
+    /// - If textures is not set but required.
+    /// - If light sources is not set but required.
+    /// - If light spaces is not set but required.
+    /// - If instance color is not set but required.
     pub fn draw(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance)
     where
         S: Shader,
@@ -106,13 +137,19 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         }
 
         if info.has_lights() {
-            let (index, group) = self.groups.lights.expect("lights is not set");
+            let (index, group) = self.groups.lights.expect("light sources is not set");
             self.pass.set_bind_group(index, group, &[]);
         }
 
         if info.has_spaces() {
-            let (index, group) = self.groups.spaces.expect("spaces is not set");
+            let (index, group) = self.groups.spaces.expect("light spaces is not set");
             self.pass.set_bind_group(index, group, &[]);
+        }
+
+        if info.has_instance_colors() {
+            let instance_color = self.instance_color.expect("instance color is not set");
+            self.pass
+                .set_vertex_buffer(self.slots.instance_color, instance_color.buffer().slice());
         }
 
         self.draw_mesh(mesh.buffer(), instance);
@@ -123,10 +160,10 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
 
         let instances = instance.buffer();
         self.pass
-            .set_vertex_buffer(Pipeline::INSTANCE_BUFFER_SLOT, instances.slice());
+            .set_vertex_buffer(self.slots.instance, instances.slice());
 
         self.pass
-            .set_vertex_buffer(Pipeline::VERTEX_BUFFER_SLOT, mesh.verts.slice());
+            .set_vertex_buffer(self.slots.vertex, mesh.verts.slice());
 
         match mesh.indxs {
             Some(buf) => {

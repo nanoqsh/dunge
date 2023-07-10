@@ -12,7 +12,7 @@ use {
         shader_data::{
             globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
             spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Instance,
-            Model,
+            InstanceColor, ModelColor, ModelTransform,
         },
         topology::Topology,
         vertex::Vertex,
@@ -120,13 +120,13 @@ impl Context {
     }
 
     /// Creates new [instances](Instance).
-    pub fn create_instances(&mut self, models: &[Model]) -> Instance {
+    pub fn create_instances(&mut self, models: &[ModelTransform]) -> Instance {
         Instance::new(models, self.render.state())
     }
 
-    /// Creates a new default [instance](Instance).
-    pub fn create_default_instance(&mut self) -> Instance {
-        self.create_instances(&[Model::default()])
+    /// Creates new color [instances](Instance).
+    pub fn create_instances_color(&mut self, models: &[ModelColor]) -> InstanceColor {
+        InstanceColor::new(models, self.render.state())
     }
 
     /// Creates a new [mesh](Mesh).

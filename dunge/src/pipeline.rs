@@ -1,7 +1,13 @@
 use {
     crate::{
-        framebuffer::Framebuffer, layer::Layer, render::State, scheme::ShaderScheme,
-        shader::Shader, shader_data::Model, topology::Topology, vertex::Vertex,
+        framebuffer::Framebuffer,
+        layer::Layer,
+        render::State,
+        scheme::ShaderScheme,
+        shader::Shader,
+        shader_data::{ModelColor, ModelTransform},
+        topology::Topology,
+        vertex::Vertex,
     },
     dunge_shader::{Layout, Shader as ShaderData, SourceBindings, SpaceBindings, TextureBindings},
     std::marker::PhantomData,
@@ -127,17 +133,15 @@ impl<'a, S, T> ParametersBuilder<'a, S, T> {
 
 pub(crate) struct Pipeline {
     inner: RenderPipeline,
+    instances: Instances,
     groups: Groups,
 }
 
 impl Pipeline {
-    pub const VERTEX_BUFFER_SLOT: u32 = 0;
-    pub const INSTANCE_BUFFER_SLOT: u32 = 1;
-
     pub fn new(
         device: &Device,
         shader: &ShaderData,
-        vert: Option<&VertexLayout>,
+        inputs: Option<&Inputs>,
         params: Parameters,
     ) -> Self {
         use wgpu::*;
@@ -154,7 +158,6 @@ impl Pipeline {
             push_constant_ranges: &[],
         });
 
-        let layouts;
         Self {
             inner: device.create_render_pipeline(&RenderPipelineDescriptor {
                 label: None,
@@ -162,13 +165,7 @@ impl Pipeline {
                 vertex: VertexState {
                     module: &module,
                     entry_point: ShaderData::VERTEX_ENTRY_POINT,
-                    buffers: match vert {
-                        Some(vl) => {
-                            layouts = [vl.buffer_layout(), Model::LAYOUT];
-                            &layouts[..]
-                        }
-                        None => &[],
-                    },
+                    buffers: &inputs.map(Inputs::buffer_layouts).unwrap_or_default(),
                 },
                 fragment: Some(FragmentState {
                     module: &module,
@@ -198,12 +195,19 @@ impl Pipeline {
                 multisample: MultisampleState::default(),
                 multiview: None,
             }),
+            instances: Instances {
+                color: inputs.is_some_and(|inputs| inputs.instance_color),
+            },
             groups,
         }
     }
 
     pub fn as_ref(&self) -> &RenderPipeline {
         &self.inner
+    }
+
+    pub fn slots(&self) -> Slots {
+        self.instances.slots()
     }
 
     pub fn globals(&self) -> Option<&GroupLayout<Globals>> {
@@ -221,6 +225,27 @@ impl Pipeline {
     pub fn spaces(&self) -> Option<&GroupLayout<Spaces>> {
         self.groups.spaces.as_ref()
     }
+}
+
+#[derive(Clone, Copy)]
+struct Instances {
+    color: bool,
+}
+
+impl Instances {
+    fn slots(self) -> Slots {
+        Slots {
+            instance: 0,
+            instance_color: 1,
+            vertex: 1 + self.color as u32,
+        }
+    }
+}
+
+pub(crate) struct Slots {
+    pub instance: u32,
+    pub instance_color: u32,
+    pub vertex: u32,
 }
 
 struct Groups {
@@ -416,13 +441,47 @@ pub(crate) struct Spaces {
     pub bindings: SpaceBindings,
 }
 
-pub(crate) struct VertexLayout {
+pub(crate) struct Inputs {
+    instance_color: bool,
+    vertex: VertexInputLayout,
+}
+
+impl Inputs {
+    pub fn new<V>(instance_color: bool) -> Self
+    where
+        V: Vertex,
+    {
+        let mut shader_location = ModelTransform::LAYOUT_ATTRIBUTES_LEN;
+        if instance_color {
+            shader_location += ModelColor::LAYOUT_ATTRIBUTES_LEN;
+        }
+
+        Self {
+            instance_color,
+            vertex: VertexInputLayout::new::<V>(shader_location),
+        }
+    }
+
+    fn buffer_layouts(&self) -> Vec<VertexBufferLayout> {
+        if self.instance_color {
+            vec![
+                ModelTransform::LAYOUT,
+                ModelColor::LAYOUT,
+                self.vertex.buffer_layout(),
+            ]
+        } else {
+            vec![ModelTransform::LAYOUT, self.vertex.buffer_layout()]
+        }
+    }
+}
+
+struct VertexInputLayout {
     size: usize,
     attrs: Vec<VertexAttribute>,
 }
 
-impl VertexLayout {
-    pub fn new<V>() -> Self
+impl VertexInputLayout {
+    fn new<V>(mut shader_location: u32) -> Self
     where
         V: Vertex,
     {
@@ -432,18 +491,17 @@ impl VertexLayout {
         };
 
         let mut offset = 0;
-        let mut location = 0;
         let mut make_attr = |n| {
             let format = Self::format(n);
-            let new_offset = Self::offset(n);
+            let new_offset = Self::f32_offset(n);
             let attr = VertexAttribute {
                 format,
                 offset,
-                shader_location: location + Model::LOCATION_OFFSET,
+                shader_location,
             };
 
             offset += new_offset;
-            location += 1;
+            shader_location += 1;
             attr
         };
 
@@ -468,7 +526,7 @@ impl VertexLayout {
         }
     }
 
-    fn offset(n: u64) -> u64 {
+    fn f32_offset(n: u64) -> u64 {
         use std::mem;
 
         n * mem::size_of::<f32>() as u64

@@ -58,7 +58,7 @@ impl Shader for TriangleShader {
 
 The `App` is our application type, we need to create it:
 ```rust
-use dunge::{Context, Instance, Layer, Mesh, MeshData};
+use dunge::{Context, Instance, Layer, Mesh, MeshData, ModelTransform};
 
 struct App {
     layer: Layer<TriangleShader>,
@@ -83,7 +83,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = context.create_default_instance();
+        let instance = context.create_instances(&[ModelTransform::default()]);
         Self { layer, mesh, instance }
     }
 }

@@ -76,7 +76,7 @@ impl<'d> Frame<'d> {
         let view_size = screen.virtual_size_with_antialiasing().as_vec2();
         pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
 
-        ActiveLayer::new(pass, screen.virtual_size().into())
+        ActiveLayer::new(pass, screen.virtual_size().into(), pipeline.slots())
     }
 
     pub(crate) fn commit_in_frame(&mut self) {

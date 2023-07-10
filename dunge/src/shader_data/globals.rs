@@ -6,7 +6,7 @@ use {
         pipeline::Globals as Bindings,
         render::State,
         shader::{Shader, ShaderInfo},
-        shader_data::{ambient::AmbientUniform, Model},
+        shader_data::{ambient::AmbientUniform, ModelTransform},
     },
     std::{marker::PhantomData, sync::Arc},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
@@ -37,7 +37,7 @@ impl<S> Globals<S> {
 
         let device = state.device();
         let camera = variables.view.map(|view| {
-            let model = Model::default();
+            let model = ModelTransform::default();
             let buf = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("camera buffer"),
                 contents: bytemuck::cast_slice(&[model]),
@@ -94,7 +94,7 @@ impl<S> Globals<S> {
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
-        assert!(info.has_camera, "the shader has no view");
+        assert!(info.has_camera(), "the shader has no view");
 
         let (camera, _) = self.camera.as_mut().expect("camera");
         camera.update_view(view);
@@ -109,7 +109,7 @@ impl<S> Globals<S> {
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
-        assert!(info.has_ambient, "the shader has no ambient");
+        assert!(info.has_ambient(), "the shader has no ambient");
 
         let buf = self.ambient.as_ref().expect("ambient");
         let uniform = AmbientUniform::new(col);
@@ -179,14 +179,14 @@ impl<'a> Builder<'a> {
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
-        if info.has_camera {
+        if info.has_camera() {
             assert!(
                 self.variables.view.is_some(),
                 "the shader requires view, but it's not set",
             );
         }
 
-        if info.has_ambient {
+        if info.has_ambient() {
             assert!(
                 self.variables.ambient.is_some(),
                 "the shader requires ambient, but it's not set",

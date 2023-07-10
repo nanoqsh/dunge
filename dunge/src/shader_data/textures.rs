@@ -71,7 +71,7 @@ impl<S> Textures<S> {
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
-        assert!(info.has_map, "the shader has no texture map");
+        assert!(info.has_map(), "the shader has no texture map");
 
         self.map
             .as_ref()
@@ -124,7 +124,7 @@ impl<'a> Builder<'a> {
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
-        if info.has_map {
+        if info.has_map() {
             assert!(
                 self.variables.map.is_some(),
                 "the shader requires texture `map`, but it's not set",

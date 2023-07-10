@@ -14,6 +14,7 @@ pub trait Shader {
     const STATIC_COLOR: Option<Color> = None;
     const SOURCES: SourceArrays = SourceArrays::EMPTY;
     const SPACES: LightSpaces = LightSpaces::EMPTY;
+    const INSTANCE_COLORS: bool = false;
 }
 
 pub(crate) const fn scheme<S>() -> Scheme
@@ -38,15 +39,17 @@ where
         ambient: S::AMBIENT,
         source_arrays: S::SOURCES,
         light_spaces: S::SPACES,
+        instance_colors: S::INSTANCE_COLORS,
     }
 }
 
 pub(crate) struct ShaderInfo {
-    pub has_camera: bool,
-    pub has_ambient: bool,
-    pub has_map: bool,
-    pub source_arrays: usize,
-    pub light_spaces: LightSpaces,
+    instances: Instances,
+    has_camera: bool,
+    has_ambient: bool,
+    has_map: bool,
+    source_arrays: usize,
+    light_spaces: LightSpaces,
 }
 
 impl ShaderInfo {
@@ -55,6 +58,9 @@ impl ShaderInfo {
         S: Shader,
     {
         Self {
+            instances: Instances {
+                has_color: S::INSTANCE_COLORS,
+            },
             has_camera: matches!(S::VIEW, ShaderView::Camera),
             has_ambient: S::AMBIENT,
             has_map: <S::Vertex as Vertex>::Texture::OPTIONAL_N_FLOATS.is_some(),
@@ -63,19 +69,47 @@ impl ShaderInfo {
         }
     }
 
-    pub const fn has_globals(&self) -> bool {
-        self.has_camera || self.has_ambient
+    pub const fn has_camera(&self) -> bool {
+        self.has_camera
     }
 
-    pub const fn has_textures(&self) -> bool {
+    pub const fn has_ambient(&self) -> bool {
+        self.has_ambient
+    }
+
+    pub const fn has_map(&self) -> bool {
         self.has_map
     }
 
+    pub const fn source_arrays(&self) -> usize {
+        self.source_arrays
+    }
+
+    pub const fn light_spaces(&self) -> LightSpaces {
+        self.light_spaces
+    }
+
+    pub const fn has_instance_colors(&self) -> bool {
+        self.instances.has_color
+    }
+
+    pub const fn has_globals(&self) -> bool {
+        self.has_camera() || self.has_ambient()
+    }
+
+    pub const fn has_textures(&self) -> bool {
+        self.has_map()
+    }
+
     pub const fn has_lights(&self) -> bool {
-        self.source_arrays > 0
+        self.source_arrays() > 0
     }
 
     pub const fn has_spaces(&self) -> bool {
-        !self.light_spaces.is_empty()
+        !self.light_spaces().is_empty()
     }
+}
+
+struct Instances {
+    has_color: bool,
 }

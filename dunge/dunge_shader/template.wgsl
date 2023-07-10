@@ -2,7 +2,7 @@
 [[groups]]
 
 @vertex
-fn vsmain(input: VertexInput, inst: InstanceInput) -> VertexOutput {
+fn vsmain(inst: InstanceInput,[[instance_color]] input: VertexInput) -> VertexOutput {
     let model = mat4x4<f32>(
         inst.r0,
         inst.r1,

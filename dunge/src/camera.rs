@@ -1,5 +1,5 @@
 use {
-    crate::shader_data::Model,
+    crate::shader_data::ModelTransform,
     glam::{Mat4, Quat, Vec3},
     std::cell::Cell,
 };
@@ -16,7 +16,7 @@ impl Camera {
         self.cache.set(None);
     }
 
-    pub fn model(&self, (width, height): (u32, u32)) -> Model {
+    pub fn model(&self, (width, height): (u32, u32)) -> ModelTransform {
         match self.cache.get() {
             Some(Cache { size: (w, h), .. }) if width != w || height != h => {}
             Some(Cache { model, .. }) => return model,
@@ -36,7 +36,7 @@ impl Camera {
 #[derive(Clone, Copy)]
 struct Cache {
     size: (u32, u32),
-    model: Model,
+    model: ModelTransform,
 }
 
 /// The camera view.
@@ -65,7 +65,7 @@ impl View {
 }
 
 impl View {
-    fn model(&self, (width, height): (f32, f32)) -> Model {
+    fn model(&self, (width, height): (f32, f32)) -> ModelTransform {
         let proj = match self.proj {
             Projection::Perspective(Perspective { fovy, znear, zfar }) => {
                 Mat4::perspective_rh(fovy, width / height, znear, zfar)
@@ -89,7 +89,7 @@ impl View {
         };
 
         let view = Mat4::look_at_rh(self.eye, self.look, self.up);
-        Model::from(proj * view)
+        ModelTransform::from(proj * view)
     }
 }
 

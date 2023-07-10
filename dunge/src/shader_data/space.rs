@@ -1,7 +1,7 @@
 use {
     crate::{
         color::{Color, Rgb},
-        shader_data::{Model, TextureError},
+        shader_data::{ModelTransform, TextureError},
     },
     bytemuck::{Pod, Zeroable},
     dunge_shader::SpaceKind,
@@ -14,7 +14,7 @@ type Mat = [[f32; 4]; 4];
 #[derive(Clone, Copy)]
 pub struct Space<'a> {
     pub data: Data<'a>,
-    pub model: Model,
+    pub model: ModelTransform,
     pub col: Rgb,
 }
 

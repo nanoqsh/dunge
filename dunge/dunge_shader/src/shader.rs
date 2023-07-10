@@ -13,6 +13,7 @@ pub struct Scheme {
     pub static_color: Option<Color>,
     pub source_arrays: SourceArrays,
     pub light_spaces: LightSpaces,
+    pub instance_colors: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -39,6 +40,7 @@ impl Shader {
             static_color,
             source_arrays,
             light_spaces,
+            instance_colors,
         } = scheme;
 
         let vert_input = VertexInput {
@@ -52,12 +54,21 @@ impl Shader {
             ambient,
             source_arrays,
             light_spaces,
+            instance_colors,
+        };
+
+        let instance_color_input = InstanceColorInput::new(instance_colors);
+        let instance_color = {
+            let mut o = Out::new();
+            instance_color_input.define_input(&mut o);
+            o
         };
 
         let types = {
             let mut o = Out::new();
             let mut location = Location::new();
             InstanceInput::define_type(&mut location, &mut o);
+            instance_color_input.define_type(&mut location, &mut o);
             vert_input.define_type(&mut location, &mut o);
 
             let mut location = Location::new();
@@ -105,6 +116,7 @@ impl Shader {
             source: Templater::default()
                 .insert("types", &types)
                 .insert("groups", &groups)
+                .insert("instance_color", &instance_color)
                 .insert("vertex_out", &vertex_out)
                 .insert("fragment_col", &fragment_col)
                 .format(include_str!("../template.wgsl"))

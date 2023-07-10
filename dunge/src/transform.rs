@@ -1,7 +1,7 @@
 //! Model transformation types and traits.
 
 use {
-    crate::shader_data::Model,
+    crate::shader_data::ModelTransform,
     glam::{Mat4, Quat, Vec3},
 };
 
@@ -42,7 +42,7 @@ impl Default for Transform {
     }
 }
 
-impl From<Transform> for Model {
+impl From<Transform> for ModelTransform {
     fn from(Transform { pos, rot, scl }: Transform) -> Self {
         let mat = Mat4::from_scale_rotation_translation(scl, rot, pos);
         Self::from(mat)

@@ -3,7 +3,7 @@ mod data;
 use {
     dunge::{
         input::Key, shader::*, Context, Frame, Globals, Input, Instance, Layer, Loop, Mesh,
-        MeshData, Perspective, Rgba, TextureData, Textures, Vertex, View,
+        MeshData, ModelTransform, Perspective, Rgba, TextureData, Textures, Vertex, View,
     },
     utils::Camera,
 };
@@ -84,7 +84,7 @@ impl App {
         };
 
         // Create a model instance
-        let instance = context.create_default_instance();
+        let instance = context.create_instances(&[ModelTransform::default()]);
 
         // Create meshes
         let texture_mesh = {

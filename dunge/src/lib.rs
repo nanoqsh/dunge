@@ -37,7 +37,9 @@ mod shader_data {
 
     pub use self::{
         globals::{Builder as GlobalsBuilder, Globals},
-        instance::{Instance, Model},
+        instance::{
+            Instance, InstanceColor, InvalidSize as InvalidInstanceSize, ModelColor, ModelTransform,
+        },
         lights::{Builder as LightsBuilder, Lights, UpdateError as LightsUpdateError},
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
@@ -82,9 +84,10 @@ pub use {
         scheme::ShaderScheme,
         shader::Shader,
         shader_data::{
-            Globals, GlobalsBuilder, Instance, InvalidMapSize, Lights, LightsBuilder,
-            LightsUpdateError, Model, Source, Space, SpaceData, SpaceFormat, Spaces, SpacesBuilder,
-            SpacesUpdateError, TextureData, TextureError, Textures, TexturesBuilder,
+            Globals, GlobalsBuilder, Instance, InstanceColor, InvalidInstanceSize, InvalidMapSize,
+            Lights, LightsBuilder, LightsUpdateError, ModelColor, ModelTransform, Source, Space,
+            SpaceData, SpaceFormat, Spaces, SpacesBuilder, SpacesUpdateError, TextureData,
+            TextureError, Textures, TexturesBuilder,
         },
         transform::Transform,
         vertex::Vertex,

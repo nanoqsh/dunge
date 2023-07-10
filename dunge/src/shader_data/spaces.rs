@@ -147,10 +147,7 @@ impl<S> Spaces<S> {
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
-        assert!(
-            !info.light_spaces.is_empty(),
-            "the shader has no light spaces",
-        );
+        assert!(info.has_spaces(), "the shader has no light spaces");
 
         let texture = self.textures.get(index).ok_or(UpdateError::Index)?;
         texture.update(data, &self.queue)
@@ -252,7 +249,8 @@ impl<'a> Builder<'a> {
     where
         S: Shader,
     {
-        let light_spaces = ShaderInfo::new::<S>().light_spaces;
+        let info = ShaderInfo::new::<S>();
+        let light_spaces = info.light_spaces();
         let actual = self.variables.light_spaces.len();
         let expected = light_spaces.len();
 
