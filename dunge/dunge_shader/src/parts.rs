@@ -593,7 +593,7 @@ impl SourceArray {
     }
 }
 
-/// The lights source kind. Describes the nature of light.
+/// The light sources kind. Describes the nature of light.
 #[derive(Clone, Copy)]
 pub enum SourceKind {
     Glow,
@@ -719,6 +719,7 @@ impl LightSpaces {
     }
 }
 
+/// The light spaces kind. Describes the number of color components in the space.
 #[derive(Clone, Copy)]
 pub enum SpaceKind {
     Rgba,

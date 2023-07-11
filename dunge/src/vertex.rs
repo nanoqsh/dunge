@@ -1,3 +1,5 @@
+//! Vertex components.
+
 use crate::vertex::private::Format;
 
 /// Vertex type description.

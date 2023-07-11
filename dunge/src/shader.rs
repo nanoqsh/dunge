@@ -1,3 +1,5 @@
+//! Shader components.
+
 pub use dunge_shader::{
     Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind, View as ShaderView,
 };
@@ -7,13 +9,32 @@ use {
     dunge_shader::{Dimension, Fragment, Scheme, Vertex as SchemeVertex},
 };
 
+/// The trait defines the shader information.
+///
+/// This trait has no methods, instead it defines static information about
+/// the shader and is used to generate it. To create a shader scheme, call
+/// the [`create_scheme`](crate::Context::create_scheme) function on
+/// the [context](crate::Context).
 pub trait Shader {
+    /// Mesh vertex type description.
     type Vertex: Vertex;
+
+    /// Determines whether to use the camera in the shader.
     const VIEW: ShaderView = ShaderView::None;
+
+    /// Determines whether to use the ambient color.
     const AMBIENT: bool = false;
+
+    /// Specifies a static color.
     const STATIC_COLOR: Option<Color> = None;
+
+    /// Determines whether to use light sources.
     const SOURCES: SourceArrays = SourceArrays::EMPTY;
+
+    /// Determines whether to use light spaces.
     const SPACES: LightSpaces = LightSpaces::EMPTY;
+
+    /// Determines whether to use color instancing.
     const INSTANCE_COLORS: bool = false;
 }
 
