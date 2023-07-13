@@ -1,8 +1,8 @@
 //! Shader components.
 
 pub use dunge_shader::{
-    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind,
-    Textures as ShaderTextures, View as ShaderView,
+    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind, TexturesNumber,
+    View as ShaderView,
 };
 
 use {
@@ -30,7 +30,7 @@ pub trait Shader {
     const STATIC_COLOR: Option<Color> = None;
 
     /// Specifies textures.
-    const TEXTURES: ShaderTextures = ShaderTextures::N0;
+    const TEXTURES: TexturesNumber = TexturesNumber::N0;
 
     /// Determines whether to use light sources.
     const SOURCES: SourceArrays = SourceArrays::EMPTY;
@@ -47,13 +47,6 @@ where
     S: Shader,
 {
     let vert = VertexInfo::new::<S::Vertex>();
-    if !S::TEXTURES.is_empty() {
-        assert!(
-            vert.has_texture,
-            "the shader requires the vertex to have a texture map",
-        );
-    }
-
     Scheme {
         vert: SchemeVertex {
             dimension: match vert.dimensions {
@@ -63,12 +56,13 @@ where
             },
             fragment: Fragment {
                 vertex_color: vert.has_color,
-                vertex_textures: S::TEXTURES,
+                vertex_texture: vert.has_texture,
             },
         },
         view: S::VIEW,
         static_color: S::STATIC_COLOR,
         ambient: S::AMBIENT,
+        textures: S::TEXTURES,
         source_arrays: S::SOURCES,
         light_spaces: S::SPACES,
         instance_colors: S::INSTANCE_COLORS,

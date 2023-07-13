@@ -80,7 +80,7 @@ impl VertexInput {
             });
         }
 
-        if self.fragment.vertex_textures.has_textures() {
+        if self.fragment.vertex_texture {
             fields.push(Field {
                 location: location.next(),
                 name: Name::Str("map"),
@@ -106,6 +106,7 @@ pub(crate) struct VertexOutput {
     pub fragment: Fragment,
     pub static_color: Option<Color>,
     pub ambient: bool,
+    pub textures: TexturesNumber,
     pub source_arrays: SourceArrays,
     pub light_spaces: LightSpaces,
     pub instance_colors: bool,
@@ -127,7 +128,7 @@ impl VertexOutput {
             });
         }
 
-        if self.fragment.vertex_textures.has_textures() {
+        if self.fragment.vertex_texture {
             fields.push(Field {
                 location: location.next(),
                 name: Name::Str("map"),
@@ -178,7 +179,7 @@ impl VertexOutput {
             o.write_str("    out.col = input.col;\n");
         }
 
-        if self.fragment.vertex_textures.has_textures() {
+        if self.fragment.vertex_texture {
             o.write_str("    out.map = input.map;\n");
         }
 
@@ -200,7 +201,7 @@ impl VertexOutput {
     }
 
     pub fn calc_fragment(&self, o: &mut Out) {
-        self.fragment.vertex_textures.calc_fragment(o);
+        self.textures.calc_fragment(o);
         let has_light = self.calc_light(o);
         let mut col = o.write_str("col = ").separated(" * ");
         if has_light {
@@ -222,7 +223,7 @@ impl VertexOutput {
             col.out().write_str("out.col");
         }
 
-        if self.fragment.vertex_textures.has_textures() {
+        if self.textures.has_textures() {
             col.out().write_str("tex.rgb");
         }
 
@@ -329,13 +330,13 @@ impl VertexOutput {
 #[derive(Clone, Copy)]
 pub struct Fragment {
     pub vertex_color: bool,
-    pub vertex_textures: Textures,
+    pub vertex_texture: bool,
 }
 
 #[derive(Clone, Copy)]
-pub struct Textures(u8);
+pub struct TexturesNumber(u8);
 
-impl Textures {
+impl TexturesNumber {
     pub const N0: Self = Self(0);
     pub const N1: Self = Self(1);
     pub const N2: Self = Self(2);

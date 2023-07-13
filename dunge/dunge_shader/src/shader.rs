@@ -11,6 +11,7 @@ pub struct Scheme {
     pub view: View,
     pub ambient: bool,
     pub static_color: Option<Color>,
+    pub textures: TexturesNumber,
     pub source_arrays: SourceArrays,
     pub light_spaces: LightSpaces,
     pub instance_colors: bool,
@@ -38,6 +39,7 @@ impl Shader {
             view,
             ambient,
             static_color,
+            textures,
             source_arrays,
             light_spaces,
             instance_colors,
@@ -52,6 +54,7 @@ impl Shader {
             fragment: vert.fragment,
             static_color,
             ambient,
+            textures,
             source_arrays,
             light_spaces,
             instance_colors,
@@ -86,7 +89,7 @@ impl Shader {
                 ambient: ambient.then(|| Ambient::declare_group(binding, o)),
             },
             |binding, o| Textures {
-                map: vert.fragment.vertex_textures.declare_group(binding, o),
+                map: textures.declare_group(binding, o),
             },
             |binding, o| Lights {
                 source_arrays: source_arrays.declare_group(binding, o),
@@ -227,6 +230,7 @@ pub struct Textures {
 }
 
 impl Textures {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.map.tdiffs.is_empty()
     }
