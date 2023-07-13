@@ -57,13 +57,14 @@ struct PostShaderDataUniform {
 }
 
 impl PostShaderDataUniform {
-    fn new((width, height): (f32, f32), (fx, fy): (f32, f32)) -> Self {
+    fn new(size: (f32, f32), factor: (f32, f32)) -> Self {
         const STEP_FACTOR: f32 = 0.5;
 
+        let size = size.into();
         Self {
-            size: [width, height],
-            step: [STEP_FACTOR / width, STEP_FACTOR / height],
-            factor: [fx, fy],
+            size,
+            step: size.map(|v| STEP_FACTOR / v),
+            factor: factor.into(),
             pad: 0,
         }
     }

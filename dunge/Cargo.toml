@@ -8,7 +8,7 @@ keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
 readme = "../README.md"
 repository = "https://github.com/nanoqsh/dunge"
-rust-version = "1.70"
+rust-version = "1.71"
 
 [dependencies]
 dunge_macros = { path = "dunge_macros" }
