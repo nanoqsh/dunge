@@ -13,14 +13,20 @@ use {
 pub struct Textures<S> {
     group: u32,
     bind_group: BindGroup,
-    map: Option<Texture>,
+    textures: Vec<Texture>,
     queue: Arc<Queue>,
     ty: PhantomData<S>,
 }
 
 impl<S> Textures<S> {
     fn new(params: Parameters, state: &State) -> Self {
-        use wgpu::{BindGroupDescriptor, BindGroupEntry, BindingResource};
+        use {
+            std::iter,
+            wgpu::{
+                AddressMode, BindGroupDescriptor, BindGroupEntry, BindingResource, FilterMode,
+                SamplerDescriptor,
+            },
+        };
 
         let Parameters {
             bindings,
@@ -28,31 +34,43 @@ impl<S> Textures<S> {
             layout,
         } = params;
 
-        let map = variables.map.map(|data| Texture::new(data, state));
-        let entries = map.as_ref().map(|texture| {
-            [
-                BindGroupEntry {
-                    binding: bindings.map.tdiff,
-                    resource: BindingResource::TextureView(texture.view()),
-                },
-                BindGroupEntry {
-                    binding: bindings.map.sdiff,
-                    resource: BindingResource::Sampler(texture.sampler()),
-                },
-            ]
+        let textures: Vec<_> = variables
+            .maps
+            .iter()
+            .map(|&data| Texture::new(data, state))
+            .collect();
+
+        let mut entries = Vec::with_capacity(textures.len() + 1);
+        for (texture, &binding) in iter::zip(&textures, &bindings.map.tdiffs) {
+            entries.push(BindGroupEntry {
+                binding,
+                resource: BindingResource::TextureView(texture.view()),
+            });
+        }
+
+        let device = state.device();
+        let sampler = device.create_sampler(&SamplerDescriptor {
+            address_mode_u: AddressMode::ClampToEdge,
+            address_mode_v: AddressMode::ClampToEdge,
+            address_mode_w: AddressMode::ClampToEdge,
+            mag_filter: FilterMode::Nearest,
+            min_filter: FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        entries.push(BindGroupEntry {
+            binding: bindings.map.sdiff,
+            resource: BindingResource::Sampler(&sampler),
         });
 
         Self {
             group: bindings.group,
             bind_group: state.device().create_bind_group(&BindGroupDescriptor {
                 layout,
-                entries: match &entries {
-                    Some(bind) => bind,
-                    None => &[],
-                },
+                entries: &entries,
                 label: Some("texture bind group"),
             }),
-            map,
+            textures,
             queue: Arc::clone(state.queue()),
             ty: PhantomData,
         }
@@ -65,18 +83,17 @@ impl<S> Textures<S> {
     /// doesn't match the current texture size.
     ///
     /// # Panics
-    /// Panics if the shader has no texture map.
-    pub fn update_map(&self, data: TextureData) -> Result<(), InvalidSize>
+    /// Panics if the shader has no texture map with given index.
+    pub fn update_map(&self, index: usize, data: TextureData) -> Result<(), InvalidSize>
     where
         S: Shader,
     {
-        let info = ShaderInfo::new::<S>();
-        assert!(info.has_map(), "the shader has no texture map");
+        assert!(
+            index < self.textures.len(),
+            "the shader has no a texture map with index {index}",
+        );
 
-        self.map
-            .as_ref()
-            .expect("texture map")
-            .update(data, &self.queue)
+        self.textures[index].update(data, &self.queue)
     }
 
     pub(crate) fn bind(&self) -> (u32, &BindGroup) {
@@ -92,7 +109,7 @@ struct Parameters<'a> {
 
 #[derive(Default)]
 struct Variables<'a> {
-    map: Option<TextureData<'a>>,
+    maps: Vec<TextureData<'a>>,
 }
 
 #[must_use]
@@ -110,7 +127,7 @@ impl<'a> Builder<'a> {
     }
 
     pub fn with_map(mut self, data: TextureData<'a>) -> Self {
-        self.variables.map = Some(data);
+        self.variables.maps.push(data);
         self
     }
 
@@ -123,13 +140,14 @@ impl<'a> Builder<'a> {
     where
         S: Shader,
     {
+        let actual = self.variables.maps.len();
         let info = ShaderInfo::new::<S>();
-        if info.has_map() {
-            assert!(
-                self.variables.map.is_some(),
-                "the shader requires texture `map`, but it's not set",
-            );
-        }
+        let expected = info.texture_maps();
+
+        assert_eq!(
+            actual, expected,
+            "the shader requires {expected} texture maps, but {actual} is set",
+        );
 
         let textures = layer
             .pipeline()

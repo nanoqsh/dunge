@@ -17,7 +17,8 @@ impl PostProcessor {
     pub const DATA_GROUP: u32 = 0;
     pub const DATA_BINDING: u32 = 0;
     pub const TEXTURE_GROUP: u32 = 1;
-    pub const TEXTURE_BINDING: TextureBindings = TextureBindings { tdiff: 0, sdiff: 1 };
+    pub const TEXTURE_TDIFF_BINDING: u32 = 0;
+    pub const TEXTURE_SDIFF_BINDING: u32 = 1;
 
     pub fn new(device: &Device) -> Self {
         const DEFAULT_ANTIALIASING: bool = false;
@@ -66,7 +67,10 @@ impl PostProcessor {
             device,
             &Shader::postproc(
                 Self::DATA_BINDING,
-                Self::TEXTURE_BINDING,
+                TextureBindings {
+                    tdiffs: vec![Self::TEXTURE_TDIFF_BINDING],
+                    sdiff: Self::TEXTURE_SDIFF_BINDING,
+                },
                 if antialiasing {
                     String::from(include_str!("shaders/post_ssaa.wgsl"))
                 } else {

@@ -300,37 +300,41 @@ impl Groups {
                     },
                 })
             },
-            textures: {
-                let mut entries = vec![];
-                if let Some(TextureBindings { tdiff, sdiff }) = layout.textures.bindings.map {
-                    entries.extend([
-                        BindGroupLayoutEntry {
-                            binding: tdiff,
-                            visibility: ShaderStages::FRAGMENT,
-                            ty: BindingType::Texture {
-                                multisampled: false,
-                                view_dimension: TextureViewDimension::D2,
-                                sample_type: TextureSampleType::Float { filterable: true },
-                            },
-                            count: None,
-                        },
-                        BindGroupLayoutEntry {
-                            binding: sdiff,
-                            visibility: ShaderStages::FRAGMENT,
-                            ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                            count: None,
-                        },
-                    ]);
+            textures: 'textures: {
+                let tx = &layout.textures.bindings;
+                if tx.is_empty() {
+                    break 'textures None;
                 }
 
-                entries.first().map(|_| GroupLayout {
+                let mut entries = Vec::with_capacity(tx.map.tdiffs.len() + 1);
+                for &tdiff in &tx.map.tdiffs {
+                    entries.push(BindGroupLayoutEntry {
+                        binding: tdiff,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: TextureViewDimension::D2,
+                            sample_type: TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    });
+                }
+
+                entries.push(BindGroupLayoutEntry {
+                    binding: tx.map.sdiff,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                    count: None,
+                });
+
+                Some(GroupLayout {
                     layout: device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                         label: Some("textures binding"),
                         entries: &entries,
                     }),
                     bindings: Textures {
                         group: layout.textures.num,
-                        map: layout.textures.bindings.map.unwrap_or_default(),
+                        map: tx.map.clone(),
                     },
                 })
             },

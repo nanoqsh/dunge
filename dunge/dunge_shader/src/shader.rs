@@ -86,10 +86,7 @@ impl Shader {
                 ambient: ambient.then(|| Ambient::declare_group(binding, o)),
             },
             |binding, o| Textures {
-                map: vert
-                    .fragment
-                    .vertex_texture
-                    .then(|| Texture::declare_group(binding, o)),
+                map: vert.fragment.vertex_textures.declare_group(binding, o),
             },
             |binding, o| Lights {
                 source_arrays: source_arrays.declare_group(binding, o),
@@ -135,7 +132,7 @@ impl Shader {
             },
             |binding, _| {
                 debug_assert_eq!(binding.group(), 1, "expected group 1 for the textures");
-                Textures { map: Some(map) }
+                Textures { map }
             },
             |_, _| Lights::default(),
             |_, _| Spaces::default(),
@@ -226,12 +223,12 @@ impl Globals {
 
 #[derive(Default)]
 pub struct Textures {
-    pub map: Option<TextureBindings>,
+    pub map: TextureBindings,
 }
 
 impl Textures {
-    fn is_empty(&self) -> bool {
-        self.map.is_none()
+    pub fn is_empty(&self) -> bool {
+        self.map.tdiffs.is_empty()
     }
 }
 

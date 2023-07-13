@@ -80,7 +80,7 @@ impl VertexInput {
             });
         }
 
-        if self.fragment.vertex_texture {
+        if self.fragment.vertex_textures.has_textures() {
             fields.push(Field {
                 location: location.next(),
                 name: Name::Str("map"),
@@ -127,7 +127,7 @@ impl VertexOutput {
             });
         }
 
-        if self.fragment.vertex_texture {
+        if self.fragment.vertex_textures.has_textures() {
             fields.push(Field {
                 location: location.next(),
                 name: Name::Str("map"),
@@ -178,7 +178,7 @@ impl VertexOutput {
             o.write_str("    out.col = input.col;\n");
         }
 
-        if self.fragment.vertex_texture {
+        if self.fragment.vertex_textures.has_textures() {
             o.write_str("    out.map = input.map;\n");
         }
 
@@ -200,15 +200,7 @@ impl VertexOutput {
     }
 
     pub fn calc_fragment(&self, o: &mut Out) {
-        if self.fragment.vertex_texture {
-            o.write_str(
-                "let tex = textureSample(tdiff, sdiff, out.map); \n    \
-                if tex.w < 0.95 { \
-                    discard; \
-                } \n    ",
-            );
-        }
-
+        self.fragment.vertex_textures.calc_fragment(o);
         let has_light = self.calc_light(o);
         let mut col = o.write_str("col = ").separated(" * ");
         if has_light {
@@ -230,7 +222,7 @@ impl VertexOutput {
             col.out().write_str("out.col");
         }
 
-        if self.fragment.vertex_texture {
+        if self.fragment.vertex_textures.has_textures() {
             col.out().write_str("tex.rgb");
         }
 
@@ -337,7 +329,93 @@ impl VertexOutput {
 #[derive(Clone, Copy)]
 pub struct Fragment {
     pub vertex_color: bool,
-    pub vertex_texture: bool,
+    pub vertex_textures: Textures,
+}
+
+#[derive(Clone, Copy)]
+pub struct Textures(u8);
+
+impl Textures {
+    pub const N0: Self = Self(0);
+    pub const N1: Self = Self(1);
+    pub const N2: Self = Self(2);
+    pub const N3: Self = Self(3);
+    pub const N4: Self = Self(4);
+
+    #[must_use]
+    pub const fn len(self) -> usize {
+        self.0 as usize
+    }
+
+    #[must_use]
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    fn has_textures(self) -> bool {
+        !self.is_empty()
+    }
+
+    pub(crate) fn declare_group(self, binding: &mut Binding, o: &mut Out) -> TextureBindings {
+        if !self.has_textures() {
+            return TextureBindings::default();
+        }
+
+        let mut tdiffs = Vec::with_capacity(self.0 as usize);
+        for n in 0..self.0 as u32 {
+            let binding = binding.next();
+            tdiffs.push(binding.get());
+            o.write(Var {
+                binding,
+                uniform: false,
+                name: Name::Num { str: "tdiff", n },
+                ty: Type::TEXTURE2D,
+            });
+        }
+
+        let sdiff = binding.next();
+        o.write(Var {
+            binding: sdiff,
+            uniform: false,
+            name: Name::Str("sdiff"),
+            ty: Type::SAMPLER,
+        });
+
+        TextureBindings {
+            tdiffs,
+            sdiff: sdiff.get(),
+        }
+    }
+
+    fn calc_fragment(self, o: &mut Out) {
+        match self.0 {
+            0 => return,
+            1 => _ = o.write("let tex = textureSample(tdiff_0, sdiff, out.map);\n    "),
+            num => {
+                o.write_str("var tex = vec4(0.);\n    ");
+                for n in 0..num as u32 {
+                    o.write_str("let tex_")
+                        .write(n)
+                        .write_str(" = textureSample(tdiff_")
+                        .write(n)
+                        .write_str(", sdiff, out.map);\n    ")
+                        .write_str("tex = mix(tex, tex_")
+                        .write(n)
+                        .write_str(", tex_")
+                        .write(n)
+                        .write_str(".a);\n    ");
+                }
+            }
+        }
+
+        o.write_str("if tex.a < 0.95 { discard; }\n    ");
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct TextureBindings {
+    pub tdiffs: Vec<u32>,
+    pub sdiff: u32,
 }
 
 /// The color in a shader.
@@ -346,39 +424,6 @@ pub struct Color {
     pub r: f32,
     pub g: f32,
     pub b: f32,
-}
-
-pub(crate) struct Texture;
-
-impl Texture {
-    pub fn declare_group(binding: &mut Binding, o: &mut Out) -> TextureBindings {
-        let tdiff = binding.next();
-        let sdiff = binding.next();
-
-        o.write(Var {
-            binding: tdiff,
-            uniform: false,
-            name: Name::Str("tdiff"),
-            ty: Type::TEXTURE2D,
-        })
-        .write(Var {
-            binding: sdiff,
-            uniform: false,
-            name: Name::Str("sdiff"),
-            ty: Type::SAMPLER,
-        });
-
-        TextureBindings {
-            tdiff: tdiff.get(),
-            sdiff: sdiff.get(),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Default)]
-pub struct TextureBindings {
-    pub tdiff: u32,
-    pub sdiff: u32,
 }
 
 pub(crate) struct Ambient;

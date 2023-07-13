@@ -24,6 +24,7 @@ impl Shader for TextureShader {
     type Vertex = TextureVert;
     const VIEW: ShaderView = ShaderView::Camera;
     const AMBIENT: bool = true;
+    const TEXTURES: ShaderTextures = ShaderTextures::N1;
     const SOURCES: SourceArrays = SourceArrays::new(&[SourceArray::new(SourceKind::Glow, 3)]);
     const SPACES: LightSpaces = LightSpaces::new(&[SpaceKind::Rgba]);
 }

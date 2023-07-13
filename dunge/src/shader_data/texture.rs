@@ -1,6 +1,6 @@
 use {
     crate::render::State,
-    wgpu::{Queue, Sampler, Texture as WgpuTexture, TextureView},
+    wgpu::{Queue, Texture as WgpuTexture, TextureView},
 };
 
 /// A data struct for a texture creation.
@@ -47,7 +47,6 @@ pub enum Error {
 pub(crate) struct Texture {
     texture: WgpuTexture,
     view: TextureView,
-    sampler: Sampler,
 }
 
 impl Texture {
@@ -90,20 +89,7 @@ impl Texture {
         );
 
         let view = texture.create_view(&TextureViewDescriptor::default());
-        let sampler = device.create_sampler(&SamplerDescriptor {
-            address_mode_u: AddressMode::ClampToEdge,
-            address_mode_v: AddressMode::ClampToEdge,
-            address_mode_w: AddressMode::ClampToEdge,
-            mag_filter: FilterMode::Nearest,
-            min_filter: FilterMode::Nearest,
-            ..Default::default()
-        });
-
-        Self {
-            texture,
-            view,
-            sampler,
-        }
+        Self { texture, view }
     }
 
     pub fn update(&self, data: Data, queue: &Queue) -> Result<(), InvalidSize> {
@@ -141,10 +127,6 @@ impl Texture {
 
     pub fn view(&self) -> &TextureView {
         &self.view
-    }
-
-    pub fn sampler(&self) -> &Sampler {
-        &self.sampler
     }
 }
 

@@ -69,11 +69,11 @@ impl RenderFrame {
             layout,
             entries: &[
                 BindGroupEntry {
-                    binding: PostProcessor::TEXTURE_BINDING.tdiff,
+                    binding: PostProcessor::TEXTURE_TDIFF_BINDING,
                     resource: BindingResource::TextureView(&view),
                 },
                 BindGroupEntry {
-                    binding: PostProcessor::TEXTURE_BINDING.sdiff,
+                    binding: PostProcessor::TEXTURE_SDIFF_BINDING,
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],

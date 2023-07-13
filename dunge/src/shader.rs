@@ -1,11 +1,12 @@
 //! Shader components.
 
 pub use dunge_shader::{
-    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind, View as ShaderView,
+    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind,
+    Textures as ShaderTextures, View as ShaderView,
 };
 
 use {
-    crate::vertex::{Component2D, Vertex, VertexInfo},
+    crate::vertex::{Vertex, VertexInfo},
     dunge_shader::{Dimension, Fragment, Scheme, Vertex as SchemeVertex},
 };
 
@@ -28,6 +29,9 @@ pub trait Shader {
     /// Specifies a static color.
     const STATIC_COLOR: Option<Color> = None;
 
+    /// Specifies textures.
+    const TEXTURES: ShaderTextures = ShaderTextures::N0;
+
     /// Determines whether to use light sources.
     const SOURCES: SourceArrays = SourceArrays::EMPTY;
 
@@ -43,6 +47,13 @@ where
     S: Shader,
 {
     let vert = VertexInfo::new::<S::Vertex>();
+    if !S::TEXTURES.is_empty() {
+        assert!(
+            vert.has_texture,
+            "the shader requires the vertex to have a texture map",
+        );
+    }
+
     Scheme {
         vert: SchemeVertex {
             dimension: match vert.dimensions {
@@ -52,7 +63,7 @@ where
             },
             fragment: Fragment {
                 vertex_color: vert.has_color,
-                vertex_texture: vert.has_texture,
+                vertex_textures: S::TEXTURES,
             },
         },
         view: S::VIEW,
@@ -68,7 +79,7 @@ pub(crate) struct ShaderInfo {
     instances: Instances,
     has_camera: bool,
     has_ambient: bool,
-    has_map: bool,
+    maps: usize,
     source_arrays: usize,
     light_spaces: LightSpaces,
 }
@@ -84,7 +95,7 @@ impl ShaderInfo {
             },
             has_camera: matches!(S::VIEW, ShaderView::Camera),
             has_ambient: S::AMBIENT,
-            has_map: <S::Vertex as Vertex>::Texture::OPTIONAL_N_FLOATS.is_some(),
+            maps: S::TEXTURES.len(),
             source_arrays: S::SOURCES.len(),
             light_spaces: S::SPACES,
         }
@@ -98,8 +109,8 @@ impl ShaderInfo {
         self.has_ambient
     }
 
-    pub const fn has_map(&self) -> bool {
-        self.has_map
+    pub const fn texture_maps(&self) -> usize {
+        self.maps
     }
 
     pub const fn source_arrays(&self) -> usize {
@@ -119,7 +130,7 @@ impl ShaderInfo {
     }
 
     pub const fn has_textures(&self) -> bool {
-        self.has_map()
+        self.texture_maps() > 0
     }
 
     pub const fn has_lights(&self) -> bool {
