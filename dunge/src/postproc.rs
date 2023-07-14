@@ -68,8 +68,8 @@ impl PostProcessor {
             &Shader::postproc(
                 Self::DATA_BINDING,
                 TextureBindings {
-                    tdiffs: vec![Self::TEXTURE_TDIFF_BINDING],
-                    sdiff: Self::TEXTURE_SDIFF_BINDING,
+                    tmaps: vec![Self::TEXTURE_TDIFF_BINDING],
+                    smap: Self::TEXTURE_SDIFF_BINDING,
                 },
                 if antialiasing {
                     String::from(include_str!("shaders/post_ssaa.wgsl"))

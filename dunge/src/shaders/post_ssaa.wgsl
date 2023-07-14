@@ -39,9 +39,9 @@ fn vsmain(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
 }
 
 @group(1) @binding(0)
-var tdiff: texture_2d<f32>;
+var tmap: texture_2d<f32>;
 @group(1) @binding(1)
-var sdiff: sampler;
+var smap: sampler;
 
 @fragment
 fn fsmain(in: VertexOutput) -> @location(0) vec4<f32> {
@@ -51,9 +51,9 @@ fn fsmain(in: VertexOutput) -> @location(0) vec4<f32> {
     let s3 = vec2(-data.step.x, -data.step.y);
 
     return (
-          textureSample(tdiff, sdiff, in.map + s0)
-        + textureSample(tdiff, sdiff, in.map + s1)
-        + textureSample(tdiff, sdiff, in.map + s2)
-        + textureSample(tdiff, sdiff, in.map + s3)
+          textureSample(tmap, smap, in.map + s0)
+        + textureSample(tmap, smap, in.map + s1)
+        + textureSample(tmap, smap, in.map + s2)
+        + textureSample(tmap, smap, in.map + s3)
     ) * 0.25;
 }

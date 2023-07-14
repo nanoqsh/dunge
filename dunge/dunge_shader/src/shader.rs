@@ -232,7 +232,7 @@ pub struct Textures {
 impl Textures {
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.map.tdiffs.is_empty()
+        self.map.tmaps.is_empty()
     }
 }
 

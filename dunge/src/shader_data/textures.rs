@@ -41,7 +41,7 @@ impl<S> Textures<S> {
             .collect();
 
         let mut entries = Vec::with_capacity(textures.len() + 1);
-        for (texture, &binding) in iter::zip(&textures, &bindings.map.tdiffs) {
+        for (texture, &binding) in iter::zip(&textures, &bindings.map.tmaps) {
             entries.push(BindGroupEntry {
                 binding,
                 resource: BindingResource::TextureView(texture.view()),
@@ -59,7 +59,7 @@ impl<S> Textures<S> {
         });
 
         entries.push(BindGroupEntry {
-            binding: bindings.map.sdiff,
+            binding: bindings.map.smap,
             resource: BindingResource::Sampler(&sampler),
         });
 

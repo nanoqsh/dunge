@@ -306,10 +306,10 @@ impl Groups {
                     break 'textures None;
                 }
 
-                let mut entries = Vec::with_capacity(tx.map.tdiffs.len() + 1);
-                for &tdiff in &tx.map.tdiffs {
+                let mut entries = Vec::with_capacity(tx.map.tmaps.len() + 1);
+                for &tmap in &tx.map.tmaps {
                     entries.push(BindGroupLayoutEntry {
-                        binding: tdiff,
+                        binding: tmap,
                         visibility: ShaderStages::FRAGMENT,
                         ty: BindingType::Texture {
                             multisampled: false,
@@ -321,7 +321,7 @@ impl Groups {
                 }
 
                 entries.push(BindGroupLayoutEntry {
-                    binding: tx.map.sdiff,
+                    binding: tx.map.smap,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
                     count: None,
@@ -374,7 +374,7 @@ impl Groups {
                     ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                 )];
 
-                entries.extend(ls.tdiffs.iter().map(|&binding| BindGroupLayoutEntry {
+                entries.extend(ls.tspaces.iter().map(|&binding| BindGroupLayoutEntry {
                     binding,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
@@ -386,7 +386,7 @@ impl Groups {
                 }));
 
                 entries.push(BindGroupLayoutEntry {
-                    binding: ls.sdiff,
+                    binding: ls.sspace,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler(SamplerBindingType::Filtering),
                     count: None,

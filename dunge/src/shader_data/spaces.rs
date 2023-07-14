@@ -109,14 +109,14 @@ impl<S> Spaces<S> {
         }];
 
         entries.extend(
-            iter::zip(&views, &bindings.bindings.tdiffs).map(|(view, &tdiff)| BindGroupEntry {
-                binding: tdiff,
+            iter::zip(&views, &bindings.bindings.tspaces).map(|(view, &tspace)| BindGroupEntry {
+                binding: tspace,
                 resource: BindingResource::TextureView(view),
             }),
         );
 
         entries.push(BindGroupEntry {
-            binding: bindings.bindings.sdiff,
+            binding: bindings.bindings.sspace,
             resource: BindingResource::Sampler(&sampler),
         });
 

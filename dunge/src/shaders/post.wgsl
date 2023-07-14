@@ -39,11 +39,11 @@ fn vsmain(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
 }
 
 @group(1) @binding(0)
-var tdiff: texture_2d<f32>;
+var tmap: texture_2d<f32>;
 @group(1) @binding(1)
-var sdiff: sampler;
+var smap: sampler;
 
 @fragment
 fn fsmain(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(tdiff, sdiff, in.map);
+    return textureSample(tmap, smap, in.map);
 }

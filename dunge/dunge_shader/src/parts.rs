@@ -362,44 +362,44 @@ impl TexturesNumber {
             return TextureBindings::default();
         }
 
-        let mut tdiffs = Vec::with_capacity(self.0 as usize);
+        let mut tmaps = Vec::with_capacity(self.0 as usize);
         for n in 0..self.0 as u32 {
             let binding = binding.next();
-            tdiffs.push(binding.get());
+            tmaps.push(binding.get());
             o.write(Var {
                 binding,
                 uniform: false,
-                name: Name::Num { str: "tdiff", n },
+                name: Name::Num { str: "tmap", n },
                 ty: Type::TEXTURE2D,
             });
         }
 
-        let sdiff = binding.next();
+        let smap = binding.next();
         o.write(Var {
-            binding: sdiff,
+            binding: smap,
             uniform: false,
-            name: Name::Str("sdiff"),
+            name: Name::Str("smap"),
             ty: Type::SAMPLER,
         });
 
         TextureBindings {
-            tdiffs,
-            sdiff: sdiff.get(),
+            tmaps,
+            smap: smap.get(),
         }
     }
 
     fn calc_fragment(self, o: &mut Out) {
         match self.0 {
             0 => return,
-            1 => _ = o.write("let tex = textureSample(tdiff_0, sdiff, out.map);\n    "),
+            1 => _ = o.write("let tex = textureSample(tmap_0, smap, out.map);\n    "),
             num => {
                 o.write_str("var tex = vec4(0.);\n    ");
                 for n in 0..num as u32 {
                     o.write_str("let tex_")
                         .write(n)
-                        .write_str(" = textureSample(tdiff_")
+                        .write_str(" = textureSample(tmap_")
                         .write(n)
-                        .write_str(", sdiff, out.map);\n    ")
+                        .write_str(", smap, out.map);\n    ")
                         .write_str("tex = mix(tex, tex_")
                         .write(n)
                         .write_str(", tex_")
@@ -415,8 +415,8 @@ impl TexturesNumber {
 
 #[derive(Clone, Default)]
 pub struct TextureBindings {
-    pub tdiffs: Vec<u32>,
-    pub sdiff: u32,
+    pub tmaps: Vec<u32>,
+    pub smap: u32,
 }
 
 /// The color in a shader.
@@ -729,29 +729,26 @@ impl LightSpaces {
 
                 binding.get()
             },
-            tdiffs: self
+            tspaces: self
                 .enumerate()
                 .map(|(n, ..)| {
                     let binding = binding.next();
                     o.write(Var {
                         binding,
                         uniform: false,
-                        name: Name::Num {
-                            str: "space_tdiff",
-                            n,
-                        },
+                        name: Name::Num { str: "tspace", n },
                         ty: Type::TEXTURE3D,
                     });
 
                     binding.get()
                 })
                 .collect(),
-            sdiff: {
+            sspace: {
                 let binding = binding.next();
                 o.write(Var {
                     binding,
                     uniform: false,
-                    name: Name::Str("space_sdiff"),
+                    name: Name::Str("sspace"),
                     ty: Type::SAMPLER,
                 });
 
@@ -776,9 +773,9 @@ impl SpaceKind {
     fn calc(self, name: &str, index: u32, o: &mut Out) {
         o.write_str("var ")
             .write_str(name)
-            .write_str(" = textureSampleLevel(space_tdiff_")
+            .write_str(" = textureSampleLevel(tspace_")
             .write(index)
-            .write_str(", space_sdiff, out.space_")
+            .write_str(", sspace, out.space_")
             .write(index)
             .write_str(", 0.);\n    ")
             .write_str("space = ");
@@ -809,13 +806,13 @@ impl SpaceKind {
 #[derive(Clone, Default)]
 pub struct SpaceBindings {
     pub spaces: u32,
-    pub tdiffs: Vec<u32>,
-    pub sdiff: u32,
+    pub tspaces: Vec<u32>,
+    pub sspace: u32,
 }
 
 impl SpaceBindings {
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.tdiffs.is_empty()
+        self.tspaces.is_empty()
     }
 }
