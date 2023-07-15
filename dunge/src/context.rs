@@ -75,20 +75,24 @@ impl Context {
         }));
     }
 
+    /// Creates a [globals](crate::Globals) builder.
     pub fn globals_builder(&mut self) -> GlobalsBuilder {
         GlobalsBuilder::new(self.render.state())
     }
 
-    pub fn textures_builder(&mut self) -> TexturesBuilder {
-        TexturesBuilder::new(self.render.state())
-    }
-
+    /// Creates a [lights](crate::Lights) builder.
     pub fn lights_builder(&mut self) -> LightsBuilder {
         LightsBuilder::new(self.render.state())
     }
 
+    /// Creates a [spaces](crate::Spaces) builder.
     pub fn spaces_builder(&mut self) -> SpacesBuilder {
         SpacesBuilder::new(self.render.state())
+    }
+
+    /// Creates a [textures](crate::Textures) builder.
+    pub fn textures_builder(&mut self) -> TexturesBuilder {
+        TexturesBuilder::new(self.render.state())
     }
 
     /// Creates a new shader [scheme](Scheme).

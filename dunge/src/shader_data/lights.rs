@@ -10,6 +10,10 @@ use {
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
 };
 
+/// Shader lights.
+///
+/// Can be created from the [context](crate::Context) by calling
+/// the [`lights_builder`](crate::Context::lights_builder) function.
 pub struct Lights<S> {
     group: u32,
     bind_group: BindGroup,
@@ -182,6 +186,7 @@ struct Variables {
     source_arrays: Vec<Vec<Source>>,
 }
 
+/// The [lights](Lights) builder.
 #[must_use]
 pub struct Builder<'a> {
     state: &'a State,
@@ -196,6 +201,7 @@ impl<'a> Builder<'a> {
         }
     }
 
+    /// Sets light [sources](Source) for the lights object.
     pub fn with_sources(mut self, sources: Vec<Source>) -> Self {
         self.variables.source_arrays.push(sources);
         self

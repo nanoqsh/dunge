@@ -12,6 +12,10 @@ use {
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
 };
 
+/// Shader global variables.
+///
+/// Can be created from the [context](crate::Context) by calling
+/// the [`globals_builder`](crate::Context::globals_builder) function.
 pub struct Globals<S> {
     group: u32,
     bind_group: BindGroup,
@@ -144,6 +148,7 @@ struct Variables {
     ambient: Option<AmbientUniform>,
 }
 
+/// The [globals](Globals) builder.
 #[must_use]
 pub struct Builder<'a> {
     state: &'a State,
@@ -158,11 +163,13 @@ impl<'a> Builder<'a> {
         }
     }
 
+    /// Sets a camera [view](View) for the globals object.
     pub fn with_view(mut self, view: View) -> Self {
         self.variables.view = Some(view);
         self
     }
 
+    /// Sets an ambient [color](Color) for the globals object.
     pub fn with_ambient(mut self, Color(col): Rgb) -> Self {
         self.variables.ambient = Some(AmbientUniform::new(col));
         self

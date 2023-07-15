@@ -10,6 +10,10 @@ use {
     wgpu::{BindGroup, BindGroupLayout, Queue},
 };
 
+/// Shader textures.
+///
+/// Can be created from the [context](crate::Context) by calling
+/// the [`textures_builder`](crate::Context::textures_builder) function.
 pub struct Textures<S> {
     group: u32,
     bind_group: BindGroup,
@@ -112,6 +116,7 @@ struct Variables<'a> {
     maps: Vec<TextureData<'a>>,
 }
 
+/// The [textures](Textures) builder.
 #[must_use]
 pub struct Builder<'a> {
     state: &'a State,
@@ -126,6 +131,7 @@ impl<'a> Builder<'a> {
         }
     }
 
+    /// Sets a texture map for the textures object.
     pub fn with_map(mut self, data: TextureData<'a>) -> Self {
         self.variables.maps.push(data);
         self
