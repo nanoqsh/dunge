@@ -1,6 +1,7 @@
 use {
     crate::render::State,
-    wgpu::{Queue, Texture as WgpuTexture, TextureView},
+    std::sync::Arc,
+    wgpu::{Queue, Texture as Tx, TextureView},
 };
 
 /// A data struct for a texture creation.
@@ -44,13 +45,38 @@ pub enum Error {
     SizeDoesNotMatch,
 }
 
-pub(crate) struct Texture {
-    texture: WgpuTexture,
-    view: TextureView,
-}
+/// The texture object.
+#[derive(Clone)]
+pub struct Texture(Arc<Inner>);
 
 impl Texture {
-    pub fn new(data: Data, state: &State) -> Self {
+    pub(crate) fn new(data: Data, state: &State) -> Self {
+        let inner = Inner::new(data, state);
+        Self(Arc::new(inner))
+    }
+
+    pub(crate) fn view(&self) -> &TextureView {
+        &self.0.view
+    }
+
+    /// Updates the texture with a new [data](`Data`).
+    ///
+    /// # Errors
+    /// Will return [`InvalidSize`] if the size of the [data](`Data`)
+    /// doesn't match the current texture size.
+    pub fn update(&self, data: Data) -> Result<(), InvalidSize> {
+        self.0.update(data)
+    }
+}
+
+struct Inner {
+    texture: Tx,
+    view: TextureView,
+    queue: Arc<Queue>,
+}
+
+impl Inner {
+    fn new(data: Data, state: &State) -> Self {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -89,10 +115,14 @@ impl Texture {
         );
 
         let view = texture.create_view(&TextureViewDescriptor::default());
-        Self { texture, view }
+        Self {
+            texture,
+            view,
+            queue: Arc::clone(state.queue()),
+        }
     }
 
-    pub fn update(&self, data: Data, queue: &Queue) -> Result<(), InvalidSize> {
+    fn update(&self, data: Data) -> Result<(), InvalidSize> {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -106,7 +136,7 @@ impl Texture {
             return Err(InvalidSize);
         }
 
-        queue.write_texture(
+        self.queue.write_texture(
             ImageCopyTexture {
                 texture: &self.texture,
                 mip_level: 0,
@@ -123,10 +153,6 @@ impl Texture {
         );
 
         Ok(())
-    }
-
-    pub fn view(&self) -> &TextureView {
-        &self.view
     }
 }
 

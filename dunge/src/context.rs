@@ -10,9 +10,12 @@ use {
         screen::Screen,
         shader::Shader,
         shader_data::{
-            globals::Builder as GlobalsBuilder, lights::Builder as LightsBuilder,
-            spaces::Builder as SpacesBuilder, textures::Builder as TexturesBuilder, Instance,
-            InstanceColor, ModelColor, ModelTransform,
+            globals::Builder as GlobalsBuilder,
+            lights::Builder as LightsBuilder,
+            spaces::Builder as SpacesBuilder,
+            texture::{Data as TextureData, Texture},
+            textures::Builder as TexturesBuilder,
+            Instance, InstanceColor, ModelColor, ModelTransform,
         },
         topology::Topology,
         vertex::Vertex,
@@ -140,6 +143,11 @@ impl Context {
         T: Topology,
     {
         Mesh::new(data, self.render.state())
+    }
+
+    /// Creates a new [texture](Texture).
+    pub fn create_texture(&self, data: TextureData) -> Texture {
+        Texture::new(data, self.render.state())
     }
 
     /// Takes a screenshot of the current frame.

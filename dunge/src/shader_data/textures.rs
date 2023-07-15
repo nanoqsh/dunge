@@ -4,10 +4,10 @@ use {
         pipeline::Textures as Bindings,
         render::State,
         shader::{Shader, ShaderInfo},
-        shader_data::texture::{Data as TextureData, InvalidSize, Texture},
+        shader_data::texture::{Data, Texture},
     },
-    std::{marker::PhantomData, sync::Arc},
-    wgpu::{BindGroup, BindGroupLayout, Queue},
+    std::marker::PhantomData,
+    wgpu::{BindGroup, BindGroupLayout},
 };
 
 /// Shader textures.
@@ -18,7 +18,6 @@ pub struct Textures<S> {
     group: u32,
     bind_group: BindGroup,
     textures: Vec<Texture>,
-    queue: Arc<Queue>,
     ty: PhantomData<S>,
 }
 
@@ -40,8 +39,11 @@ impl<S> Textures<S> {
 
         let textures: Vec<_> = variables
             .maps
-            .iter()
-            .map(|&data| Texture::new(data, state))
+            .into_iter()
+            .map(|map| match map {
+                Map::Data(data) => Texture::new(data, state),
+                Map::Texture(texture) => texture,
+            })
             .collect();
 
         let mut entries = Vec::with_capacity(textures.len() + 1);
@@ -75,20 +77,15 @@ impl<S> Textures<S> {
                 label: Some("texture bind group"),
             }),
             textures,
-            queue: Arc::clone(state.queue()),
             ty: PhantomData,
         }
     }
 
-    /// Updates the texture map with a new [data](`TextureData`).
-    ///
-    /// # Errors
-    /// Will return [`InvalidSize`] if the size of the [data](`TextureData`)
-    /// doesn't match the current texture size.
+    /// Returns the [texture](Texture) map by index.
     ///
     /// # Panics
     /// Panics if the shader has no texture map with given index.
-    pub fn update_map(&self, index: usize, data: TextureData) -> Result<(), InvalidSize>
+    pub fn get_map(&self, index: usize) -> &Texture
     where
         S: Shader,
     {
@@ -97,7 +94,7 @@ impl<S> Textures<S> {
             "the shader has no a texture map with index {index}",
         );
 
-        self.textures[index].update(data, &self.queue)
+        &self.textures[index]
     }
 
     pub(crate) fn bind(&self) -> (u32, &BindGroup) {
@@ -113,7 +110,7 @@ struct Parameters<'a> {
 
 #[derive(Default)]
 struct Variables<'a> {
-    maps: Vec<TextureData<'a>>,
+    maps: Vec<Map<'a>>,
 }
 
 /// The [textures](Textures) builder.
@@ -132,8 +129,11 @@ impl<'a> Builder<'a> {
     }
 
     /// Sets a texture map for the textures object.
-    pub fn with_map(mut self, data: TextureData<'a>) -> Self {
-        self.variables.maps.push(data);
+    pub fn with_map<M>(mut self, map: M) -> Self
+    where
+        M: Into<Map<'a>>,
+    {
+        self.variables.maps.push(map.into());
         self
     }
 
@@ -167,5 +167,23 @@ impl<'a> Builder<'a> {
         };
 
         Textures::new(params, self.state)
+    }
+}
+
+/// The texture map parameter.
+pub enum Map<'a> {
+    Data(Data<'a>),
+    Texture(Texture),
+}
+
+impl<'a> From<Data<'a>> for Map<'a> {
+    fn from(v: Data<'a>) -> Self {
+        Self::Data(v)
+    }
+}
+
+impl From<Texture> for Map<'_> {
+    fn from(v: Texture) -> Self {
+        Self::Texture(v)
     }
 }

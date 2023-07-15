@@ -42,7 +42,7 @@ mod shader_data {
     mod source;
     mod space;
     pub(crate) mod spaces;
-    mod texture;
+    pub(crate) mod texture;
     pub(crate) mod textures;
 
     pub(crate) use self::post::PostShaderData;
@@ -56,8 +56,10 @@ mod shader_data {
         source::Source,
         space::{Data as SpaceData, Format as SpaceFormat, Space},
         spaces::{Builder as SpacesBuilder, Spaces, UpdateError as SpacesUpdateError},
-        texture::{Data as TextureData, Error as TextureError, InvalidSize as InvalidMapSize},
-        textures::{Builder as TexturesBuilder, Textures},
+        texture::{
+            Data as TextureData, Error as TextureError, InvalidSize as InvalidMapSize, Texture,
+        },
+        textures::{Builder as TexturesBuilder, Map as MapParameter, Textures},
     };
 }
 pub mod shader;
@@ -96,9 +98,9 @@ pub use {
         scheme::Scheme,
         shader::Shader,
         shader_data::{
-            Globals, GlobalsBuilder, Instance, InstanceColor, Lights, LightsBuilder, ModelColor,
-            ModelTransform, Source, Space, SpaceData, SpaceFormat, Spaces, SpacesBuilder,
-            TextureData, Textures, TexturesBuilder,
+            Globals, GlobalsBuilder, Instance, InstanceColor, Lights, LightsBuilder, MapParameter,
+            ModelColor, ModelTransform, Source, Space, SpaceData, SpaceFormat, Spaces,
+            SpacesBuilder, Texture, TextureData, Textures, TexturesBuilder,
         },
         transform::Transform,
         vertex::Vertex,
