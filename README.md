@@ -118,6 +118,7 @@ cargo run
 ```
 
 Now you should see something like [this](https://github.com/nanoqsh/dunge/tree/main/examples/triangle/screen.png)
+
 ![triangle](./examples/triangle/screen.png)
 
 ## Examples

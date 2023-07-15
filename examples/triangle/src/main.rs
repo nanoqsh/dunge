@@ -17,8 +17,8 @@ fn main() {
     dunge::make_window(InitialState {
         title: "Triangle",
         mode: WindowMode::Windowed {
-            width: 500,
-            height: 500,
+            width: 400,
+            height: 400,
         },
         ..Default::default()
     })
