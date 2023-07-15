@@ -117,9 +117,8 @@ Finally, let's run our code:
 cargo run
 ```
 
-Now you should see something like this:
-
-![the triangle](./examples/triangle/screen.png)
+Now you should see something like [this](https://github.com/nanoqsh/dunge/tree/main/examples/triangle/screen.png)
+![triangle](./examples/triangle/screen.png)
 
 ## Examples
 See [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory for more examples.

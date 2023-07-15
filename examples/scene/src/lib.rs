@@ -86,7 +86,7 @@ impl App {
         let color_layer = {
             let scheme: Scheme<ColorShader> = context.create_scheme();
             context
-                .create_layer_with_parameters()
+                .create_layer_with()
                 .with_depth_compare(Compare::Always)
                 .build(&scheme)
         };

@@ -2,7 +2,7 @@
 
 use {bytemuck::Pod, wgpu::PrimitiveTopology};
 
-/// The topology type of [`Topology`](crate::topology::Topology) trait.
+/// The topology type of the [topology](crate::topology::Topology) trait.
 pub struct TopologyValue(PrimitiveTopology);
 
 impl TopologyValue {
@@ -12,6 +12,7 @@ impl TopologyValue {
     }
 }
 
+/// The topology trait. Specifies how the mesh is presented.
 pub trait Topology {
     type Face: Pod;
     const VALUE: TopologyValue;

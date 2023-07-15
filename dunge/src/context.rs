@@ -4,7 +4,7 @@ use {
         framebuffer::FrameFilter,
         layer::Layer,
         mesh::{Data as MeshData, Mesh},
-        pipeline::ParametersBuilder,
+        pipeline::LayerBuilder,
         render::{Render, State},
         scheme::Scheme,
         screen::Screen,
@@ -108,9 +108,9 @@ impl Context {
 
     /// Creates a new [layer](Layer) with default parameters.
     ///
-    /// This is a shortcut for `context.create_layer_with_parameters().build(scheme)`
+    /// This is a shortcut for `context.create_layer_with().build(scheme)`
     /// with an automatically generated shader [scheme](Scheme).
-    /// Use the [`create_layer_with_parameters`](crate::Context::create_layer_with_parameters)
+    /// Use the [`create_layer_with`](crate::Context::create_layer_with)
     /// function to create a custom layer.
     pub fn create_layer<S, T>(&mut self) -> Layer<S, T>
     where
@@ -118,12 +118,12 @@ impl Context {
         T: Topology,
     {
         let scheme = self.create_scheme();
-        self.create_layer_with_parameters().build(&scheme)
+        self.create_layer_with().build(&scheme)
     }
 
-    /// Creates a layer [builder](ParametersBuilder) with custom parameters.
-    pub fn create_layer_with_parameters<S, T>(&mut self) -> ParametersBuilder<S, T> {
-        ParametersBuilder::new(self.render.state())
+    /// Creates a [layer](Layer) builder with custom parameters.
+    pub fn create_layer_with<S, T>(&mut self) -> LayerBuilder<S, T> {
+        LayerBuilder::new(self.render.state())
     }
 
     /// Creates new [instances](Instance).

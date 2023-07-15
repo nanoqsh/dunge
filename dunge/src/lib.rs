@@ -1,3 +1,5 @@
+#![doc = include_str!("../../README.md")]
+
 mod buffer;
 mod camera;
 mod canvas;
@@ -85,15 +87,15 @@ pub use crate::canvas::android::from_app;
 pub use {
     crate::{
         camera::{Orthographic, Perspective, Projection, View},
-        canvas::{Backend, Canvas, CanvasConfig, Device, Selector},
+        canvas::{Backend, Canvas, CanvasConfig, Device, Selector, SelectorEntry},
         color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, Limits, PixelSize},
         frame::Frame,
         framebuffer::FrameFilter,
         input::Input,
-        layer::{ActiveLayer, Builder as LayerBuilder, Layer},
+        layer::{ActiveLayer, Builder as ActiveLayerBuilder, Layer},
         mesh::{Data as MeshData, Mesh},
-        pipeline::{Blend, Compare, DrawMode, ParametersBuilder as LayerParametersBuilder},
+        pipeline::{Blend, Compare, DrawMode, LayerBuilder},
         r#loop::Loop,
         scheme::Scheme,
         shader::Shader,

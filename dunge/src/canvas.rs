@@ -323,7 +323,7 @@ pub(crate) enum CanvasEvent {
 pub(crate) mod window {
     use super::*;
 
-    /// Creates a canvas in a window with given initial state.
+    /// Creates a canvas in the window with given initial state.
     #[must_use]
     pub fn make_window(state: InitialState) -> Canvas {
         use winit::{dpi::PhysicalSize, window::Fullscreen};
@@ -448,7 +448,7 @@ pub struct CanvasConfig {
     pub selector: Selector,
 }
 
-/// Description of backend selection behavior.
+/// Description of [backend](Backend) selection behavior.
 #[derive(Default)]
 pub enum Selector {
     #[default]
@@ -457,6 +457,7 @@ pub enum Selector {
     Callback(Box<dyn FnMut(Vec<SelectorEntry>) -> Option<usize>>),
 }
 
+/// The render backend.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Backend {
     #[cfg_attr(not(target_arch = "wasm32"), default)]
@@ -469,12 +470,14 @@ pub enum Backend {
     WebGpu,
 }
 
+/// The entry used in [`Selector::Callback`].
 #[derive(Debug)]
 pub struct SelectorEntry {
     pub name: String,
     pub device: Device,
 }
 
+/// The device type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Device {
     IntegratedGpu,

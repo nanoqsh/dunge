@@ -333,6 +333,7 @@ pub struct Fragment {
     pub vertex_texture: bool,
 }
 
+/// Sets the number of texture maps in the shader.
 #[derive(Clone, Copy)]
 pub struct TexturesNumber(u8);
 
@@ -343,11 +344,13 @@ impl TexturesNumber {
     pub const N3: Self = Self(3);
     pub const N4: Self = Self(4);
 
+    /// Returns the number of texture maps.
     #[must_use]
     pub const fn len(self) -> usize {
         self.0 as usize
     }
 
+    /// Checks if the number of texture maps is zero.
     #[must_use]
     pub const fn is_empty(self) -> bool {
         self.0 == 0

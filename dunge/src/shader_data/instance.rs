@@ -12,6 +12,7 @@ use {
 
 type Mat = [[f32; 4]; 4];
 
+/// The instance transform model.
 #[repr(transparent)]
 #[derive(Copy, Clone, Pod, Zeroable)]
 pub struct ModelTransform(Mat);
@@ -56,6 +57,7 @@ impl From<Mat4> for ModelTransform {
     }
 }
 
+/// The instance color model.
 #[repr(transparent)]
 #[derive(Copy, Clone, Default, Pod, Zeroable)]
 pub struct ModelColor([f32; 3]);
@@ -81,6 +83,10 @@ impl From<Rgb> for ModelColor {
     }
 }
 
+/// The instance defining a transform of drawable objects.
+///
+/// Can be created from the [context](crate::Context) by calling
+/// the [`create_instances`](crate::Context::create_instances) function.
 pub struct Instance(Inner<ModelTransform>);
 
 impl Instance {
@@ -102,6 +108,10 @@ impl Instance {
     }
 }
 
+/// The instance defining a color of drawable objects.
+///
+/// Can be created from the [context](crate::Context) by calling
+/// the [`create_instances_color`](crate::Context::create_instances_color) function.
 pub struct InstanceColor(Inner<ModelColor>);
 
 impl InstanceColor {

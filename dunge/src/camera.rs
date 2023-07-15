@@ -104,6 +104,7 @@ impl Default for View {
     }
 }
 
+/// The camera projection.
 #[derive(Clone, Copy)]
 pub enum Projection {
     Perspective(Perspective),

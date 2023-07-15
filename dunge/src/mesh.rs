@@ -85,6 +85,7 @@ pub enum Error {
     WrongIndex,
 }
 
+/// The mesh object.
 pub struct Mesh<V, T = TriangleList> {
     verts: Buffer,
     indxs: Option<Buffer>,

@@ -38,14 +38,14 @@ impl Default for Parameters {
     }
 }
 
-/// Layer's blending
+/// Layer's blending.
 #[derive(Clone, Copy)]
 pub enum Blend {
     Replace,
     AlphaBlending,
 }
 
-/// Type of drawing mode for polygons
+/// Type of drawing mode for polygons.
 #[derive(Clone, Copy)]
 pub enum DrawMode {
     Fill,
@@ -53,31 +53,31 @@ pub enum DrawMode {
     Point,
 }
 
-/// Depth comparison function
+/// Depth comparison function.
 #[derive(Clone, Copy)]
 pub enum Compare {
-    /// Function never passes
+    /// Function never passes.
     Never,
 
-    /// Function passes if new value less than existing value
+    /// Function passes if new value less than existing value.
     Less,
 
-    /// Function passes if new value is greater than existing value
+    /// Function passes if new value is greater than existing value.
     Greater,
 
-    /// Function always passes
+    /// Function always passes.
     Always,
 }
 
 /// Builds new layer with specific parameters.
 #[must_use]
-pub struct ParametersBuilder<'a, S, T> {
+pub struct LayerBuilder<'a, S, T> {
     state: &'a State,
     params: Parameters,
     vertex_type: PhantomData<(S, T)>,
 }
 
-impl<'a, S, T> ParametersBuilder<'a, S, T> {
+impl<'a, S, T> LayerBuilder<'a, S, T> {
     pub(crate) fn new(state: &'a State) -> Self {
         Self {
             state,
@@ -121,7 +121,7 @@ impl<'a, S, T> ParametersBuilder<'a, S, T> {
         self
     }
 
-    /// Builds new layer.
+    /// Builds a new layer.
     pub fn build(self, scheme: &Scheme<S>) -> Layer<S, T>
     where
         S: Shader,
