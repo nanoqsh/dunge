@@ -6,6 +6,7 @@ use {
         screen::Screen,
         time::Time,
     },
+    wgpu::AdapterInfo,
     winit::{
         event_loop::{EventLoop, EventLoopBuilder},
         window::{Window, WindowBuilder},
@@ -454,7 +455,7 @@ pub enum Selector {
     #[default]
     Auto,
     #[cfg(not(target_arch = "wasm32"))]
-    Callback(Box<dyn FnMut(Vec<SelectorEntry>) -> Option<usize>>),
+    Callback(Box<dyn FnMut(Vec<Info>) -> Option<usize>>),
 }
 
 /// The render backend.
@@ -470,11 +471,38 @@ pub enum Backend {
     WebGpu,
 }
 
-/// The entry used in [`Selector::Callback`].
-#[derive(Debug)]
-pub struct SelectorEntry {
+/// The render context info.
+#[derive(Clone, Debug)]
+pub struct Info {
+    pub backend: Backend,
     pub name: String,
     pub device: Device,
+}
+
+impl Info {
+    pub(crate) fn from_adapter_info(info: AdapterInfo) -> Self {
+        use wgpu::{Backend as Bk, DeviceType};
+
+        Self {
+            backend: match info.backend {
+                Bk::Empty => unreachable!(),
+                Bk::Vulkan => Backend::Vulkan,
+                Bk::Metal => Backend::Metal,
+                Bk::Dx12 => Backend::Dx12,
+                Bk::Dx11 => Backend::Dx11,
+                Bk::Gl => Backend::Gl,
+                Bk::BrowserWebGpu => Backend::WebGpu,
+            },
+            name: info.name,
+            device: match info.device_type {
+                DeviceType::IntegratedGpu => Device::IntegratedGpu,
+                DeviceType::DiscreteGpu => Device::DiscreteGpu,
+                DeviceType::VirtualGpu => Device::VirtualGpu,
+                DeviceType::Cpu => Device::Cpu,
+                DeviceType::Other => panic!("undefined device type"),
+            },
+        }
+    }
 }
 
 /// The device type.

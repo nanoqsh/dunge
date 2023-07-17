@@ -1,6 +1,6 @@
 use {
     crate::{
-        canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Selector},
+        canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Info, Selector},
         context::Screenshot,
         frame::Frame,
         framebuffer::{BufferSize, FrameParameters, Framebuffer},
@@ -46,6 +46,10 @@ impl Render {
             postproc,
             framebuffer,
         }
+    }
+
+    pub fn info(&self) -> &Info {
+        &self.state.info
     }
 
     pub fn drop_surface(&mut self) {
@@ -242,6 +246,7 @@ impl Render {
 }
 
 pub(crate) struct State {
+    info: Info,
     instance: Instance,
     device: Arc<Device>,
     queue: Arc<Queue>,
@@ -271,12 +276,13 @@ impl State {
             Some(unsafe { instance.create_surface(window).expect("create surface") })
         };
 
-        let (device, queue) = {
-            let adapter = Self::select_adapter(conf.selector, &instance, surface.as_ref())
+        let (device, queue, info) = {
+            let adapter = Self::select_adapter(conf, &instance, surface.as_ref())
                 .await
                 .ok_or(CanvasError::BackendSelection)?;
 
-            let backend = adapter.get_info().backend;
+            let info = Info::from_adapter_info(adapter.get_info());
+            let backend = info.backend;
             log::info!("selected backend: {backend:?}");
 
             let desc = DeviceDescriptor {
@@ -301,13 +307,16 @@ impl State {
                 label: None,
             };
 
-            adapter
+            let (device, queue) = adapter
                 .request_device(&desc, None)
                 .await
-                .map_err(|_| CanvasError::RequestDevice)?
+                .map_err(|_| CanvasError::RequestDevice)?;
+
+            (device, queue, info)
         };
 
         Ok(Self {
+            info,
             instance,
             device: Arc::new(device),
             queue: Arc::new(queue),
@@ -316,11 +325,11 @@ impl State {
     }
 
     async fn select_adapter(
-        selector: Selector,
+        conf: CanvasConfig,
         instance: &Instance,
         surface: Option<&Surface>,
     ) -> Option<Adapter> {
-        match selector {
+        match conf.selector {
             Selector::Auto => {
                 use wgpu::{PowerPreference, RequestAdapterOptions};
 
@@ -334,28 +343,14 @@ impl State {
             }
             #[cfg(not(target_arch = "wasm32"))]
             Selector::Callback(mut callback) => {
-                use {
-                    crate::canvas::{Device, SelectorEntry},
-                    wgpu::{Backends, DeviceType},
-                };
+                use wgpu::Backends;
 
                 let mut adapters = vec![];
                 let mut entries = vec![];
                 for adapter in instance.enumerate_adapters(Backends::all()) {
                     let info = adapter.get_info();
-                    let entry = SelectorEntry {
-                        name: info.name,
-                        device: match info.device_type {
-                            DeviceType::IntegratedGpu => Device::IntegratedGpu,
-                            DeviceType::DiscreteGpu => Device::DiscreteGpu,
-                            DeviceType::VirtualGpu => Device::VirtualGpu,
-                            DeviceType::Cpu => Device::Cpu,
-                            DeviceType::Other => panic!("undefined device type"),
-                        },
-                    };
-
                     adapters.push(adapter);
-                    entries.push(entry);
+                    entries.push(Info::from_adapter_info(info));
                 }
 
                 let selected = callback(entries)?;

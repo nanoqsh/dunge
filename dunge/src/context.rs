@@ -1,6 +1,6 @@
 use {
     crate::{
-        canvas::CanvasEvent,
+        canvas::{CanvasEvent, Info},
         framebuffer::FrameFilter,
         layer::Layer,
         mesh::{Data as MeshData, Mesh},
@@ -41,6 +41,12 @@ impl Context {
             render: Render::new(state),
             limits: Limits::default(),
         }
+    }
+
+    /// Returns the render info.
+    #[must_use]
+    pub fn info(&self) -> &Info {
+        self.render.info()
     }
 
     /// Returns the window.
