@@ -277,9 +277,9 @@ impl State {
         };
 
         let (device, queue, info) = {
-            let adapter = Self::select_adapter(conf, &instance, surface.as_ref())
+            let adapter = Self::select_adapter(conf.selector, &instance, surface.as_ref())
                 .await
-                .ok_or(CanvasError::BackendSelection)?;
+                .ok_or(CanvasError::BackendSelection(conf.backend))?;
 
             let info = Info::from_adapter_info(adapter.get_info());
             let backend = info.backend;
@@ -325,11 +325,11 @@ impl State {
     }
 
     async fn select_adapter(
-        conf: CanvasConfig,
+        selector: Selector,
         instance: &Instance,
         surface: Option<&Surface>,
     ) -> Option<Adapter> {
-        match conf.selector {
+        match selector {
             Selector::Auto => {
                 use wgpu::{PowerPreference, RequestAdapterOptions};
 

@@ -301,7 +301,7 @@ impl Canvas {
 #[derive(Clone, Copy, Debug)]
 #[must_use]
 pub enum Error {
-    BackendSelection,
+    BackendSelection(Backend),
     RequestDevice,
 }
 

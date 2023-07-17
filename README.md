@@ -23,7 +23,7 @@ The library is for personal use only. I use it to create my applications and I m
 
 ## Getting Started
 Let's render a colorful triangle for example. First, we need to add the dependency of dunge in the `Cargo.toml`:
-```ignore
+```sh
 cargo add dunge
 ```
 
@@ -113,7 +113,7 @@ impl Loop for App {
 ```
 
 Finally, let's run our code:
-```ignore
+```sh
 cargo run
 ```
 
@@ -124,6 +124,6 @@ Now you should see something like [this](https://github.com/nanoqsh/dunge/tree/m
 ## Examples
 See [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory for more examples.
 To build and run an example do:
-```ignore
+```sh
 cargo r -p <example_name>
 ```
