@@ -18,6 +18,7 @@ struct TextureVert {
 }
 
 struct TextureShader;
+
 impl Shader for TextureShader {
     type Vertex = TextureVert;
     const VIEW: ShaderView = ShaderView::Camera;
@@ -33,6 +34,7 @@ struct ColorVert {
 }
 
 struct ColorShader;
+
 impl Shader for ColorShader {
     type Vertex = ColorVert;
     const VIEW: ShaderView = ShaderView::Camera;

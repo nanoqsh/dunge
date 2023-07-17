@@ -8,6 +8,7 @@ use dunge::{
 struct Vert(#[position] [f32; 2], #[color] [f32; 3]);
 
 struct TriangleShader;
+
 impl Shader for TriangleShader {
     type Vertex = Vert;
 }

@@ -23,12 +23,12 @@ The library is for personal use only. I use it to create my applications and I m
 
 ## Getting Started
 Let's render a colorful triangle for example. First, we need to add the dependency of dunge in the `Cargo.toml`:
-```
+```ignore
 cargo add dunge
 ```
 
 Then, let's create a new window to draw something in it:
-```rust
+```rust,ignore
 use dunge::{CanvasConfig, InitialState};
 
 fn main() {
@@ -41,7 +41,7 @@ fn main() {
 `make_window` creates a new instance of `Canvas` type and sets up window properties, it allows us to handle an input from users. `run_blocking` runs our application by calling the constructor of it and passes the `Context` object there. Context uses for creation and updating of meshes, textures, instances etc.
 
 To be able to draw something, you need to define a vertex type with the `Vertex` trait implementation and a shader type with the `Shader` trait implementation:
-```rust
+```rust,ignore
 use dunge::{Shader, Vertex};
 
 // Instead of manually implementing the trait, use a derive macro.
@@ -57,7 +57,7 @@ impl Shader for TriangleShader {
 ```
 
 The `App` is our application type, we need to create it:
-```rust
+```rust,ignore
 use dunge::{Context, Instance, Layer, Mesh, MeshData, ModelTransform};
 
 struct App {
@@ -90,7 +90,7 @@ impl App {
 ```
 
 To be able to pass the `App` in `run_blocking` we need to implement a `Loop` trait for it:
-```rust
+```rust,ignore
 use dunge::{Input, Frame, Loop, Rgba};
 
 impl Loop for App {
@@ -113,7 +113,7 @@ impl Loop for App {
 ```
 
 Finally, let's run our code:
-```
+```ignore
 cargo run
 ```
 
@@ -124,6 +124,6 @@ Now you should see something like [this](https://github.com/nanoqsh/dunge/tree/m
 ## Examples
 See [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory for more examples.
 To build and run an example do:
-```
+```ignore
 cargo r -p <example_name>
 ```
