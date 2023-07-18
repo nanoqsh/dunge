@@ -24,19 +24,19 @@ jobs:
                 cargo clippy --
                 -W clippy::use_self
                 -W clippy::pedantic
-                -W clippy::unwrap-used
+                -W clippy::unwrap_used
                 -W clippy::perf
-                -W clippy::missing-assert-message
+                -W clippy::missing_assert_message
                 -A clippy::needless_collect
-                -A clippy::cast-precision-loss
-                -A clippy::cast-sign-loss
-                -A clippy::cast-possible-truncation
-                -A clippy::cast-lossless
-                -A clippy::wildcard-imports
-                -A clippy::module_name-repetitions
-                -A clippy::many-single-char-names
-                -A clippy::too-many-lines
-                -A clippy::similar-names
+                -A clippy::cast_precision_loss
+                -A clippy::cast_sign_loss
+                -A clippy::cast_possible_truncation
+                -A clippy::cast_lossless
+                -A clippy::wildcard_imports
+                -A clippy::module_name_repetitions
+                -A clippy::many_single_char_names
+                -A clippy::too_many_lines
+                -A clippy::similar_names
 
           - name: Tests
             run: cargo test --verbose
