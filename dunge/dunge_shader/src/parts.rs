@@ -335,25 +335,38 @@ pub struct Fragment {
 
 /// Sets the number of texture maps in the shader.
 #[derive(Clone, Copy)]
-pub struct TexturesNumber(u8);
+pub struct TexturesNumber {
+    n: u8,
+    discard: Option<f32>,
+}
 
 impl TexturesNumber {
-    pub const N0: Self = Self(0);
-    pub const N1: Self = Self(1);
-    pub const N2: Self = Self(2);
-    pub const N3: Self = Self(3);
-    pub const N4: Self = Self(4);
+    pub const N0: Self = Self::new(0);
+    pub const N1: Self = Self::new(1);
+    pub const N2: Self = Self::new(2);
+    pub const N3: Self = Self::new(3);
+    pub const N4: Self = Self::new(4);
+
+    const fn new(n: u8) -> Self {
+        Self { n, discard: None }
+    }
+
+    /// Discard a pixel if its alpha value is less than the specified.
+    pub const fn with_discard_threshold(mut self, value: f32) -> Self {
+        self.discard = Some(value);
+        self
+    }
 
     /// Returns the number of texture maps.
     #[must_use]
     pub const fn len(self) -> usize {
-        self.0 as usize
+        self.n as usize
     }
 
     /// Checks if the number of texture maps is zero.
     #[must_use]
     pub const fn is_empty(self) -> bool {
-        self.0 == 0
+        self.n == 0
     }
 
     fn has_textures(self) -> bool {
@@ -365,8 +378,8 @@ impl TexturesNumber {
             return TextureBindings::default();
         }
 
-        let mut tmaps = Vec::with_capacity(self.0 as usize);
-        for n in 0..self.0 as u32 {
+        let mut tmaps = Vec::with_capacity(self.n as usize);
+        for n in 0..self.n as u32 {
             let binding = binding.next();
             tmaps.push(binding.get());
             o.write(Var {
@@ -392,7 +405,7 @@ impl TexturesNumber {
     }
 
     fn calc_fragment(self, o: &mut Out) {
-        match self.0 {
+        match self.n {
             0 => return,
             1 => _ = o.write("let tex = textureSample(tmap_0, smap, out.map);\n    "),
             num => {
@@ -412,7 +425,11 @@ impl TexturesNumber {
             }
         }
 
-        o.write_str("if tex.a < 0.95 { discard; }\n    ");
+        if let Some(value) = self.discard {
+            o.write_str("if tex.a < ")
+                .write_f32(value)
+                .write_str(" { discard; }\n    ");
+        }
     }
 }
 
