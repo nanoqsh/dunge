@@ -13,4 +13,4 @@ path = "src/main.rs"
 [dependencies]
 dunge = { path = "../../dunge" }
 utils = { path = "../utils" }
-env_logger = "0.9"
+env_logger = "0.10"
