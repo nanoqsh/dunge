@@ -4,7 +4,7 @@ use {
         pipeline::Textures as Bindings,
         render::State,
         shader::{Shader, ShaderInfo},
-        shader_data::texture::{Data, Texture},
+        shader_data::{data::TextureData, texture::Texture},
     },
     std::marker::PhantomData,
     wgpu::{BindGroup, BindGroupLayout},
@@ -172,12 +172,12 @@ impl<'a> Builder<'a> {
 
 /// The texture map parameter.
 pub enum Map<'a> {
-    Data(Data<'a>),
+    Data(TextureData<'a>),
     Texture(Texture),
 }
 
-impl<'a> From<Data<'a>> for Map<'a> {
-    fn from(v: Data<'a>) -> Self {
+impl<'a> From<TextureData<'a>> for Map<'a> {
+    fn from(v: TextureData<'a>) -> Self {
         Self::Data(v)
     }
 }

@@ -2,10 +2,10 @@ mod models;
 
 use {
     dunge::{
-        input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Frame,
+        input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Format, Frame,
         FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights, Loop, Mesh,
         MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, Rgb, Rgba, Scheme, Source,
-        Space, SpaceData, SpaceFormat, Spaces, TextureData, Textures, Transform, Vertex, View,
+        Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -96,7 +96,9 @@ impl App {
         // Create the sprite texture
         let sprites = {
             let image = utils::read_png(include_bytes!("sprites.png"));
-            let data = TextureData::new(&image, image.dimensions()).expect("create texture");
+            let data = TextureData::new(&image, image.dimensions(), Format::Srgba)
+                .expect("create texture");
+
             context
                 .textures_builder()
                 .with_map(data)
@@ -140,7 +142,7 @@ impl App {
             };
 
             let space = Space {
-                data: SpaceData::new(&map, size, SpaceFormat::Srgba).expect("create space"),
+                data: SpaceData::new(&map, size, Format::Srgba).expect("create space"),
                 model: ModelTransform::default(),
                 col: Color([2.5; 3]),
             };

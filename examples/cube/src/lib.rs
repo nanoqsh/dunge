@@ -2,7 +2,7 @@ mod data;
 
 use {
     dunge::{
-        input::Key, shader::*, Context, Frame, Globals, Input, Instance, Layer, Loop, Mesh,
+        input::Key, shader::*, Context, Format, Frame, Globals, Input, Instance, Layer, Loop, Mesh,
         MeshData, ModelTransform, Perspective, Rgba, TextureData, Textures, Vertex, View,
     },
     utils::Camera,
@@ -22,6 +22,7 @@ struct TextureShader;
 impl Shader for TextureShader {
     type Vertex = TextureVert;
     const VIEW: ShaderView = ShaderView::Camera;
+    const TEXTURES: TexturesNumber = TexturesNumber::N1;
 }
 
 #[repr(C)]
@@ -78,7 +79,9 @@ impl App {
         // Create a textures
         let textures = {
             let image = utils::read_png(include_bytes!("grass.png"));
-            let data = TextureData::new(&image, image.dimensions()).expect("create texture");
+            let data = TextureData::new(&image, image.dimensions(), Format::Srgba)
+                .expect("create texture");
+
             context
                 .textures_builder()
                 .with_map(data)

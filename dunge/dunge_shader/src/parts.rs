@@ -335,6 +335,7 @@ pub struct Fragment {
 
 /// Sets the number of texture maps in the shader.
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct TexturesNumber {
     n: u8,
     discard: Option<f32>,

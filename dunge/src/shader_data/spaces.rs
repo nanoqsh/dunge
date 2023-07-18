@@ -4,7 +4,10 @@ use {
         pipeline::Spaces as Bindings,
         render::State,
         shader::{Shader, ShaderInfo},
-        shader_data::space::{Data, Format, Space, SpaceUniform},
+        shader_data::{
+            data::{Data, SpaceData},
+            space::{Space, SpaceUniform},
+        },
     },
     std::{marker::PhantomData, sync::Arc},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue, Texture},
@@ -65,11 +68,7 @@ impl<S> Spaces<S> {
                     mip_level_count: 1,
                     sample_count: 1,
                     dimension: TextureDimension::D3,
-                    format: match format {
-                        Format::Srgba => TextureFormat::Rgba8UnormSrgb,
-                        Format::Rgba => TextureFormat::Rgba8Unorm,
-                        Format::Gray => TextureFormat::R8Unorm,
-                    },
+                    format: format.texture_format(),
                     usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
                     view_formats: &[],
                 });
@@ -138,15 +137,15 @@ impl<S> Spaces<S> {
         }
     }
 
-    /// Updates the spaces with a new [data](`Data`).
+    /// Updates the spaces with a new [data](`SpaceData`).
     ///
     /// # Errors
     /// Will return [`UpdateError::Index`] if the index is invalid or
-    /// [`UpdateError::Size`] if the [data](`Data`) doesn't match the current size.
+    /// [`UpdateError::Size`] if the [data](`SpaceData`) doesn't match the current size.
     ///
     /// # Panics
     /// Panics if the shader has no light spaces.
-    pub fn update(&self, index: usize, data: Data) -> Result<(), UpdateError>
+    pub fn update(&self, index: usize, data: SpaceData) -> Result<(), UpdateError>
     where
         S: Shader,
     {
@@ -154,7 +153,7 @@ impl<S> Spaces<S> {
         assert!(info.has_spaces(), "the shader has no light spaces");
 
         let texture = self.textures.get(index).ok_or(UpdateError::Index)?;
-        texture.update(data, &self.queue)
+        texture.update(data.get(), &self.queue)
     }
 
     pub(crate) fn bind(&self) -> (u32, &BindGroup) {
@@ -168,7 +167,7 @@ struct SpaceTexture {
 }
 
 impl SpaceTexture {
-    fn update(&self, data: Data, queue: &Queue) -> Result<(), UpdateError> {
+    fn update(&self, data: Data<(u8, u8, u8)>, queue: &Queue) -> Result<(), UpdateError> {
         use wgpu::*;
 
         if data.size != self.size {
@@ -206,7 +205,7 @@ pub enum UpdateError {
     /// The index is invalid.
     Index,
 
-    /// [`Data`] size doesn't match the current size.
+    /// [`SpaceData`] size doesn't match the current size.
     Size,
 }
 
@@ -219,7 +218,7 @@ struct Parameters<'a> {
 #[derive(Default)]
 struct Variables<'a> {
     light_spaces: Vec<SpaceUniform>,
-    textures_data: Vec<Data<'a>>,
+    textures_data: Vec<Data<'a, (u8, u8, u8)>>,
 }
 
 /// The light [spaces](Spaces) builder.
@@ -239,7 +238,7 @@ impl<'a> Builder<'a> {
 
     /// Set a [space](Space) to shader.
     pub fn with_space(mut self, space: Space<'a>) -> Self {
-        self.variables.textures_data.push(space.data);
+        self.variables.textures_data.push(space.data.get());
         self.variables.light_spaces.push(space.into_uniform());
         self
     }

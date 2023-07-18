@@ -1,49 +1,11 @@
 use {
-    crate::render::State,
+    crate::{
+        render::State,
+        shader_data::data::{Data, TextureData},
+    },
     std::sync::Arc,
     wgpu::{Queue, Texture as Tx, TextureView},
 };
-
-/// A data struct for a texture creation.
-#[derive(Clone, Copy)]
-#[must_use]
-pub struct Data<'a> {
-    data: &'a [u8],
-    size: (u32, u32),
-}
-
-impl<'a> Data<'a> {
-    /// Creates a new [`TextureData`](crate::TextureData).
-    ///
-    /// # Errors
-    /// Will return
-    /// - [`TextureError::EmptyData`](crate::error::TextureError::EmptyData)
-    ///   if the data is empty.
-    /// - [`TextureError::SizeDoesNotMatch`](crate::error::TextureError::SizeDoesNotMatch)
-    ///   if the data length doesn't match with size * number of channels.
-    pub const fn new(data: &'a [u8], size: (u32, u32)) -> Result<Self, Error> {
-        if data.is_empty() {
-            return Err(Error::EmptyData);
-        }
-
-        let (width, height) = size;
-        if data.len() != width as usize * height as usize * 4 {
-            return Err(Error::SizeDoesNotMatch);
-        }
-
-        Ok(Self { data, size })
-    }
-}
-
-/// Texture error.
-#[derive(Debug)]
-pub enum Error {
-    /// The data is empty.
-    EmptyData,
-
-    /// The data length doesn't match with size * number of channels.
-    SizeDoesNotMatch,
-}
 
 /// The texture object.
 #[derive(Clone)]
@@ -51,8 +13,8 @@ pub enum Error {
 pub struct Texture(Arc<Inner>);
 
 impl Texture {
-    pub(crate) fn new(data: Data, state: &State) -> Self {
-        let inner = Inner::new(data, state);
+    pub(crate) fn new(data: TextureData, state: &State) -> Self {
+        let inner = Inner::new(data.get(), state);
         Self(Arc::new(inner))
     }
 
@@ -60,13 +22,13 @@ impl Texture {
         &self.0.view
     }
 
-    /// Updates the texture with a new [data](`Data`).
+    /// Updates the texture with a new [data](`TextureData`).
     ///
     /// # Errors
-    /// Will return [`InvalidSize`] if the size of the [data](`Data`)
+    /// Will return [`InvalidSize`] if the size of the [data](`TextureData`)
     /// doesn't match the current texture size.
-    pub fn update(&self, data: Data) -> Result<(), InvalidSize> {
-        self.0.update(data)
+    pub fn update(&self, data: TextureData) -> Result<(), InvalidSize> {
+        self.0.update(data.get())
     }
 }
 
@@ -77,7 +39,7 @@ struct Inner {
 }
 
 impl Inner {
-    fn new(data: Data, state: &State) -> Self {
+    fn new(data: Data<(u32, u32)>, state: &State) -> Self {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -94,7 +56,7 @@ impl Inner {
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8UnormSrgb,
+            format: data.format.texture_format(),
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             view_formats: &[],
         });
@@ -123,7 +85,7 @@ impl Inner {
         }
     }
 
-    fn update(&self, data: Data) -> Result<(), InvalidSize> {
+    fn update(&self, data: Data<(u32, u32)>) -> Result<(), InvalidSize> {
         use wgpu::*;
 
         let (width, height) = data.size;

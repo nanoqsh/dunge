@@ -12,7 +12,7 @@ pub mod error {
         canvas::Error as CanvasError,
         mesh::{Error as MeshError, UpdateError as MeshUpdateError},
         shader_data::{
-            InvalidInstanceSize, InvalidMapSize, LightsUpdateError, SpacesUpdateError, TextureError,
+            DataError, InvalidInstanceSize, InvalidMapSize, LightsUpdateError, SpacesUpdateError,
         },
     };
 }
@@ -36,6 +36,7 @@ mod scheme;
 mod screen;
 mod shader_data {
     mod ambient;
+    mod data;
     pub(crate) mod globals;
     mod instance;
     mod len;
@@ -50,17 +51,16 @@ mod shader_data {
     pub(crate) use self::post::PostShaderData;
 
     pub use self::{
+        data::{Error as DataError, Format, SpaceData, TextureData},
         globals::{Builder as GlobalsBuilder, Globals},
         instance::{
             Instance, InstanceColor, InvalidSize as InvalidInstanceSize, ModelColor, ModelTransform,
         },
         lights::{Builder as LightsBuilder, Lights, UpdateError as LightsUpdateError},
         source::Source,
-        space::{Data as SpaceData, Format as SpaceFormat, Space},
+        space::Space,
         spaces::{Builder as SpacesBuilder, Spaces, UpdateError as SpacesUpdateError},
-        texture::{
-            Data as TextureData, Error as TextureError, InvalidSize as InvalidMapSize, Texture,
-        },
+        texture::{InvalidSize as InvalidMapSize, Texture},
         textures::{Builder as TexturesBuilder, Map as MapParameter, Textures},
     };
 }
@@ -100,8 +100,8 @@ pub use {
         scheme::Scheme,
         shader::Shader,
         shader_data::{
-            Globals, GlobalsBuilder, Instance, InstanceColor, Lights, LightsBuilder, MapParameter,
-            ModelColor, ModelTransform, Source, Space, SpaceData, SpaceFormat, Spaces,
+            Format, Globals, GlobalsBuilder, Instance, InstanceColor, Lights, LightsBuilder,
+            MapParameter, ModelColor, ModelTransform, Source, Space, SpaceData, Spaces,
             SpacesBuilder, Texture, TextureData, Textures, TexturesBuilder,
         },
         transform::Transform,
