@@ -1,5 +1,9 @@
 use {
-    crate::{context::PixelSize, framebuffer::BufferSize, postproc::FrameFilter},
+    crate::{
+        context::PixelSize,
+        framebuffer::BufferSize,
+        postproc::{FrameFilter, FrameParameters},
+    },
     glam::{UVec2, Vec2},
     std::num::NonZeroU32,
 };
@@ -13,10 +17,6 @@ pub(crate) struct Screen {
 }
 
 impl Screen {
-    pub fn is_antialiasing_enabled(&self) -> bool {
-        matches!(self.pixel_size, PixelSize::Antialiasing)
-    }
-
     /// The physical size of the frame.
     pub fn physical_size(&self) -> UVec2 {
         UVec2::new(self.width.get(), self.height.get())
@@ -33,6 +33,10 @@ impl Screen {
         };
 
         size.max(UVec2::new(1, 1))
+    }
+
+    fn is_antialiasing_enabled(&self) -> bool {
+        matches!(self.pixel_size, PixelSize::Antialiasing)
     }
 
     /// The virtual size of the frame.
@@ -85,7 +89,6 @@ impl Default for Screen {
     }
 }
 
-#[derive(Clone, Copy)]
 pub(crate) struct RenderScreen {
     screen: Screen,
     max_texture_size: u32,
@@ -112,5 +115,14 @@ impl RenderScreen {
         let size = self.screen.virtual_size_aligned();
         let (width, height) = size.into();
         BufferSize::new(width, height, self.max_texture_size)
+    }
+
+    pub fn frame_parameters(&self) -> FrameParameters {
+        FrameParameters {
+            buffer_size: self.buffer_size(),
+            factor: self.screen.size_factor(),
+            filter: self.screen.filter,
+            antialiasing: self.screen.is_antialiasing_enabled(),
+        }
     }
 }

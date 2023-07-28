@@ -1,21 +1,24 @@
 use {
-    crate::{framebuffer::BufferSize, postproc::PostProcessor},
+    crate::{postproc::PostProcessor, render::State},
     bytemuck::{Pod, Zeroable},
-    wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
+    std::sync::Arc,
+    wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
 };
 
 pub(crate) struct PostShaderData {
     bind_group: BindGroup,
     buf: Buffer,
+    queue: Arc<Queue>,
 }
 
 impl PostShaderData {
-    pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
+    pub fn new(state: &State, layout: &BindGroupLayout) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BindGroupDescriptor, BindGroupEntry, BufferUsages,
         };
 
+        let device = state.device();
         let buf = {
             let uniform = PostShaderDataUniform::new((1., 1.), (1., 1.));
             device.create_buffer_init(&BufferInitDescriptor {
@@ -34,12 +37,17 @@ impl PostShaderData {
             label: Some("post bind group"),
         });
 
-        Self { bind_group, buf }
+        Self {
+            bind_group,
+            buf,
+            queue: Arc::clone(state.queue()),
+        }
     }
 
-    pub fn resize(&self, size: BufferSize, factor: (f32, f32), queue: &Queue) {
-        let uniform = PostShaderDataUniform::new(size.into(), factor);
-        queue.write_buffer(&self.buf, 0, bytemuck::cast_slice(&[uniform]));
+    pub fn resize(&self, size: (f32, f32), factor: (f32, f32)) {
+        let uniform = PostShaderDataUniform::new(size, factor);
+        self.queue
+            .write_buffer(&self.buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 
     pub fn bind_group(&self) -> &BindGroup {

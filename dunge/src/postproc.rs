@@ -3,11 +3,11 @@ use {
         framebuffer::BufferSize,
         pipeline::{Parameters, Pipeline},
         render::State,
-        screen::RenderScreen,
         shader_data::PostShaderData,
     },
     dunge_shader::TextureBindings,
-    wgpu::{BindGroup, Device, Queue, RenderPipeline, Sampler, TextureView},
+    glam::Vec2,
+    wgpu::{BindGroup, Device, RenderPipeline, Sampler, TextureView},
 };
 
 /// Describes a frame render filter mode.
@@ -16,6 +16,14 @@ pub enum FrameFilter {
     #[default]
     Nearest,
     Linear,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct FrameParameters {
+    pub buffer_size: BufferSize,
+    pub factor: Vec2,
+    pub filter: FrameFilter,
+    pub antialiasing: bool,
 }
 
 pub(crate) struct PostProcessor {
@@ -34,19 +42,21 @@ impl PostProcessor {
     const TEXTURE_TDIFF_BINDING: u32 = 0;
     const TEXTURE_SDIFF_BINDING: u32 = 1;
 
-    pub fn new(state: &State, view: &TextureView, screen: RenderScreen) -> Self {
+    pub fn new(state: &State, view: &TextureView, params: FrameParameters) -> Self {
         use wgpu::*;
 
-        let buffer_size = screen.buffer_size();
-        let screen = screen.screen();
-        let antialiasing = screen.is_antialiasing_enabled();
-        let filter = screen.filter;
+        let FrameParameters {
+            buffer_size,
+            factor,
+            filter,
+            antialiasing,
+        } = params;
 
         let device = state.device();
         let pipeline = Self::pipeline(device, antialiasing);
         let globals = &pipeline.globals().expect("globals").layout;
-        let data = PostShaderData::new(device, globals);
-        data.resize(buffer_size, screen.size_factor().into(), state.queue());
+        let data = PostShaderData::new(state, globals);
+        data.resize(buffer_size.into(), factor.into());
 
         let sampler = Self::sampler(device, filter);
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
@@ -74,6 +84,25 @@ impl PostProcessor {
         }
     }
 
+    pub fn set_parameters(&mut self, device: &Device, params: FrameParameters) {
+        let FrameParameters {
+            buffer_size,
+            factor,
+            filter,
+            antialiasing,
+        } = params;
+
+        if self.antialiasing != antialiasing {
+            self.pipeline = Self::pipeline(device, antialiasing);
+        }
+
+        if self.filter != filter {
+            self.sampler = Self::sampler(device, filter);
+        }
+
+        self.data.resize(buffer_size.into(), factor.into());
+    }
+
     pub fn set_view(&mut self, device: &Device, view: &TextureView) {
         use wgpu::*;
 
@@ -91,26 +120,6 @@ impl PostProcessor {
                 },
             ],
         });
-    }
-
-    pub fn set_antialiasing(&mut self, device: &Device, antialiasing: bool) {
-        if self.antialiasing == antialiasing {
-            return;
-        }
-
-        self.pipeline = Self::pipeline(device, antialiasing);
-    }
-
-    pub fn set_filter(&mut self, device: &Device, filter: FrameFilter) {
-        if self.filter == filter {
-            return;
-        }
-
-        self.sampler = Self::sampler(device, filter);
-    }
-
-    pub fn resize(&self, size: BufferSize, factor: (f32, f32), queue: &Queue) {
-        self.data.resize(size, factor, queue);
     }
 
     pub fn render_pipeline(&self) -> &RenderPipeline {

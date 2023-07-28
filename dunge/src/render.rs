@@ -98,12 +98,13 @@ impl Render {
             .expect("surface")
             .configure(&self.state.device, &self.surface_conf);
 
-        let buffer_size = self.screen.buffer_size();
-        let framebuffer_updated = self.framebuffer.set_size(buffer_size, &self.state.device);
+        let params = self.screen.frame_parameters();
+        let framebuffer_updated = self
+            .framebuffer
+            .set_size(params.buffer_size, &self.state.device);
+
         if let Some(postproc) = self.postproc.get_mut() {
-            postproc.set_antialiasing(&self.state.device, screen.is_antialiasing_enabled());
-            postproc.set_filter(&self.state.device, screen.filter);
-            postproc.resize(buffer_size, screen.size_factor().into(), &self.state.queue);
+            postproc.set_parameters(&self.state.device, params);
             if framebuffer_updated {
                 postproc.set_view(&self.state.device, self.framebuffer.render_view());
             }
@@ -229,7 +230,11 @@ impl Render {
 
     pub fn post_processor(&self) -> &PostProcessor {
         self.postproc.get_or_init(|| {
-            PostProcessor::new(&self.state, self.framebuffer.render_view(), self.screen)
+            PostProcessor::new(
+                &self.state,
+                self.framebuffer.render_view(),
+                self.screen.frame_parameters(),
+            )
         })
     }
 
