@@ -1,48 +1,41 @@
 use {
-    crate::framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame, FrameFilter},
-    wgpu::{BindGroup, BindGroupLayout, Device, Texture, TextureFormat, TextureView},
+    crate::framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame},
+    wgpu::{Device, Texture, TextureFormat, TextureView},
 };
 
 pub(crate) struct Framebuffer {
     depth: DepthFrame,
     render: RenderFrame,
-    params: Parameters,
+    size: BufferSize,
 }
 
 impl Framebuffer {
     pub const DEPTH_FORMAT: TextureFormat = DepthFrame::FORMAT;
     pub const RENDER_FORMAT: TextureFormat = RenderFrame::FORMAT;
 
-    pub fn new(device: &Device, layout: &BindGroupLayout) -> Self {
+    pub fn new(device: &Device) -> Self {
         const DEFAULT_SIZE: BufferSize = BufferSize::MIN;
-        const DEFAULT_FILTER: FrameFilter = FrameFilter::Nearest;
 
         Self {
             depth: DepthFrame::new(DEFAULT_SIZE, device),
-            render: RenderFrame::new(DEFAULT_SIZE, DEFAULT_FILTER, device, layout),
-            params: Parameters {
-                size: DEFAULT_SIZE,
-                filter: DEFAULT_FILTER,
-            },
+            render: RenderFrame::new(DEFAULT_SIZE, device),
+            size: DEFAULT_SIZE,
         }
     }
 
-    pub fn set_params(&mut self, params: Parameters, device: &Device, layout: &BindGroupLayout) {
-        if self.params == params {
-            return;
+    pub fn set_size(&mut self, size: BufferSize, device: &Device) -> bool {
+        if self.size == size {
+            return false;
         }
 
-        self.depth = DepthFrame::new(params.size, device);
-        self.render = RenderFrame::new(params.size, params.filter, device, layout);
-        self.params = params;
+        self.depth = DepthFrame::new(size, device);
+        self.render = RenderFrame::new(size, device);
+        self.size = size;
+        true
     }
 
     pub fn render_texture(&self) -> &Texture {
         self.render.texture()
-    }
-
-    pub fn render_bind_group(&self) -> &BindGroup {
-        self.render.bind_group()
     }
 
     pub fn render_view(&self) -> &TextureView {
@@ -52,12 +45,6 @@ impl Framebuffer {
     pub fn depth_view(&self) -> &TextureView {
         self.depth.view()
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Parameters {
-    pub size: BufferSize,
-    pub filter: FrameFilter,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

@@ -1,5 +1,5 @@
 use {
-    crate::postproc::PostProcessor,
+    crate::{framebuffer::BufferSize, postproc::PostProcessor},
     bytemuck::{Pod, Zeroable},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Device, Queue},
 };
@@ -37,8 +37,8 @@ impl PostShaderData {
         Self { bind_group, buf }
     }
 
-    pub fn resize(&self, size: (f32, f32), factor: (f32, f32), queue: &Queue) {
-        let uniform = PostShaderDataUniform::new(size, factor);
+    pub fn resize(&self, size: BufferSize, factor: (f32, f32), queue: &Queue) {
+        let uniform = PostShaderDataUniform::new(size.into(), factor);
         queue.write_buffer(&self.buf, 0, bytemuck::cast_slice(&[uniform]));
     }
 

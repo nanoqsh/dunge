@@ -1,10 +1,10 @@
 use {
     crate::{
         canvas::{CanvasEvent, Info},
-        framebuffer::FrameFilter,
         layer::Layer,
         mesh::{Data as MeshData, Mesh},
         pipeline::LayerBuilder,
+        postproc::FrameFilter,
         render::{Render, State},
         scheme::Scheme,
         screen::Screen,

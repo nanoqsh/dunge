@@ -3,12 +3,12 @@ use {
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Info, Selector},
         context::Screenshot,
         frame::Frame,
-        framebuffer::{BufferSize, FrameParameters, Framebuffer},
+        framebuffer::{BufferSize, Framebuffer},
         postproc::PostProcessor,
         r#loop::Loop,
         screen::{RenderScreen, Screen},
     },
-    std::sync::Arc,
+    std::sync::{Arc, OnceLock},
     wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
@@ -17,8 +17,8 @@ pub(crate) struct Render {
     state: State,
     surface_conf: SurfaceConfiguration,
     screen: RenderScreen,
-    postproc: PostProcessor,
     framebuffer: Framebuffer,
+    postproc: OnceLock<PostProcessor>,
 }
 
 impl Render {
@@ -35,16 +35,15 @@ impl Render {
             view_formats: vec![],
         };
 
-        let screen = RenderScreen::new(state.device.limits().max_texture_dimension_2d);
-        let postproc = PostProcessor::new(&state.device);
-        let framebuffer = Framebuffer::new(&state.device, postproc.layout());
-
+        let max_texture_size = state.device.limits().max_texture_dimension_2d;
+        let screen: RenderScreen = RenderScreen::new(max_texture_size);
+        let framebuffer = Framebuffer::new(&state.device);
         Self {
             state,
             surface_conf,
             screen,
-            postproc,
             framebuffer,
+            postproc: OnceLock::default(),
         }
     }
 
@@ -100,22 +99,15 @@ impl Render {
             .configure(&self.state.device, &self.surface_conf);
 
         let buffer_size = self.screen.buffer_size();
-        let size_factor = screen.size_factor();
-
-        self.postproc
-            .set_antialiasing(&self.state.device, screen.is_antialiasing_enabled());
-
-        self.postproc
-            .resize(buffer_size.into(), size_factor.into(), &self.state.queue);
-
-        self.framebuffer.set_params(
-            FrameParameters {
-                size: buffer_size,
-                filter: screen.filter,
-            },
-            &self.state.device,
-            self.postproc.layout(),
-        );
+        let framebuffer_updated = self.framebuffer.set_size(buffer_size, &self.state.device);
+        if let Some(postproc) = self.postproc.get_mut() {
+            postproc.set_antialiasing(&self.state.device, screen.is_antialiasing_enabled());
+            postproc.set_filter(&self.state.device, screen.filter);
+            postproc.resize(buffer_size, screen.size_factor().into(), &self.state.queue);
+            if framebuffer_updated {
+                postproc.set_view(&self.state.device, self.framebuffer.render_view());
+            }
+        }
     }
 
     pub fn draw_frame<L>(&mut self, lp: &L) -> Result<(), SurfaceError>
@@ -236,7 +228,9 @@ impl Render {
     }
 
     pub fn post_processor(&self) -> &PostProcessor {
-        &self.postproc
+        self.postproc.get_or_init(|| {
+            PostProcessor::new(&self.state, self.framebuffer.render_view(), self.screen)
+        })
     }
 
     pub fn framebuffer(&self) -> &Framebuffer {

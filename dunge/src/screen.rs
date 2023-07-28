@@ -1,8 +1,5 @@
 use {
-    crate::{
-        context::PixelSize,
-        framebuffer::{BufferSize, FrameFilter},
-    },
+    crate::{context::PixelSize, framebuffer::BufferSize, postproc::FrameFilter},
     glam::{UVec2, Vec2},
     std::num::NonZeroU32,
 };
@@ -88,6 +85,7 @@ impl Default for Screen {
     }
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct RenderScreen {
     screen: Screen,
     max_texture_size: u32,

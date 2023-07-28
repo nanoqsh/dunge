@@ -22,8 +22,7 @@ mod framebuffer {
     mod depth_frame;
     mod render_frame;
 
-    pub(crate) use self::buffer::{BufferSize, Framebuffer, Parameters as FrameParameters};
-    pub use self::render_frame::FrameFilter;
+    pub(crate) use self::buffer::{BufferSize, Framebuffer};
 }
 
 mod layer;
@@ -91,11 +90,11 @@ pub use {
         color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, Limits, PixelSize},
         frame::Frame,
-        framebuffer::FrameFilter,
         input::Input,
         layer::{ActiveLayer, Builder as ActiveLayerBuilder, Layer},
         mesh::{Data as MeshData, Mesh},
         pipeline::{Blend, Compare, DrawMode, LayerBuilder},
+        postproc::FrameFilter,
         r#loop::Loop,
         scheme::Scheme,
         shader::Shader,

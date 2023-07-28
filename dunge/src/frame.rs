@@ -112,12 +112,7 @@ impl<'d> Frame<'d> {
             let post = self.render.post_processor();
             pass.set_pipeline(post.render_pipeline());
             pass.set_bind_group(PostProcessor::DATA_GROUP, post.data_bind_group(), &[]);
-            pass.set_bind_group(
-                PostProcessor::TEXTURE_GROUP,
-                self.render.framebuffer().render_bind_group(),
-                &[],
-            );
-
+            pass.set_bind_group(PostProcessor::TEXTURE_GROUP, post.render_bind_group(), &[]);
             pass.draw(0..4, 0..1);
         }
 
