@@ -137,8 +137,7 @@ impl Render {
 
         let mut frame = Frame::new(self, frame_view);
         lp.render(&mut frame);
-
-        frame.commit_in_frame();
+        frame.draw_on_screen();
         output.present();
         Ok(())
     }

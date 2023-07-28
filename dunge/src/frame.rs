@@ -14,6 +14,7 @@ pub struct Frame<'d> {
     render: &'d Render,
     frame_view: TextureView,
     encoder: Encoder,
+    drawn: bool,
 }
 
 impl<'d> Frame<'d> {
@@ -22,6 +23,7 @@ impl<'d> Frame<'d> {
             render,
             frame_view,
             encoder: Encoder::default(),
+            drawn: false,
         }
     }
 
@@ -40,6 +42,7 @@ impl<'d> Frame<'d> {
 
         // Before start a new layer, finish the previous one if it exists
         self.encoder.finish(self.render);
+        self.drawn = false;
 
         let mut pass = self
             .encoder
@@ -71,16 +74,23 @@ impl<'d> Frame<'d> {
             });
 
         pass.set_pipeline(pipeline.as_ref());
-
         let screen = self.render.screen();
         let view_size = screen.virtual_size_with_antialiasing().as_vec2();
         pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
-
         ActiveLayer::new(pass, screen.virtual_size().into(), pipeline.slots())
     }
 
-    pub(crate) fn commit_in_frame(&mut self) {
+    /// Writes a final frame on the screen.
+    ///
+    /// When you call this, you may experience problems with borrowing frame references.
+    /// This is intentional. You should drop the layer object before calling this method.
+    pub fn draw_on_screen(&mut self) {
         use wgpu::*;
+
+        // Skip render if not needed
+        if self.drawn {
+            return;
+        }
 
         {
             let mut pass = self
@@ -112,6 +122,7 @@ impl<'d> Frame<'d> {
         }
 
         self.encoder.finish(self.render);
+        self.drawn = true;
     }
 }
 
