@@ -15,17 +15,17 @@ use {
 
 pub(crate) struct Render {
     state: State,
-    surface_conf: SurfaceConfiguration,
+    conf: SurfaceConfiguration,
     screen: RenderScreen,
-    framebuffer: Framebuffer,
     postproc: PostProcessor,
+    framebuffer: Framebuffer,
 }
 
 impl Render {
     pub fn new(state: State) -> Self {
         use wgpu::*;
 
-        let surface_conf = SurfaceConfiguration {
+        let conf = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format: Framebuffer::RENDER_FORMAT,
             width: 1,
@@ -35,17 +35,16 @@ impl Render {
             view_formats: vec![],
         };
 
-        let max_texture_size = state.device.limits().max_texture_dimension_2d;
-        let screen: RenderScreen = RenderScreen::new(max_texture_size);
-        let framebuffer = Framebuffer::new(&state.device);
+        let screen = RenderScreen::new(&state);
         let postproc = PostProcessor::new(&state);
+        let framebuffer = Framebuffer::new(&state);
 
         Self {
             state,
-            surface_conf,
+            conf,
             screen,
-            framebuffer,
             postproc,
+            framebuffer,
         }
     }
 
@@ -65,7 +64,7 @@ impl Render {
                 .create_surface(&window)
                 .expect("create surface");
 
-            surface.configure(&self.state.device, &self.surface_conf);
+            surface.configure(&self.state.device, &self.conf);
             surface
         });
     }
@@ -92,16 +91,16 @@ impl Render {
         self.screen.set_screen(screen);
 
         let (width, height) = screen.physical_size().into();
-        self.surface_conf.width = width;
-        self.surface_conf.height = height;
+        self.conf.width = width;
+        self.conf.height = height;
         self.state
             .surface
             .as_mut()
             .expect("surface")
-            .configure(&self.state.device, &self.surface_conf);
+            .configure(&self.state.device, &self.conf);
 
         self.framebuffer
-            .set_size(self.screen.buffer_size(), &self.state.device);
+            .set_size(self.screen.buffer_size(), &self.state);
     }
 
     pub fn draw_frame<L>(&mut self, lp: &L) -> Result<(), SurfaceError>

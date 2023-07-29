@@ -1,6 +1,6 @@
 use {
-    crate::framebuffer::buffer::BufferSize,
-    wgpu::{Device, Texture, TextureFormat, TextureView},
+    crate::{framebuffer::buffer::BufferSize, render::State},
+    wgpu::{Texture, TextureFormat, TextureView},
 };
 
 pub(crate) struct RenderFrame {
@@ -15,10 +15,10 @@ impl RenderFrame {
         TextureFormat::Rgba8UnormSrgb
     };
 
-    pub fn new(BufferSize(width, height): BufferSize, device: &Device) -> Self {
+    pub fn new(BufferSize(width, height): BufferSize, state: &State) -> Self {
         use wgpu::*;
 
-        let texture = device.create_texture(&TextureDescriptor {
+        let texture = state.device().create_texture(&TextureDescriptor {
             label: None,
             size: Extent3d {
                 width,

@@ -1,6 +1,9 @@
 use {
-    crate::framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame},
-    wgpu::{Device, Texture, TextureFormat, TextureView},
+    crate::{
+        framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame},
+        render::State,
+    },
+    wgpu::{Texture, TextureFormat, TextureView},
 };
 
 pub(crate) struct Framebuffer {
@@ -13,23 +16,23 @@ impl Framebuffer {
     pub const DEPTH_FORMAT: TextureFormat = DepthFrame::FORMAT;
     pub const RENDER_FORMAT: TextureFormat = RenderFrame::FORMAT;
 
-    pub fn new(device: &Device) -> Self {
+    pub fn new(state: &State) -> Self {
         const DEFAULT_SIZE: BufferSize = BufferSize::MIN;
 
         Self {
-            depth: DepthFrame::new(DEFAULT_SIZE, device),
-            render: RenderFrame::new(DEFAULT_SIZE, device),
+            depth: DepthFrame::new(DEFAULT_SIZE, state),
+            render: RenderFrame::new(DEFAULT_SIZE, state),
             size: DEFAULT_SIZE,
         }
     }
 
-    pub fn set_size(&mut self, size: BufferSize, device: &Device) {
+    pub fn set_size(&mut self, size: BufferSize, state: &State) {
         if self.size == size {
             return;
         }
 
-        self.depth = DepthFrame::new(size, device);
-        self.render = RenderFrame::new(size, device);
+        self.depth = DepthFrame::new(size, state);
+        self.render = RenderFrame::new(size, state);
         self.size = size;
     }
 

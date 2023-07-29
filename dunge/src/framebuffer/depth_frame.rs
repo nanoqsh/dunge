@@ -1,19 +1,19 @@
 use {
-    crate::framebuffer::buffer::BufferSize,
-    wgpu::{Device, Sampler, TextureFormat, TextureView},
+    crate::{framebuffer::buffer::BufferSize, render::State},
+    wgpu::{TextureFormat, TextureView},
 };
 
 pub(crate) struct DepthFrame {
     view: TextureView,
-    _sampler: Sampler,
 }
 
 impl DepthFrame {
     pub const FORMAT: TextureFormat = TextureFormat::Depth24Plus;
 
-    pub fn new(BufferSize(width, height): BufferSize, device: &Device) -> Self {
+    pub fn new(BufferSize(width, height): BufferSize, state: &State) -> Self {
         use wgpu::*;
 
+        let device = state.device();
         let texture = device.create_texture(&TextureDescriptor {
             label: None,
             size: Extent3d {
@@ -30,23 +30,7 @@ impl DepthFrame {
         });
 
         let view = texture.create_view(&TextureViewDescriptor::default());
-        let sampler = device.create_sampler(&SamplerDescriptor {
-            address_mode_u: AddressMode::ClampToEdge,
-            address_mode_v: AddressMode::ClampToEdge,
-            address_mode_w: AddressMode::ClampToEdge,
-            mag_filter: FilterMode::Linear,
-            min_filter: FilterMode::Linear,
-            mipmap_filter: FilterMode::Nearest,
-            compare: Some(CompareFunction::LessEqual),
-            lod_min_clamp: 0.,
-            lod_max_clamp: 100.0,
-            ..Default::default()
-        });
-
-        Self {
-            view,
-            _sampler: sampler,
-        }
+        Self { view }
     }
 
     pub fn view(&self) -> &TextureView {

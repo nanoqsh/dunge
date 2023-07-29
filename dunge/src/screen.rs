@@ -3,6 +3,7 @@ use {
         context::PixelSize,
         framebuffer::BufferSize,
         postproc::{FrameFilter, FrameParameters},
+        render::State,
     },
     glam::{UVec2, Vec2},
     std::num::NonZeroU32,
@@ -90,15 +91,15 @@ impl Default for Screen {
 }
 
 pub(crate) struct RenderScreen {
-    screen: Screen,
     max_texture_size: u32,
+    screen: Screen,
 }
 
 impl RenderScreen {
-    pub fn new(max_texture_size: u32) -> Self {
+    pub fn new(state: &State) -> Self {
         Self {
+            max_texture_size: state.device().limits().max_texture_dimension_2d,
             screen: Screen::default(),
-            max_texture_size,
         }
     }
 

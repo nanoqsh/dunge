@@ -150,7 +150,7 @@ impl PostProcessor {
         };
 
         Pipeline::new(
-            state.device(),
+            state,
             &Shader::postproc(
                 Self::DATA_BINDING,
                 TextureBindings {

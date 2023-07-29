@@ -12,7 +12,7 @@ use {
     dunge_shader::{Layout, Shader as ShaderData, SourceBindings, SpaceBindings, TextureBindings},
     std::marker::PhantomData,
     wgpu::{
-        BindGroupLayout, BlendState, CompareFunction, Device, PolygonMode, PrimitiveTopology,
+        BindGroupLayout, BlendState, CompareFunction, PolygonMode, PrimitiveTopology,
         RenderPipeline, VertexAttribute, VertexBufferLayout, VertexFormat,
     },
 };
@@ -95,13 +95,13 @@ impl<'a, S, T> LayerBuilder<'a, S, T> {
         self
     }
 
-    pub fn with_cull_faces(mut self, cull_faces: bool) -> Self {
-        self.params.cull_faces = cull_faces;
+    pub fn with_cull_faces(mut self, cull: bool) -> Self {
+        self.params.cull_faces = cull;
         self
     }
 
-    pub fn with_draw_mode(mut self, draw_mode: DrawMode) -> Self {
-        self.params.mode = match draw_mode {
+    pub fn with_draw_mode(mut self, mode: DrawMode) -> Self {
+        self.params.mode = match mode {
             DrawMode::Fill => PolygonMode::Fill,
             DrawMode::Line => PolygonMode::Line,
             DrawMode::Point => PolygonMode::Point,
@@ -110,8 +110,8 @@ impl<'a, S, T> LayerBuilder<'a, S, T> {
         self
     }
 
-    pub fn with_depth_compare(mut self, depth_compare: Compare) -> Self {
-        self.params.depth_stencil = Some(match depth_compare {
+    pub fn with_depth_compare(mut self, cmp: Compare) -> Self {
+        self.params.depth_stencil = Some(match cmp {
             Compare::Never => CompareFunction::Never,
             Compare::Less => CompareFunction::Less,
             Compare::Greater => CompareFunction::Greater,
@@ -127,7 +127,7 @@ impl<'a, S, T> LayerBuilder<'a, S, T> {
         S: Shader,
         T: Topology,
     {
-        Layer::new(self.state.device(), scheme.data(), self.params)
+        Layer::new(self.state, scheme.data(), self.params)
     }
 }
 
@@ -139,19 +139,20 @@ pub(crate) struct Pipeline {
 
 impl Pipeline {
     pub fn new(
-        device: &Device,
+        state: &State,
         shader: &ShaderData,
         inputs: Option<&Inputs>,
         params: Parameters,
     ) -> Self {
         use wgpu::*;
 
+        let device = state.device();
         let module = device.create_shader_module(ShaderModuleDescriptor {
             label: None,
             source: ShaderSource::Wgsl(shader.source.as_str().into()),
         });
 
-        let groups = Groups::new(device, &shader.layout);
+        let groups = Groups::new(state, &shader.layout);
         let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &groups.layouts(),
@@ -256,9 +257,10 @@ struct Groups {
 }
 
 impl Groups {
-    fn new(device: &Device, layout: &Layout) -> Self {
+    fn new(state: &State, layout: &Layout) -> Self {
         use wgpu::*;
 
+        let device = state.device();
         let entry = |binding, visibility| BindGroupLayoutEntry {
             binding,
             visibility,

@@ -4,13 +4,14 @@ use {
         frame::Frame,
         mesh::{Mesh, MeshBuffer},
         pipeline::{Inputs, Parameters as PipelineParameters, Pipeline, Slots},
+        render::State,
         shader::{Shader, ShaderInfo},
         shader_data::{Globals, Instance, InstanceColor, Lights, Spaces, Textures},
         topology::{Topology, TriangleList},
     },
     dunge_shader::Shader as ShaderData,
     std::marker::PhantomData,
-    wgpu::{BindGroup, Device, RenderPass},
+    wgpu::{BindGroup, RenderPass},
 };
 
 /// The drawable layer of the [frame](Frame).
@@ -25,7 +26,7 @@ pub struct Layer<S, T = TriangleList> {
 }
 
 impl<S, T> Layer<S, T> {
-    pub(crate) fn new(device: &Device, shader: &ShaderData, params: PipelineParameters) -> Self
+    pub(crate) fn new(state: &State, shader: &ShaderData, params: PipelineParameters) -> Self
     where
         S: Shader,
         T: Topology,
@@ -33,7 +34,7 @@ impl<S, T> Layer<S, T> {
         let inputs = Inputs::new::<S::Vertex>(S::INSTANCE_COLORS);
         Self {
             pipeline: Box::new(Pipeline::new(
-                device,
+                state,
                 shader,
                 Some(&inputs),
                 PipelineParameters {
