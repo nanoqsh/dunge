@@ -7,7 +7,8 @@ use {
     },
     dunge_shader::TextureBindings,
     glam::Vec2,
-    wgpu::{BindGroup, Device, RenderPipeline, Sampler, TextureView},
+    std::sync::OnceLock,
+    wgpu::{BindGroup, FilterMode, RenderPipeline, Sampler, TextureView},
 };
 
 /// Describes a frame render filter mode.
@@ -18,7 +19,16 @@ pub enum FrameFilter {
     Linear,
 }
 
-#[derive(Clone, Copy)]
+impl FrameFilter {
+    fn mode(self) -> FilterMode {
+        match self {
+            Self::Nearest => FilterMode::Nearest,
+            Self::Linear => FilterMode::Linear,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default)]
 pub(crate) struct FrameParameters {
     pub buffer_size: BufferSize,
     pub factor: Vec2,
@@ -29,10 +39,9 @@ pub(crate) struct FrameParameters {
 pub(crate) struct PostProcessor {
     data: PostShaderData,
     pipeline: Pipeline,
-    bind_group: BindGroup,
+    bind_group: OnceLock<BindGroup>,
     sampler: Sampler,
-    antialiasing: bool,
-    filter: FrameFilter,
+    params: FrameParameters,
 }
 
 impl PostProcessor {
@@ -42,9 +51,8 @@ impl PostProcessor {
     const TEXTURE_TDIFF_BINDING: u32 = 0;
     const TEXTURE_SDIFF_BINDING: u32 = 1;
 
-    pub fn new(state: &State, view: &TextureView, params: FrameParameters) -> Self {
-        use wgpu::*;
-
+    pub fn new(state: &State) -> Self {
+        let params = FrameParameters::default();
         let FrameParameters {
             buffer_size,
             factor,
@@ -52,39 +60,21 @@ impl PostProcessor {
             antialiasing,
         } = params;
 
-        let device = state.device();
-        let pipeline = Self::pipeline(device, antialiasing);
+        let pipeline = Self::pipeline(state, antialiasing);
         let globals = &pipeline.globals().expect("globals").layout;
         let data = PostShaderData::new(state, globals);
         data.resize(buffer_size.into(), factor.into());
 
-        let sampler = Self::sampler(device, filter);
-        let bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: None,
-            layout: &pipeline.textures().expect("textures layout").layout,
-            entries: &[
-                BindGroupEntry {
-                    binding: Self::TEXTURE_TDIFF_BINDING,
-                    resource: BindingResource::TextureView(view),
-                },
-                BindGroupEntry {
-                    binding: Self::TEXTURE_SDIFF_BINDING,
-                    resource: BindingResource::Sampler(&sampler),
-                },
-            ],
-        });
-
         Self {
             data,
             pipeline,
-            bind_group,
-            sampler,
-            antialiasing,
-            filter,
+            bind_group: OnceLock::new(),
+            sampler: Self::sampler(state, filter),
+            params,
         }
     }
 
-    pub fn set_parameters(&mut self, device: &Device, params: FrameParameters) {
+    pub fn set_parameters(&mut self, state: &State, params: FrameParameters) {
         let FrameParameters {
             buffer_size,
             factor,
@@ -92,34 +82,23 @@ impl PostProcessor {
             antialiasing,
         } = params;
 
-        if self.antialiasing != antialiasing {
-            self.pipeline = Self::pipeline(device, antialiasing);
+        if self.params.antialiasing != antialiasing {
+            self.pipeline = Self::pipeline(state, antialiasing);
         }
 
-        if self.filter != filter {
-            self.sampler = Self::sampler(device, filter);
+        if self.params.filter != filter {
+            self.sampler = Self::sampler(state, filter);
         }
 
-        self.data.resize(buffer_size.into(), factor.into());
-    }
+        if self.params.factor != factor {
+            self.data.resize(buffer_size.into(), factor.into());
+        }
 
-    pub fn set_view(&mut self, device: &Device, view: &TextureView) {
-        use wgpu::*;
+        if self.params.buffer_size != buffer_size {
+            self.bind_group.take();
+        }
 
-        self.bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: None,
-            layout: &self.pipeline.textures().expect("textures layout").layout,
-            entries: &[
-                BindGroupEntry {
-                    binding: Self::TEXTURE_TDIFF_BINDING,
-                    resource: BindingResource::TextureView(view),
-                },
-                BindGroupEntry {
-                    binding: Self::TEXTURE_SDIFF_BINDING,
-                    resource: BindingResource::Sampler(&self.sampler),
-                },
-            ],
-        });
+        self.params = params;
     }
 
     pub fn render_pipeline(&self) -> &RenderPipeline {
@@ -130,35 +109,48 @@ impl PostProcessor {
         self.data.bind_group()
     }
 
-    pub fn render_bind_group(&self) -> &BindGroup {
-        &self.bind_group
+    pub fn render_bind_group(&self, state: &State, view: &TextureView) -> &BindGroup {
+        use wgpu::*;
+
+        self.bind_group.get_or_init(|| {
+            state.device().create_bind_group(&BindGroupDescriptor {
+                label: None,
+                layout: &self.pipeline.textures().expect("textures layout").layout,
+                entries: &[
+                    BindGroupEntry {
+                        binding: Self::TEXTURE_TDIFF_BINDING,
+                        resource: BindingResource::TextureView(view),
+                    },
+                    BindGroupEntry {
+                        binding: Self::TEXTURE_SDIFF_BINDING,
+                        resource: BindingResource::Sampler(&self.sampler),
+                    },
+                ],
+            })
+        })
     }
 
-    fn sampler(device: &Device, filter: FrameFilter) -> Sampler {
-        use wgpu::{AddressMode, FilterMode, SamplerDescriptor};
+    fn sampler(state: &State, filter: FrameFilter) -> Sampler {
+        use wgpu::{AddressMode, SamplerDescriptor};
 
-        let filter_mode = match filter {
-            FrameFilter::Nearest => FilterMode::Nearest,
-            FrameFilter::Linear => FilterMode::Linear,
-        };
-
-        device.create_sampler(&SamplerDescriptor {
+        let mode = filter.mode();
+        state.device().create_sampler(&SamplerDescriptor {
             address_mode_u: AddressMode::ClampToEdge,
             address_mode_v: AddressMode::ClampToEdge,
-            mag_filter: filter_mode,
-            min_filter: filter_mode,
+            mag_filter: mode,
+            min_filter: mode,
             ..Default::default()
         })
     }
 
-    fn pipeline(device: &Device, antialiasing: bool) -> Pipeline {
+    fn pipeline(state: &State, antialiasing: bool) -> Pipeline {
         use {
             dunge_shader::Shader,
             wgpu::{BlendState, PrimitiveTopology},
         };
 
         Pipeline::new(
-            device,
+            state.device(),
             &Shader::postproc(
                 Self::DATA_BINDING,
                 TextureBindings {

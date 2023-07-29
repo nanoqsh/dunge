@@ -3,7 +3,7 @@ use {
         layer::{ActiveLayer, Builder, Layer},
         pipeline::Pipeline,
         postproc::PostProcessor,
-        render::Render,
+        render::{Render, State},
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -11,14 +11,14 @@ use {
 /// The type that represented a current frame
 /// and creates new [layers](crate::ActiveLayer).
 pub struct Frame<'d> {
-    render: &'d Render,
+    render: &'d mut Render,
     frame_view: TextureView,
     encoder: Encoder,
     drawn: bool,
 }
 
 impl<'d> Frame<'d> {
-    pub(crate) fn new(render: &'d Render, frame_view: TextureView) -> Self {
+    pub(crate) fn new(render: &'d mut Render, frame_view: TextureView) -> Self {
         Self {
             render,
             frame_view,
@@ -41,37 +41,37 @@ impl<'d> Frame<'d> {
         use wgpu::*;
 
         // Before start a new layer, finish the previous one if it exists
-        self.encoder.finish(self.render);
+        self.encoder.finish(self.render.state());
         self.drawn = false;
 
-        let mut pass = self
-            .encoder
-            .get(self.render)
-            .begin_render_pass(&RenderPassDescriptor {
-                label: None,
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: self.render.framebuffer().render_view(),
-                    resolve_target: None,
-                    ops: Operations {
-                        load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
-                            LoadOp::Clear(Color { r, g, b, a })
-                        }),
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: self.render.framebuffer().depth_view(),
-                    depth_ops: Some(Operations {
-                        load: if clear_depth {
-                            LoadOp::Clear(1.)
-                        } else {
-                            LoadOp::Load
+        let mut pass =
+            self.encoder
+                .get(self.render.state())
+                .begin_render_pass(&RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: self.render.framebuffer().render_view(),
+                        resolve_target: None,
+                        ops: Operations {
+                            load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
+                                LoadOp::Clear(Color { r, g, b, a })
+                            }),
+                            store: true,
                         },
-                        store: true,
+                    })],
+                    depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                        view: self.render.framebuffer().depth_view(),
+                        depth_ops: Some(Operations {
+                            load: if clear_depth {
+                                LoadOp::Clear(1.)
+                            } else {
+                                LoadOp::Load
+                            },
+                            store: true,
+                        }),
+                        stencil_ops: None,
                     }),
-                    stencil_ops: None,
-                }),
-            });
+                });
 
         pass.set_pipeline(pipeline.as_ref());
         let screen = self.render.screen();
@@ -93,30 +93,39 @@ impl<'d> Frame<'d> {
         }
 
         {
-            let mut pass = self
-                .encoder
-                .get(self.render)
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[Some(RenderPassColorAttachment {
-                        view: &self.frame_view,
-                        resolve_target: None,
-                        ops: Operations {
-                            load: LoadOp::Load,
-                            store: false,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                });
+            let mut pass =
+                self.encoder
+                    .get(self.render.state())
+                    .begin_render_pass(&RenderPassDescriptor {
+                        label: None,
+                        color_attachments: &[Some(RenderPassColorAttachment {
+                            view: &self.frame_view,
+                            resolve_target: None,
+                            ops: Operations {
+                                load: LoadOp::Load,
+                                store: false,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                    });
 
+            self.render.set_post_processor_params();
             let post = self.render.post_processor();
             pass.set_pipeline(post.render_pipeline());
             pass.set_bind_group(PostProcessor::DATA_GROUP, post.data_bind_group(), &[]);
-            pass.set_bind_group(PostProcessor::TEXTURE_GROUP, post.render_bind_group(), &[]);
+            pass.set_bind_group(
+                PostProcessor::TEXTURE_GROUP,
+                post.render_bind_group(
+                    self.render.state(),
+                    self.render.framebuffer().render_view(),
+                ),
+                &[],
+            );
+
             pass.draw(0..4, 0..1);
         }
 
-        self.encoder.finish(self.render);
+        self.encoder.finish(self.render.state());
         self.drawn = true;
     }
 }
@@ -125,20 +134,19 @@ impl<'d> Frame<'d> {
 struct Encoder(Option<CommandEncoder>);
 
 impl Encoder {
-    fn get(&mut self, render: &Render) -> &mut CommandEncoder {
+    fn get(&mut self, state: &State) -> &mut CommandEncoder {
         use wgpu::CommandEncoderDescriptor;
 
         self.0.get_or_insert_with(|| {
-            render
-                .state()
+            state
                 .device()
                 .create_command_encoder(&CommandEncoderDescriptor::default())
         })
     }
 
-    fn finish(&mut self, render: &Render) {
+    fn finish(&mut self, state: &State) {
         if let Some(encoder) = self.0.take() {
-            render.state().queue().submit([encoder.finish()]);
+            state.queue().submit([encoder.finish()]);
         }
     }
 }

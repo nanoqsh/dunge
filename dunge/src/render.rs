@@ -8,7 +8,7 @@ use {
         r#loop::Loop,
         screen::{RenderScreen, Screen},
     },
-    std::sync::{Arc, OnceLock},
+    std::sync::Arc,
     wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
@@ -18,7 +18,7 @@ pub(crate) struct Render {
     surface_conf: SurfaceConfiguration,
     screen: RenderScreen,
     framebuffer: Framebuffer,
-    postproc: OnceLock<PostProcessor>,
+    postproc: PostProcessor,
 }
 
 impl Render {
@@ -38,12 +38,14 @@ impl Render {
         let max_texture_size = state.device.limits().max_texture_dimension_2d;
         let screen: RenderScreen = RenderScreen::new(max_texture_size);
         let framebuffer = Framebuffer::new(&state.device);
+        let postproc = PostProcessor::new(&state);
+
         Self {
             state,
             surface_conf,
             screen,
             framebuffer,
-            postproc: OnceLock::default(),
+            postproc,
         }
     }
 
@@ -98,17 +100,8 @@ impl Render {
             .expect("surface")
             .configure(&self.state.device, &self.surface_conf);
 
-        let params = self.screen.frame_parameters();
-        let framebuffer_updated = self
-            .framebuffer
-            .set_size(params.buffer_size, &self.state.device);
-
-        if let Some(postproc) = self.postproc.get_mut() {
-            postproc.set_parameters(&self.state.device, params);
-            if framebuffer_updated {
-                postproc.set_view(&self.state.device, self.framebuffer.render_view());
-            }
-        }
+        self.framebuffer
+            .set_size(self.screen.buffer_size(), &self.state.device);
     }
 
     pub fn draw_frame<L>(&mut self, lp: &L) -> Result<(), SurfaceError>
@@ -228,14 +221,13 @@ impl Render {
         &self.state
     }
 
+    pub fn set_post_processor_params(&mut self) {
+        let params = self.screen.frame_parameters();
+        self.postproc.set_parameters(&self.state, params);
+    }
+
     pub fn post_processor(&self) -> &PostProcessor {
-        self.postproc.get_or_init(|| {
-            PostProcessor::new(
-                &self.state,
-                self.framebuffer.render_view(),
-                self.screen.frame_parameters(),
-            )
-        })
+        &self.postproc
     }
 
     pub fn framebuffer(&self) -> &Framebuffer {

@@ -23,15 +23,14 @@ impl Framebuffer {
         }
     }
 
-    pub fn set_size(&mut self, size: BufferSize, device: &Device) -> bool {
+    pub fn set_size(&mut self, size: BufferSize, device: &Device) {
         if self.size == size {
-            return false;
+            return;
         }
 
         self.depth = DepthFrame::new(size, device);
         self.render = RenderFrame::new(size, device);
         self.size = size;
-        true
     }
 
     pub fn render_texture(&self) -> &Texture {
@@ -55,6 +54,12 @@ impl BufferSize {
 
     pub(crate) fn new(width: u32, height: u32, max_size: u32) -> Self {
         Self(width.clamp(1, max_size), height.clamp(1, max_size))
+    }
+}
+
+impl Default for BufferSize {
+    fn default() -> Self {
+        Self::MIN
     }
 }
 
