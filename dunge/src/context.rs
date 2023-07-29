@@ -84,22 +84,22 @@ impl Context {
 
     /// Creates a [globals](crate::Globals) builder.
     pub fn globals_builder(&mut self) -> GlobalsBuilder {
-        GlobalsBuilder::new(self.render.state())
+        GlobalsBuilder::new(&self.render)
     }
 
     /// Creates a [lights](crate::Lights) builder.
     pub fn lights_builder(&mut self) -> LightsBuilder {
-        LightsBuilder::new(self.render.state())
+        LightsBuilder::new(&self.render)
     }
 
     /// Creates a [spaces](crate::Spaces) builder.
     pub fn spaces_builder(&mut self) -> SpacesBuilder {
-        SpacesBuilder::new(self.render.state())
+        SpacesBuilder::new(&self.render)
     }
 
     /// Creates a [textures](crate::Textures) builder.
     pub fn textures_builder(&mut self) -> TexturesBuilder {
-        TexturesBuilder::new(self.render.state())
+        TexturesBuilder::new(&self.render)
     }
 
     /// Creates a new shader [scheme](Scheme).
@@ -127,17 +127,17 @@ impl Context {
 
     /// Creates a [layer](Layer) builder with custom parameters.
     pub fn create_layer_with<S, T>(&mut self) -> LayerBuilder<S, T> {
-        LayerBuilder::new(self.render.state())
+        LayerBuilder::new(&self.render)
     }
 
     /// Creates new [instances](Instance).
     pub fn create_instances(&mut self, models: &[ModelTransform]) -> Instance {
-        Instance::new(models, self.render.state())
+        Instance::new(models, &self.render)
     }
 
     /// Creates new color [instances](Instance).
     pub fn create_instances_color(&mut self, models: &[ModelColor]) -> InstanceColor {
-        InstanceColor::new(models, self.render.state())
+        InstanceColor::new(models, &self.render)
     }
 
     /// Creates a new [mesh](Mesh).
@@ -146,12 +146,12 @@ impl Context {
         V: Vertex,
         T: Topology,
     {
-        Mesh::new(data, self.render.state())
+        Mesh::new(data, &self.render)
     }
 
     /// Creates a new [texture](Texture).
     pub fn create_texture(&self, data: TextureData) -> Texture {
-        Texture::new(data, self.render.state())
+        Texture::new(data, &self.render)
     }
 
     /// Takes a screenshot of the current frame.

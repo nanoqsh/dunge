@@ -41,37 +41,37 @@ impl<'d> Frame<'d> {
         use wgpu::*;
 
         // Before start a new layer, finish the previous one if it exists
-        self.encoder.finish(self.render.state());
+        self.encoder.finish(self.render);
         self.drawn = false;
 
-        let mut pass =
-            self.encoder
-                .get(self.render.state())
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[Some(RenderPassColorAttachment {
-                        view: self.render.framebuffer().render_view(),
-                        resolve_target: None,
-                        ops: Operations {
-                            load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
-                                LoadOp::Clear(Color { r, g, b, a })
-                            }),
-                            store: true,
-                        },
-                    })],
-                    depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                        view: self.render.framebuffer().depth_view(),
-                        depth_ops: Some(Operations {
-                            load: if clear_depth {
-                                LoadOp::Clear(1.)
-                            } else {
-                                LoadOp::Load
-                            },
-                            store: true,
+        let mut pass = self
+            .encoder
+            .get(self.render)
+            .begin_render_pass(&RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: self.render.framebuffer().render_view(),
+                    resolve_target: None,
+                    ops: Operations {
+                        load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
+                            LoadOp::Clear(Color { r, g, b, a })
                         }),
-                        stencil_ops: None,
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                    view: self.render.framebuffer().depth_view(),
+                    depth_ops: Some(Operations {
+                        load: if clear_depth {
+                            LoadOp::Clear(1.)
+                        } else {
+                            LoadOp::Load
+                        },
+                        store: true,
                     }),
-                });
+                    stencil_ops: None,
+                }),
+            });
 
         pass.set_pipeline(pipeline.as_ref());
         let screen = self.render.screen();
@@ -93,21 +93,21 @@ impl<'d> Frame<'d> {
         }
 
         {
-            let mut pass =
-                self.encoder
-                    .get(self.render.state())
-                    .begin_render_pass(&RenderPassDescriptor {
-                        label: None,
-                        color_attachments: &[Some(RenderPassColorAttachment {
-                            view: &self.frame_view,
-                            resolve_target: None,
-                            ops: Operations {
-                                load: LoadOp::Load,
-                                store: false,
-                            },
-                        })],
-                        depth_stencil_attachment: None,
-                    });
+            let mut pass = self
+                .encoder
+                .get(self.render)
+                .begin_render_pass(&RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: &self.frame_view,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: LoadOp::Load,
+                            store: false,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                });
 
             self.render.set_post_processor_params();
             let post = self.render.post_processor();
@@ -115,17 +115,14 @@ impl<'d> Frame<'d> {
             pass.set_bind_group(PostProcessor::DATA_GROUP, post.data_bind_group(), &[]);
             pass.set_bind_group(
                 PostProcessor::TEXTURE_GROUP,
-                post.render_bind_group(
-                    self.render.state(),
-                    self.render.framebuffer().render_view(),
-                ),
+                post.render_bind_group(self.render, self.render.framebuffer().render_view()),
                 &[],
             );
 
             pass.draw(0..4, 0..1);
         }
 
-        self.encoder.finish(self.render.state());
+        self.encoder.finish(self.render);
         self.drawn = true;
     }
 }

@@ -8,7 +8,7 @@ use {
         r#loop::Loop,
         screen::{RenderScreen, Screen},
     },
-    std::sync::Arc,
+    std::{ops, sync::Arc},
     wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration, SurfaceError},
     winit::window::Window,
 };
@@ -217,10 +217,6 @@ impl Render {
         }
     }
 
-    pub fn state(&self) -> &State {
-        &self.state
-    }
-
     pub fn set_post_processor_params(&mut self) {
         let params = self.screen.frame_parameters();
         self.postproc.set_parameters(&self.state, params);
@@ -232,6 +228,14 @@ impl Render {
 
     pub fn framebuffer(&self) -> &Framebuffer {
         &self.framebuffer
+    }
+}
+
+impl ops::Deref for Render {
+    type Target = State;
+
+    fn deref(&self) -> &Self::Target {
+        &self.state
     }
 }
 
