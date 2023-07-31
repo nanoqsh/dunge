@@ -26,6 +26,7 @@ pub struct Vertex {
 pub struct PostScheme {
     pub post_data: u32,
     pub map: TextureBindings,
+    pub antialiasing: bool,
 }
 
 #[must_use]
@@ -87,7 +88,7 @@ impl Shader {
             o
         };
 
-        let (layout, groups) = Layout::new(
+        let (layout, groups) = Layout::common(
             |binding, o| Globals {
                 post_data: None,
                 camera: view.declare_group(binding, o),
@@ -124,15 +125,32 @@ impl Shader {
                 .insert("instance_color", &instance_color)
                 .insert("vertex_out", &vertex_out)
                 .insert("fragment_col", &fragment_col)
-                .format(include_str!("../template.wgsl"))
+                .format(include_str!("../template_common.wgsl"))
                 .expect("generate shader"),
         }
     }
 
-    pub fn postproc(scheme: PostScheme, source: String) -> Self {
-        let PostScheme { post_data, map } = scheme;
-        let layout = Layout::postproc(post_data, map);
-        Self { layout, source }
+    pub fn postproc(scheme: PostScheme) -> Self {
+        let PostScheme {
+            post_data,
+            map,
+            antialiasing,
+        } = scheme;
+
+        let fragment_col = {
+            let mut o = Out::new();
+            let post = Post { antialiasing };
+            post.calc_fragment(&mut o);
+            o
+        };
+
+        Self {
+            layout: Layout::postproc(post_data, map),
+            source: Templater::default()
+                .insert("fragment_col", &fragment_col)
+                .format(include_str!("../template_post.wgsl"))
+                .expect("generate post shader"),
+        }
     }
 }
 
@@ -144,7 +162,7 @@ pub struct Layout {
 }
 
 impl Layout {
-    fn new<G, T, L, S>(globals: G, textures: T, lights: L, spaces: S) -> (Self, Out)
+    fn common<G, T, L, S>(globals: G, textures: T, lights: L, spaces: S) -> (Self, Out)
     where
         G: FnOnce(&mut Binding, &mut Out) -> Globals,
         T: FnOnce(&mut Binding, &mut Out) -> Textures,

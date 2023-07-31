@@ -3,6 +3,7 @@ mod out;
 mod parts {
     mod ambient;
     mod instance;
+    mod post;
     mod sources;
     mod spaces;
     mod textures;
@@ -12,6 +13,7 @@ mod parts {
     pub(crate) use self::{
         ambient::Ambient,
         instance::{InstanceColorInput, InstanceInput},
+        post::Post,
         vertex::{VertexInput, VertexOutput},
     };
 

@@ -45,6 +45,7 @@ var smap: sampler;
 
 @fragment
 fn fsmain(in: VertexOutput) -> @location(0) vec4<f32> {
-    let col = textureSample(tmap, smap, in.map);
+    var col: vec4<f32>;
+    [[fragment_col]]
     return col;
 }

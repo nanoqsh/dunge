@@ -155,16 +155,11 @@ impl PostProcessor {
                 tmaps: vec![Self::TEXTURE_TDIFF_BINDING],
                 smap: Self::TEXTURE_SDIFF_BINDING,
             },
+            antialiasing,
         };
 
-        let shader = Shader::postproc(
-            scheme,
-            if antialiasing {
-                String::from(include_str!("shaders/post_ssaa.wgsl"))
-            } else {
-                String::from(include_str!("shaders/post.wgsl"))
-            },
-        );
+        let shader = Shader::postproc(scheme);
+        log::debug!("generated post shader:\n{src}", src = shader.source);
 
         Pipeline::new(
             state,
