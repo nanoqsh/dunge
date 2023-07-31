@@ -2,7 +2,7 @@ use {
     crate::{
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Info, Selector},
         context::Screenshot,
-        frame::Frame,
+        frame::{Frame, Snapshot},
         framebuffer::{BufferSize, Framebuffer},
         postproc::PostProcessor,
         r#loop::Loop,
@@ -78,11 +78,10 @@ impl Render {
 
         self.set_screen({
             let (width, height) = size;
-            let screen = self.screen();
             Screen {
                 width: NonZeroU32::new(width).unwrap_or(NonZeroU32::MIN),
                 height: NonZeroU32::new(height).unwrap_or(NonZeroU32::MIN),
-                ..screen
+                ..self.screen()
             }
         });
     }
@@ -116,11 +115,11 @@ impl Render {
             .expect("surface")
             .get_current_texture()?;
 
-        let frame_view = output
+        let view = output
             .texture
             .create_view(&TextureViewDescriptor::default());
 
-        let mut frame = Frame::new(self, frame_view);
+        let mut frame = Frame::new(Snapshot::new(self), view);
         lp.render(&mut frame);
         frame.draw_on_screen();
         output.present();
@@ -215,19 +214,6 @@ impl Render {
             data,
         }
     }
-
-    pub fn set_post_processor_params(&mut self) {
-        let params = self.screen.frame_parameters();
-        self.postproc.set_parameters(&self.state, params);
-    }
-
-    pub fn post_processor(&self) -> &PostProcessor {
-        &self.postproc
-    }
-
-    pub fn framebuffer(&self) -> &Framebuffer {
-        &self.framebuffer
-    }
 }
 
 impl ops::Deref for Render {
@@ -235,6 +221,17 @@ impl ops::Deref for Render {
 
     fn deref(&self) -> &Self::Target {
         &self.state
+    }
+}
+
+impl<'d> Snapshot<'d> {
+    fn new(render: &'d mut Render) -> Self {
+        Self {
+            state: &render.state,
+            framebuffer: &render.framebuffer,
+            postproc: &mut render.postproc,
+            screen: render.screen,
+        }
     }
 }
 

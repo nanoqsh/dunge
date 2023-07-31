@@ -1,9 +1,6 @@
 use {
     crate::{
-        framebuffer::BufferSize,
-        pipeline::{Parameters, Pipeline},
-        render::State,
-        shader_data::PostShaderData,
+        framebuffer::BufferSize, pipeline::Pipeline, render::State, shader_data::PostShaderData,
     },
     dunge_shader::{PostScheme, TextureBindings, Vignette},
     glam::Vec2,
@@ -29,7 +26,7 @@ impl FrameFilter {
 }
 
 #[derive(Clone, Copy, Default)]
-pub(crate) struct FrameParameters {
+pub(crate) struct Parameters {
     pub buffer_size: BufferSize,
     pub factor: Vec2,
     pub filter: FrameFilter,
@@ -42,7 +39,7 @@ pub(crate) struct PostProcessor {
     pipeline: Pipeline,
     bind_group: OnceLock<BindGroup>,
     sampler: Sampler,
-    params: FrameParameters,
+    params: Parameters,
 }
 
 impl PostProcessor {
@@ -53,8 +50,8 @@ impl PostProcessor {
     const TEXTURE_SDIFF_BINDING: u32 = 1;
 
     pub fn new(state: &State) -> Self {
-        let params = FrameParameters::default();
-        let FrameParameters {
+        let params = Parameters::default();
+        let Parameters {
             buffer_size,
             factor,
             filter,
@@ -76,8 +73,8 @@ impl PostProcessor {
         }
     }
 
-    pub fn set_parameters(&mut self, state: &State, params: FrameParameters) {
-        let FrameParameters {
+    pub fn set_parameters(&mut self, state: &State, params: Parameters) {
+        let Parameters {
             buffer_size,
             factor,
             filter,
@@ -148,6 +145,7 @@ impl PostProcessor {
 
     fn pipeline(state: &State, antialiasing: bool, vignette: Vignette) -> Pipeline {
         use {
+            crate::pipeline::Parameters,
             dunge_shader::Shader,
             wgpu::{BlendState, PrimitiveTopology},
         };

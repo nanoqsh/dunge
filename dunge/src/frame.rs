@@ -1,9 +1,11 @@
 use {
     crate::{
+        framebuffer::Framebuffer,
         layer::{ActiveLayer, Builder, Layer},
         pipeline::Pipeline,
         postproc::PostProcessor,
-        render::{Render, State},
+        render::State,
+        screen::RenderScreen,
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -11,17 +13,17 @@ use {
 /// The type that represented a current frame
 /// and creates new [layers](crate::ActiveLayer).
 pub struct Frame<'d> {
-    render: &'d mut Render,
-    frame_view: TextureView,
+    shot: Snapshot<'d>,
+    view: TextureView,
     encoder: Encoder,
     drawn: bool,
 }
 
 impl<'d> Frame<'d> {
-    pub(crate) fn new(render: &'d mut Render, frame_view: TextureView) -> Self {
+    pub(crate) fn new(shot: Snapshot<'d>, view: TextureView) -> Self {
         Self {
-            render,
-            frame_view,
+            shot,
+            view,
             encoder: Encoder::default(),
             drawn: false,
         }
@@ -41,16 +43,17 @@ impl<'d> Frame<'d> {
         use wgpu::*;
 
         // Before start a new layer, finish the previous one if it exists
-        self.encoder.finish(self.render);
+        self.encoder.finish(self.shot.state);
         self.drawn = false;
 
+        let framebuffer = self.shot.framebuffer;
         let mut pass = self
             .encoder
-            .get(self.render)
+            .get(self.shot.state)
             .begin_render_pass(&RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(RenderPassColorAttachment {
-                    view: self.render.framebuffer().render_view(),
+                    view: framebuffer.render_view(),
                     resolve_target: None,
                     ops: Operations {
                         load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
@@ -60,7 +63,7 @@ impl<'d> Frame<'d> {
                     },
                 })],
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: self.render.framebuffer().depth_view(),
+                    view: framebuffer.depth_view(),
                     depth_ops: Some(Operations {
                         load: if clear_depth {
                             LoadOp::Clear(1.)
@@ -74,7 +77,7 @@ impl<'d> Frame<'d> {
             });
 
         pass.set_pipeline(pipeline.as_ref());
-        let screen = self.render.screen();
+        let screen = self.shot.screen.screen();
         let view_size = screen.virtual_size_with_antialiasing().as_vec2();
         pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
         ActiveLayer::new(pass, screen.virtual_size().into(), pipeline.slots())
@@ -93,38 +96,47 @@ impl<'d> Frame<'d> {
         }
 
         {
-            let mut pass = self
-                .encoder
-                .get(self.render)
-                .begin_render_pass(&RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[Some(RenderPassColorAttachment {
-                        view: &self.frame_view,
-                        resolve_target: None,
-                        ops: Operations {
-                            load: LoadOp::Load,
-                            store: false,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                });
+            let mut pass =
+                self.encoder
+                    .get(self.shot.state)
+                    .begin_render_pass(&RenderPassDescriptor {
+                        label: None,
+                        color_attachments: &[Some(RenderPassColorAttachment {
+                            view: &self.view,
+                            resolve_target: None,
+                            ops: Operations {
+                                load: LoadOp::Load,
+                                store: false,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                    });
 
-            self.render.set_post_processor_params();
-            let post = self.render.post_processor();
-            pass.set_pipeline(post.render_pipeline());
-            pass.set_bind_group(PostProcessor::DATA_GROUP, post.data_bind_group(), &[]);
+            let params = self.shot.screen.frame_parameters();
+            self.shot.postproc.set_parameters(self.shot.state, params);
+
+            let postproc = &mut *self.shot.postproc;
+            pass.set_pipeline(postproc.render_pipeline());
+            pass.set_bind_group(PostProcessor::DATA_GROUP, postproc.data_bind_group(), &[]);
             pass.set_bind_group(
                 PostProcessor::TEXTURE_GROUP,
-                post.render_bind_group(self.render, self.render.framebuffer().render_view()),
+                postproc.render_bind_group(self.shot.state, self.shot.framebuffer.render_view()),
                 &[],
             );
 
             pass.draw(0..4, 0..1);
         }
 
-        self.encoder.finish(self.render);
+        self.encoder.finish(self.shot.state);
         self.drawn = true;
     }
+}
+
+pub(crate) struct Snapshot<'d> {
+    pub state: &'d State,
+    pub framebuffer: &'d Framebuffer,
+    pub postproc: &'d mut PostProcessor,
+    pub screen: RenderScreen,
 }
 
 #[derive(Default)]
