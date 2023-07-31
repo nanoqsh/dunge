@@ -83,10 +83,6 @@ impl Binding {
     pub fn get(self) -> u32 {
         self.binding
     }
-
-    pub fn group(self) -> u32 {
-        self.group
-    }
 }
 
 #[derive(Clone, Copy)]

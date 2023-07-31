@@ -23,6 +23,11 @@ pub struct Vertex {
     pub fragment: Fragment,
 }
 
+pub struct PostScheme {
+    pub post_data: u32,
+    pub map: TextureBindings,
+}
+
 #[must_use]
 pub struct Shader {
     pub layout: Layout,
@@ -124,23 +129,9 @@ impl Shader {
         }
     }
 
-    pub fn postproc(post_data: u32, map: TextureBindings, source: String) -> Self {
-        let (layout, _) = Layout::new(
-            |binding, _| {
-                debug_assert_eq!(binding.group(), 0, "expected group 0 for the globals");
-                Globals {
-                    post_data: Some(post_data),
-                    ..Default::default()
-                }
-            },
-            |binding, _| {
-                debug_assert_eq!(binding.group(), 1, "expected group 1 for the textures");
-                Textures { map }
-            },
-            |_, _| Lights::default(),
-            |_, _| Spaces::default(),
-        );
-
+    pub fn postproc(scheme: PostScheme, source: String) -> Self {
+        let PostScheme { post_data, map } = scheme;
+        let layout = Layout::postproc(post_data, map);
         Self { layout, source }
     }
 }
@@ -204,8 +195,27 @@ impl Layout {
             o,
         )
     }
+
+    fn postproc(post_data: u32, map: TextureBindings) -> Self {
+        Self {
+            globals: Group {
+                num: 0,
+                bindings: Globals {
+                    post_data: Some(post_data),
+                    ..Default::default()
+                },
+            },
+            textures: Group {
+                num: 1,
+                bindings: Textures { map },
+            },
+            lights: Group::default(),
+            spaces: Group::default(),
+        }
+    }
 }
 
+#[derive(Default)]
 pub struct Group<T> {
     pub num: u32,
     pub bindings: T,

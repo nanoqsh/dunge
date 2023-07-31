@@ -5,7 +5,7 @@ use {
         render::State,
         shader_data::PostShaderData,
     },
-    dunge_shader::TextureBindings,
+    dunge_shader::{PostScheme, TextureBindings},
     glam::Vec2,
     std::sync::OnceLock,
     wgpu::{BindGroup, FilterMode, RenderPipeline, Sampler, TextureView},
@@ -149,20 +149,26 @@ impl PostProcessor {
             wgpu::{BlendState, PrimitiveTopology},
         };
 
+        let scheme = PostScheme {
+            post_data: Self::DATA_BINDING,
+            map: TextureBindings {
+                tmaps: vec![Self::TEXTURE_TDIFF_BINDING],
+                smap: Self::TEXTURE_SDIFF_BINDING,
+            },
+        };
+
+        let shader = Shader::postproc(
+            scheme,
+            if antialiasing {
+                String::from(include_str!("shaders/post_ssaa.wgsl"))
+            } else {
+                String::from(include_str!("shaders/post.wgsl"))
+            },
+        );
+
         Pipeline::new(
             state,
-            &Shader::postproc(
-                Self::DATA_BINDING,
-                TextureBindings {
-                    tmaps: vec![Self::TEXTURE_TDIFF_BINDING],
-                    smap: Self::TEXTURE_SDIFF_BINDING,
-                },
-                if antialiasing {
-                    String::from(include_str!("shaders/post_ssaa.wgsl"))
-                } else {
-                    String::from(include_str!("shaders/post.wgsl"))
-                },
-            ),
+            &shader,
             None,
             Parameters {
                 blend: BlendState::ALPHA_BLENDING,

@@ -213,10 +213,10 @@ impl<'d, 'l, S, T> Builder<'d, 'l, S, T> {
     /// Sets clear color for the layer.
     ///
     /// Don't set this setting if you don't want to fill
-    /// the previous layer (or frame) with some color.
+    /// the previous layer or frame with some color.
     pub fn with_clear_color(self, Color(col): Rgba) -> Self {
         Self {
-            clear_color: Some(col.map(|v| v as f64)),
+            clear_color: Some(col.map(f64::from)),
             ..self
         }
     }

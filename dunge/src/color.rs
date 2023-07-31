@@ -1,5 +1,11 @@
 //! Color types.
 
+/// A linear RGB color.
+pub type Rgb = Color<3>;
+
+/// A linear RGBA color.
+pub type Rgba = Color<4>;
+
 /// A linear RGB(A) color.
 #[derive(Clone, Copy)]
 pub struct Color<const N: usize>(pub [f32; N]);
@@ -32,9 +38,3 @@ impl<const N: usize> Color<N> {
 fn to_f32_color(c: u8) -> f32 {
     f32::from(c) / u8::MAX as f32
 }
-
-/// A linear RGB color.
-pub type Rgb = Color<3>;
-
-/// A linear RGBA color.
-pub type Rgba = Color<4>;
