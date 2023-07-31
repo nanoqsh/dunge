@@ -124,6 +124,7 @@ impl RenderScreen {
             factor: self.screen.size_factor(),
             filter: self.screen.filter,
             antialiasing: self.screen.is_antialiasing_enabled(),
+            ..Default::default()
         }
     }
 }

@@ -57,7 +57,7 @@ impl Canvas {
                 Err(err) => return err,
             };
 
-            Box::new(Context::new(window, event_loop.create_proxy(), state))
+            Context::new(window, event_loop.create_proxy(), state)
         };
 
         // Create the loop object

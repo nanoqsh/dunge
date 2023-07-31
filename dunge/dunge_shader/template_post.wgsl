@@ -10,7 +10,8 @@ var<uniform> data: Data;
 
 struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
-    @location(0) map: vec2<f32>,
+    @location(0) uni: vec2<f32>,
+    @location(1) map: vec2<f32>,
 }
 
 @vertex
@@ -19,18 +20,22 @@ fn vsmain(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
     switch in_vertex_index {
         case 0u {
             out.pos = vec4(1., -1., 0., 1.);
+            out.uni = vec2(1., 1.);
             out.map = data.factor.xy;
         }
         case 1u {
             out.pos = vec4(1., 1., 0., 1.);
+            out.uni = vec2(1., 0.);
             out.map = vec2(data.factor.x, 0.);
         }
         case 2u {
-             out.pos = vec4(-1., -1., 0., 1.);
+            out.pos = vec4(-1., -1., 0., 1.);
+            out.uni = vec2(0., 1.);
             out.map = vec2(0., data.factor.y);
         }
         case 3u {
             out.pos = vec4(-1., 1., 0., 1.);
+            out.uni = vec2(0., 0.);
             out.map = vec2(0., 0.);
         }
         default {}

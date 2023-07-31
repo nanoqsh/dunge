@@ -2,6 +2,7 @@ use crate::{
     nodes::*,
     out::Out,
     parts::{
+        color::Color,
         sources::{SourceArrays, SourceKind},
         spaces::LightSpaces,
         textures::TexturesNumber,
@@ -284,14 +285,6 @@ impl VertexOutput {
         o.write_str("\n    ");
         true
     }
-}
-
-/// The color in a shader.
-#[derive(Clone, Copy)]
-pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
 }
 
 #[derive(Clone, Copy)]

@@ -2,6 +2,7 @@ use crate::out::Out;
 
 pub(crate) struct Post {
     pub antialiasing: bool,
+    pub vignette: Vignette,
 }
 
 impl Post {
@@ -23,5 +24,32 @@ impl Post {
         } else {
             o.write_str("col = textureSample(tmap, smap, in.map);\n    ");
         }
+
+        if let Vignette::Color { r, g, b, f } = self.vignette {
+            o.write_str("\n    ")
+                .write_str("let vcol = vec4(")
+                .write_f32(r)
+                .write_str(", ")
+                .write_f32(g)
+                .write_str(", ")
+                .write_f32(b)
+                .write_str(", 1.);\n    ")
+                .write_str("let vforce = length(in.uni * 2. - 1.) * ")
+                .write_f32(f)
+                .write_str(";\n    ")
+                .write_str("col = mix(col, vcol, vforce);\n    ");
+        }
     }
+}
+
+#[derive(Clone, Copy, Default, PartialEq)]
+pub enum Vignette {
+    #[default]
+    None,
+    Color {
+        r: f32,
+        g: f32,
+        b: f32,
+        f: f32,
+    },
 }

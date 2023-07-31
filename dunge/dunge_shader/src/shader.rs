@@ -27,6 +27,7 @@ pub struct PostScheme {
     pub post_data: u32,
     pub map: TextureBindings,
     pub antialiasing: bool,
+    pub vignette: Vignette,
 }
 
 #[must_use]
@@ -135,11 +136,16 @@ impl Shader {
             post_data,
             map,
             antialiasing,
+            vignette,
         } = scheme;
 
         let fragment_col = {
             let mut o = Out::new();
-            let post = Post { antialiasing };
+            let post = Post {
+                antialiasing,
+                vignette,
+            };
+
             post.calc_fragment(&mut o);
             o
         };

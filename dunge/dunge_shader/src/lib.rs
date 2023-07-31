@@ -2,6 +2,7 @@ mod nodes;
 mod out;
 mod parts {
     mod ambient;
+    mod color;
     mod instance;
     mod post;
     mod sources;
@@ -18,10 +19,12 @@ mod parts {
     };
 
     pub use self::{
+        color::Color,
+        post::Vignette,
         sources::{SourceArray, SourceArrays, SourceBindings, SourceKind},
         spaces::{LightSpaces, SpaceBindings, SpaceKind},
         textures::{TextureBindings, TexturesNumber},
-        vertex::{Color, Dimension, Fragment},
+        vertex::{Dimension, Fragment},
         view::View,
     };
 }

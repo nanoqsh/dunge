@@ -5,7 +5,7 @@ use {
         render::State,
         shader_data::PostShaderData,
     },
-    dunge_shader::{PostScheme, TextureBindings},
+    dunge_shader::{PostScheme, TextureBindings, Vignette},
     glam::Vec2,
     std::sync::OnceLock,
     wgpu::{BindGroup, FilterMode, RenderPipeline, Sampler, TextureView},
@@ -34,6 +34,7 @@ pub(crate) struct FrameParameters {
     pub factor: Vec2,
     pub filter: FrameFilter,
     pub antialiasing: bool,
+    pub vignette: Vignette,
 }
 
 pub(crate) struct PostProcessor {
@@ -58,9 +59,10 @@ impl PostProcessor {
             factor,
             filter,
             antialiasing,
+            vignette,
         } = params;
 
-        let pipeline = Self::pipeline(state, antialiasing);
+        let pipeline = Self::pipeline(state, antialiasing, vignette);
         let globals = &pipeline.globals().expect("globals").layout;
         let data = PostShaderData::new(state, globals);
         data.resize(buffer_size.into(), factor.into());
@@ -80,10 +82,11 @@ impl PostProcessor {
             factor,
             filter,
             antialiasing,
+            vignette,
         } = params;
 
-        if self.params.antialiasing != antialiasing {
-            self.pipeline = Self::pipeline(state, antialiasing);
+        if self.params.antialiasing != antialiasing || self.params.vignette != vignette {
+            self.pipeline = Self::pipeline(state, antialiasing, vignette);
         }
 
         if self.params.filter != filter {
@@ -143,7 +146,7 @@ impl PostProcessor {
         })
     }
 
-    fn pipeline(state: &State, antialiasing: bool) -> Pipeline {
+    fn pipeline(state: &State, antialiasing: bool, vignette: Vignette) -> Pipeline {
         use {
             dunge_shader::Shader,
             wgpu::{BlendState, PrimitiveTopology},
@@ -156,6 +159,7 @@ impl PostProcessor {
                 smap: Self::TEXTURE_SDIFF_BINDING,
             },
             antialiasing,
+            vignette,
         };
 
         let shader = Shader::postproc(scheme);

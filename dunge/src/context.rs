@@ -32,13 +32,14 @@ pub struct Context {
 }
 
 impl Context {
-    pub(crate) fn new(window: Window, proxy: Proxy, state: State) -> Self {
-        Self {
+    #[allow(clippy::unnecessary_box_returns)]
+    pub(crate) fn new(window: Window, proxy: Proxy, state: State) -> Box<Self> {
+        Box::new(Self {
             window,
             proxy,
             render: Render::new(state),
             limits: Limits::default(),
-        }
+        })
     }
 
     /// Returns the render info.
