@@ -71,7 +71,7 @@ pub struct App {
     sprite_meshes: Vec<Sprite>,
     squares: Squares,
     camera: Camera,
-    time: f32,
+    time_passed: f32,
     fullscreen: bool,
 }
 
@@ -287,7 +287,7 @@ impl App {
             sprite_meshes,
             squares,
             camera: Camera::default(),
-            time: 0.,
+            time_passed: 0.,
             fullscreen: false,
         }
     }
@@ -307,9 +307,9 @@ impl Loop for App {
             (TAU * 2. / 3., [0., 0., INTENSITY]),
         ];
 
-        self.time += input.delta_time * LIGHTS_SPEED;
+        self.time_passed += input.delta_time * LIGHTS_SPEED;
         let make_source = |step, col| {
-            let step = (self.time + step) % TAU;
+            let step = (self.time_passed + step) % TAU;
             Source::new(
                 Color(col),
                 [
@@ -326,7 +326,7 @@ impl Loop for App {
             .update_sources(0, 0, &sources)
             .expect("update sources");
 
-        let g = self.time.sin() * 0.5 + 0.5;
+        let g = self.time_passed.sin() * 0.5 + 0.5;
         let col = Color([0.2, g, 0.5]);
         let colors = vec![ModelColor::from(col); self.squares.len];
         self.squares

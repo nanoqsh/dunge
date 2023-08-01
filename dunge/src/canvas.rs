@@ -4,7 +4,7 @@ use {
         r#loop::{Input, Keys, Loop, Mouse},
         render::State,
         screen::Screen,
-        time::Time,
+        time::{Fps, Time},
     },
     wgpu::AdapterInfo,
     winit::{
@@ -66,6 +66,7 @@ impl Canvas {
         // Set an initial state
         let mut active = false;
         let mut time = Time::now();
+        let mut fps = Fps::default();
         let mut deferred_screen = None;
         let mut cursor_position = None;
         let mut last_touch = None;
@@ -177,12 +178,11 @@ impl Canvas {
                     }
                 }
                 Event::RedrawRequested(window_id) if window_id == context.window.id() => {
-                    log::info!(
-                        "redraw requested {active}",
-                        active = if active { "(active)" } else { "" },
-                    );
+                    if active {
+                        log::info!("redraw requested (active)");
+                    } else {
+                        log::info!("redraw requested");
 
-                    if !active {
                         // Wait a while to become active
                         flow.set_wait_timeout(Duration::from_secs_f32(WAIT_TIME));
                         return;
@@ -198,6 +198,11 @@ impl Canvas {
                             flow.set_wait_timeout(Duration::from_secs_f32(wait));
                             return;
                         }
+                    }
+
+                    // Count number of frames
+                    if let Some(fps) = fps.count(delta_time) {
+                        context.fps = fps;
                     }
 
                     // Create an user's input data

@@ -30,6 +30,7 @@ pub struct Context {
     pub(crate) proxy: Proxy,
     pub(crate) render: Render,
     pub(crate) limits: Limits,
+    pub(crate) fps: u32,
 }
 
 impl Context {
@@ -40,7 +41,14 @@ impl Context {
             proxy,
             render: Render::new(state),
             limits: Limits::default(),
+            fps: 0,
         })
+    }
+
+    /// Returns the window.
+    #[must_use]
+    pub fn window(&self) -> &Window {
+        &self.window
     }
 
     /// Returns the render info.
@@ -49,10 +57,10 @@ impl Context {
         self.render.info()
     }
 
-    /// Returns the window.
+    /// Returns the number of rendered frames per second.
     #[must_use]
-    pub fn window(&self) -> &Window {
-        &self.window
+    pub fn fps(&self) -> u32 {
+        self.fps
     }
 
     /// Plans the main loop to close.
