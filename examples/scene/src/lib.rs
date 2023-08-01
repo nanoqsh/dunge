@@ -5,7 +5,7 @@ use {
         input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Format, Frame,
         FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights, Loop, Mesh,
         MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, PostEffect, Rgb, Rgba,
-        Scheme, Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex, View,
+        Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -64,10 +64,10 @@ pub struct App {
     color_layer: Layer<ColorShader, LineStrip>,
     texture_globals: Globals<TextureShader>,
     color_globals: Globals<ColorShader>,
-    sprites: Textures<TextureShader>,
     lights: Lights<TextureShader>,
     spaces: Spaces<TextureShader>,
     post: PostEffect,
+    sprites: Textures<TextureShader>,
     sprite_meshes: Vec<Sprite>,
     squares: Squares,
     camera: Camera,
@@ -87,23 +87,11 @@ impl App {
         // Create shaders and layers
         let texture_layer = context.create_layer();
         let color_layer = {
-            let scheme: Scheme<ColorShader> = context.create_scheme();
+            let scheme = context.create_scheme();
             context
                 .create_layer_with()
                 .with_depth_compare(Compare::Always)
                 .build(&scheme)
-        };
-
-        // Create the sprite texture
-        let sprites = {
-            let image = utils::read_png(include_bytes!("sprites.png"));
-            let data = TextureData::new(&image, image.dimensions(), Format::Srgba)
-                .expect("create texture");
-
-            context
-                .textures_builder()
-                .with_map(data)
-                .build(&texture_layer)
         };
 
         // Create globals
@@ -155,6 +143,18 @@ impl App {
             context
                 .spaces_builder()
                 .with_space(space)
+                .build(&texture_layer)
+        };
+
+        // Create the sprite texture
+        let sprites = {
+            let image = utils::read_png(include_bytes!("sprites.png"));
+            let data = TextureData::new(&image, image.dimensions(), Format::Srgba)
+                .expect("create texture");
+
+            context
+                .textures_builder()
+                .with_map(data)
                 .build(&texture_layer)
         };
 
@@ -280,10 +280,10 @@ impl App {
             color_layer,
             texture_globals,
             color_globals,
-            sprites,
             lights,
             spaces,
             post,
+            sprites,
             sprite_meshes,
             squares,
             camera: Camera::default(),

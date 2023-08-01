@@ -1,6 +1,6 @@
 use instant::Instant;
 
-pub(crate) struct Time {
+pub struct Time {
     last: Instant,
     delta_time: f32,
 }

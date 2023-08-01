@@ -15,6 +15,7 @@ dunge_macros = { path = "dunge_macros" }
 dunge_shader = { path = "dunge_shader" }
 bytemuck = { version = "1.13", features = ["derive"] }
 glam = "0.24"
+instant = "0.1"
 log = "0.4"
 wgpu = "0.16"
 winit = { version = "0.28", default-features = false }
@@ -22,13 +23,20 @@ winit = { version = "0.28", default-features = false }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
 wgpu = { version = "0.16", features = ["webgl"] }
-web-sys = { version = "0.3", features = ["Document", "Window", "Element", "Performance"] }
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Window",
+    "Element",
+    "Performance",
+] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 pollster = "0.3"
 
 [target.'cfg(target_os = "android")'.dependencies]
-winit = { version = "0.28", default-features = false, features = ["android-native-activity"] }
+winit = { version = "0.28", default-features = false, features = [
+    "android-native-activity",
+] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 winit = { version = "0.28", default-features = false, features = ["x11"] }

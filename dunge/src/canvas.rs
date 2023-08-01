@@ -65,7 +65,7 @@ impl Canvas {
 
         // Set an initial state
         let mut active = false;
-        let mut time = Time::new();
+        let mut time = Time::now();
         let mut deferred_screen = None;
         let mut cursor_position = None;
         let mut last_touch = None;
