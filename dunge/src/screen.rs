@@ -112,6 +112,14 @@ impl RenderScreen {
         self.screen
     }
 
+    pub fn virtual_size(&self) -> UVec2 {
+        self.screen.virtual_size()
+    }
+
+    pub fn virtual_size_with_antialiasing(&self) -> UVec2 {
+        self.screen.virtual_size_with_antialiasing()
+    }
+
     /// The buffer size of the frame.
     pub fn buffer_size(&self) -> BufferSize {
         let size = self.screen.virtual_size_aligned();

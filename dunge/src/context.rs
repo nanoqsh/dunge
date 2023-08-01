@@ -4,6 +4,7 @@ use {
         layer::Layer,
         mesh::{Data as MeshData, Mesh},
         pipeline::LayerBuilder,
+        posteffect::Builder as PostEffectBuilder,
         postproc::FrameFilter,
         render::{Render, State},
         scheme::Scheme,
@@ -75,7 +76,7 @@ impl Context {
     }
 
     /// Sets context's frame parameters via [`FrameParameters`] struct.
-    pub fn set_frame_parameters(&mut self, params: FrameParameters) {
+    pub fn set_frame_parameters(&self, params: FrameParameters) {
         _ = self.proxy.send_event(CanvasEvent::SetScreen(Screen {
             pixel_size: params.pixel_size,
             filter: params.filter,
@@ -84,27 +85,32 @@ impl Context {
     }
 
     /// Creates a [globals](crate::Globals) builder.
-    pub fn globals_builder(&mut self) -> GlobalsBuilder {
+    pub fn globals_builder(&self) -> GlobalsBuilder {
         GlobalsBuilder::new(&self.render)
     }
 
     /// Creates a [lights](crate::Lights) builder.
-    pub fn lights_builder(&mut self) -> LightsBuilder {
+    pub fn lights_builder(&self) -> LightsBuilder {
         LightsBuilder::new(&self.render)
     }
 
     /// Creates a [spaces](crate::Spaces) builder.
-    pub fn spaces_builder(&mut self) -> SpacesBuilder {
+    pub fn spaces_builder(&self) -> SpacesBuilder {
         SpacesBuilder::new(&self.render)
     }
 
     /// Creates a [textures](crate::Textures) builder.
-    pub fn textures_builder(&mut self) -> TexturesBuilder {
+    pub fn textures_builder(&self) -> TexturesBuilder {
         TexturesBuilder::new(&self.render)
     }
 
+    /// Creates a [post-effect](crate::PostEffect) builder.
+    pub fn posteffect_builder(&self) -> PostEffectBuilder {
+        PostEffectBuilder::new(&self.render)
+    }
+
     /// Creates a new shader [scheme](Scheme).
-    pub fn create_scheme<S>(&mut self) -> Scheme<S>
+    pub fn create_scheme<S>(&self) -> Scheme<S>
     where
         S: Shader,
     {
@@ -117,7 +123,7 @@ impl Context {
     /// with an automatically generated shader [scheme](Scheme).
     /// Use the [`create_layer_with`](crate::Context::create_layer_with)
     /// function to create a custom layer.
-    pub fn create_layer<S, T>(&mut self) -> Layer<S, T>
+    pub fn create_layer<S, T>(&self) -> Layer<S, T>
     where
         S: Shader,
         T: Topology,
@@ -127,17 +133,17 @@ impl Context {
     }
 
     /// Creates a [layer](Layer) builder with custom parameters.
-    pub fn create_layer_with<S, T>(&mut self) -> LayerBuilder<S, T> {
+    pub fn create_layer_with<S, T>(&self) -> LayerBuilder<S, T> {
         LayerBuilder::new(&self.render)
     }
 
     /// Creates new [instances](Instance).
-    pub fn create_instances(&mut self, models: &[ModelTransform]) -> Instance {
+    pub fn create_instances(&self, models: &[ModelTransform]) -> Instance {
         Instance::new(models, &self.render)
     }
 
     /// Creates new color [instances](Instance).
-    pub fn create_instances_color(&mut self, models: &[ModelColor]) -> InstanceColor {
+    pub fn create_instances_color(&self, models: &[ModelColor]) -> InstanceColor {
         InstanceColor::new(models, &self.render)
     }
 

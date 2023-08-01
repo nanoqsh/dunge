@@ -29,6 +29,7 @@ mod layer;
 mod r#loop;
 mod mesh;
 mod pipeline;
+mod posteffect;
 mod postproc;
 mod render;
 mod scheme;
@@ -94,6 +95,7 @@ pub use {
         layer::{ActiveLayer, Builder as ActiveLayerBuilder, Layer},
         mesh::{Data as MeshData, Mesh},
         pipeline::{Blend, Compare, DrawMode, LayerBuilder},
+        posteffect::{Builder as PostEffectBuilder, PostEffect},
         postproc::FrameFilter,
         r#loop::Loop,
         scheme::Scheme,

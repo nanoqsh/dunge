@@ -4,8 +4,8 @@ use {
     dunge::{
         input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Format, Frame,
         FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights, Loop, Mesh,
-        MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, Rgb, Rgba, Scheme, Source,
-        Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex, View,
+        MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, PostEffect, Rgb, Rgba,
+        Scheme, Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex, View,
     },
     utils::Camera,
 };
@@ -67,6 +67,7 @@ pub struct App {
     sprites: Textures<TextureShader>,
     lights: Lights<TextureShader>,
     spaces: Spaces<TextureShader>,
+    post: PostEffect,
     sprite_meshes: Vec<Sprite>,
     squares: Squares,
     camera: Camera,
@@ -116,6 +117,10 @@ impl App {
             .globals_builder()
             .with_view(View::default())
             .build(&color_layer);
+
+        let post = context
+            .posteffect_builder()
+            .vignette(Rgb::from_bytes([0; 3]), 0.3);
 
         // Crate the lights
         let lights = context
@@ -278,6 +283,7 @@ impl App {
             sprites,
             lights,
             spaces,
+            post,
             sprite_meshes,
             squares,
             camera: Camera::default(),
@@ -408,5 +414,7 @@ impl Loop for App {
                 .bind_instance_color(&self.squares.color)
                 .draw(&self.squares.mesh, &self.squares.instance);
         }
+
+        frame.draw_on_screen_with(&self.post);
     }
 }

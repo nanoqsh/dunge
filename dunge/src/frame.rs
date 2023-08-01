@@ -3,6 +3,7 @@ use {
         framebuffer::Framebuffer,
         layer::{ActiveLayer, Builder, Layer},
         pipeline::Pipeline,
+        posteffect::PostEffect,
         postproc::PostProcessor,
         render::State,
         screen::RenderScreen,
@@ -42,18 +43,19 @@ impl<'d> Frame<'d> {
     ) -> ActiveLayer<'l, S, T> {
         use wgpu::*;
 
+        let shot = &self.shot;
+
         // Before start a new layer, finish the previous one if it exists
-        self.encoder.finish(self.shot.state);
+        self.encoder.finish(shot.state);
         self.drawn = false;
 
-        let framebuffer = self.shot.framebuffer;
         let mut pass = self
             .encoder
-            .get(self.shot.state)
+            .get(shot.state)
             .begin_render_pass(&RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(RenderPassColorAttachment {
-                    view: framebuffer.render_view(),
+                    view: shot.framebuffer.render_view(),
                     resolve_target: None,
                     ops: Operations {
                         load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
@@ -63,7 +65,7 @@ impl<'d> Frame<'d> {
                     },
                 })],
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: framebuffer.depth_view(),
+                    view: shot.framebuffer.depth_view(),
                     depth_ops: Some(Operations {
                         load: if clear_depth {
                             LoadOp::Clear(1.)
@@ -76,58 +78,78 @@ impl<'d> Frame<'d> {
                 }),
             });
 
-        pass.set_pipeline(pipeline.as_ref());
-        let screen = self.shot.screen.screen();
-        let view_size = screen.virtual_size_with_antialiasing().as_vec2();
+        let view_size = shot.screen.virtual_size_with_antialiasing().as_vec2();
         pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
-        ActiveLayer::new(pass, screen.virtual_size().into(), pipeline.slots())
+        pass.set_pipeline(pipeline.as_ref());
+        ActiveLayer::new(pass, shot.screen.virtual_size().into(), pipeline.slots())
     }
 
     /// Writes a final frame on the screen.
     ///
     /// When you call this, you may experience problems with borrowing frame references.
     /// This is intentional. You should drop the layer object before calling this method.
+    ///
+    /// To apply a [post-effect](PostEffect) to the frame, call the
+    /// [`draw_on_screen_with`](Frame::draw_on_screen_with) method.
     pub fn draw_on_screen(&mut self) {
+        self.draw(None);
+    }
+
+    /// Writes a final frame on the screen with the [post-effect](PostEffect).
+    pub fn draw_on_screen_with(&mut self, ef: &PostEffect) {
+        self.draw(Some(ef));
+    }
+
+    fn draw(&mut self, ef: Option<&PostEffect>) {
         use wgpu::*;
 
         // Skip render if not needed
         if self.drawn {
+            log::info!("draw frame (skipped)");
             return;
         }
 
+        log::info!("draw frame");
+        let shot = &mut self.shot;
+        let locked_postproc;
         {
-            let mut pass =
-                self.encoder
-                    .get(self.shot.state)
-                    .begin_render_pass(&RenderPassDescriptor {
-                        label: None,
-                        color_attachments: &[Some(RenderPassColorAttachment {
-                            view: &self.view,
-                            resolve_target: None,
-                            ops: Operations {
-                                load: LoadOp::Load,
-                                store: false,
-                            },
-                        })],
-                        depth_stencil_attachment: None,
-                    });
+            let mut pass = self
+                .encoder
+                .get(shot.state)
+                .begin_render_pass(&RenderPassDescriptor {
+                    label: None,
+                    color_attachments: &[Some(RenderPassColorAttachment {
+                        view: &self.view,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: LoadOp::Load,
+                            store: false,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                });
 
-            let params = self.shot.screen.frame_parameters();
-            self.shot.postproc.set_parameters(self.shot.state, params);
+            let params = shot.screen.frame_parameters();
+            let postproc: &PostProcessor = if let Some(ef) = ef {
+                locked_postproc = ef.with_parameters(shot.state, params);
+                &locked_postproc
+            } else {
+                shot.postproc.set_parameters(shot.state, params);
+                shot.postproc
+            };
 
-            let postproc = &mut *self.shot.postproc;
             pass.set_pipeline(postproc.render_pipeline());
             pass.set_bind_group(PostProcessor::DATA_GROUP, postproc.data_bind_group(), &[]);
             pass.set_bind_group(
                 PostProcessor::TEXTURE_GROUP,
-                postproc.render_bind_group(self.shot.state, self.shot.framebuffer.render_view()),
+                postproc.render_bind_group(shot.state, shot.framebuffer.render_view()),
                 &[],
             );
 
             pass.draw(0..4, 0..1);
         }
 
-        self.encoder.finish(self.shot.state);
+        self.encoder.finish(shot.state);
         self.drawn = true;
     }
 }
