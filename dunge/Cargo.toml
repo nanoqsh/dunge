@@ -17,12 +17,12 @@ bytemuck = { version = "1.13", features = ["derive"] }
 glam = "0.24"
 instant = "0.1"
 log = "0.4"
-wgpu = "0.16"
+wgpu = "0.17"
 winit = { version = "0.28", default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
-wgpu = { version = "0.16", features = ["webgl"] }
+wgpu = { version = "0.17", features = ["webgl"] }
 web-sys = { version = "0.3", features = [
     "Document",
     "Window",
