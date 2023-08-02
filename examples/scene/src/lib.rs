@@ -119,9 +119,9 @@ impl App {
         // Create the light spaces
         let spaces = {
             let layers = [
-                utils::read_png(include_bytes!("lightmap_side.png")),
-                utils::read_png(include_bytes!("lightmap_center.png")),
-                utils::read_png(include_bytes!("lightmap_side.png")),
+                utils::decode_rgba_png(include_bytes!("lightmap_side.png")),
+                utils::decode_rgba_png(include_bytes!("lightmap_center.png")),
+                utils::decode_rgba_png(include_bytes!("lightmap_side.png")),
             ];
 
             let mut map = vec![];
@@ -148,7 +148,7 @@ impl App {
 
         // Create the sprite texture
         let sprites = {
-            let image = utils::read_png(include_bytes!("sprites.png"));
+            let image = utils::decode_rgba_png(include_bytes!("sprites.png"));
             let data = TextureData::new(&image, image.dimensions(), Format::Srgba)
                 .expect("create texture");
 

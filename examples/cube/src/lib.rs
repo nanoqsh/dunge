@@ -78,7 +78,7 @@ impl App {
 
         // Create a textures
         let textures = {
-            let image = utils::read_png(include_bytes!("grass.png"));
+            let image = utils::decode_rgba_png(include_bytes!("grass.png"));
             let data = TextureData::new(&image, image.dimensions(), Format::Srgba)
                 .expect("create texture");
 

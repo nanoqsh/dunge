@@ -1,14 +1,21 @@
-use {
-    image::{io::Reader, ImageFormat, RgbaImage},
-    std::io::Cursor,
-};
+use image::{codecs::png::PngDecoder, DynamicImage, GrayImage, RgbaImage};
 
+/// Decodes the rgba png image from bytes.
 #[must_use]
-pub fn read_png(bytes: &[u8]) -> RgbaImage {
-    Reader::with_format(Cursor::new(bytes), ImageFormat::Png)
-        .decode()
-        .expect("decode png")
-        .to_rgba8()
+pub fn decode_rgba_png(data: &[u8]) -> RgbaImage {
+    let decoder = PngDecoder::new(data).expect("create decoder");
+    DynamicImage::from_decoder(decoder)
+        .expect("decode png image")
+        .into_rgba8()
+}
+
+/// Decodes the gray png image from bytes.
+#[must_use]
+pub fn decode_gray_png(data: &[u8]) -> GrayImage {
+    let decoder = PngDecoder::new(data).expect("create decoder");
+    DynamicImage::from_decoder(decoder)
+        .expect("decode png image")
+        .into_luma8()
 }
 
 #[must_use]

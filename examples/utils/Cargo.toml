@@ -6,4 +6,3 @@ edition = "2021"
 [dependencies]
 dunge = { path = "../../dunge" }
 image = { version = "0.24", default-features = false, features = ["png"] }
-instant = "0.1"
