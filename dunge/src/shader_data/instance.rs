@@ -177,7 +177,7 @@ impl<M> Inner<M> {
     }
 
     fn buffer(&self) -> BufferView {
-        BufferView::new::<M>(&self.buf)
+        BufferView::new::<M>(&self.buf, None)
     }
 }
 

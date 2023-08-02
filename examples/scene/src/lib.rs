@@ -1,8 +1,10 @@
+mod atlas;
 mod models;
 
 use {
+    crate::atlas::{Atlas, Rect},
     dunge::{
-        input::Key, shader::*, topology::LineStrip, Color, Compare, Context, Format, Frame,
+        input::Key, shader::*, topology::LineStrip, Blend, Color, Compare, Context, Format, Frame,
         FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights, Loop, Mesh,
         MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, PostEffect, Rgb, Rgba,
         Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex, View,
@@ -45,6 +47,22 @@ impl Shader for ColorShader {
     const INSTANCE_COLORS: bool = true;
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Default, Vertex)]
+struct FontVert {
+    #[position]
+    pos: [f32; 2],
+    #[texture]
+    map: [f32; 2],
+}
+
+struct FontShader;
+
+impl Shader for FontShader {
+    type Vertex = FontVert;
+    const TEXTURES: TexturesNumber = TexturesNumber::N1;
+}
+
 struct Sprite {
     instance: Instance,
     mesh: &'static Mesh<TextureVert>,
@@ -59,9 +77,72 @@ struct Squares {
     len: usize,
 }
 
+struct Text {
+    map: Textures<FontShader>,
+    size: (u32, u32),
+    atlas: Atlas,
+    instance: Instance,
+    mesh: Mesh<FontVert>,
+    n: u32,
+}
+
+impl Text {
+    const MAX_SYMBOLS: usize = 32;
+
+    fn write(&mut self, s: &str, (sw, sh): (u32, u32)) {
+        const PADDING: i32 = 16;
+        const FONT_SIZE: i32 = 2;
+        const SPACE_WIDTH: i32 = 4;
+
+        let mut px = -(sw as i32 - PADDING);
+        let py = sh as i32 - PADDING;
+        let (mw, mh) = {
+            let (mw, mh) = self.size;
+            (mw as f32, mh as f32)
+        };
+
+        let (sw, sh) = (sw as f32, sh as f32);
+        let vert = |x, y, u, v| FontVert {
+            pos: [x, y],
+            map: [u, v],
+        };
+
+        self.n = 0;
+        let mut quads = Vec::with_capacity(Self::MAX_SYMBOLS * 4);
+        for c in s.chars().take(Self::MAX_SYMBOLS) {
+            self.n += 2;
+            if c == ' ' {
+                px += SPACE_WIDTH * FONT_SIZE + FONT_SIZE;
+                continue;
+            }
+
+            let Rect { u, v, w, h } = self.atlas.get(c);
+            let (x, y) = (px as f32 / sw, py as f32 / sh);
+            let (dx, dy) = (
+                w as f32 / sw * FONT_SIZE as f32,
+                h as f32 / sh * FONT_SIZE as f32,
+            );
+
+            let (u, v) = (u as f32 / mw, v as f32 / mh);
+            let (du, dv) = (w as f32 / mw, h as f32 / mh);
+            quads.extend([
+                vert(x, y, u, v),
+                vert(x + dx, y, u + du, v),
+                vert(x + dx, y - dy, u + du, v + dv),
+                vert(x, y - dy, u, v + dv),
+            ]);
+
+            px += w as i32 * FONT_SIZE + FONT_SIZE;
+        }
+
+        self.mesh.update_verts(&quads).expect("update font mesh");
+    }
+}
+
 pub struct App {
     texture_layer: Layer<TextureShader>,
     color_layer: Layer<ColorShader, LineStrip>,
+    font_layer: Layer<FontShader>,
     texture_globals: Globals<TextureShader>,
     color_globals: Globals<ColorShader>,
     lights: Lights<TextureShader>,
@@ -70,6 +151,7 @@ pub struct App {
     sprites: Textures<TextureShader>,
     sprite_meshes: Vec<Sprite>,
     squares: Squares,
+    text: Text,
     camera: Camera,
     time_passed: f32,
     fullscreen: bool,
@@ -90,6 +172,16 @@ impl App {
             let scheme = context.create_scheme();
             context
                 .create_layer_with()
+                .with_depth_compare(Compare::Always)
+                .build(&scheme)
+        };
+
+        let font_layer = {
+            let scheme = context.create_scheme();
+            context
+                .create_layer_with()
+                .with_blend(Blend::AlphaBlending)
+                .with_cull_faces(false)
                 .with_depth_compare(Compare::Always)
                 .build(&scheme)
         };
@@ -275,9 +367,34 @@ impl App {
             }
         };
 
+        // Create text
+        let text = {
+            let image = utils::decode_gray_png(include_bytes!("atlas.png"));
+            let size = image.dimensions();
+            let data = TextureData::new(&image, size, Format::Gray).expect("create atlas texture");
+
+            let map = context.textures_builder().with_map(data).build(&font_layer);
+            let atlas = serde_json::from_str(include_str!("atlas.json")).expect("read atlas map");
+            let instance = context.create_instances(&[ModelTransform::default()]);
+
+            let quads = vec![[FontVert::default(); 4]; Text::MAX_SYMBOLS];
+            let data = MeshData::from_quads(&quads).expect("create atlas mesh");
+            let mesh = context.create_mesh(&data);
+
+            Text {
+                map,
+                size,
+                atlas,
+                instance,
+                mesh,
+                n: 0,
+            }
+        };
+
         Self {
             texture_layer,
             color_layer,
+            font_layer,
             texture_globals,
             color_globals,
             lights,
@@ -286,6 +403,7 @@ impl App {
             sprites,
             sprite_meshes,
             squares,
+            text,
             camera: Camera::default(),
             time_passed: 0.,
             fullscreen: false,
@@ -384,6 +502,11 @@ impl Loop for App {
                 sprite.instance.update(&[ModelTransform::from(transform)])
             })
             .expect("update instances");
+
+        let backend = context.info().backend;
+        let fps = context.fps();
+        let s = format!("Backend: {backend:?} ({fps})");
+        self.text.write(&s, context.size());
     }
 
     fn render(&self, frame: &mut Frame) {
@@ -416,5 +539,15 @@ impl Loop for App {
         }
 
         frame.draw_on_screen_with(&self.post);
+
+        {
+            let clear_color = Rgba::from_bytes([0; 4]);
+            frame
+                .layer(&self.font_layer)
+                .with_clear_color(clear_color)
+                .start()
+                .bind_textures(&self.text.map)
+                .draw_limited(&self.text.mesh, &self.text.instance, self.text.n);
+        }
     }
 }

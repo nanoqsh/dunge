@@ -1,5 +1,6 @@
 use {
     crate::{
+        buffer::BufferView,
         color::{Color, Rgba},
         frame::Frame,
         mesh::{Mesh, MeshBuffer},
@@ -130,6 +131,31 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
     pub fn draw(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance)
     where
         S: Shader,
+        T: Topology,
+    {
+        self.set_bind_groups();
+        self.draw_mesh(mesh.buffer(None), instance.buffer());
+    }
+
+    /// Draws the [mesh](crate::Mesh) partially with a limit of drawn elements.
+    ///
+    /// For example, pass the `limit` value of 2 to draw only two triangles
+    /// (for a triangular mesh) instead of the entire mesh.
+    ///
+    /// # Panics
+    /// See [`draw`](ActiveLayer::draw) method.
+    pub fn draw_limited(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance, limit: u32)
+    where
+        S: Shader,
+        T: Topology,
+    {
+        self.set_bind_groups();
+        self.draw_mesh(mesh.buffer(Some(limit)), instance.buffer());
+    }
+
+    fn set_bind_groups(&mut self)
+    where
+        S: Shader,
     {
         let info = ShaderInfo::new::<S>();
         if info.has_globals() {
@@ -157,16 +183,13 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
             self.pass
                 .set_vertex_buffer(self.slots.instance_color, instance_color.buffer().slice());
         }
-
-        self.draw_mesh(mesh.buffer(), instance);
     }
 
-    fn draw_mesh(&mut self, mesh: MeshBuffer<'l>, instance: &'l Instance) {
+    fn draw_mesh(&mut self, mesh: MeshBuffer<'l>, instance: BufferView<'l>) {
         use wgpu::IndexFormat;
 
-        let instances = instance.buffer();
         self.pass
-            .set_vertex_buffer(self.slots.instance, instances.slice());
+            .set_vertex_buffer(self.slots.instance, instance.slice());
 
         self.pass
             .set_vertex_buffer(self.slots.vertex, mesh.verts.slice());
@@ -174,9 +197,9 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         match mesh.indxs {
             Some(buf) => {
                 self.pass.set_index_buffer(buf.slice(), IndexFormat::Uint16);
-                self.pass.draw_indexed(0..buf.len(), 0, 0..instances.len());
+                self.pass.draw_indexed(0..buf.len(), 0, 0..instance.len());
             }
-            None => self.pass.draw(0..mesh.verts.len(), 0..instances.len()),
+            None => self.pass.draw(0..mesh.verts.len(), 0..instance.len()),
         }
     }
 }

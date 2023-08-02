@@ -15,6 +15,7 @@ impl TopologyValue {
 /// The topology trait. Specifies how the mesh is presented.
 pub trait Topology {
     type Face: Pod;
+    const N: usize;
     const VALUE: TopologyValue;
 }
 
@@ -24,6 +25,7 @@ pub struct PointList;
 
 impl Topology for PointList {
     type Face = u16;
+    const N: usize = 1;
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::PointList);
 }
 
@@ -32,7 +34,8 @@ impl Topology for PointList {
 pub struct LineList;
 
 impl Topology for LineList {
-    type Face = [u16; 2];
+    type Face = [u16; Self::N];
+    const N: usize = 2;
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::LineList);
 }
 
@@ -42,6 +45,7 @@ pub struct LineStrip;
 
 impl Topology for LineStrip {
     type Face = u16;
+    const N: usize = 1;
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::LineStrip);
 }
 
@@ -50,7 +54,8 @@ impl Topology for LineStrip {
 pub struct TriangleList;
 
 impl Topology for TriangleList {
-    type Face = [u16; 3];
+    type Face = [u16; Self::N];
+    const N: usize = 3;
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::TriangleList);
 }
 
@@ -60,5 +65,6 @@ pub struct TriangleStrip;
 
 impl Topology for TriangleStrip {
     type Face = u16;
+    const N: usize = 1;
     const VALUE: TopologyValue = TopologyValue(PrimitiveTopology::TriangleStrip);
 }

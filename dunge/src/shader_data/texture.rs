@@ -71,7 +71,7 @@ impl Inner {
             data.data,
             ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(4 * width),
+                bytes_per_row: Some(width * data.format.n_channels() as u32),
                 rows_per_image: Some(height),
             },
             size,

@@ -28,10 +28,11 @@ jobs:
                 -W clippy::perf
                 -W clippy::missing_assert_message
                 -A clippy::needless_collect
+                -A clippy::cast_lossless
                 -A clippy::cast_precision_loss
                 -A clippy::cast_sign_loss
+                -A clippy::cast_possible_wrap
                 -A clippy::cast_possible_truncation
-                -A clippy::cast_lossless
                 -A clippy::wildcard_imports
                 -A clippy::module_name_repetitions
                 -A clippy::many_single_char_names

@@ -40,7 +40,6 @@ impl<'a, V> Data<'a, V> {
     ///   if the vertex index is out of bounds of the vertex slice.
     pub fn new(verts: &'a [V], indxs: &'a [[u16; 3]]) -> Result<Self, Error> {
         let len: u16 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
-
         if indxs.iter().flatten().any(|&i| i >= len) {
             return Err(Error::WrongIndex);
         }
@@ -68,7 +67,7 @@ impl<'a, V> Data<'a, V> {
             indxs: Some(
                 (0..len)
                     .step_by(4)
-                    .flat_map(|i| [[i, i + 1, i + 2], [i + 2, i + 1, i + 3]])
+                    .flat_map(|i| [[i, i + 1, i + 2], [i, i + 2, i + 3]])
                     .collect(),
             ),
         })
@@ -109,13 +108,13 @@ impl<V, T> Mesh<V, T> {
             verts: device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("vertex buffer"),
                 contents: vertex::verts_as_bytes(data.verts),
-                usage: BufferUsages::VERTEX,
+                usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             }),
             indxs: data.indxs.as_deref().map(|indxs| {
                 device.create_buffer_init(&BufferInitDescriptor {
                     label: Some("index buffer"),
                     contents: bytemuck::cast_slice(indxs),
-                    usage: BufferUsages::INDEX,
+                    usage: BufferUsages::INDEX | BufferUsages::COPY_DST,
                 })
             }),
             queue: Arc::clone(state.queue()),
@@ -158,10 +157,38 @@ impl<V, T> Mesh<V, T> {
         Ok(())
     }
 
-    pub(crate) fn buffer(&self) -> MeshBuffer {
+    /// Updates the mesh with new vertices.
+    ///
+    /// # Errors
+    /// Will return
+    /// - [`MeshUpdateError::VertexSize`](crate::error::MeshUpdateError::VertexSize)
+    ///   if a slice of vertices is passed with a length longer than the length of the mesh.
+    pub fn update_verts(&mut self, verts: &[V]) -> Result<(), UpdateError>
+    where
+        V: Vertex,
+        T: Topology,
+    {
+        if self.verts.size() < verts.len() as u64 {
+            return Err(UpdateError::VertexSize);
+        }
+
+        self.queue
+            .write_buffer(&self.verts, 0, vertex::verts_as_bytes(verts));
+
+        Ok(())
+    }
+
+    pub(crate) fn buffer(&self, limit: Option<u32>) -> MeshBuffer
+    where
+        T: Topology,
+    {
+        let limit = limit.map(|n| n * T::N as u32);
         MeshBuffer {
-            verts: BufferView::new::<V>(&self.verts),
-            indxs: self.indxs.as_ref().map(BufferView::new::<u16>),
+            verts: BufferView::new::<V>(&self.verts, limit),
+            indxs: self
+                .indxs
+                .as_ref()
+                .map(|buf| BufferView::new::<u16>(buf, limit)),
         }
     }
 }
@@ -179,6 +206,7 @@ pub enum UpdateError {
     NoIndices,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct MeshBuffer<'a> {
     pub verts: BufferView<'a>,
     pub indxs: Option<BufferView<'a>>,
@@ -196,8 +224,8 @@ mod tests {
         assert_eq!(data.verts.len(), 8);
         assert_eq!(indxs.len(), 4);
         assert_eq!([data.verts[0], data.verts[1], data.verts[2]], indxs[0]);
-        assert_eq!([data.verts[2], data.verts[1], data.verts[3]], indxs[1]);
+        assert_eq!([data.verts[0], data.verts[2], data.verts[3]], indxs[1]);
         assert_eq!([data.verts[4], data.verts[5], data.verts[6]], indxs[2]);
-        assert_eq!([data.verts[6], data.verts[5], data.verts[7]], indxs[3]);
+        assert_eq!([data.verts[4], data.verts[6], data.verts[7]], indxs[3]);
     }
 }

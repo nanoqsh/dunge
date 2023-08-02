@@ -123,7 +123,7 @@ impl<'d> Frame<'d> {
                         resolve_target: None,
                         ops: Operations {
                             load: LoadOp::Load,
-                            store: false,
+                            store: true,
                         },
                     })],
                     depth_stencil_attachment: None,
