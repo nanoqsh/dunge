@@ -315,8 +315,8 @@ impl Error {
     ///
     /// # Panics
     /// Yes.
-    pub fn into_panic(self) {
-        panic!("{self:?}");
+    pub fn into_panic(self) -> ! {
+        panic!("{self:?}")
     }
 }
 

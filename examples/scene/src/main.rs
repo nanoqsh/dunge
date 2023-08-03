@@ -1,11 +1,10 @@
-fn main() {
+fn main() -> ! {
     use {
         dunge::{CanvasConfig, InitialState, WindowMode},
         scene::App,
     };
 
     env_logger::init();
-
     dunge::make_window(InitialState {
         mode: WindowMode::Windowed {
             width: 500,
@@ -15,5 +14,5 @@ fn main() {
         ..Default::default()
     })
     .run_blocking(CanvasConfig::default(), App::new)
-    .into_panic();
+    .into_panic()
 }

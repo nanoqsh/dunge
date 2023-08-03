@@ -13,7 +13,7 @@ impl Shader for TriangleShader {
     type Vertex = Vert;
 }
 
-fn main() {
+fn main() -> ! {
     env_logger::init();
     dunge::make_window(InitialState {
         title: "Triangle",
@@ -24,7 +24,7 @@ fn main() {
         ..Default::default()
     })
     .run_blocking(CanvasConfig::default(), App::new)
-    .into_panic();
+    .into_panic()
 }
 
 struct App {

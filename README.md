@@ -31,10 +31,10 @@ Then, let's create a new window to draw something in it:
 ```rust,ignore
 use dunge::{CanvasConfig, InitialState};
 
-fn main() {
+fn main() -> ! {
     dunge::make_window(InitialState::default())
         .run_blocking(CanvasConfig::default(), App::new)
-        .into_panic();
+        .into_panic()
 }
 ```
 
