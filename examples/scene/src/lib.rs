@@ -60,7 +60,9 @@ struct FontShader;
 
 impl Shader for FontShader {
     type Vertex = FontVert;
-    const TEXTURES: TexturesNumber = TexturesNumber::N1;
+    const TEXTURES: TexturesNumber = TexturesNumber::N1
+        .with_gray_mode()
+        .with_discard_threshold(0.95);
 }
 
 struct Sprite {

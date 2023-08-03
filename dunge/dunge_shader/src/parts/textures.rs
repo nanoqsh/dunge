@@ -6,6 +6,7 @@ use crate::{nodes::*, out::Out};
 pub struct TexturesNumber {
     n: u8,
     discard: Option<f32>,
+    gray: bool,
 }
 
 impl TexturesNumber {
@@ -16,12 +17,22 @@ impl TexturesNumber {
     pub const N4: Self = Self::new(4);
 
     const fn new(n: u8) -> Self {
-        Self { n, discard: None }
+        Self {
+            n,
+            discard: None,
+            gray: false,
+        }
     }
 
     /// Discard a pixel if its alpha value is less than the specified.
     pub const fn with_discard_threshold(mut self, value: f32) -> Self {
         self.discard = Some(value);
+        self
+    }
+
+    /// Enables gray mode.
+    pub const fn with_gray_mode(mut self) -> Self {
+        self.gray = true;
         self
     }
 
@@ -75,7 +86,13 @@ impl TexturesNumber {
     pub(crate) fn calc_fragment(self, o: &mut Out) {
         match self.n {
             0 => return,
-            1 => _ = o.write("let tex = textureSample(tmap_0, smap, out.map);\n    "),
+            1 => {
+                o.write_str("let tex = textureSample(tmap_0, smap, out.map)");
+                if self.gray {
+                    o.write_str(".rrrr");
+                }
+                o.write_str(";\n    ");
+            }
             num => {
                 o.write_str("var tex = vec4(0.);\n    ");
                 for n in 0..num as u32 {
@@ -83,7 +100,13 @@ impl TexturesNumber {
                         .write(n)
                         .write_str(" = textureSample(tmap_")
                         .write(n)
-                        .write_str(", smap, out.map);\n    ")
+                        .write_str(", smap, out.map)");
+
+                    if self.gray {
+                        o.write_str(".rrrr");
+                    }
+
+                    o.write_str(";\n    ")
                         .write_str("tex = mix(tex, tex_")
                         .write(n)
                         .write_str(", tex_")
