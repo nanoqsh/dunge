@@ -2,8 +2,8 @@ mod data;
 
 use {
     dunge::{
-        input::Key, shader::*, Context, Format, Frame, Globals, Input, Instance, Layer, Loop, Mesh,
-        MeshData, ModelTransform, Perspective, Rgba, TextureData, Textures, Vertex, View,
+        input::Key, shader::*, Context, Format, Frame, Globals, Input, Layer, Loop, Mesh, MeshData,
+        Perspective, Rgba, TextureData, Textures, Vertex, View,
     },
     utils::Camera,
 };
@@ -52,7 +52,6 @@ pub struct App {
     texture_globals: Globals<TextureShader>,
     color_globals: Globals<ColorShader>,
     textures: Textures<TextureShader>,
-    instance: Instance,
     texture_mesh: Mesh<TextureVert>,
     color_mesh: Mesh<ColorVert>,
     camera: Camera,
@@ -88,9 +87,6 @@ impl App {
                 .build(&texture_layer)
         };
 
-        // Create a model instance
-        let instance = context.create_instances(&[ModelTransform::default()]);
-
         // Create meshes
         let texture_mesh = {
             let verts = data::VERTICES.map(|(pos, map)| TextureVert { pos, map });
@@ -115,7 +111,6 @@ impl App {
             texture_globals,
             color_globals,
             textures,
-            instance,
             texture_mesh,
             color_mesh,
             camera: Camera::default(),
@@ -161,14 +156,14 @@ impl Loop for App {
                 .start()
                 .bind_globals(&self.texture_globals)
                 .bind_textures(&self.textures)
-                .draw(&self.texture_mesh, &self.instance),
+                .draw(&self.texture_mesh),
             State::Color => frame
                 .layer(&self.color_layer)
                 .with_clear_color(clear_color)
                 .with_clear_depth()
                 .start()
                 .bind_globals(&self.color_globals)
-                .draw(&self.color_mesh, &self.instance),
+                .draw(&self.color_mesh),
         }
     }
 }

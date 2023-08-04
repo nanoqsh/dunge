@@ -1,8 +1,6 @@
 use {
     crate::{FontShader, FontVert},
-    dunge::{
-        Context, Format, Instance, Layer, Mesh, MeshData, ModelTransform, TextureData, Textures,
-    },
+    dunge::{Context, Format, Layer, Mesh, MeshData, TextureData, Textures},
     serde::Deserialize,
     std::collections::HashMap,
 };
@@ -11,7 +9,6 @@ pub(crate) struct Font {
     pub map: Textures<FontShader>,
     size: (u32, u32),
     atlas: Atlas,
-    pub instance: Instance,
     pub mesh: Mesh<FontVert>,
     pub n: u32,
 }
@@ -26,7 +23,6 @@ impl Font {
 
         let map = context.textures_builder().with_map(data).build(layer);
         let atlas = serde_json::from_str(include_str!("atlas.json")).expect("read atlas map");
-        let instance = context.create_instances(&[ModelTransform::default()]);
 
         let quads = vec![[FontVert::default(); 4]; Self::MAX_SYMBOLS];
         let data = MeshData::from_quads(&quads).expect("create atlas mesh");
@@ -36,7 +32,6 @@ impl Font {
             map,
             size,
             atlas,
-            instance,
             mesh,
             n: 0,
         }

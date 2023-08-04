@@ -7,6 +7,7 @@ use {
         postproc::PostProcessor,
         render::State,
         screen::RenderScreen,
+        shader_data::Instance,
     },
     wgpu::{CommandEncoder, TextureView},
 };
@@ -81,7 +82,12 @@ impl<'d> Frame<'d> {
         let view_size = shot.screen.virtual_size_with_antialiasing().as_vec2();
         pass.set_viewport(0., 0., view_size.x, view_size.y, 0., 1.);
         pass.set_pipeline(pipeline.as_ref());
-        ActiveLayer::new(pass, shot.screen.virtual_size().into(), pipeline.slots())
+        ActiveLayer::new(
+            pass,
+            shot.screen.virtual_size().into(),
+            pipeline.slots(),
+            shot.instance,
+        )
     }
 
     /// Writes a final frame on the screen.
@@ -159,6 +165,7 @@ pub(crate) struct Snapshot<'d> {
     pub framebuffer: &'d Framebuffer,
     pub postproc: &'d mut PostProcessor,
     pub screen: RenderScreen,
+    pub instance: &'d Instance,
 }
 
 #[derive(Default)]

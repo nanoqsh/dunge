@@ -444,7 +444,7 @@ impl Loop for App {
                 .bind_spaces(&self.spaces);
 
             for model in &self.sprite_meshes {
-                layer.draw(model.mesh, &model.instance);
+                layer.bind_instance(&model.instance).draw(model.mesh);
             }
         }
 
@@ -454,7 +454,8 @@ impl Loop for App {
                 .start()
                 .bind_globals(&self.color_globals)
                 .bind_instance_color(&self.squares.color)
-                .draw(&self.squares.mesh, &self.squares.instance);
+                .bind_instance(&self.squares.instance)
+                .draw(&self.squares.mesh);
         }
 
         frame.draw_on_screen_with(&self.post);
@@ -466,7 +467,7 @@ impl Loop for App {
                 .with_clear_color(clear_color)
                 .start()
                 .bind_textures(&self.font.map)
-                .draw_limited(&self.font.mesh, &self.font.instance, self.font.n);
+                .draw_limited(&self.font.mesh, self.font.n);
         }
     }
 }

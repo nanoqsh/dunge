@@ -1,6 +1,6 @@
 use dunge::{
-    input::Key, CanvasConfig, Context, Frame, InitialState, Input, Instance, Layer, Loop, Mesh,
-    MeshData, ModelTransform, Rgba, Shader, Vertex, WindowMode,
+    input::Key, CanvasConfig, Context, Frame, InitialState, Input, Layer, Loop, Mesh, MeshData,
+    Rgba, Shader, Vertex, WindowMode,
 };
 
 #[repr(C)]
@@ -30,7 +30,6 @@ fn main() -> ! {
 struct App {
     layer: Layer<TriangleShader>,
     mesh: Mesh<Vert>,
-    instance: Instance,
 }
 
 impl App {
@@ -50,13 +49,7 @@ impl App {
             context.create_mesh(&data)
         };
 
-        // Create a model instance
-        let instance = context.create_instances(&[ModelTransform::default()]);
-        Self {
-            layer,
-            mesh,
-            instance,
-        }
+        Self { layer, mesh }
     }
 }
 
@@ -76,6 +69,6 @@ impl Loop for App {
             .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
             .with_clear_depth()
             .start()
-            .draw(&self.mesh, &self.instance);
+            .draw(&self.mesh);
     }
 }

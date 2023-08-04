@@ -1,6 +1,5 @@
 use {
     crate::{
-        buffer::BufferView,
         color::{Color, Rgba},
         frame::Frame,
         mesh::{Mesh, MeshBuffer},
@@ -60,17 +59,26 @@ pub struct ActiveLayer<'l, S, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),
     slots: Slots,
+    instance: &'l Instance,
+    default_instance: &'l Instance,
     instance_color: Option<&'l InstanceColor>,
     groups: Groups<'l>,
     ty: PhantomData<(S, T)>,
 }
 
 impl<'l, S, T> ActiveLayer<'l, S, T> {
-    pub(crate) fn new(pass: RenderPass<'l>, size: (u32, u32), slots: Slots) -> Self {
+    pub(crate) fn new(
+        pass: RenderPass<'l>,
+        size: (u32, u32),
+        slots: Slots,
+        instance: &'l Instance,
+    ) -> Self {
         Self {
             pass,
             size,
             slots,
+            instance,
+            default_instance: instance,
             instance_color: None,
             groups: Groups::default(),
             ty: PhantomData,
@@ -102,6 +110,21 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         self
     }
 
+    /// Binds the instance.
+    pub fn bind_instance(&mut self, instance: &'l Instance) -> &mut Self {
+        self.instance = instance;
+        self
+    }
+
+    /// Binds the default instance with a position at (0, 0, 0) in world coordinates.
+    ///
+    /// After the layer [starts](Frame::layer), this instance is bound by default,
+    /// so there is no need to additionally call this method.
+    pub fn bind_default_instance(&mut self) -> &mut Self {
+        self.instance = self.default_instance;
+        self
+    }
+
     /// Binds the color instance.
     ///
     /// # Panics
@@ -128,13 +151,13 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
     /// - If light sources is not set but required.
     /// - If light spaces is not set but required.
     /// - If instance color is not set but required.
-    pub fn draw(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance)
+    pub fn draw(&mut self, mesh: &'l Mesh<S::Vertex, T>)
     where
         S: Shader,
         T: Topology,
     {
         self.set_bind_groups();
-        self.draw_mesh(mesh.buffer(None), instance.buffer());
+        self.draw_mesh(mesh.buffer(None));
     }
 
     /// Draws the [mesh](crate::Mesh) partially with a limit of drawn elements.
@@ -144,13 +167,13 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
     ///
     /// # Panics
     /// See [`draw`](ActiveLayer::draw) method.
-    pub fn draw_limited(&mut self, mesh: &'l Mesh<S::Vertex, T>, instance: &'l Instance, limit: u32)
+    pub fn draw_limited(&mut self, mesh: &'l Mesh<S::Vertex, T>, limit: u32)
     where
         S: Shader,
         T: Topology,
     {
         self.set_bind_groups();
-        self.draw_mesh(mesh.buffer(Some(limit)), instance.buffer());
+        self.draw_mesh(mesh.buffer(Some(limit)));
     }
 
     fn set_bind_groups(&mut self)
@@ -185,8 +208,10 @@ impl<'l, S, T> ActiveLayer<'l, S, T> {
         }
     }
 
-    fn draw_mesh(&mut self, mesh: MeshBuffer<'l>, instance: BufferView<'l>) {
+    fn draw_mesh(&mut self, mesh: MeshBuffer<'l>) {
         use wgpu::IndexFormat;
+
+        let instance = self.instance.buffer();
 
         self.pass
             .set_vertex_buffer(self.slots.instance, instance.slice());

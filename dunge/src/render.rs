@@ -7,6 +7,7 @@ use {
         postproc::PostProcessor,
         r#loop::Loop,
         screen::{RenderScreen, Screen},
+        shader_data::{Instance as ShaderInstance, ModelTransform},
     },
     std::{ops, sync::Arc},
     wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration, SurfaceError},
@@ -19,6 +20,7 @@ pub(crate) struct Render {
     screen: RenderScreen,
     postproc: PostProcessor,
     framebuffer: Framebuffer,
+    instance: ShaderInstance,
 }
 
 impl Render {
@@ -38,6 +40,7 @@ impl Render {
         let screen = RenderScreen::new(&state);
         let postproc = PostProcessor::new(&state);
         let framebuffer = Framebuffer::new(&state);
+        let instance = ShaderInstance::new(&[ModelTransform::default()], &state);
 
         Self {
             state,
@@ -45,6 +48,7 @@ impl Render {
             screen,
             postproc,
             framebuffer,
+            instance,
         }
     }
 
@@ -231,6 +235,7 @@ impl<'d> Snapshot<'d> {
             framebuffer: &render.framebuffer,
             postproc: &mut render.postproc,
             screen: render.screen,
+            instance: &render.instance,
         }
     }
 }
