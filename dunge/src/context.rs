@@ -78,9 +78,12 @@ impl Context {
         self.render.screen().virtual_size().into()
     }
 
-    /// Sets context's [`Limits`].
-    pub fn set_limits(&mut self, limits: Limits) {
-        self.limits = limits;
+    /// Sets a minimal time between two frames in seconds.
+    ///
+    /// The [context](crate::Context) will draw the next
+    /// frame no earlier than the specified time.
+    pub fn set_min_delta_time(&mut self, delta: f32) {
+        self.limits.min_delta_time = delta;
     }
 
     /// Sets context's frame parameters via [`FrameParameters`] struct.
@@ -180,23 +183,9 @@ impl Context {
 }
 
 /// The context's limits.
-#[derive(Clone, Copy)]
-pub struct Limits {
-    /// Sets a minimal time between two frames in seconds.
-    ///
-    /// If the value is set, then the [context](crate::Context) will draw
-    /// a next frame no earlier than the specified time.
-    pub min_frame_delta_time: Option<f32>,
-}
-
-impl Default for Limits {
-    fn default() -> Self {
-        const FPS: f32 = 60.;
-
-        Self {
-            min_frame_delta_time: Some(1. / FPS),
-        }
-    }
+#[derive(Clone, Copy, Default)]
+pub(crate) struct Limits {
+    pub min_delta_time: f32,
 }
 
 /// Describes frame parameters.

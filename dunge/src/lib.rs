@@ -89,7 +89,7 @@ pub use {
         camera::{Orthographic, Perspective, Projection, View},
         canvas::{Backend, Canvas, CanvasConfig, Device, Info, Selector},
         color::{Color, Rgb, Rgba},
-        context::{Context, FrameParameters, Limits, PixelSize},
+        context::{Context, FrameParameters, PixelSize},
         frame::Frame,
         input::Input,
         layer::{ActiveLayer, Builder as ActiveLayerBuilder, Layer},
