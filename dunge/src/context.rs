@@ -46,19 +46,16 @@ impl Context {
     }
 
     /// Returns the window.
-    #[must_use]
     pub fn window(&self) -> &Window {
         &self.window
     }
 
     /// Returns the render info.
-    #[must_use]
     pub fn info(&self) -> &Info {
         self.render.info()
     }
 
     /// Returns the number of rendered frames per second.
-    #[must_use]
     pub fn fps(&self) -> u32 {
         self.fps
     }
@@ -73,7 +70,6 @@ impl Context {
     }
 
     /// Returns the canvas size.
-    #[must_use]
     pub fn size(&self) -> (u32, u32) {
         self.render.screen().virtual_size().into()
     }
@@ -176,7 +172,6 @@ impl Context {
     ///
     /// If the buffer cannot be copied for some reason,
     /// this method returns an empty.
-    #[must_use]
     pub fn take_screenshot(&self) -> Screenshot {
         self.render.take_screenshot()
     }

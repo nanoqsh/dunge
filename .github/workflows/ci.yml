@@ -38,6 +38,7 @@ jobs:
                 -A clippy::many_single_char_names
                 -A clippy::too_many_lines
                 -A clippy::similar_names
+                -A clippy::must_use_candidate
 
           - name: Tests
             run: cargo test --verbose

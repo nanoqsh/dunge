@@ -12,7 +12,6 @@ impl LightSpaces {
     ///
     /// # Panics
     /// Panic if the number of spaces exceeds the maximum allowed.
-    #[must_use]
     pub const fn new(spaces: &'static [SpaceKind]) -> Self {
         assert!(
             spaces.len() <= 4,
@@ -23,13 +22,11 @@ impl LightSpaces {
     }
 
     /// Returns the length of light space.
-    #[must_use]
     pub const fn len(&self) -> usize {
         self.0.len()
     }
 
     /// Checks if the light space is empty.
-    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -158,7 +155,6 @@ pub struct SpaceBindings {
 }
 
 impl SpaceBindings {
-    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.tspaces.is_empty()
     }

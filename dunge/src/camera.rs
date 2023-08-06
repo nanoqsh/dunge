@@ -56,7 +56,6 @@ pub struct View {
 }
 
 impl View {
-    #[must_use]
     pub fn rotation(&self) -> Quat {
         let mat = Mat4::look_at_rh(self.eye, self.look, self.up);
         let (_, rot, _) = mat.to_scale_rotation_translation();

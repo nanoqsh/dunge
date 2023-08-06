@@ -211,7 +211,6 @@ impl<'a> Builder<'a> {
     ///
     /// # Panics
     /// Panics if the shader requires source arrays, but they aren't set.
-    #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Lights<S>
     where
         S: Shader,

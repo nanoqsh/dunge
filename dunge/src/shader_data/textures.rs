@@ -141,7 +141,6 @@ impl<'a> Builder<'a> {
     ///
     /// # Panics
     /// Panics if the shader requires texture `map`, but it's not set.
-    #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Textures<S>
     where
         S: Shader,

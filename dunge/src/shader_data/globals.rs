@@ -180,7 +180,6 @@ impl<'a> Builder<'a> {
     /// # Panics
     /// Panics if the shader requires view or ambient, but they aren't set. They can be set by the
     /// [`with_view`](Builder::with_view) or the [`with_ambient`](Builder::with_ambient) functions.
-    #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Globals<S>
     where
         S: Shader,

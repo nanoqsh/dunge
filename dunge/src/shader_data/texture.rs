@@ -9,7 +9,6 @@ use {
 
 /// The texture object.
 #[derive(Clone)]
-#[must_use]
 pub struct Texture(Arc<Inner>);
 
 impl Texture {

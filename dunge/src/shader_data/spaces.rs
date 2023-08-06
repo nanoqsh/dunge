@@ -248,7 +248,6 @@ impl<'a> Builder<'a> {
     /// # Panics
     /// Panics if the shader requires light spaces, but they aren't set
     /// or some light space format doesn't match.
-    #[must_use]
     pub fn build<S, T>(self, layer: &Layer<S, T>) -> Spaces<S>
     where
         S: Shader,

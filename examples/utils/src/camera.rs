@@ -15,7 +15,6 @@ impl Camera {
         self.distance = (self.distance - y).clamp(3., 10.);
     }
 
-    #[must_use]
     pub fn view<P>(&self, proj: P) -> View
     where
         P: Into<Projection>,

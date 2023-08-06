@@ -30,7 +30,6 @@ pub struct PostScheme {
     pub vignette: Vignette,
 }
 
-#[must_use]
 pub struct Shader {
     pub layout: Layout,
     pub source: String,
@@ -264,7 +263,6 @@ pub struct Textures {
 }
 
 impl Textures {
-    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.map.tmaps.is_empty()
     }

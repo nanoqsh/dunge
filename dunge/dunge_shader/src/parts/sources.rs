@@ -12,7 +12,6 @@ impl SourceArrays {
     ///
     /// # Panics
     /// Panic if the number of source arrays exceeds the maximum allowed.
-    #[must_use]
     pub const fn new(arrays: &'static [SourceArray]) -> Self {
         assert!(
             arrays.len() <= 4,
@@ -23,13 +22,11 @@ impl SourceArrays {
     }
 
     /// Returns the length of light source arrays.
-    #[must_use]
     pub const fn len(&self) -> usize {
         self.0.len()
     }
 
     /// Checks if the light source arrays is empty.
-    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -142,7 +139,6 @@ impl SourceArray {
     ///
     /// # Panics
     /// This function will panic if the source array have a zero size or is larger than 127.
-    #[must_use]
     pub const fn new(kind: SourceKind, size: u8) -> Self {
         assert!(size != 0, "source array cannot have size equal to zero");
         assert!(size <= 127, "source array cannot be larger than 127");

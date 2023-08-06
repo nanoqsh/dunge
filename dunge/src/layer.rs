@@ -19,7 +19,6 @@ use {
 /// Can be created from the [context](crate::Context) by calling
 /// the [`create_layer`](crate::Context::create_layer) or
 /// [`create_layer_with`](crate::Context::create_layer_with) functions.
-#[must_use]
 pub struct Layer<S, T = TriangleList> {
     pipeline: Box<Pipeline>,
     ty: PhantomData<(S, T)>,
@@ -54,7 +53,6 @@ impl<S, T> Layer<S, T> {
 /// The frame's active layer.
 ///
 /// Can be created from the [`Frame`] instance by calling the [`layer`](Frame::layer) function.
-#[must_use]
 pub struct ActiveLayer<'l, S, T> {
     pass: RenderPass<'l>,
     size: (u32, u32),

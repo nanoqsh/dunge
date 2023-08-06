@@ -1,8 +1,8 @@
 use crate::{nodes::*, out::Out};
 
 /// Sets the number of texture maps in the shader.
-#[derive(Clone, Copy)]
 #[must_use]
+#[derive(Clone, Copy)]
 pub struct TexturesNumber {
     n: u8,
     discard: Option<f32>,
@@ -37,13 +37,11 @@ impl TexturesNumber {
     }
 
     /// Returns the number of texture maps.
-    #[must_use]
     pub const fn len(self) -> usize {
         self.n as usize
     }
 
     /// Checks if the number of texture maps is zero.
-    #[must_use]
     pub const fn is_empty(self) -> bool {
         self.n == 0
     }

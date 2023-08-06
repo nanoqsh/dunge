@@ -12,7 +12,6 @@ use {
 ///
 /// Can be created from the [context](crate::Context) by calling
 /// the [`posteffect_builder`](crate::Context::posteffect_builder) function.
-#[must_use]
 pub struct PostEffect(Box<Inner>);
 
 impl PostEffect {
