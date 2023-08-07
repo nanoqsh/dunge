@@ -90,12 +90,11 @@ impl PostProcessor {
             self.sampler = Self::sampler(state, filter);
         }
 
-        if self.params.factor != factor {
-            self.data.resize(buffer_size.into(), factor.into());
-        }
-
         if self.params.buffer_size != buffer_size {
             self.bind_group.take();
+            self.data.resize(buffer_size.into(), factor.into());
+        } else if self.params.factor != factor {
+            self.data.resize(buffer_size.into(), factor.into());
         }
 
         self.params = params;

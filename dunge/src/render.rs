@@ -283,6 +283,7 @@ impl State {
             let desc = DeviceDescriptor {
                 features: Features::empty(),
                 limits: Limits {
+                    max_texture_dimension_2d: 4096,
                     max_storage_buffers_per_shader_stage: 0,
                     max_storage_textures_per_shader_stage: 0,
                     max_dynamic_storage_buffers_per_pipeline_layout: 0,

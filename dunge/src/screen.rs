@@ -124,7 +124,17 @@ impl RenderScreen {
     pub fn buffer_size(&self) -> BufferSize {
         let size = self.screen.virtual_size_aligned();
         let (width, height) = size.into();
-        BufferSize::new(width, height, self.max_texture_size)
+
+        let max = self.max_texture_size;
+        if width > max {
+            log::warn!("maximum screen buffer width ({max}) exceeded");
+        }
+
+        if height > max {
+            log::warn!("maximum screen buffer height ({max}) exceeded");
+        }
+
+        BufferSize::new(width, height, max)
     }
 
     pub fn frame_parameters(&self) -> Parameters {
