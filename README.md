@@ -102,7 +102,6 @@ impl Loop for App {
         frame
             .layer(&self.layer)
             .with_clear_color(Rgba::from_bytes([0, 0, 0, u8::MAX]))
-            .with_clear_depth()
             .start()
             .draw(&self.mesh);
     }

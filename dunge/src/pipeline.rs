@@ -33,7 +33,7 @@ impl Default for Parameters {
             topology: PrimitiveTopology::TriangleList,
             cull_faces: true,
             mode: PolygonMode::Fill,
-            depth_stencil: Some(CompareFunction::Less),
+            depth_stencil: Some(CompareFunction::LessEqual),
         }
     }
 }
