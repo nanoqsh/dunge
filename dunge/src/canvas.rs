@@ -500,7 +500,7 @@ impl Info {
                 DeviceType::DiscreteGpu => Device::DiscreteGpu,
                 DeviceType::VirtualGpu => Device::VirtualGpu,
                 DeviceType::Cpu => Device::Cpu,
-                DeviceType::Other => panic!("undefined device type"),
+                DeviceType::Other => Device::Other,
             },
         }
     }
@@ -513,4 +513,5 @@ pub enum Device {
     DiscreteGpu,
     VirtualGpu,
     Cpu,
+    Other,
 }
