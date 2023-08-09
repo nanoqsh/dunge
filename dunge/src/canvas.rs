@@ -331,18 +331,6 @@ pub(crate) mod window {
     pub fn make_window(state: InitialState) -> Canvas {
         use winit::{dpi::PhysicalSize, window::Fullscreen};
 
-        let mut builder = EventLoopBuilder::with_user_event();
-
-        #[cfg(target_os = "linux")]
-        {
-            use {std::env, winit::platform::x11::EventLoopBuilderExtX11};
-
-            builder.with_x11();
-            env::remove_var("WAYLAND_DISPLAY"); // Temporary force x11
-        }
-
-        let event_loop = builder.build();
-
         let builder = WindowBuilder::new().with_title(state.title);
         let builder = match state.mode {
             WindowMode::Fullscreen => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
@@ -351,6 +339,7 @@ pub(crate) mod window {
             }
         };
 
+        let event_loop = EventLoopBuilder::with_user_event().build();
         let window = builder.build(&event_loop).expect("build window");
         window.set_cursor_visible(state.show_cursor);
 
