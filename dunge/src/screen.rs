@@ -50,21 +50,9 @@ impl Screen {
         }
     }
 
-    /// The virtual size of the frame without antialiasing factor, but aligned width.
-    fn virtual_size_aligned(&self) -> UVec2 {
-        use wgpu::util;
-
-        const N_COLOR_CHANNELS: u32 = 4;
-        const ALIGNMENT: u32 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT / N_COLOR_CHANNELS;
-
-        let mut size = self.virtual_size_with_antialiasing();
-        size.x = util::align_to(size.x, ALIGNMENT);
-        size
-    }
-
     /// Factor of physical size relative to virtual aligned size.
     pub fn size_factor(&self) -> Vec2 {
-        let aligned = self.virtual_size_aligned().as_vec2();
+        let aligned = self.virtual_size_with_antialiasing().as_vec2();
         let aligned = match self.pixel_size {
             PixelSize::Antialiasing => aligned / 2.,
             PixelSize::X1 => aligned,
@@ -122,7 +110,7 @@ impl RenderScreen {
 
     /// The buffer size of the frame.
     pub fn buffer_size(&self) -> BufferSize {
-        let size = self.screen.virtual_size_aligned();
+        let size = self.screen.virtual_size_with_antialiasing();
         let (width, height) = size.into();
 
         let max = self.max_texture_size;
