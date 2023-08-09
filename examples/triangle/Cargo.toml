@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-utils = { path = "../utils" }
 dunge = { path = "../../dunge" }
+utils = { path = "../utils" }
 env_logger = "0.10"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+dunge = { path = "../../dunge", features = ["x11"] }

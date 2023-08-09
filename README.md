@@ -123,3 +123,19 @@ To build and run an example do:
 ```sh
 cargo r -p <example_name>
 ```
+
+## Build for Linux
+For a more convenient build on other platforms, Linux specific features aren't enabled by default. You need to explicitly specify which window system you want to use:
+```toml
+[dependencies]
+dunge = { .., features = ["x11"] }
+# or
+dunge = { .., features = ["wayland"] }
+# or both
+```
+
+An universal option to specify the window system for Linux only:
+```toml
+[target.'cfg(target_os = "linux")'.dependencies]
+dunge = { .., features = ["x11"] }
+```
