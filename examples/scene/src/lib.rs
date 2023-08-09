@@ -376,12 +376,6 @@ impl Loop for App {
         for key in input.pressed_keys {
             match key {
                 Key::Escape => context.plan_to_close(),
-                Key::P => {
-                    let shot = context.take_screenshot();
-                    utils::create_image(shot.width, shot.height, shot.data)
-                        .save("screen.png")
-                        .expect("save screenshot");
-                }
                 Key::F1 => {
                     self.fullscreen = !self.fullscreen;
                     context

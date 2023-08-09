@@ -3,7 +3,7 @@ use {
         framebuffer::{depth_frame::DepthFrame, render_frame::RenderFrame},
         render::State,
     },
-    wgpu::{Texture, TextureFormat, TextureView},
+    wgpu::{TextureFormat, TextureView},
 };
 
 pub(crate) struct Framebuffer {
@@ -34,10 +34,6 @@ impl Framebuffer {
         self.depth = DepthFrame::new(size, state);
         self.render = RenderFrame::new(size, state);
         self.size = size;
-    }
-
-    pub fn render_texture(&self) -> &Texture {
-        self.render.texture()
     }
 
     pub fn render_view(&self) -> &TextureView {

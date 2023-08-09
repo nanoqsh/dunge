@@ -1,9 +1,8 @@
 use {
     crate::{
         canvas::{Backend as CanvasBackend, CanvasConfig, Error as CanvasError, Info, Selector},
-        context::Screenshot,
         frame::{Frame, Snapshot},
-        framebuffer::{BufferSize, Framebuffer},
+        framebuffer::Framebuffer,
         postproc::PostProcessor,
         r#loop::Loop,
         screen::{RenderScreen, Screen},
@@ -128,95 +127,6 @@ impl Render {
         frame.draw_on_screen();
         output.present();
         Ok(())
-    }
-
-    pub fn take_screenshot(&self) -> Screenshot {
-        use {std::sync::mpsc, wgpu::*};
-
-        const N_COLOR_CHANNELS: usize = 4;
-
-        let image = ImageCopyTexture {
-            texture: self.framebuffer.render_texture(),
-            mip_level: 0,
-            origin: Origin3d::ZERO,
-            aspect: TextureAspect::All,
-        };
-
-        let BufferSize(width, height) = self.screen.buffer_size();
-        let buffer = self.state.device.create_buffer(&BufferDescriptor {
-            label: Some("copy buffer"),
-            size: width as u64 * height as u64 * N_COLOR_CHANNELS as u64,
-            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let buffer = ImageCopyBuffer {
-            buffer: &buffer,
-            layout: ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(width * N_COLOR_CHANNELS as u32),
-                rows_per_image: Some(height),
-            },
-        };
-
-        let size = Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        };
-
-        let mut encoder = self
-            .state
-            .device
-            .create_command_encoder(&CommandEncoderDescriptor::default());
-
-        encoder.copy_texture_to_buffer(image, buffer, size);
-        self.state.queue.submit([encoder.finish()]);
-
-        let (sender, receiver) = mpsc::channel();
-        let buffer_slice = buffer.buffer.slice(..);
-        buffer_slice.map_async(MapMode::Read, move |res| _ = sender.send(res));
-
-        self.state.device.poll(Maintain::Wait);
-        if receiver
-            .recv()
-            .expect("wait until the buffer maps")
-            .is_err()
-        {
-            return Screenshot {
-                width,
-                height,
-                data: vec![],
-            };
-        }
-
-        let virtual_size = self.screen().virtual_size_with_antialiasing();
-        let data = {
-            let view = buffer_slice.get_mapped_range();
-            let mut data = Vec::with_capacity(
-                virtual_size.x as usize * virtual_size.y as usize * N_COLOR_CHANNELS,
-            );
-
-            let row_size = width as usize * N_COLOR_CHANNELS;
-            let virt_row_size = virtual_size.x as usize * N_COLOR_CHANNELS;
-            for row in view.chunks(row_size) {
-                data.extend_from_slice(&row[..virt_row_size]);
-            }
-
-            if Framebuffer::RENDER_FORMAT == TextureFormat::Bgra8UnormSrgb {
-                for chunk in data.chunks_mut(N_COLOR_CHANNELS) {
-                    chunk.swap(0, 2);
-                }
-            }
-
-            data
-        };
-
-        Screenshot {
-            width: virtual_size.x,
-            height: virtual_size.y,
-            data,
-        }
     }
 }
 

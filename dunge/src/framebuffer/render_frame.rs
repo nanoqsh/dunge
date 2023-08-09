@@ -1,10 +1,9 @@
 use {
     crate::{framebuffer::buffer::BufferSize, render::State},
-    wgpu::{Texture, TextureFormat, TextureView},
+    wgpu::{TextureFormat, TextureView},
 };
 
 pub(crate) struct RenderFrame {
-    texture: Texture,
     view: TextureView,
 }
 
@@ -29,19 +28,12 @@ impl RenderFrame {
             sample_count: 1,
             dimension: TextureDimension::D2,
             format: Self::FORMAT,
-            usage: TextureUsages::COPY_SRC
-                | TextureUsages::COPY_DST
-                | TextureUsages::RENDER_ATTACHMENT
-                | TextureUsages::TEXTURE_BINDING,
+            usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
 
         let view = texture.create_view(&TextureViewDescriptor::default());
-        Self { texture, view }
-    }
-
-    pub fn texture(&self) -> &Texture {
-        &self.texture
+        Self { view }
     }
 
     pub fn view(&self) -> &TextureView {

@@ -167,14 +167,6 @@ impl Context {
     pub fn create_texture(&self, data: TextureData) -> Texture {
         Texture::new(data, &self.render)
     }
-
-    /// Takes a screenshot of the current frame.
-    ///
-    /// If the buffer cannot be copied for some reason,
-    /// this method returns an empty.
-    pub fn take_screenshot(&self) -> Screenshot {
-        self.render.take_screenshot()
-    }
 }
 
 /// The context's limits.
@@ -202,11 +194,4 @@ pub enum PixelSize {
     X2,
     X3,
     X4,
-}
-
-/// The representation of a screenshot.
-pub struct Screenshot {
-    pub width: u32,
-    pub height: u32,
-    pub data: Vec<u8>,
 }
