@@ -1,5 +1,3 @@
-#![doc = include_str!("../../README.md")]
-
 mod buffer;
 mod camera;
 mod canvas;
