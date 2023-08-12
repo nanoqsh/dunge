@@ -6,7 +6,7 @@ use crate::{
         sources::{SourceArrays, SourceKind},
         spaces::LightSpaces,
         textures::TexturesNumber,
-        view::View,
+        view::ViewKind,
     },
 };
 
@@ -126,7 +126,7 @@ impl VertexOutput {
         });
     }
 
-    pub fn calc_vertex(&self, input: &VertexInput, camera: View, o: &mut Out) {
+    pub fn calc_vertex(&self, input: &VertexInput, camera: ViewKind, o: &mut Out) {
         o.write_str("let world = ");
         input.calc_world(o);
         o.write_str(";\n");

@@ -72,12 +72,12 @@ impl App {
 
         // Create a mesh
         let mesh = {
-            const VERTICES: [Vert; 3] = [
+            let data = MeshData::from_verts(&[
                 Vert([-0.5, -0.5], [1., 0., 0.]),
                 Vert([ 0.5, -0.5], [0., 1., 0.]),
                 Vert([ 0.,   0.5], [0., 0., 1.]),
-            ];
-            let data = MeshData::from_verts(&VERTICES);
+            ]);
+
             context.create_mesh(&data)
         };
 

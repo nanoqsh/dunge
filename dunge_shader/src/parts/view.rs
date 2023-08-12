@@ -1,13 +1,13 @@
 use crate::{nodes::*, out::Out};
 
-/// The shader view.
+/// The shader view kind.
 #[derive(Clone, Copy)]
-pub enum View {
+pub enum ViewKind {
     None,
     Camera,
 }
 
-impl View {
+impl ViewKind {
     pub(crate) fn define_type(self, o: &mut Out) {
         if let Self::Camera = self {
             o.write(Struct {

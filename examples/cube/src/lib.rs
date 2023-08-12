@@ -21,7 +21,7 @@ struct TextureShader;
 
 impl Shader for TextureShader {
     type Vertex = TextureVert;
-    const VIEW: ShaderView = ShaderView::Camera;
+    const VIEW: ViewKind = ViewKind::Camera;
     const TEXTURES: TexturesNumber = TexturesNumber::N1;
 }
 
@@ -38,7 +38,7 @@ struct ColorShader;
 
 impl Shader for ColorShader {
     type Vertex = ColorVert;
-    const VIEW: ShaderView = ShaderView::Camera;
+    const VIEW: ViewKind = ViewKind::Camera;
 }
 
 enum State {

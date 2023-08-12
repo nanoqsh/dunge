@@ -25,7 +25,7 @@ struct TextureShader;
 
 impl Shader for TextureShader {
     type Vertex = TextureVert;
-    const VIEW: ShaderView = ShaderView::Camera;
+    const VIEW: ViewKind = ViewKind::Camera;
     const AMBIENT: bool = true;
     const TEXTURES: TexturesNumber = TexturesNumber::N1.with_discard_threshold(0.9);
     const SOURCES: SourceArrays = SourceArrays::new(&[SourceArray::new(SourceKind::Glow, 3)]);
@@ -43,7 +43,7 @@ struct ColorShader;
 
 impl Shader for ColorShader {
     type Vertex = ColorVert;
-    const VIEW: ShaderView = ShaderView::Camera;
+    const VIEW: ViewKind = ViewKind::Camera;
     const INSTANCE_COLORS: bool = true;
 }
 

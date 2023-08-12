@@ -1,8 +1,7 @@
 //! Shader components.
 
 pub use dunge_shader::{
-    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind, TexturesNumber,
-    View as ShaderView,
+    Color, LightSpaces, SourceArray, SourceArrays, SourceKind, SpaceKind, TexturesNumber, ViewKind,
 };
 
 use {
@@ -21,7 +20,7 @@ pub trait Shader {
     type Vertex: Vertex;
 
     /// Determines whether to use the camera in the shader.
-    const VIEW: ShaderView = ShaderView::None;
+    const VIEW: ViewKind = ViewKind::None;
 
     /// Determines whether to use the ambient color.
     const AMBIENT: bool = false;
@@ -87,7 +86,7 @@ impl ShaderInfo {
             instances: Instances {
                 has_color: S::INSTANCE_COLORS,
             },
-            has_camera: matches!(S::VIEW, ShaderView::Camera),
+            has_camera: matches!(S::VIEW, ViewKind::Camera),
             has_ambient: S::AMBIENT,
             maps: S::TEXTURES.len(),
             source_arrays: S::SOURCES.len(),

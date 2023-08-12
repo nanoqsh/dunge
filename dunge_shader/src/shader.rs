@@ -8,7 +8,7 @@ use crate::{
 #[derive(Clone, Copy)]
 pub struct Scheme {
     pub vert: Vertex,
-    pub view: View,
+    pub view: ViewKind,
     pub ambient: bool,
     pub static_color: Option<Color>,
     pub textures: TexturesNumber,

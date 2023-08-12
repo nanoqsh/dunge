@@ -25,7 +25,7 @@ mod parts {
         spaces::{LightSpaces, SpaceBindings, SpaceKind},
         textures::{TextureBindings, TexturesNumber},
         vertex::{Dimension, Fragment},
-        view::View,
+        view::ViewKind,
     };
 }
 mod shader;
