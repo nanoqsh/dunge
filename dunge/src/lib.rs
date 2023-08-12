@@ -109,5 +109,5 @@ pub use {
         vertex::Vertex,
     },
     dunge_macros::Vertex,
-    winit,
+    glam, winit,
 };
