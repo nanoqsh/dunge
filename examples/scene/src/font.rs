@@ -7,10 +7,11 @@ use {
 
 pub(crate) struct Font {
     pub map: Textures<FontShader>,
+    pub mesh: Mesh<FontVert>,
     size: (u32, u32),
     atlas: Atlas,
-    pub mesh: Mesh<FontVert>,
-    pub n: u32,
+    quads: Vec<FontVert>,
+    n: u32,
 }
 
 impl Font {
@@ -30,11 +31,16 @@ impl Font {
 
         Self {
             map,
+            mesh,
             size,
             atlas,
-            mesh,
+            quads: Vec::with_capacity(Self::MAX_SYMBOLS * 4),
             n: 0,
         }
+    }
+
+    pub fn len(&self) -> u32 {
+        self.n
     }
 
     pub fn write(&mut self, s: &str, (sw, sh): (u32, u32)) {
@@ -56,7 +62,8 @@ impl Font {
         };
 
         self.n = 0;
-        let mut quads = Vec::with_capacity(Self::MAX_SYMBOLS * 4);
+        self.quads.clear();
+
         for c in s.chars().take(Self::MAX_SYMBOLS) {
             self.n += 2;
             if c == ' ' {
@@ -73,7 +80,7 @@ impl Font {
 
             let (u, v) = (u as f32 / mw, v as f32 / mh);
             let (du, dv) = (w as f32 / mw, h as f32 / mh);
-            quads.extend([
+            self.quads.extend([
                 vert(x, y, u, v),
                 vert(x + dx, y, u + du, v),
                 vert(x + dx, y - dy, u + du, v + dv),
@@ -83,7 +90,9 @@ impl Font {
             px += w as i32 * FONT_SIZE + FONT_SIZE;
         }
 
-        self.mesh.update_verts(&quads).expect("update font mesh");
+        self.mesh
+            .update_verts(&self.quads)
+            .expect("update font mesh");
     }
 }
 

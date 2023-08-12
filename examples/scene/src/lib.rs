@@ -461,7 +461,7 @@ impl Loop for App {
                 .with_clear_color(clear_color)
                 .start()
                 .bind_textures(&self.font.map)
-                .draw_limited(&self.font.mesh, self.font.n);
+                .draw_limited(&self.font.mesh, self.font.len());
         }
     }
 }
