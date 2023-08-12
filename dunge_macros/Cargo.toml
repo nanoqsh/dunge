@@ -2,6 +2,10 @@
 name = "dunge_macros"
 version = "0.1.10"
 edition = "2021"
+description = "Procmacro for the dunge library"
+license = "MIT"
+documentation = "https://docs.rs/dunge"
+repository = "https://github.com/nanoqsh/dunge"
 
 [lib]
 proc-macro = true

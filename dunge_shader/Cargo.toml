@@ -2,3 +2,7 @@
 name = "dunge_shader"
 version = "0.1.10"
 edition = "2021"
+description = "Shader generator for the dunge library"
+license = "MIT"
+documentation = "https://docs.rs/dunge"
+repository = "https://github.com/nanoqsh/dunge"
