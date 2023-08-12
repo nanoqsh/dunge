@@ -11,8 +11,8 @@ repository = "https://github.com/nanoqsh/dunge"
 rust-version = "1.71"
 
 [dependencies]
-dunge_macros = { path = "../dunge_macros" }
-dunge_shader = { path = "../dunge_shader" }
+dunge_macros = "0.2"
+dunge_shader = "0.2"
 bytemuck = { version = "1.13", features = ["derive"] }
 glam = "0.24"
 instant = "0.1"
