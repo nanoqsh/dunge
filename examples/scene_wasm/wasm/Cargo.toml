@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 scene = { path = "../../scene" }
-dunge = { path = "../../../dunge" }
+dunge = { path = "../../../dunge", default-features = false }
 console_error_panic_hook = "0.1"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

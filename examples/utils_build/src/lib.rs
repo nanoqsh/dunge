@@ -53,6 +53,6 @@ fn report(output: &Output) {
     if code != 0 {
         let err = String::from_utf8_lossy(&output.stderr);
         let out = String::from_utf8_lossy(&output.stdout);
-        panic!("error while compiling android:\nerr: {err}\nout: {out}\ncode: {code}\n");
+        panic!("error while compiling:\nerr: {err}\nout: {out}\ncode: {code}\n");
     }
 }

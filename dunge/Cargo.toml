@@ -39,5 +39,6 @@ winit = { version = "0.28", default-features = false, features = [
 ] }
 
 [features]
+default = ["x11"]
 x11 = ["winit/x11"]
 wayland = ["winit/wayland"]
