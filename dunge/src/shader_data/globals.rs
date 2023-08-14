@@ -1,6 +1,6 @@
 use {
     crate::{
-        camera::{Camera, View},
+        camera::Camera,
         color::{Color, Rgb},
         layer::Layer,
         pipeline::Globals as Bindings,
@@ -40,7 +40,7 @@ impl<S> Globals<S> {
         } = params;
 
         let device = state.device();
-        let camera = variables.view.map(|view| {
+        let camera = variables.camera.map(|camera| {
             let model = ModelTransform::default();
             let buf = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("camera buffer"),
@@ -48,8 +48,6 @@ impl<S> Globals<S> {
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             });
 
-            let mut camera = Camera::default();
-            camera.update_view(view);
             (camera, buf)
         });
 
@@ -89,19 +87,20 @@ impl<S> Globals<S> {
         }
     }
 
-    /// Updates the view with a new [view](`View`).
+    /// Updates the view with a new [view](crate::View).
     ///
     /// # Panics
     /// Panics if the shader has no view.
-    pub fn update_view(&mut self, view: View)
+    pub fn update_view<V>(&mut self, view: V)
     where
         S: Shader,
+        V: Into<Camera>,
     {
         let info = ShaderInfo::new::<S>();
         assert!(info.has_camera(), "the shader has no view");
 
         let (camera, _) = self.camera.as_mut().expect("camera");
-        camera.update_view(view);
+        *camera = view.into();
     }
 
     /// Updates the ambient with a new [color](`Rgb`).
@@ -144,7 +143,7 @@ struct Parameters<'a> {
 
 #[derive(Default)]
 struct Variables {
-    view: Option<View>,
+    camera: Option<Camera>,
     ambient: Option<AmbientUniform>,
 }
 
@@ -163,9 +162,12 @@ impl<'a> Builder<'a> {
         }
     }
 
-    /// Sets a camera [view](View) for the globals object.
-    pub fn with_view(mut self, view: View) -> Self {
-        self.variables.view = Some(view);
+    /// Sets a camera [view](crate::View) for the globals object.
+    pub fn with_view<V>(mut self, view: V) -> Self
+    where
+        V: Into<Camera>,
+    {
+        self.variables.camera = Some(view.into());
         self
     }
 
@@ -187,7 +189,7 @@ impl<'a> Builder<'a> {
         let info = ShaderInfo::new::<S>();
         if info.has_camera() {
             assert!(
-                self.variables.view.is_some(),
+                self.variables.camera.is_some(),
                 "the shader requires view, but it's not set",
             );
         }

@@ -10,7 +10,7 @@ fn main() -> ! {
             width: 500,
             height: 500,
         },
-        show_cursor: false,
+        show_cursor: true,
         ..Default::default()
     })
     .run_blocking(CanvasConfig::default(), App::new)

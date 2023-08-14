@@ -37,6 +37,10 @@ impl ModelTransform {
     pub(crate) fn into_inner(self) -> Mat {
         self.0
     }
+
+    pub fn into_mat(self) -> Mat4 {
+        Mat4::from_cols_array_2d(&self.0)
+    }
 }
 
 impl Default for ModelTransform {

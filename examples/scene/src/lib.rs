@@ -4,13 +4,38 @@ mod models;
 use {
     crate::font::Font,
     dunge::{
-        input::Key, shader::*, topology::LineStrip, Blend, Color, Compare, Context, Format, Frame,
-        FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights, Loop, Mesh,
-        MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, PostEffect, Rgb, Rgba,
-        Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex, View,
+        glam::Vec3, input::Key, shader::*, topology::LineStrip, Blend, Color, Compare, Context,
+        Format, Frame, FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights,
+        Loop, Mesh, MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, PostEffect, Rgb,
+        Rgba, Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex,
     },
     utils::Camera,
 };
+
+struct Ray {
+    color: InstanceColor,
+    mesh: Mesh<ColorVert, LineStrip>,
+}
+
+impl Ray {
+    fn new(a: Vec3, b: Vec3, context: &Context) -> Self {
+        Self {
+            color: {
+                let rgb = Color([1., 0., 0.]);
+                context.create_instances_color(&[ModelColor::from(rgb)])
+            },
+            mesh: {
+                let verts = [
+                    ColorVert { pos: a.to_array() },
+                    ColorVert { pos: b.to_array() },
+                ];
+
+                let data = MeshData::from_verts(&verts);
+                context.create_mesh(&data)
+            },
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Vertex)]
@@ -92,9 +117,11 @@ pub struct App {
     sprite_meshes: Vec<Sprite>,
     squares: Squares,
     font: Font,
+    view: dunge::Camera,
     camera: Camera,
     time_passed: f32,
     fullscreen: bool,
+    rays: Vec<Ray>,
 }
 
 impl App {
@@ -126,16 +153,18 @@ impl App {
                 .build(&scheme)
         };
 
+        let view = dunge::Camera::default();
+
         // Create globals
         let texture_globals = context
             .globals_builder()
-            .with_view(View::default())
+            .with_view(view.clone())
             .with_ambient(AMBIENT_COLOR)
             .build(&texture_layer);
 
         let color_globals = context
             .globals_builder()
-            .with_view(View::default())
+            .with_view(view.clone())
             .build(&color_layer);
 
         let post = context
@@ -323,9 +352,11 @@ impl App {
             sprite_meshes,
             squares,
             font,
+            view,
             camera: Camera::default(),
             time_passed: 0.,
             fullscreen: false,
+            rays: vec![],
         }
     }
 }
@@ -398,9 +429,22 @@ impl Loop for App {
             height_factor: 1. / sprite_scale,
             ..Default::default()
         });
+        // let view = self.camera.view(Perspective::default());
+        self.view.update_view(view);
 
-        self.texture_globals.update_view(view);
-        self.color_globals.update_view(view);
+        if input.mouse.pressed_left {
+            if let Some((x, y)) = input.cursor_position {
+                let (w, h) = context.size();
+                let v = self.view.model((w, h)).into_mat().inverse();
+
+                dbg!(x, y);
+                let x = -x;
+                let a = Vec3::new(x, y, 0.); // (0., 0., 0.) for perspective, (x, y, 0.) for orthographic
+                let b = Vec3::new(x, y, 1.);
+                let ray = Ray::new(v.project_point3(a), v.project_point3(b), context);
+                self.rays.push(ray);
+            }
+        }
 
         self.sprite_meshes
             .iter()
@@ -443,13 +487,18 @@ impl Loop for App {
         }
 
         {
-            frame
-                .layer(&self.color_layer)
-                .start()
+            let mut layer = frame.layer(&self.color_layer).start();
+
+            layer
                 .bind_globals(&self.color_globals)
                 .bind_instance_color(&self.squares.color)
                 .bind_instance(&self.squares.instance)
                 .draw(&self.squares.mesh);
+
+            layer.bind_default_instance();
+            for ray in &self.rays {
+                layer.bind_instance_color(&ray.color).draw(&ray.mesh);
+            }
         }
 
         frame.draw_on_screen_with(&self.post);

@@ -79,7 +79,7 @@ impl Canvas {
                 std::{num::NonZeroU32, time::Duration},
                 wgpu::SurfaceError,
                 winit::{
-                    dpi::PhysicalPosition,
+                    dpi::{PhysicalPosition, PhysicalSize},
                     event::{
                         DeviceEvent, ElementState, Event, KeyboardInput, MouseButton,
                         MouseScrollDelta, StartCause, Touch, TouchPhase, WindowEvent,
@@ -132,19 +132,25 @@ impl Canvas {
                             ElementState::Pressed => pressed_keys.push(key),
                             ElementState::Released => released_keys.push(key),
                         },
-                        WindowEvent::CursorMoved { position, .. } => {
-                            cursor_position = Some(position.into());
+                        WindowEvent::CursorMoved {
+                            position: PhysicalPosition { x, y },
+                            ..
+                        } => {
+                            let PhysicalSize { width, height } = context.window.inner_size();
+                            let nx = 1. - x as f32 * 2. / width as f32;
+                            let ny = 1. - y as f32 * 2. / height as f32;
+                            cursor_position = Some((nx, ny));
                         }
                         WindowEvent::CursorLeft { .. } => {
                             cursor_position = None;
                         }
-                        WindowEvent::MouseWheel { delta, .. } => match delta {
-                            MouseScrollDelta::LineDelta(x, y) => {
-                                mouse.wheel_delta.0 += x;
-                                mouse.wheel_delta.1 += y;
-                            }
-                            MouseScrollDelta::PixelDelta(PhysicalPosition { .. }) => {}
-                        },
+                        WindowEvent::MouseWheel {
+                            delta: MouseScrollDelta::LineDelta(x, y),
+                            ..
+                        } => {
+                            mouse.wheel_delta.0 += x;
+                            mouse.wheel_delta.1 += y;
+                        }
                         WindowEvent::MouseInput { state, button, .. } => match button {
                             MouseButton::Left => {
                                 mouse.pressed_left = state == ElementState::Pressed;

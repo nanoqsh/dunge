@@ -84,7 +84,7 @@ pub use crate::canvas::android::from_app;
 
 pub use {
     crate::{
-        camera::{Orthographic, Perspective, Projection, View},
+        camera::{Camera, Orthographic, Perspective, Projection, View},
         canvas::{Backend, Canvas, CanvasConfig, Device, Info, Selector},
         color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, PixelSize},

@@ -1,33 +1,56 @@
 use {
     crate::shader_data::ModelTransform,
     glam::{Mat4, Quat, Vec3},
-    std::cell::Cell,
+    std::sync::{Arc, Mutex, MutexGuard},
 };
 
-#[derive(Default)]
-pub(crate) struct Camera {
-    view: View,
-    cache: Cell<Option<Cache>>,
-}
+#[derive(Clone, Default)]
+pub struct Camera(Arc<Mutex<Inner>>);
 
 impl Camera {
-    pub fn update_view(&mut self, view: View) {
-        self.view = view;
-        self.cache.set(None);
+    pub fn update_view(&self, view: View) {
+        *self.inner() = Inner::new(view);
     }
 
-    pub fn model(&self, (width, height): (u32, u32)) -> ModelTransform {
-        match self.cache.get() {
-            Some(Cache { size: (w, h), .. }) if width != w || height != h => {}
+    pub fn model(&self, size: (u32, u32)) -> ModelTransform {
+        self.inner().model(size)
+    }
+
+    fn inner(&self) -> MutexGuard<Inner> {
+        self.0.lock().expect("lock inner")
+    }
+}
+
+impl From<View> for Camera {
+    fn from(view: View) -> Self {
+        let inner = Inner::new(view);
+        Self(Arc::new(Mutex::new(inner)))
+    }
+}
+
+#[derive(Default)]
+struct Inner {
+    view: View,
+    cache: Option<Cache>,
+}
+
+impl Inner {
+    fn new(view: View) -> Self {
+        Self { view, cache: None }
+    }
+
+    fn model(&mut self, (width, height): (u32, u32)) -> ModelTransform {
+        match self.cache {
+            Some(Cache { size, .. }) if (width, height) != size => {}
             Some(Cache { model, .. }) => return model,
             None => {}
         }
 
         let model = self.view.model((width as f32, height as f32));
-        self.cache.set(Some(Cache {
+        self.cache = Some(Cache {
             size: (width, height),
             model,
-        }));
+        });
 
         model
     }
@@ -61,9 +84,7 @@ impl View {
         let (_, rot, _) = mat.to_scale_rotation_translation();
         rot
     }
-}
 
-impl View {
     fn model(&self, (width, height): (f32, f32)) -> ModelTransform {
         let proj = match self.proj {
             Projection::Perspective(Perspective { fovy, znear, zfar }) => {
