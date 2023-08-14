@@ -6,9 +6,9 @@ use {
     dunge::{
         glam::Vec3, input::Key, shader::*, topology::LineStrip, Blend, Color, Compare, Context,
         Format, Frame, FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights,
-        Loop, Mesh, MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, PostEffect, Rgb,
-        Rgba, Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex,
-        ViewHandle,
+        Loop, Mesh, MeshData, ModelColor, ModelTransform, Orthographic, Perspective, PixelSize,
+        PostEffect, Rgb, Rgba, Source, Space, SpaceData, Spaces, TextureData, Textures, Transform,
+        Vertex, ViewHandle,
     },
     utils::Camera,
 };
@@ -120,6 +120,7 @@ pub struct App {
     font: Font,
     view: ViewHandle,
     camera: Camera,
+    projection: Projection,
     time_passed: f32,
     fullscreen: bool,
     rays: Vec<Ray>,
@@ -355,6 +356,7 @@ impl App {
             font,
             view,
             camera: Camera::default(),
+            projection: Projection::Orthographic,
             time_passed: 0.,
             fullscreen: false,
             rays: vec![],
@@ -414,6 +416,7 @@ impl Loop for App {
                         .window()
                         .set_fullscreen(self.fullscreen.then_some(Fullscreen::Borderless(None)));
                 }
+                Key::P => self.projection.toggle(),
                 _ => {}
             }
         }
@@ -425,12 +428,15 @@ impl Loop for App {
 
         // Set the view
         let sprite_scale = 4. * 6.;
-        let view = self.camera.view(Orthographic {
-            width_factor: 1. / sprite_scale,
-            height_factor: 1. / sprite_scale,
-            ..Default::default()
-        });
-        // let view = self.camera.view(Perspective::default());
+        let view = match self.projection {
+            Projection::Perspective => self.camera.view(Perspective::default()),
+            Projection::Orthographic => self.camera.view(Orthographic {
+                width_factor: 1. / sprite_scale,
+                height_factor: 1. / sprite_scale,
+                ..Default::default()
+            }),
+        };
+
         self.view.update_view(view);
 
         if input.mouse.pressed_left {
@@ -440,7 +446,11 @@ impl Loop for App {
 
                 dbg!(x, y);
                 let x = -x;
-                let a = Vec3::new(x, y, 0.); // (0., 0., 0.) for perspective, (x, y, 0.) for orthographic
+                let a = match self.projection {
+                    Projection::Perspective => Vec3::ZERO,
+                    Projection::Orthographic => Vec3::new(x, y, 0.),
+                };
+
                 let b = Vec3::new(x, y, 1.);
                 let ray = Ray::new(v.project_point3(a), v.project_point3(b), context);
                 self.rays.push(ray);
@@ -512,6 +522,20 @@ impl Loop for App {
                 .start()
                 .bind_textures(&self.font.map)
                 .draw_limited(&self.font.mesh, self.font.len());
+        }
+    }
+}
+
+enum Projection {
+    Perspective,
+    Orthographic,
+}
+
+impl Projection {
+    fn toggle(&mut self) {
+        *self = match self {
+            Self::Perspective => Self::Orthographic,
+            Self::Orthographic => Self::Perspective,
         }
     }
 }
