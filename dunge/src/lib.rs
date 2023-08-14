@@ -1,8 +1,8 @@
 mod buffer;
-mod camera;
 mod canvas;
 mod color;
 mod context;
+mod view;
 pub mod error {
     //! Error types.
 
@@ -84,7 +84,6 @@ pub use crate::canvas::android::from_app;
 
 pub use {
     crate::{
-        camera::{Camera, Orthographic, Perspective, Projection, View},
         canvas::{Backend, Canvas, CanvasConfig, Device, Info, Selector},
         color::{Color, Rgb, Rgba},
         context::{Context, FrameParameters, PixelSize},
@@ -105,6 +104,7 @@ pub use {
         },
         transform::Transform,
         vertex::Vertex,
+        view::{Orthographic, Perspective, Projection, View, ViewHandle},
     },
     dunge_macros::Vertex,
     glam, winit,

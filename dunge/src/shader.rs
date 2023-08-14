@@ -70,7 +70,7 @@ where
 
 pub(crate) struct ShaderInfo {
     instances: Instances,
-    has_camera: bool,
+    has_view: bool,
     has_ambient: bool,
     maps: usize,
     source_arrays: usize,
@@ -86,7 +86,7 @@ impl ShaderInfo {
             instances: Instances {
                 has_color: S::INSTANCE_COLORS,
             },
-            has_camera: matches!(S::VIEW, ViewKind::Camera),
+            has_view: matches!(S::VIEW, ViewKind::Camera),
             has_ambient: S::AMBIENT,
             maps: S::TEXTURES.len(),
             source_arrays: S::SOURCES.len(),
@@ -94,8 +94,8 @@ impl ShaderInfo {
         }
     }
 
-    pub const fn has_camera(&self) -> bool {
-        self.has_camera
+    pub const fn has_view(&self) -> bool {
+        self.has_view
     }
 
     pub const fn has_ambient(&self) -> bool {
@@ -119,7 +119,7 @@ impl ShaderInfo {
     }
 
     pub const fn has_globals(&self) -> bool {
-        self.has_camera() || self.has_ambient()
+        self.has_view() || self.has_ambient()
     }
 
     pub const fn has_textures(&self) -> bool {

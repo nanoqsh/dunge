@@ -8,6 +8,7 @@ use {
         Format, Frame, FrameParameters, Globals, Input, Instance, InstanceColor, Layer, Lights,
         Loop, Mesh, MeshData, ModelColor, ModelTransform, Orthographic, PixelSize, PostEffect, Rgb,
         Rgba, Source, Space, SpaceData, Spaces, TextureData, Textures, Transform, Vertex,
+        ViewHandle,
     },
     utils::Camera,
 };
@@ -117,7 +118,7 @@ pub struct App {
     sprite_meshes: Vec<Sprite>,
     squares: Squares,
     font: Font,
-    view: dunge::Camera,
+    view: ViewHandle,
     camera: Camera,
     time_passed: f32,
     fullscreen: bool,
@@ -153,7 +154,7 @@ impl App {
                 .build(&scheme)
         };
 
-        let view = dunge::Camera::default();
+        let view = ViewHandle::default();
 
         // Create globals
         let texture_globals = context

@@ -1,12 +1,12 @@
 use {
     crate::{
-        camera::Camera,
         color::{Color, Rgb},
         layer::Layer,
         pipeline::Globals as Bindings,
         render::State,
         shader::{Shader, ShaderInfo},
         shader_data::{ambient::AmbientUniform, ModelTransform},
+        view::ViewHandle,
     },
     std::{marker::PhantomData, sync::Arc},
     wgpu::{BindGroup, BindGroupLayout, Buffer, Queue},
@@ -19,7 +19,7 @@ use {
 pub struct Globals<S> {
     group: u32,
     bind_group: BindGroup,
-    camera: Option<(Camera, Buffer)>,
+    view: Option<(ViewHandle, Buffer)>,
     ambient: Option<Buffer>,
     queue: Arc<Queue>,
     ty: PhantomData<S>,
@@ -40,7 +40,7 @@ impl<S> Globals<S> {
         } = params;
 
         let device = state.device();
-        let camera = variables.camera.map(|camera| {
+        let view = variables.view.map(|view| {
             let model = ModelTransform::default();
             let buf = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("camera buffer"),
@@ -48,7 +48,7 @@ impl<S> Globals<S> {
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             });
 
-            (camera, buf)
+            (view, buf)
         });
 
         let ambient = variables.ambient.map(|uniform| {
@@ -60,7 +60,7 @@ impl<S> Globals<S> {
         });
 
         let entries: Vec<_> = [
-            camera.as_ref().map(|(_, buf)| BindGroupEntry {
+            view.as_ref().map(|(_, buf)| BindGroupEntry {
                 binding: bindings.camera,
                 resource: buf.as_entire_binding(),
             }),
@@ -80,7 +80,7 @@ impl<S> Globals<S> {
                 entries: &entries,
                 label: Some("globals bind group"),
             }),
-            camera,
+            view,
             ambient,
             queue: Arc::clone(state.queue()),
             ty: PhantomData,
@@ -94,13 +94,13 @@ impl<S> Globals<S> {
     pub fn update_view<V>(&mut self, view: V)
     where
         S: Shader,
-        V: Into<Camera>,
+        V: Into<ViewHandle>,
     {
         let info = ShaderInfo::new::<S>();
-        assert!(info.has_camera(), "the shader has no view");
+        assert!(info.has_view(), "the shader has no view");
 
-        let (camera, _) = self.camera.as_mut().expect("camera");
-        *camera = view.into();
+        let (handle, _) = self.view.as_mut().expect("view");
+        *handle = view.into();
     }
 
     /// Updates the ambient with a new [color](`Rgb`).
@@ -121,7 +121,7 @@ impl<S> Globals<S> {
     }
 
     pub(crate) fn update_size(&self, size: (u32, u32)) {
-        let Some((camera, buf)) = &self.camera else {
+        let Some((camera, buf)) = &self.view else {
             return;
         };
 
@@ -143,7 +143,7 @@ struct Parameters<'a> {
 
 #[derive(Default)]
 struct Variables {
-    camera: Option<Camera>,
+    view: Option<ViewHandle>,
     ambient: Option<AmbientUniform>,
 }
 
@@ -162,12 +162,12 @@ impl<'a> Builder<'a> {
         }
     }
 
-    /// Sets a camera [view](crate::View) for the globals object.
+    /// Sets a [view](crate::View) for the globals object.
     pub fn with_view<V>(mut self, view: V) -> Self
     where
-        V: Into<Camera>,
+        V: Into<ViewHandle>,
     {
-        self.variables.camera = Some(view.into());
+        self.variables.view = Some(view.into());
         self
     }
 
@@ -187,9 +187,9 @@ impl<'a> Builder<'a> {
         S: Shader,
     {
         let info = ShaderInfo::new::<S>();
-        if info.has_camera() {
+        if info.has_view() {
             assert!(
-                self.variables.camera.is_some(),
+                self.variables.view.is_some(),
                 "the shader requires view, but it's not set",
             );
         }

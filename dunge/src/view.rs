@@ -4,64 +4,6 @@ use {
     std::sync::{Arc, Mutex, MutexGuard},
 };
 
-#[derive(Clone, Default)]
-pub struct Camera(Arc<Mutex<Inner>>);
-
-impl Camera {
-    pub fn update_view(&self, view: View) {
-        *self.inner() = Inner::new(view);
-    }
-
-    pub fn model(&self, size: (u32, u32)) -> ModelTransform {
-        self.inner().model(size)
-    }
-
-    fn inner(&self) -> MutexGuard<Inner> {
-        self.0.lock().expect("lock inner")
-    }
-}
-
-impl From<View> for Camera {
-    fn from(view: View) -> Self {
-        let inner = Inner::new(view);
-        Self(Arc::new(Mutex::new(inner)))
-    }
-}
-
-#[derive(Default)]
-struct Inner {
-    view: View,
-    cache: Option<Cache>,
-}
-
-impl Inner {
-    fn new(view: View) -> Self {
-        Self { view, cache: None }
-    }
-
-    fn model(&mut self, (width, height): (u32, u32)) -> ModelTransform {
-        match self.cache {
-            Some(Cache { size, .. }) if (width, height) != size => {}
-            Some(Cache { model, .. }) => return model,
-            None => {}
-        }
-
-        let model = self.view.model((width as f32, height as f32));
-        self.cache = Some(Cache {
-            size: (width, height),
-            model,
-        });
-
-        model
-    }
-}
-
-#[derive(Clone, Copy)]
-struct Cache {
-    size: (u32, u32),
-    model: ModelTransform,
-}
-
 /// The camera view.
 #[derive(Clone, Copy)]
 pub struct View {
@@ -185,4 +127,62 @@ impl Default for Orthographic {
             far: 100.,
         }
     }
+}
+
+#[derive(Clone, Default)]
+pub struct ViewHandle(Arc<Mutex<Inner>>);
+
+impl ViewHandle {
+    pub fn update_view(&self, view: View) {
+        *self.inner() = Inner::new(view);
+    }
+
+    pub fn model(&self, size: (u32, u32)) -> ModelTransform {
+        self.inner().model(size)
+    }
+
+    fn inner(&self) -> MutexGuard<Inner> {
+        self.0.lock().expect("lock inner")
+    }
+}
+
+impl From<View> for ViewHandle {
+    fn from(view: View) -> Self {
+        let inner = Inner::new(view);
+        Self(Arc::new(Mutex::new(inner)))
+    }
+}
+
+#[derive(Default)]
+struct Inner {
+    view: View,
+    cache: Option<Cache>,
+}
+
+impl Inner {
+    fn new(view: View) -> Self {
+        Self { view, cache: None }
+    }
+
+    fn model(&mut self, (width, height): (u32, u32)) -> ModelTransform {
+        match self.cache {
+            Some(Cache { size, .. }) if (width, height) != size => {}
+            Some(Cache { model, .. }) => return model,
+            None => {}
+        }
+
+        let model = self.view.model((width as f32, height as f32));
+        self.cache = Some(Cache {
+            size: (width, height),
+            model,
+        });
+
+        model
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Cache {
+    size: (u32, u32),
+    model: ModelTransform,
 }
