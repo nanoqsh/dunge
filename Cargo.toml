@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "dunge",
+    "dunge_macros",
+    "dunge_shader",
     "examples/cube",
     "examples/scene",
     "examples/scene_android",
