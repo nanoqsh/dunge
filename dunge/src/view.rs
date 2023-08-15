@@ -129,14 +129,19 @@ impl Default for Orthographic {
     }
 }
 
+/// The view handle. This allows to update [views](View) remotely.
+///
+/// Can be created from a [view](View) object.
 #[derive(Clone, Default)]
 pub struct ViewHandle(Arc<Mutex<Inner>>);
 
 impl ViewHandle {
+    /// Updates the view with a new [view](View).
     pub fn update_view(&self, view: View) {
         *self.inner() = Inner::new(view);
     }
 
+    /// Returns the view [model](ModelTransform).
     pub fn model(&self, size: (u32, u32)) -> ModelTransform {
         self.inner().model(size)
     }
@@ -147,6 +152,7 @@ impl ViewHandle {
 }
 
 impl From<View> for ViewHandle {
+    /// Converts to view [handle](ViewHandle) from the [view](View).
     fn from(view: View) -> Self {
         let inner = Inner::new(view);
         Self(Arc::new(Mutex::new(inner)))
