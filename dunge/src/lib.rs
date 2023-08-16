@@ -2,6 +2,7 @@ mod buffer;
 mod canvas;
 mod color;
 mod context;
+mod element;
 mod view;
 pub mod error {
     //! Error types.

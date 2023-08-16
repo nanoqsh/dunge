@@ -1,6 +1,7 @@
 use {
     crate::{
         context::Context,
+        element::Element,
         r#loop::{Input, Keys, Loop, Mouse},
         render::State,
         screen::Screen,
@@ -17,6 +18,7 @@ use {
 pub struct Canvas {
     event_loop: EventLoop<CanvasEvent>,
     window: Window,
+    el: Element,
 }
 
 impl Canvas {
@@ -47,7 +49,11 @@ impl Canvas {
         M: FnOnce(&mut Context) -> L,
         L: Loop + 'static,
     {
-        let Self { event_loop, window } = self;
+        let Self {
+            event_loop,
+            window,
+            el,
+        } = self;
 
         // Create the context
         let mut context = {
@@ -93,6 +99,8 @@ impl Canvas {
                 Event::NewEvents(cause) => match cause {
                     StartCause::ResumeTimeReached { .. } => {
                         log::info!("resume time reached");
+
+                        el.set_window_size(&context.window);
                         context.window.request_redraw();
                     }
                     StartCause::WaitCancelled {
@@ -349,7 +357,11 @@ pub(crate) mod window {
         let window = builder.build(&event_loop).expect("build window");
         window.set_cursor_visible(state.show_cursor);
 
-        Canvas { event_loop, window }
+        Canvas {
+            event_loop,
+            window,
+            el: Element::default(),
+        }
     }
 
     /// The initial window state.
@@ -385,10 +397,7 @@ pub(crate) mod window {
 /// Creates a canvas in the HTML element by its id.
 #[cfg(target_arch = "wasm32")]
 pub fn from_element(id: &str) -> Canvas {
-    use {
-        web_sys::Window,
-        winit::{dpi::PhysicalSize, platform::web::WindowExtWebSys},
-    };
+    use {web_sys::Window, winit::platform::web::WindowExtWebSys};
 
     let event_loop = EventLoopBuilder::with_user_event().build();
     let window = WindowBuilder::new()
@@ -404,17 +413,18 @@ pub fn from_element(id: &str) -> Canvas {
         panic!("an element with id {id:?} not found");
     };
 
-    window.set_inner_size({
-        let width = el.client_width().max(1) as u32;
-        let height = el.client_height().max(1) as u32;
-        PhysicalSize { width, height }
-    });
+    let el = Element::new(el);
+    el.set_window_size(&window);
 
     let canvas = window.canvas();
     canvas.remove_attribute("style").expect("remove attribute");
     el.append_child(&canvas).expect("append child");
 
-    Canvas { event_loop, window }
+    Canvas {
+        event_loop,
+        window,
+        el,
+    }
 }
 
 #[cfg(target_os = "android")]
@@ -434,7 +444,11 @@ pub(crate) mod android {
             .build(&event_loop)
             .expect("build window");
 
-        Canvas { event_loop, window }
+        Canvas {
+            event_loop,
+            window,
+            el: Element::default(),
+        }
     }
 }
 
