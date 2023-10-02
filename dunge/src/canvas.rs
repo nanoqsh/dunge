@@ -342,6 +342,9 @@ pub(crate) mod window {
     use super::*;
 
     /// Creates a canvas in the window with given initial state.
+    ///
+    /// # Panics
+    /// Panics if window creation fails.
     pub fn make_window(state: InitialState) -> Canvas {
         use winit::{dpi::PhysicalSize, window::Fullscreen};
 
