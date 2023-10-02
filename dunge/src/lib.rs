@@ -3,7 +3,23 @@ mod canvas;
 mod color;
 mod context;
 mod element;
+mod frame;
+mod layer;
+mod r#loop;
+mod mesh;
+mod pipeline;
+mod posteffect;
+mod postproc;
+mod render;
+mod scheme;
+mod screen;
+pub mod shader;
+mod time;
+pub mod topology;
+mod transform;
+pub mod vertex;
 mod view;
+
 pub mod error {
     //! Error types.
 
@@ -15,7 +31,7 @@ pub mod error {
         },
     };
 }
-mod frame;
+
 mod framebuffer {
     mod buffer;
     mod depth_frame;
@@ -24,15 +40,12 @@ mod framebuffer {
     pub(crate) use self::buffer::{BufferSize, Framebuffer};
 }
 
-mod layer;
-mod r#loop;
-mod mesh;
-mod pipeline;
-mod posteffect;
-mod postproc;
-mod render;
-mod scheme;
-mod screen;
+pub mod input {
+    //! User's input types.
+
+    pub use crate::r#loop::{Input, Key, Keys, KeysIterator, Mouse};
+}
+
 mod shader_data {
     mod ambient;
     mod data;
@@ -62,16 +75,6 @@ mod shader_data {
         texture::{InvalidSize as InvalidMapSize, Texture},
         textures::{Builder as TexturesBuilder, Map as MapParameter, Textures},
     };
-}
-pub mod shader;
-mod time;
-pub mod topology;
-mod transform;
-pub mod vertex;
-
-pub mod input {
-    //! User's input types.
-    pub use crate::r#loop::{Input, Key, Keys, KeysIterator, Mouse};
 }
 
 #[cfg(not(target_arch = "wasm32"))]

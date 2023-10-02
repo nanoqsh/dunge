@@ -1,5 +1,8 @@
 mod nodes;
 mod out;
+mod shader;
+mod templater;
+
 mod parts {
     mod ambient;
     mod color;
@@ -28,7 +31,5 @@ mod parts {
         view::ViewKind,
     };
 }
-mod shader;
-mod templater;
 
 pub use crate::{parts::*, shader::*};
