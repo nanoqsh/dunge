@@ -1,3 +1,4 @@
+#[allow(clippy::missing_panics_doc)]
 pub fn run(path: String) {
     use {std::net::SocketAddr, tokio::runtime::Builder};
 

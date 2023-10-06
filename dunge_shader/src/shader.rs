@@ -39,6 +39,7 @@ impl Shader {
     pub const VERTEX_ENTRY_POINT: &str = "vsmain";
     pub const FRAGMENT_ENTRY_POINT: &str = "fsmain";
 
+    #[allow(clippy::missing_panics_doc)]
     pub fn generate(scheme: Scheme) -> Self {
         let Scheme {
             vert,
@@ -130,6 +131,7 @@ impl Shader {
         }
     }
 
+    #[allow(clippy::missing_panics_doc)]
     pub fn postproc(scheme: PostScheme) -> Self {
         let PostScheme {
             post_data,
