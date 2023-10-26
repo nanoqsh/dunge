@@ -357,7 +357,10 @@ pub(crate) mod window {
             }
         };
 
-        let event_loop = EventLoopBuilder::with_user_event().build();
+        let event_loop = EventLoopBuilder::with_user_event()
+            .build()
+            .expect("build event loop");
+
         let window = builder.build(&event_loop).expect("build window");
         window.set_cursor_visible(state.show_cursor);
 
@@ -403,7 +406,10 @@ pub(crate) mod window {
 pub fn from_element(id: &str) -> Canvas {
     use {web_sys::Window, winit::platform::web::WindowExtWebSys};
 
-    let event_loop = EventLoopBuilder::with_user_event().build();
+    let event_loop = EventLoopBuilder::with_user_event()
+        .build()
+        .expect("build event loop");
+
     let window = WindowBuilder::new()
         .build(&event_loop)
         .expect("build window");
