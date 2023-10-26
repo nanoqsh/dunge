@@ -172,6 +172,8 @@ impl State {
                 CanvasBackend::WebGpu => Backends::BROWSER_WEBGPU,
             },
             dx12_shader_compiler: Dx12Compiler::default(),
+            flags: InstanceFlags::default(),
+            gles_minor_version: Gles3MinorVersion::Automatic,
         });
 
         // In Android a surface will be created later

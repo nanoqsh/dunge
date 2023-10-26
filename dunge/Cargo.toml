@@ -17,12 +17,12 @@ bytemuck = { version = "1.13", features = ["derive"] }
 glam = "0.24"
 instant = "0.1"
 log = "0.4"
-wgpu = "0.17"
-winit = { version = "0.28", default-features = false }
+wgpu = "0.18"
+winit = { version = "0.29", default-features = false, features = ["rwh_06"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
-wgpu = { version = "0.17", features = ["webgl"] }
+wgpu = { version = "0.18", features = ["webgl"] }
 web-sys = { version = "0.3", features = [
     "Document",
     "Window",
@@ -34,7 +34,7 @@ web-sys = { version = "0.3", features = [
 pollster = "0.3"
 
 [target.'cfg(target_os = "android")'.dependencies]
-winit = { version = "0.28", default-features = false, features = [
+winit = { version = "0.29", default-features = false, features = [
     "android-native-activity",
 ] }
 

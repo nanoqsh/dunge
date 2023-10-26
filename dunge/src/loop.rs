@@ -1,4 +1,4 @@
-pub use winit::event::VirtualKeyCode as Key;
+pub use winit::keyboard::NamedKey as Key;
 
 use {
     crate::{context::Context, frame::Frame},

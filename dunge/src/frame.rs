@@ -62,7 +62,7 @@ impl<'d> Frame<'d> {
                         load: clear_color.map_or(LoadOp::Load, |[r, g, b, a]| {
                             LoadOp::Clear(Color { r, g, b, a })
                         }),
-                        store: true,
+                        store: StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
@@ -73,10 +73,12 @@ impl<'d> Frame<'d> {
                         } else {
                             LoadOp::Load
                         },
-                        store: true,
+                        store: StoreOp::Store,
                     }),
                     stencil_ops: None,
                 }),
+                timestamp_writes: None,
+                occlusion_query_set: None,
             });
 
         let view_size = shot.screen.virtual_size_with_antialiasing().as_vec2();
@@ -129,10 +131,12 @@ impl<'d> Frame<'d> {
                         resolve_target: None,
                         ops: Operations {
                             load: LoadOp::Load,
-                            store: true,
+                            store: StoreOp::Store,
                         },
                     })],
                     depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
                 });
 
             let params = shot.screen.frame_parameters();
