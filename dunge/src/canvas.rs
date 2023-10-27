@@ -112,14 +112,13 @@ impl Canvas {
                             requested_resume, ..
                         } => {
                             log::info!("wait cancelled");
-                            if let Some(resume) = requested_resume {
-                                target.set_control_flow(ControlFlow::WaitUntil(resume));
-                            }
+
+                            target.set_control_flow(match requested_resume {
+                                Some(resume) => ControlFlow::WaitUntil(resume),
+                                None => ControlFlow::wait_duration(wait_time),
+                            });
                         }
-                        StartCause::Poll => {
-                            log::info!("poll");
-                            target.set_control_flow(ControlFlow::wait_duration(wait_time));
-                        }
+                        StartCause::Poll => log::info!("poll"),
                         StartCause::Init => log::info!("init"),
                     },
                     Event::WindowEvent { event, window_id } if window_id == context.window.id() => {
@@ -128,8 +127,12 @@ impl Canvas {
                         match event {
                             WindowEvent::Resized(size) => context.render.resize(size.into()),
                             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
-                                let (x, y): (f64, f64) = window.inner_size().cast().into();
-                                let size = ((x * scale_factor) as u32, (y * scale_factor) as u32);
+                                let PhysicalSize { width, height } = context.window.inner_size();
+                                let size = (
+                                    (width as f64 * scale_factor) as u32,
+                                    (height as f64 * scale_factor) as u32,
+                                );
+
                                 context.render.resize(size);
                             }
                             WindowEvent::CloseRequested if lp.close_requested() => target.exit(),
@@ -194,74 +197,74 @@ impl Canvas {
                                 }
                                 TouchPhase::Ended | TouchPhase::Cancelled => last_touch = None,
                             },
+                            WindowEvent::RedrawRequested => {
+                                if active {
+                                    log::info!("redraw requested (active)");
+                                } else {
+                                    log::info!("redraw requested");
+
+                                    // Wait a while to become active
+                                    target.set_control_flow(ControlFlow::wait_duration(wait_time));
+                                    return;
+                                }
+
+                                // Measure the delta time
+                                let delta_time = time.delta();
+
+                                // If frame rate is limited, skip drawing until it's time
+                                let min_delta_time = context.limits.min_delta_time;
+                                if delta_time < min_delta_time {
+                                    let wait = Duration::from_secs_f32(min_delta_time - delta_time);
+                                    target.set_control_flow(ControlFlow::wait_duration(wait));
+                                    return;
+                                }
+
+                                // Count number of frames
+                                if let Some(fps) = fps.count(delta_time) {
+                                    context.fps = fps;
+                                }
+
+                                // Create an user's input data
+                                let input = Input {
+                                    delta_time,
+                                    cursor_position,
+                                    mouse,
+                                    pressed_keys: Keys {
+                                        keys: &pressed_keys[..],
+                                    },
+                                    released_keys: Keys {
+                                        keys: &released_keys[..],
+                                    },
+                                };
+
+                                // Reset delta time
+                                time.reset();
+
+                                // Update the loop
+                                lp.update(&mut context, &input);
+
+                                // Reset mouse delta
+                                mouse = Mouse::default();
+
+                                // Reset keys
+                                pressed_keys.clear();
+                                released_keys.clear();
+
+                                match context.render.draw_frame(&lp) {
+                                    Ok(()) => {}
+                                    Err(SurfaceError::Timeout) => {
+                                        log::info!("suface error: timeout");
+                                    }
+                                    Err(SurfaceError::Outdated | SurfaceError::Lost) => {
+                                        context.render.resize(context.window.inner_size().into());
+                                    }
+                                    Err(SurfaceError::OutOfMemory) => {
+                                        log::error!("suface error: out of memory");
+                                        target.exit();
+                                    }
+                                }
+                            }
                             _ => {}
-                        }
-                    }
-                    Event::RedrawRequested(window_id) if window_id == context.window.id() => {
-                        if active {
-                            log::info!("redraw requested (active)");
-                        } else {
-                            log::info!("redraw requested");
-
-                            // Wait a while to become active
-                            target.set_control_flow(ControlFlow::wait_duration(wait_time));
-                            return;
-                        }
-
-                        // Measure the delta time
-                        let delta_time = time.delta();
-
-                        // If frame rate is limited, skip drawing until it's time
-                        let min_delta_time = context.limits.min_delta_time;
-                        if delta_time < min_delta_time {
-                            let wait = Duration::from_secs_f32(min_delta_time - delta_time);
-                            target.set_control_flow(ControlFlow::wait_duration(wait));
-                            return;
-                        }
-
-                        // Count number of frames
-                        if let Some(fps) = fps.count(delta_time) {
-                            context.fps = fps;
-                        }
-
-                        // Create an user's input data
-                        let input = Input {
-                            delta_time,
-                            cursor_position,
-                            mouse,
-                            pressed_keys: Keys {
-                                keys: &pressed_keys[..],
-                            },
-                            released_keys: Keys {
-                                keys: &released_keys[..],
-                            },
-                        };
-
-                        // Reset delta time
-                        time.reset();
-
-                        // Update the loop
-                        lp.update(&mut context, &input);
-
-                        // Reset mouse delta
-                        mouse = Mouse::default();
-
-                        // Reset keys
-                        pressed_keys.clear();
-                        released_keys.clear();
-
-                        match context.render.draw_frame(&lp) {
-                            Ok(()) => {}
-                            Err(SurfaceError::Timeout) => {
-                                log::info!("suface error: timeout");
-                            }
-                            Err(SurfaceError::Outdated | SurfaceError::Lost) => {
-                                context.render.resize(context.window.inner_size().into());
-                            }
-                            Err(SurfaceError::OutOfMemory) => {
-                                log::error!("suface error: out of memory");
-                                target.exit();
-                            }
                         }
                     }
                     Event::DeviceEvent {

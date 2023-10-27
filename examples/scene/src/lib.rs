@@ -418,7 +418,8 @@ impl Loop for App {
                         .window()
                         .set_fullscreen(self.fullscreen.then_some(Fullscreen::Borderless(None)));
                 }
-                Key::P => self.projection.toggle(),
+                // TODO
+                // Key::P => self.projection.toggle(),
                 _ => {}
             }
         }
@@ -529,11 +530,13 @@ impl Loop for App {
 }
 
 enum Projection {
+    #[allow(dead_code)]
     Perspective,
     Orthographic,
 }
 
 impl Projection {
+    #[allow(dead_code)]
     fn toggle(&mut self) {
         *self = match self {
             Self::Perspective => Self::Orthographic,
