@@ -36,8 +36,8 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub const VERTEX_ENTRY_POINT: &str = "vsmain";
-    pub const FRAGMENT_ENTRY_POINT: &str = "fsmain";
+    pub const VERTEX_ENTRY_POINT: &'static str = "vsmain";
+    pub const FRAGMENT_ENTRY_POINT: &'static str = "fsmain";
 
     #[allow(clippy::missing_panics_doc)]
     pub fn generate(scheme: Scheme) -> Self {

@@ -1,4 +1,4 @@
-fn main() -> ! {
+fn main() {
     use {
         cube::App,
         dunge::{CanvasConfig, InitialState, WindowMode},
@@ -13,5 +13,5 @@ fn main() -> ! {
         ..Default::default()
     })
     .run_blocking(CanvasConfig::default(), App::new)
-    .into_panic()
+    .expect("loop error");
 }

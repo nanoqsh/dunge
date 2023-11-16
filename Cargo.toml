@@ -6,7 +6,7 @@ members = [
     "examples/cube",
     "examples/scene",
     "examples/scene_android",
-    "examples/scene_wasm",
+    # "examples/scene_wasm",
     "examples/triangle",
 ]
 default-members = ["dunge"]

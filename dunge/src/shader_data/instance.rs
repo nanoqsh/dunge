@@ -19,7 +19,7 @@ pub struct ModelTransform(Mat);
 
 impl ModelTransform {
     pub(crate) const LAYOUT_ATTRIBUTES_LEN: u32 = Self::LAYOUT.attributes.len() as u32;
-    pub(crate) const LAYOUT: VertexBufferLayout<'_> = {
+    pub(crate) const LAYOUT: VertexBufferLayout<'static> = {
         use std::mem;
 
         VertexBufferLayout {
@@ -68,7 +68,7 @@ pub struct ModelColor([f32; 3]);
 
 impl ModelColor {
     pub(crate) const LAYOUT_ATTRIBUTES_LEN: u32 = Self::LAYOUT.attributes.len() as u32;
-    pub(crate) const LAYOUT: VertexBufferLayout<'_> = {
+    pub(crate) const LAYOUT: VertexBufferLayout<'static> = {
         use std::mem;
 
         VertexBufferLayout {

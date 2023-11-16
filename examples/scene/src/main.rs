@@ -1,4 +1,4 @@
-fn main() -> ! {
+fn main() {
     use {
         dunge::{CanvasConfig, InitialState, WindowMode},
         scene::App,
@@ -14,5 +14,5 @@ fn main() -> ! {
         ..Default::default()
     })
     .run_blocking(CanvasConfig::default(), App::new)
-    .into_panic()
+    .expect("loop error");
 }

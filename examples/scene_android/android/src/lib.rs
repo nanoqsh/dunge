@@ -9,5 +9,5 @@ fn android_main(app: AndroidApp) {
 
     dunge::from_app(app)
         .run_blocking(CanvasConfig::default(), App::new)
-        .into_panic();
+        .expect("loop error");
 }

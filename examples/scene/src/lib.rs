@@ -447,7 +447,6 @@ impl Loop for App {
                 let (w, h) = context.size();
                 let v = self.view.model((w, h)).into_mat().inverse();
 
-                dbg!(x, y);
                 let x = -x;
                 let a = match self.projection {
                     Projection::Perspective => Vec3::ZERO,
