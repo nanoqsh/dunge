@@ -87,7 +87,7 @@ impl Canvas {
                         DeviceEvent, ElementState, Event, KeyEvent, MouseButton, MouseScrollDelta,
                         StartCause, Touch, TouchPhase, WindowEvent,
                     },
-                    keyboard::Key,
+                    keyboard::PhysicalKey,
                 },
             };
 
@@ -133,7 +133,7 @@ impl Canvas {
                         WindowEvent::KeyboardInput {
                             event:
                                 KeyEvent {
-                                    logical_key: Key::Named(key),
+                                    physical_key: PhysicalKey::Code(key),
                                     state,
                                     ..
                                 },

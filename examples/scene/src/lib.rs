@@ -418,8 +418,7 @@ impl Loop for App {
                         .window()
                         .set_fullscreen(self.fullscreen.then_some(Fullscreen::Borderless(None)));
                 }
-                // TODO
-                // Key::P => self.projection.toggle(),
+                Key::KeyP => self.projection.toggle(),
                 _ => {}
             }
         }
