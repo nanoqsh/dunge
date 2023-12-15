@@ -193,9 +193,10 @@ impl State {
             log::info!("selected backend: {backend:?}");
 
             let desc = DeviceDescriptor {
+                label: None,
                 features: Features::empty(),
                 limits: Limits {
-                    max_texture_dimension_2d: 4096,
+                    max_texture_dimension_2d: adapter.limits().max_texture_dimension_2d,
                     max_storage_buffers_per_shader_stage: 0,
                     max_storage_textures_per_shader_stage: 0,
                     max_dynamic_storage_buffers_per_pipeline_layout: 0,
@@ -212,7 +213,6 @@ impl State {
                         Limits::downlevel_defaults()
                     }
                 },
-                label: None,
             };
 
             let (device, queue) = adapter
