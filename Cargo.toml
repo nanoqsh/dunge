@@ -1,14 +1,5 @@
 [workspace]
-members = [
-    "dunge",
-    "dunge_macros",
-    "dunge_shader",
-    "examples/cube",
-    "examples/scene",
-    "examples/scene_android",
-    # "examples/scene_wasm",
-    "examples/triangle",
-]
+members = ["dunge", "dunge_macros", "dunge_shader"]
 default-members = ["dunge"]
 resolver = "2"
 
