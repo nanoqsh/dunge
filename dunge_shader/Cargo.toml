@@ -6,3 +6,6 @@ description = "Shader generator for the dunge library"
 license = "MIT"
 documentation = "https://docs.rs/dunge"
 repository = "https://github.com/nanoqsh/dunge"
+
+[lints]
+workspace = true
