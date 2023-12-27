@@ -161,8 +161,8 @@ impl Texture {
         Self { inner, view }
     }
 
-    pub(crate) fn inner(&self) -> &wgpu::Texture {
-        &self.inner
+    pub fn size(&self) -> (u32, u32) {
+        (self.inner.width(), self.inner.height())
     }
 
     pub(crate) fn view(&self) -> &TextureView {
@@ -170,9 +170,7 @@ impl Texture {
     }
 }
 
-pub struct Sampler {
-    inner: wgpu::Sampler,
-}
+pub struct Sampler(wgpu::Sampler);
 
 impl Sampler {
     pub(crate) fn new(state: &State) -> Self {
@@ -188,11 +186,11 @@ impl Sampler {
             state.device().create_sampler(&desc)
         };
 
-        Self { inner }
+        Self(inner)
     }
 
     pub(crate) fn inner(&self) -> &wgpu::Sampler {
-        &self.inner
+        &self.0
     }
 }
 
@@ -238,13 +236,10 @@ impl CopyBuffer {
         }
     }
 
-    pub(crate) fn copy_texture<T>(&self, texture: &T, encoder: &mut CommandEncoder)
-    where
-        T: CopyTexture,
-    {
+    pub(crate) fn copy_texture(&self, texture: &Texture, encoder: &mut CommandEncoder) {
         use wgpu::*;
 
-        let texture = texture.copy_texture().inner();
+        let texture = &texture.inner;
         let (width, height) = self.size;
         if texture.width() > width || texture.height() != height {
             panic!("texture size doesn't match buffer size");

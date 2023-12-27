@@ -18,8 +18,8 @@ jobs:
         steps:
           - uses: actions/checkout@v3
           - name: Build
-            run: cargo build --features x11 --verbose
+            run: cargo build --verbose
           - name: Clippy
-            run: cargo clippy --features x11
+            run: cargo clippy
           - name: Tests
-            run: cargo test --features x11 --verbose
+            run: cargo test --verbose

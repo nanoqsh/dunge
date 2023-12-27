@@ -31,19 +31,19 @@ pub trait Group {
     type Projection: Projection + 'static;
     const DECL: DeclareGroup;
 
-    fn group<'a, V>(&self, visit: &mut V)
+    fn group<V>(&self, visit: &mut V)
     where
-        V: Visitor<'a>;
+        V: Visitor;
 }
 
 pub trait Projection {
     fn projection(id: u32, out: GlobalOut) -> Self;
 }
 
-pub trait Visitor<'a> {
+pub trait Visitor {
     type Texture;
     type Sampler;
 
-    fn visit_texture(&mut self, texture: &'a Self::Texture);
-    fn visit_sampler(&mut self, sampler: &'a Self::Sampler);
+    fn visit_texture(&mut self, texture: Self::Texture);
+    fn visit_sampler(&mut self, sampler: Self::Sampler);
 }
