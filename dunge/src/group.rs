@@ -4,12 +4,13 @@ use {
         state::State,
         texture::{self, Sampler, Texture},
     },
-    dunge_shader::group::{Group, Visitor},
     std::{any::TypeId, fmt, marker::PhantomData, sync::Arc},
     wgpu::{
         BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
     },
 };
+
+pub use dunge_shader::group::*;
 
 #[derive(Clone, Copy)]
 pub struct BindTexture<'a>(&'a Texture);
@@ -78,9 +79,13 @@ impl fmt::Display for ForeignShader {
     }
 }
 
-pub(crate) trait Bind {
-    fn shader_id(&self) -> usize;
-    fn binds(&self) -> &[BindGroup];
+pub trait Binding {
+    fn binding(&self) -> Bind;
+}
+
+pub struct Bind<'a> {
+    pub(crate) shader_id: usize,
+    pub(crate) groups: &'a [BindGroup],
 }
 
 #[derive(Clone)]
@@ -96,15 +101,12 @@ impl GroupBinding {
             groups: Arc::from(groups),
         }
     }
-}
 
-impl Bind for GroupBinding {
-    fn shader_id(&self) -> usize {
-        self.shader_id
-    }
-
-    fn binds(&self) -> &[BindGroup] {
-        &self.groups
+    fn bind(&self) -> Bind {
+        Bind {
+            shader_id: self.shader_id,
+            groups: &self.groups,
+        }
     }
 }
 
@@ -141,15 +143,9 @@ impl UniqueGroupBinding {
     fn groups(&mut self) -> &mut [BindGroup] {
         Arc::get_mut(&mut self.0.groups).expect("uniqueness is guaranteed by the type")
     }
-}
 
-impl Bind for UniqueGroupBinding {
-    fn shader_id(&self) -> usize {
-        self.0.shader_id
-    }
-
-    fn binds(&self) -> &[BindGroup] {
-        &self.0.groups
+    fn bind(&self) -> Bind {
+        self.0.bind()
     }
 }
 
@@ -167,11 +163,12 @@ impl TypedGroup {
     }
 
     pub fn bind(&self) -> &BindGroupLayout {
-        self.bind.as_ref()
+        &self.bind
     }
 }
 
 pub struct Binder<'a> {
+    shader_id: usize,
     device: &'a Device,
     layout: &'a [TypedGroup],
     groups: Vec<BindGroup>,
@@ -181,6 +178,7 @@ impl<'a> Binder<'a> {
     pub(crate) fn new<V>(state: &'a State, shader: &'a Shader<V>) -> Self {
         let layout = shader.groups();
         Self {
+            shader_id: shader.id(),
             device: state.device(),
             layout,
             groups: Vec::with_capacity(layout.len()),
@@ -212,7 +210,7 @@ impl<'a> Binder<'a> {
         self.groups.push(bind);
 
         GroupHandler {
-            shader_id: 0,
+            shader_id: self.shader_id,
             id,
             layout,
             ty: PhantomData,
@@ -224,7 +222,7 @@ impl<'a> Binder<'a> {
             panic!("some group bindings is not set");
         }
 
-        let binding = GroupBinding::new(0, self.groups);
+        let binding = GroupBinding::new(self.shader_id, self.groups);
         UniqueGroupBinding(binding)
     }
 }

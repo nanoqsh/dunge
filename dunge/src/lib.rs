@@ -6,3 +6,5 @@ pub mod shader;
 pub mod state;
 pub mod texture;
 pub mod time;
+
+pub use dunge_shader::{sl, vertex};

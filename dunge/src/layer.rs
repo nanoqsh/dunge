@@ -1,5 +1,5 @@
 use {
-    crate::{group::Bind, mesh::Mesh, shader::Shader, state::State},
+    crate::{group::Binding, mesh::Mesh, shader::Shader, state::State},
     std::{iter, marker::PhantomData},
     wgpu::{RenderPass, RenderPipeline, TextureFormat},
 };
@@ -11,15 +11,16 @@ pub struct SetLayer<'p, V> {
 }
 
 impl<'p, V> SetLayer<'p, V> {
-    pub(crate) fn bind<B>(&mut self, binding: &'p B) -> BoundLayer<'_, 'p, V>
+    pub fn bind<B>(&mut self, bind: &'p B) -> BoundLayer<'_, 'p, V>
     where
-        B: Bind,
+        B: Binding,
     {
-        if self.shader_id != binding.shader_id() {
+        let bind = bind.binding();
+        if self.shader_id != bind.shader_id {
             panic!("the binding doesn't belong to this shader");
         }
 
-        for (id, group) in iter::zip(0.., binding.binds()) {
+        for (id, group) in iter::zip(0.., bind.groups) {
             self.pass.set_bind_group(id, group, &[]);
         }
 
@@ -36,7 +37,7 @@ pub struct BoundLayer<'s, 'p, V> {
 }
 
 impl<'p, V> BoundLayer<'_, 'p, V> {
-    pub(crate) fn draw(&mut self, mesh: &'p Mesh<V>) {
+    fn draw(&mut self, mesh: &'p Mesh<V>) {
         mesh.draw(self.pass);
     }
 }
@@ -110,7 +111,7 @@ impl Inner {
 
         let pipeline = state.device().create_render_pipeline(&desc);
         Self {
-            shader_id: 0,
+            shader_id: shader.id(),
             pipeline,
         }
     }

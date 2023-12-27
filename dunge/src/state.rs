@@ -4,6 +4,7 @@ use {
         layer::{Layer, SetLayer},
         texture::{CopyBuffer, CopyTexture},
     },
+    std::sync::atomic::{self, AtomicUsize},
     wgpu::{Adapter, CommandEncoder, Device, Instance, Queue, TextureView},
 };
 
@@ -11,6 +12,7 @@ pub(crate) struct State {
     adapter: Adapter,
     device: Device,
     queue: Queue,
+    shader_ids: AtomicUsize,
     encoders: Encoders,
 }
 
@@ -49,6 +51,7 @@ impl State {
             adapter,
             device,
             queue,
+            shader_ids: AtomicUsize::default(),
             encoders: Encoders::default(),
         }
     }
@@ -63,6 +66,12 @@ impl State {
 
     pub fn queue(&self) -> &Queue {
         &self.queue
+    }
+
+    pub fn next_shader_id(&self) -> usize {
+        use atomic::Ordering;
+
+        self.shader_ids.fetch_add(1, Ordering::Relaxed)
     }
 
     pub fn render<D>(&mut self, view: &TextureView, draw: D)

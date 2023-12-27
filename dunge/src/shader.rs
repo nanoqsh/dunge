@@ -1,8 +1,8 @@
 use {
     crate::{group::TypedGroup, state::State},
     dunge_shader::{
-        eval::{InputInfo, IntoModule, Module, Stages},
         group::GroupMemberType,
+        sl::{InputInfo, IntoModule, Module, Stages},
         vertex::VectorType,
     },
     std::marker::PhantomData,
@@ -23,6 +23,10 @@ impl<V> Shader<V> {
             inner: Inner::new(state, module.into_module()),
             ty: PhantomData,
         }
+    }
+
+    pub(crate) fn id(&self) -> usize {
+        self.inner.id
     }
 
     pub(crate) fn module(&self) -> &ShaderModule {
@@ -58,6 +62,7 @@ struct Vertex {
 }
 
 struct Inner {
+    id: usize,
     module: ShaderModule,
     layout: PipelineLayout,
     vertex: Box<[Vertex]>,
@@ -173,6 +178,7 @@ impl Inner {
         };
 
         Self {
+            id: state.next_shader_id(),
             module,
             layout,
             vertex,
