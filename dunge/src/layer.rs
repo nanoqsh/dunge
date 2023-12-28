@@ -1,7 +1,7 @@
 use {
-    crate::{group::Binding, mesh::Mesh, shader::Shader, state::State},
+    crate::{group::Binding, mesh::Mesh, shader::Shader, state::State, texture::Format},
     std::{iter, marker::PhantomData},
-    wgpu::{RenderPass, RenderPipeline, TextureFormat},
+    wgpu::{RenderPass, RenderPipeline},
 };
 
 pub struct SetLayer<'p, V> {
@@ -37,45 +37,24 @@ pub struct BoundLayer<'s, 'p, V> {
 }
 
 impl<'p, V> BoundLayer<'_, 'p, V> {
-    fn draw(&mut self, mesh: &'p Mesh<V>) {
+    pub fn draw(&mut self, mesh: &'p Mesh<V>) {
         mesh.draw(self.pass);
     }
 }
 
 pub struct Layer<V> {
-    inner: Inner,
+    shader_id: usize,
+    format: Format,
+    pipeline: RenderPipeline,
     ty: PhantomData<V>,
 }
 
 impl<V> Layer<V> {
-    pub(crate) fn new(state: &State, format: TextureFormat, shader: &Shader<V>) -> Self {
-        Self {
-            inner: Inner::new(state, format, shader),
-            ty: PhantomData,
-        }
-    }
-
-    pub(crate) fn set<'pass>(&'pass self, mut pass: RenderPass<'pass>) -> SetLayer<'pass, V> {
-        pass.set_pipeline(&self.inner.pipeline);
-        SetLayer {
-            shader_id: self.inner.shader_id,
-            pass,
-            vert: PhantomData,
-        }
-    }
-}
-
-struct Inner {
-    shader_id: usize,
-    pipeline: RenderPipeline,
-}
-
-impl Inner {
-    fn new<V>(state: &State, format: TextureFormat, shader: &Shader<V>) -> Self {
+    pub(crate) fn new(state: &State, format: Format, shader: &Shader<V>) -> Self {
         use wgpu::*;
 
         let targets = [Some(ColorTargetState {
-            format,
+            format: format.wgpu(),
             blend: Some(BlendState::REPLACE),
             write_mask: ColorWrites::ALL,
         })];
@@ -112,7 +91,22 @@ impl Inner {
         let pipeline = state.device().create_render_pipeline(&desc);
         Self {
             shader_id: shader.id(),
+            format,
             pipeline,
+            ty: PhantomData,
+        }
+    }
+
+    pub fn format(&self) -> Format {
+        self.format
+    }
+
+    pub(crate) fn set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, V> {
+        pass.set_pipeline(&self.pipeline);
+        SetLayer {
+            shader_id: self.shader_id,
+            pass,
+            vert: PhantomData,
         }
     }
 }

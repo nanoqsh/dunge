@@ -2,7 +2,7 @@ use {
     crate::{
         draw::Draw,
         layer::{Layer, SetLayer},
-        texture::{CopyBuffer, CopyTexture},
+        texture::{CopyBuffer, CopyTexture, Format, Texture},
     },
     std::sync::atomic::{self, AtomicUsize},
     wgpu::{Adapter, CommandEncoder, Device, Instance, Queue, TextureView},
@@ -13,7 +13,6 @@ pub(crate) struct State {
     device: Device,
     queue: Queue,
     shader_ids: AtomicUsize,
-    encoders: Encoders,
 }
 
 impl State {
@@ -29,9 +28,6 @@ impl State {
 
             instance.request_adapter(&options).await.unwrap()
         };
-
-        let backend = adapter.get_info().backend;
-        println!("backend: {backend:?}");
 
         let (device, queue) = {
             let desc = DeviceDescriptor {
@@ -52,7 +48,6 @@ impl State {
             device,
             queue,
             shader_ids: AtomicUsize::default(),
-            encoders: Encoders::default(),
         }
     }
 
@@ -74,32 +69,45 @@ impl State {
         self.shader_ids.fetch_add(1, Ordering::Relaxed)
     }
 
-    pub fn render<D>(&mut self, view: &TextureView, draw: D)
+    pub fn draw<V, D>(&self, render: &mut Render, view: &V, draw: D)
     where
+        V: AsView,
         D: Draw,
     {
-        let frame = self.encoders.make(&self.device, view);
+        let frame = render.encoders.make(&self.device, view.as_view());
         draw.draw(frame);
 
-        let buffers = self.encoders.drain().map(CommandEncoder::finish);
+        let buffers = render.encoders.drain().map(CommandEncoder::finish);
         self.queue.submit(buffers);
     }
 }
 
+#[derive(Default)]
+pub struct Render {
+    encoders: Encoders,
+}
+
 pub struct Frame<'v, 'e> {
-    view: &'v TextureView,
+    view: View<'v>,
     device: &'e Device,
     encoders: &'e mut Encoders,
     id: usize,
 }
 
 impl Frame<'_, '_> {
-    pub fn subframe<'e, 'v>(&'e mut self, view: &'v TextureView) -> Frame<'v, 'e> {
-        self.encoders.make(self.device, view)
+    pub fn subframe<'e, 'v, V>(&'e mut self, view: &'v V) -> Frame<'v, 'e>
+    where
+        V: AsView,
+    {
+        self.encoders.make(self.device, view.as_view())
     }
 
     pub fn layer<'p, V>(&'p mut self, layer: &'p Layer<V>) -> SetLayer<'p, V> {
         use wgpu::*;
+
+        if self.view.format != layer.format() {
+            panic!("layer format doesn't match frame format");
+        }
 
         let clear = Color {
             r: 0.19,
@@ -109,7 +117,7 @@ impl Frame<'_, '_> {
         };
 
         let attachment = RenderPassColorAttachment {
-            view: self.view,
+            view: self.view.txview,
             resolve_target: None,
             ops: Operations {
                 load: LoadOp::Clear(clear),
@@ -140,7 +148,7 @@ impl Frame<'_, '_> {
 struct Encoders(Vec<CommandEncoder>);
 
 impl Encoders {
-    fn make<'e, 'v>(&'e mut self, device: &'e Device, view: &'v TextureView) -> Frame<'v, 'e> {
+    fn make<'e, 'v>(&'e mut self, device: &'e Device, view: View<'v>) -> Frame<'v, 'e> {
         use wgpu::CommandEncoderDescriptor;
 
         let encoder = {
@@ -164,5 +172,24 @@ impl Encoders {
 
     fn drain(&mut self) -> impl Iterator<Item = CommandEncoder> + '_ {
         self.0.drain(..)
+    }
+}
+
+pub trait AsView {
+    fn as_view(&self) -> View;
+}
+
+#[derive(Clone, Copy)]
+pub struct View<'v> {
+    txview: &'v TextureView,
+    format: Format,
+}
+
+impl AsView for Texture {
+    fn as_view(&self) -> View {
+        View {
+            txview: self.view(),
+            format: self.format(),
+        }
     }
 }

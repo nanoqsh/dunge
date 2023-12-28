@@ -75,7 +75,7 @@ pub enum Error {
 #[derive(Debug)]
 pub struct ZeroSized;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Format {
     RgbAlpha,
 }
@@ -87,7 +87,7 @@ impl Format {
         }
     }
 
-    const fn wgpu(self) -> TextureFormat {
+    pub(crate) const fn wgpu(self) -> TextureFormat {
         match self {
             Self::RgbAlpha => TextureFormat::Rgba8UnormSrgb,
         }
@@ -165,6 +165,10 @@ impl Texture {
         (self.inner.width(), self.inner.height())
     }
 
+    pub fn format(&self) -> Format {
+        Format::from_wgpu(self.inner.format()).expect("supported format")
+    }
+
     pub(crate) fn view(&self) -> &TextureView {
         &self.view
     }
@@ -194,11 +198,11 @@ impl Sampler {
     }
 }
 
-pub(crate) fn make<M>(state: &State, m: M) -> M::Out
+pub(crate) fn make<M>(state: &State, data: M) -> M::Out
 where
     M: Make,
 {
-    m.make(Maker {
+    data.make(Maker {
         state,
         usage: TextureUsages::empty(),
     })
@@ -264,11 +268,11 @@ impl CopyBuffer {
         );
     }
 
-    pub(crate) fn view(&self) -> CopyBufferView {
+    pub fn view(&self) -> CopyBufferView {
         CopyBufferView(self.buf.slice(..))
     }
 
-    pub(crate) fn size(&self) -> (u32, u32) {
+    pub fn size(&self) -> (u32, u32) {
         self.size
     }
 }
@@ -280,12 +284,13 @@ impl Drop for CopyBuffer {
     }
 }
 
-type MapResult = Result<(), BufferAsyncError>;
+pub type MapResult = Result<(), BufferAsyncError>;
 
+#[derive(Clone, Copy)]
 pub struct CopyBufferView<'a>(BufferSlice<'a>);
 
 impl<'a> CopyBufferView<'a> {
-    pub(crate) async fn map<S, R, F>(&self, state: &State, tx: S, rx: R) -> Mapped<'a>
+    pub(crate) async fn map<S, R, F>(self, state: &State, tx: S, rx: R) -> Mapped<'a>
     where
         S: FnOnce(MapResult) + WasmNotSend + 'static,
         R: FnOnce() -> F,

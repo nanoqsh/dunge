@@ -1,3 +1,4 @@
+pub mod context;
 pub mod draw;
 pub mod group;
 pub mod layer;

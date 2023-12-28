@@ -1,8 +1,9 @@
 use {
-    crate::{group::TypedGroup, state::State},
-    dunge_shader::{
+    crate::{
         group::GroupMemberType,
+        group::TypedGroup,
         sl::{InputInfo, IntoModule, Module, Stages},
+        state::State,
         vertex::VectorType,
     },
     std::marker::PhantomData,

@@ -1,6 +1,8 @@
 use {
-    crate::state::State,
-    dunge_shader::vertex::{self, Vertex},
+    crate::{
+        state::State,
+        vertex::{self, Vertex},
+    },
     std::{borrow::Cow, marker::PhantomData, mem, slice},
     wgpu::{Buffer, RenderPass},
 };

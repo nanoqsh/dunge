@@ -101,8 +101,10 @@ impl GroupBinding {
             groups: Arc::from(groups),
         }
     }
+}
 
-    fn bind(&self) -> Bind {
+impl Binding for GroupBinding {
+    fn binding(&self) -> Bind {
         Bind {
             shader_id: self.shader_id,
             groups: &self.groups,
@@ -112,30 +114,35 @@ impl GroupBinding {
 
 pub type Update = Result<(), ForeignShader>;
 
+pub(crate) fn update<G>(
+    state: &State,
+    uni: &mut UniqueGroupBinding,
+    handler: GroupHandler<G>,
+    group: &G,
+) -> Update
+where
+    G: Group,
+{
+    if handler.shader_id != uni.0.shader_id {
+        return Err(ForeignShader);
+    }
+
+    let entries = visit(group);
+    let desc = BindGroupDescriptor {
+        label: None,
+        layout: &handler.layout,
+        entries: &entries,
+    };
+
+    let new = state.device().create_bind_group(&desc);
+    let groups = uni.groups();
+    groups[handler.id] = new;
+    Ok(())
+}
+
 pub struct UniqueGroupBinding(GroupBinding);
 
 impl UniqueGroupBinding {
-    pub(crate) fn update<G>(&mut self, handler: GroupHandler<G>, state: &State, group: &G) -> Update
-    where
-        G: Group,
-    {
-        if handler.shader_id != self.0.shader_id {
-            return Err(ForeignShader);
-        }
-
-        let entries = visit(group);
-        let desc = BindGroupDescriptor {
-            label: None,
-            layout: &handler.layout,
-            entries: &entries,
-        };
-
-        let new = state.device().create_bind_group(&desc);
-        let groups = self.groups();
-        groups[handler.id] = new;
-        Ok(())
-    }
-
     pub fn into_inner(self) -> GroupBinding {
         self.0
     }
@@ -143,9 +150,11 @@ impl UniqueGroupBinding {
     fn groups(&mut self) -> &mut [BindGroup] {
         Arc::get_mut(&mut self.0.groups).expect("uniqueness is guaranteed by the type")
     }
+}
 
-    fn bind(&self) -> Bind {
-        self.0.bind()
+impl Binding for UniqueGroupBinding {
+    fn binding(&self) -> Bind {
+        self.0.binding()
     }
 }
 
