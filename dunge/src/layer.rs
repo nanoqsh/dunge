@@ -36,6 +36,12 @@ pub struct BoundLayer<'s, 'p, V> {
     vert: PhantomData<V>,
 }
 
+impl<'p> BoundLayer<'_, 'p, ()> {
+    pub fn draw_triangles(&mut self, n: u32) {
+        self.pass.draw(0..n * 3, 0..1);
+    }
+}
+
 impl<'p, V> BoundLayer<'_, 'p, V> {
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
         mesh.draw(self.pass);
@@ -45,8 +51,8 @@ impl<'p, V> BoundLayer<'_, 'p, V> {
 pub struct Layer<V> {
     shader_id: usize,
     format: Format,
-    pipeline: RenderPipeline,
-    ty: PhantomData<V>,
+    render: RenderPipeline,
+    vertex: PhantomData<V>,
 }
 
 impl<V> Layer<V> {
@@ -88,12 +94,12 @@ impl<V> Layer<V> {
             multiview: None,
         };
 
-        let pipeline = state.device().create_render_pipeline(&desc);
+        let render = state.device().create_render_pipeline(&desc);
         Self {
             shader_id: shader.id(),
             format,
-            pipeline,
-            ty: PhantomData,
+            render,
+            vertex: PhantomData,
         }
     }
 
@@ -102,7 +108,7 @@ impl<V> Layer<V> {
     }
 
     pub(crate) fn set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, V> {
-        pass.set_pipeline(&self.pipeline);
+        pass.set_pipeline(&self.render);
         SetLayer {
             shader_id: self.shader_id,
             pass,

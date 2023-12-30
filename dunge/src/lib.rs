@@ -1,3 +1,4 @@
+pub mod color;
 pub mod context;
 pub mod draw;
 pub mod group;
@@ -6,6 +7,7 @@ pub mod mesh;
 pub mod shader;
 pub mod state;
 pub mod texture;
-pub mod time;
+#[allow(dead_code)]
+mod time;
 
 pub use dunge_shader::{eval, types, vertex};

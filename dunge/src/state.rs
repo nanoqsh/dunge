@@ -1,11 +1,12 @@
 use {
     crate::{
+        color::Rgba,
         draw::Draw,
         layer::{Layer, SetLayer},
         texture::{CopyBuffer, CopyTexture, Format, Texture},
     },
     std::sync::atomic::{self, AtomicUsize},
-    wgpu::{Adapter, CommandEncoder, Device, Instance, Queue, TextureView},
+    wgpu::{Adapter, Color, CommandEncoder, Device, Instance, LoadOp, Queue, TextureView},
 };
 
 pub(crate) struct State {
@@ -51,6 +52,7 @@ impl State {
         }
     }
 
+    #[allow(dead_code)]
     pub fn adapter(&self) -> &Adapter {
         &self.adapter
     }
@@ -87,6 +89,20 @@ pub struct Render {
     encoders: Encoders,
 }
 
+#[derive(Clone, Copy, Default)]
+pub struct Options {
+    clear_color: Option<Rgba>,
+}
+
+impl Options {
+    fn clear_color(self) -> LoadOp<Color> {
+        self.clear_color.map_or(LoadOp::Load, |col| {
+            let [r, g, b, a] = col.0.map(f64::from);
+            LoadOp::Clear(Color { r, g, b, a })
+        })
+    }
+}
+
 pub struct Frame<'v, 'e> {
     view: View<'v>,
     device: &'e Device,
@@ -102,25 +118,18 @@ impl Frame<'_, '_> {
         self.encoders.make(self.device, view.as_view())
     }
 
-    pub fn layer<'p, V>(&'p mut self, layer: &'p Layer<V>) -> SetLayer<'p, V> {
+    pub fn layer<'p, V>(&'p mut self, layer: &'p Layer<V>, opts: Options) -> SetLayer<'p, V> {
         use wgpu::*;
 
         if self.view.format != layer.format() {
             panic!("layer format doesn't match frame format");
         }
 
-        let clear = Color {
-            r: 0.19,
-            g: 0.06,
-            b: 0.12,
-            a: 1.,
-        };
-
         let attachment = RenderPassColorAttachment {
             view: self.view.txview,
             resolve_target: None,
             ops: Operations {
-                load: LoadOp::Clear(clear),
+                load: opts.clear_color(),
                 store: StoreOp::Store,
             },
         };
