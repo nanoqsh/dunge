@@ -1,13 +1,13 @@
 use {
     crate::{
-        group::{self, DeclareGroup, Group, GroupMemberType},
-        vertex::{self, DeclareInput, VectorType, Vertex},
+        group::{self, DeclareGroup, Group},
+        types::{self, IntoLiteral, Scalar, ScalarType, VectorType},
+        vertex::{self, DeclareInput, Vertex},
     },
     naga::{
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
-        Function, FunctionArgument, FunctionResult, GlobalVariable, Handle, ImageClass,
-        ImageDimension, Literal, Range, ResourceBinding, SampleLevel, ScalarKind, ShaderStage,
-        Span, Statement, StructMember, Type, TypeInner, UniqueArena, VectorSize,
+        Function, FunctionArgument, FunctionResult, GlobalVariable, Handle, Range, ResourceBinding,
+        SampleLevel, ShaderStage, Span, Statement, StructMember, Type, TypeInner, UniqueArena,
     },
     std::{
         any::TypeId, array, cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, ops,
@@ -310,16 +310,16 @@ pub struct Out<P, C> {
 }
 
 pub trait Output {
-    type Place: Eval<VsEntry, Out = Vec4<f32>>;
-    type Color: Eval<FsEntry, Out = Vec4<f32>>;
+    type Place: Eval<VsEntry, Out = types::Vec4<f32>>;
+    type Color: Eval<FsEntry, Out = types::Vec4<f32>>;
 
     fn output(self) -> Out<Self::Place, Self::Color>;
 }
 
 impl<P, C> Output for Out<P, C>
 where
-    P: Eval<VsEntry, Out = Vec4<f32>>,
-    C: Eval<FsEntry, Out = Vec4<f32>>,
+    P: Eval<VsEntry, Out = types::Vec4<f32>>,
+    C: Eval<FsEntry, Out = types::Vec4<f32>>,
 {
     type Place = P;
     type Color = C;
@@ -344,9 +344,12 @@ impl Module {
         let make_input = |kind| match kind {
             InputKind::Type(InputInfo { decl, .. }) => {
                 let mut new = decl.into_iter().map(Member::from_vecty);
-                compl.decl_input(&mut new)
+                Argument::from_type(compl.decl_input(&mut new))
             }
-            InputKind::Index => compl.decl_index(),
+            InputKind::Index => Argument {
+                ty: compl.decl_index(),
+                binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
+            },
         };
 
         let inputs: Vec<_> = cx.inputs.iter().copied().map(make_input).collect();
@@ -359,7 +362,7 @@ impl Module {
             let Expr(ex) = color.eval(&mut fs);
             fs.inner.ret(ex);
             let fsty = fs.define_fragment_ty();
-            let mut args = [fsty].into_iter();
+            let mut args = [fsty].into_iter().map(Argument::from_type);
             let built = fs.inner.build(Stage::Fragment, &mut args, Return::Color);
             (built, fs.required, fsty)
         };
@@ -415,17 +418,17 @@ pub trait Eval<E>: Sized {
     fn eval(self, en: &mut E) -> Expr;
 }
 
-pub type Vec2f<A> = Ret<A, Vec2<f32>>;
-pub type Vec3f<A> = Ret<A, Vec3<f32>>;
-pub type Vec4f<A> = Ret<A, Vec4<f32>>;
-pub type Vec2u<A> = Ret<A, Vec2<u32>>;
-pub type Vec3u<A> = Ret<A, Vec3<u32>>;
-pub type Vec4u<A> = Ret<A, Vec4<u32>>;
-pub type Vec2i<A> = Ret<A, Vec2<i32>>;
-pub type Vec3i<A> = Ret<A, Vec3<i32>>;
-pub type Vec4i<A> = Ret<A, Vec4<i32>>;
-pub type Tx2df<A> = Ret<A, Texture2d<f32>>;
-pub type Sampl<A> = Ret<A, Sampler>;
+pub type Vec2f<A> = Ret<A, types::Vec2<f32>>;
+pub type Vec3f<A> = Ret<A, types::Vec3<f32>>;
+pub type Vec4f<A> = Ret<A, types::Vec4<f32>>;
+pub type Vec2u<A> = Ret<A, types::Vec2<u32>>;
+pub type Vec3u<A> = Ret<A, types::Vec3<u32>>;
+pub type Vec4u<A> = Ret<A, types::Vec4<u32>>;
+pub type Vec2i<A> = Ret<A, types::Vec2<i32>>;
+pub type Vec3i<A> = Ret<A, types::Vec3<i32>>;
+pub type Vec4i<A> = Ret<A, types::Vec4<i32>>;
+pub type Tx2df<A> = Ret<A, types::Texture2d<f32>>;
+pub type Sampl<A> = Ret<A, types::Sampler>;
 
 pub struct Ret<A, T> {
     a: A,
@@ -449,7 +452,7 @@ const fn ret<A, T>(a: A) -> Ret<A, T> {
 
 impl<A, O> ops::Mul<f32> for Ret<A, O>
 where
-    O: Vector,
+    O: types::Vector,
 {
     type Output = Ret<Mul<Self, f32>, O>;
 
@@ -460,7 +463,7 @@ where
 
 impl<A, O> ops::Mul<Ret<A, O>> for f32
 where
-    O: Vector,
+    O: types::Vector,
 {
     type Output = Ret<Mul<Self, Ret<A, O>>, O>;
 
@@ -490,34 +493,6 @@ where
     }
 }
 
-trait IntoLiteral {
-    fn into_literal(self) -> Literal;
-}
-
-impl IntoLiteral for f32 {
-    fn into_literal(self) -> Literal {
-        Literal::F32(self)
-    }
-}
-
-impl IntoLiteral for u32 {
-    fn into_literal(self) -> Literal {
-        Literal::U32(self)
-    }
-}
-
-impl IntoLiteral for i32 {
-    fn into_literal(self) -> Literal {
-        Literal::I32(self)
-    }
-}
-
-impl IntoLiteral for bool {
-    fn into_literal(self) -> Literal {
-        Literal::Bool(self)
-    }
-}
-
 impl<P, E> Eval<E> for P
 where
     P: IntoLiteral,
@@ -536,7 +511,7 @@ pub struct Index {
 }
 
 impl Index {
-    pub const fn new<T>(id: u32) -> Ret<Self, T> {
+    pub const fn new(id: u32) -> Ret<Self, u32> {
         ret(Self { id })
     }
 }
@@ -548,8 +523,8 @@ impl FromContext for Index {
     }
 }
 
-impl<T> Eval<VsEntry> for Ret<Index, T> {
-    type Out = T;
+impl Eval<VsEntry> for Ret<Index, u32> {
+    type Out = u32;
 
     fn eval(self, en: &mut VsEntry) -> Expr {
         Expr(en.inner.argument(self.a.id))
@@ -619,11 +594,59 @@ where
     }
 }
 
+pub const fn i32<A, E>(a: A) -> Ret<As<A>, i32>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(As(a))
+}
+
+pub const fn u32<A, E>(a: A) -> Ret<As<A>, u32>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(As(a))
+}
+
+pub const fn f32<A, E>(a: A) -> Ret<As<A>, f32>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(As(a))
+}
+
+pub const fn bool<A, E>(a: A) -> Ret<As<A>, bool>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(As(a))
+}
+
+pub struct As<A>(A);
+
+impl<A, O, E> Eval<E> for Ret<As<A>, O>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+    E: Get,
+{
+    type Out = O;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let Expr(v) = self.a.0.eval(en);
+        Expr(en.get().convert(v, A::Out::TYPE))
+    }
+}
+
 pub const fn texture_sample<T, S, C, E, F>(tex: T, sam: S, crd: C) -> Vec4f<Sample<T, S, C>>
 where
-    T: Eval<E, Out = Texture2d<F>>,
-    S: Eval<E, Out = Sampler>,
-    C: Eval<E, Out = Vec2<f32>>,
+    T: Eval<E, Out = types::Texture2d<F>>,
+    S: Eval<E, Out = types::Sampler>,
+    C: Eval<E, Out = types::Vec2<f32>>,
 {
     ret(Sample { tex, sam, crd })
 }
@@ -636,12 +659,12 @@ pub struct Sample<T, S, C> {
 
 impl<T, S, C, E, F> Eval<E> for Vec4f<Sample<T, S, C>>
 where
-    T: Eval<E, Out = Texture2d<F>>,
-    S: Eval<E, Out = Sampler>,
-    C: Eval<E, Out = Vec2<f32>>,
+    T: Eval<E, Out = types::Texture2d<F>>,
+    S: Eval<E, Out = types::Sampler>,
+    C: Eval<E, Out = types::Vec2<f32>>,
     E: Get,
 {
-    type Out = Vec4<F>;
+    type Out = types::Vec4<F>;
 
     fn eval(self, en: &mut E) -> Expr {
         let ex = SampleExpr {
@@ -657,7 +680,7 @@ where
 pub const fn fragment<A>(a: A) -> Ret<Fragment<A>, A::Out>
 where
     A: Eval<VsEntry>,
-    A::Out: Vector,
+    A::Out: types::Vector,
 {
     ret(Fragment(a))
 }
@@ -667,12 +690,13 @@ pub struct Fragment<A>(A);
 impl<A> Eval<FsEntry> for Ret<Fragment<A>, A::Out>
 where
     A: Eval<VsEntry> + 'static,
-    A::Out: Vector,
+    A::Out: types::Vector,
 {
     type Out = A::Out;
 
     fn eval(self, en: &mut FsEntry) -> Expr {
-        let index = en.push_evalf(<A::Out as Vector>::TYPE, |en| self.a.0.eval(en));
+        let vecty = <A::Out as types::Vector>::TYPE;
+        let index = en.push_evalf(vecty, |en| self.a.0.eval(en));
         let en = &mut en.inner;
         let arg = en.argument(0);
         Expr(en.access_index(arg, index))
@@ -725,7 +749,7 @@ where
 
 pub const fn vec3<A, B, E>(a: A, b: B) -> Vec3f<Compose<A, B>>
 where
-    A: Eval<E, Out = Vec2<B::Out>>,
+    A: Eval<E, Out = types::Vec2<B::Out>>,
     B: Eval<E>,
 {
     ret(Compose { a, b })
@@ -733,7 +757,7 @@ where
 
 pub const fn vec4<A, B, E>(a: A, b: B) -> Vec4f<Compose<A, B>>
 where
-    A: Eval<E, Out = Vec3<B::Out>>,
+    A: Eval<E, Out = types::Vec3<B::Out>>,
     B: Eval<E>,
 {
     ret(Compose { a, b })
@@ -748,7 +772,7 @@ impl<A, B, O, E> Eval<E> for Ret<Compose<A, B>, O>
 where
     A: Eval<E>,
     B: Eval<E>,
-    O: Vector,
+    O: types::Vector,
     E: Get,
 {
     type Out = O;
@@ -758,7 +782,7 @@ where
         let Expr(x) = a.eval(en);
         let Expr(y) = b.eval(en);
         let en = en.get();
-        let ty = en.ty(O::TYPE.ty());
+        let ty = en.new_type(O::TYPE.ty());
         Expr(en.compose(ty, [x, y]))
     }
 }
@@ -903,7 +927,26 @@ struct Built {
     point: EntryPoint,
 }
 
-type Types<'a> = dyn Iterator<Item = Handle<Type>> + 'a;
+struct Argument {
+    ty: Handle<Type>,
+    binding: Option<Binding>,
+}
+
+impl Argument {
+    fn from_type(ty: Handle<Type>) -> Self {
+        Self { ty, binding: None }
+    }
+
+    fn into_function(self) -> FunctionArgument {
+        FunctionArgument {
+            name: None,
+            ty: self.ty,
+            binding: self.binding,
+        }
+    }
+}
+
+type Args<'a> = dyn Iterator<Item = Argument> + 'a;
 
 pub struct Entry {
     compl: Compiler,
@@ -920,7 +963,7 @@ impl Entry {
         }
     }
 
-    fn ty(&mut self, ty: Type) -> Handle<Type> {
+    fn new_type(&mut self, ty: Type) -> Handle<Type> {
         self.compl.types.insert(ty, Span::UNDEFINED)
     }
 
@@ -928,6 +971,7 @@ impl Entry {
     where
         L: IntoLiteral,
     {
+        self.new_type(L::TYPE.ty());
         let ex = Expression::Literal(l.into_literal());
         self.exprs.append(ex, Span::UNDEFINED)
     }
@@ -944,6 +988,20 @@ impl Entry {
 
     fn access_index(&mut self, base: Handle<Expression>, index: u32) -> Handle<Expression> {
         let ex = Expression::AccessIndex { base, index };
+        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+        self.stats.push(st, &self.exprs);
+        handle
+    }
+
+    fn convert(&mut self, expr: Handle<Expression>, ty: ScalarType) -> Handle<Expression> {
+        let (kind, width) = ty.inner();
+        let ex = Expression::As {
+            expr,
+            kind,
+            convert: Some(width),
+        };
+
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
@@ -987,19 +1045,15 @@ impl Entry {
         self.stats.push(st, &self.exprs);
     }
 
-    fn build(mut self, stage: Stage, args: &mut Types, ret: Return) -> Built {
+    fn build(mut self, stage: Stage, args: &mut Args, ret: Return) -> Built {
+        const COLOR_TYPE: Type = VectorType::Vec4f.ty();
+
         let res = match ret {
             Return::Ty(ty) => FunctionResult { ty, binding: None },
             Return::Color => FunctionResult {
-                ty: self.ty(VEC4F),
-                binding: Some(binding(0, &VEC4F.inner)),
+                ty: self.new_type(COLOR_TYPE),
+                binding: Some(binding_location(0, &COLOR_TYPE.inner)),
             },
-        };
-
-        let make_arg = |ty| FunctionArgument {
-            name: None,
-            ty,
-            binding: None,
         };
 
         let point = EntryPoint {
@@ -1008,7 +1062,7 @@ impl Entry {
             early_depth_test: None,
             workgroup_size: [0; 3],
             function: Function {
-                arguments: args.map(make_arg).collect(),
+                arguments: args.map(Argument::into_function).collect(),
                 result: Some(res),
                 expressions: self.exprs,
                 body: Block::from_vec(self.stats.0),
@@ -1075,15 +1129,7 @@ struct Compiler {
 
 impl Compiler {
     fn decl_index(&mut self) -> Handle<Type> {
-        let ty = Type {
-            name: None,
-            inner: TypeInner::Scalar {
-                kind: ScalarKind::Uint,
-                width: 4,
-            },
-        };
-
-        self.types.insert(ty, Span::UNDEFINED)
+        self.types.insert(ScalarType::Uint.ty(), Span::UNDEFINED)
     }
 
     fn decl_input(&mut self, new: &mut Members) -> Handle<Type> {
@@ -1099,7 +1145,7 @@ impl Compiler {
                 None => {
                     let curr = location;
                     location += 1;
-                    binding(curr, &ty.inner)
+                    binding_location(curr, &ty.inner)
                 }
                 _ => unimplemented!(),
             };
@@ -1158,7 +1204,7 @@ impl Globals {
     }
 }
 
-fn binding(location: u32, inner: &TypeInner) -> Binding {
+fn binding_location(location: u32, inner: &TypeInner) -> Binding {
     let mut binding = Binding::Location {
         location,
         second_blend_source: false,
@@ -1168,122 +1214,4 @@ fn binding(location: u32, inner: &TypeInner) -> Binding {
 
     binding.apply_default_interpolation(inner);
     binding
-}
-
-pub struct Vec2<T>(PhantomData<T>);
-pub struct Vec3<T>(PhantomData<T>);
-pub struct Vec4<T>(PhantomData<T>);
-
-pub trait Vector {
-    const TYPE: VectorType;
-}
-
-impl Vector for Vec2<f32> {
-    const TYPE: VectorType = VectorType::Vec2f;
-}
-
-impl Vector for Vec3<f32> {
-    const TYPE: VectorType = VectorType::Vec3f;
-}
-
-impl Vector for Vec4<f32> {
-    const TYPE: VectorType = VectorType::Vec4f;
-}
-
-impl Vector for Vec2<u32> {
-    const TYPE: VectorType = VectorType::Vec2u;
-}
-
-impl Vector for Vec3<u32> {
-    const TYPE: VectorType = VectorType::Vec3u;
-}
-
-impl Vector for Vec4<u32> {
-    const TYPE: VectorType = VectorType::Vec4u;
-}
-
-impl Vector for Vec2<i32> {
-    const TYPE: VectorType = VectorType::Vec2i;
-}
-
-impl Vector for Vec3<i32> {
-    const TYPE: VectorType = VectorType::Vec3i;
-}
-
-impl Vector for Vec4<i32> {
-    const TYPE: VectorType = VectorType::Vec4i;
-}
-
-const VEC2F: Type = vec(VectorSize::Bi, ScalarKind::Float);
-const VEC3F: Type = vec(VectorSize::Tri, ScalarKind::Float);
-const VEC4F: Type = vec(VectorSize::Quad, ScalarKind::Float);
-const VEC2U: Type = vec(VectorSize::Bi, ScalarKind::Uint);
-const VEC3U: Type = vec(VectorSize::Tri, ScalarKind::Uint);
-const VEC4U: Type = vec(VectorSize::Quad, ScalarKind::Uint);
-const VEC2I: Type = vec(VectorSize::Bi, ScalarKind::Sint);
-const VEC3I: Type = vec(VectorSize::Tri, ScalarKind::Sint);
-const VEC4I: Type = vec(VectorSize::Quad, ScalarKind::Sint);
-
-const fn vec(size: VectorSize, kind: ScalarKind) -> Type {
-    Type {
-        name: None,
-        inner: TypeInner::Vector {
-            size,
-            kind,
-            width: 4,
-        },
-    }
-}
-
-pub struct Texture2d<T>(PhantomData<T>);
-
-const TEXTURE2DF: Type = texture(ImageDimension::D2, ScalarKind::Float);
-
-#[allow(dead_code)]
-const TEXTURE2DU: Type = texture(ImageDimension::D2, ScalarKind::Uint);
-
-#[allow(dead_code)]
-const TEXTURE2DI: Type = texture(ImageDimension::D2, ScalarKind::Sint);
-
-const fn texture(dim: ImageDimension, kind: ScalarKind) -> Type {
-    Type {
-        name: None,
-        inner: TypeInner::Image {
-            dim,
-            arrayed: false,
-            class: ImageClass::Sampled { kind, multi: false },
-        },
-    }
-}
-
-pub struct Sampler;
-
-const SAMPLER: Type = Type {
-    name: None,
-    inner: TypeInner::Sampler { comparison: false },
-};
-
-impl VectorType {
-    const fn ty(&self) -> Type {
-        match self {
-            Self::Vec2f => VEC2F,
-            Self::Vec3f => VEC3F,
-            Self::Vec4f => VEC4F,
-            Self::Vec2u => VEC2U,
-            Self::Vec3u => VEC3U,
-            Self::Vec4u => VEC4U,
-            Self::Vec2i => VEC2I,
-            Self::Vec3i => VEC3I,
-            Self::Vec4i => VEC4I,
-        }
-    }
-}
-
-impl GroupMemberType {
-    const fn ty(&self) -> Type {
-        match self {
-            Self::Tx2df => TEXTURE2DF,
-            Self::Sampl => SAMPLER,
-        }
-    }
 }

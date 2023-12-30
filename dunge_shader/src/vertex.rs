@@ -1,17 +1,7 @@
-use std::{iter, mem, slice};
-
-#[derive(Clone, Copy)]
-pub enum VectorType {
-    Vec2f,
-    Vec3f,
-    Vec4f,
-    Vec2u,
-    Vec3u,
-    Vec4u,
-    Vec2i,
-    Vec3i,
-    Vec4i,
-}
+use {
+    crate::types::VectorType,
+    std::{iter, mem, slice},
+};
 
 #[derive(Clone, Copy)]
 pub struct DeclareInput(&'static [VectorType]);

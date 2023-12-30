@@ -1,5 +1,5 @@
 use {
-    crate::sl::GlobalOut,
+    crate::{eval::GlobalOut, types::GroupMemberType},
     std::{iter, slice},
 };
 
@@ -19,12 +19,6 @@ impl IntoIterator for DeclareGroup {
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter().copied()
     }
-}
-
-#[derive(Clone, Copy)]
-pub enum GroupMemberType {
-    Tx2df,
-    Sampl,
 }
 
 pub trait Group {
