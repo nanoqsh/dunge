@@ -23,6 +23,21 @@ pub struct GroupInfo {
 }
 
 #[derive(Clone, Copy)]
+enum InputKind {
+    Type(InputInfo),
+    Index,
+}
+
+impl InputKind {
+    fn into_input_info(self) -> Option<InputInfo> {
+        match self {
+            Self::Type(info) => Some(info),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct InputInfo {
     pub decl: DeclareInput,
     pub size: usize,
@@ -34,32 +49,55 @@ struct GroupEntry {
     out: GlobalOut,
 }
 
-#[derive(Default)]
+struct Limits {
+    index: u8,
+    input: u8,
+    group: u8,
+}
+
+fn countdown(v: &mut u8, msg: &str) {
+    match v.checked_sub(1) {
+        Some(n) => *v = n,
+        None => panic!("{msg}"),
+    }
+}
+
 pub struct Context {
-    inputs: Vec<InputInfo>,
+    inputs: Vec<InputKind>,
     groups: Vec<GroupEntry>,
+    limits: Limits,
 }
 
 impl Context {
-    pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
-        self.groups.iter().map(|entry| GroupInfo {
-            tyid: entry.tyid,
-            decl: entry.decl,
-            stages: entry.out.stage.get(),
-        })
+    fn new() -> Self {
+        Self {
+            inputs: vec![],
+            groups: vec![],
+            limits: Limits {
+                index: 1,
+                input: 1,
+                group: 4,
+            },
+        }
     }
 
-    pub fn inputs(&self) -> impl Iterator<Item = InputInfo> + '_ {
-        self.inputs.iter().copied()
+    fn declare_index(&mut self) -> u32 {
+        countdown(&mut self.limits.index, "too many indices in the shader");
+        let id = self.inputs.len() as u32;
+        self.inputs.push(InputKind::Index);
+        id
     }
 
     fn declare_input(&mut self, decl: DeclareInput, size: usize) -> u32 {
+        countdown(&mut self.limits.input, "too many inputs in the shader");
         let id = self.inputs.len() as u32;
-        self.inputs.push(InputInfo { decl, size });
+        let info = InputInfo { decl, size };
+        self.inputs.push(InputKind::Type(info));
         id
     }
 
     fn declare_group(&mut self, tyid: TypeId, decl: DeclareGroup) -> (u32, GlobalOut) {
+        countdown(&mut self.limits.group, "too many groups in the shader");
         let out = GlobalOut::default();
         let en = GroupEntry {
             tyid,
@@ -71,10 +109,37 @@ impl Context {
         self.groups.push(en);
         (id, out)
     }
+
+    pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
+        self.groups.iter().map(|entry| GroupInfo {
+            tyid: entry.tyid,
+            decl: entry.decl,
+            stages: entry.out.stage.get(),
+        })
+    }
+
+    pub fn inputs(&self) -> impl Iterator<Item = InputInfo> + '_ {
+        self.inputs
+            .iter()
+            .copied()
+            .flat_map(InputKind::into_input_info)
+    }
 }
 
-pub trait FromContext {
-    fn from_context(cx: &mut Context) -> Self;
+pub trait FromContextTyped {
+    type Vertex;
+    fn from_context_typed(cx: &mut Context) -> Self;
+}
+
+impl<V> FromContextTyped for V
+where
+    V: FromContext,
+{
+    type Vertex = ();
+
+    fn from_context_typed(cx: &mut Context) -> Self {
+        V::from_context(cx)
+    }
 }
 
 pub struct Input<V>(V::Projection)
@@ -92,14 +157,20 @@ where
     }
 }
 
-impl<V> FromContext for Input<V>
+impl<V> FromContextTyped for Input<V>
 where
     V: Vertex,
 {
-    fn from_context(cx: &mut Context) -> Self {
+    type Vertex = V;
+
+    fn from_context_typed(cx: &mut Context) -> Self {
         let id = cx.declare_input(V::DECL, mem::size_of::<V>());
         Self(vertex::Projection::projection(id))
     }
+}
+
+pub trait FromContext {
+    fn from_context(cx: &mut Context) -> Self;
 }
 
 pub trait ProjectionFromContext {
@@ -164,6 +235,75 @@ where
     }
 }
 
+pub trait IntoModule<A> {
+    type Vertex;
+    fn into_module(self) -> Module;
+}
+
+impl<M, O> IntoModule<()> for M
+where
+    M: FnOnce() -> O,
+    O: Output,
+{
+    type Vertex = ();
+
+    fn into_module(self) -> Module {
+        let cx = Context::new();
+        Module::new(cx, self())
+    }
+}
+
+impl<M, O, A> IntoModule<(A,)> for M
+where
+    M: FnOnce(A) -> O,
+    O: Output,
+    A: FromContextTyped,
+{
+    type Vertex = A::Vertex;
+
+    fn into_module(self) -> Module {
+        let mut cx = Context::new();
+        let a = A::from_context_typed(&mut cx);
+        Module::new(cx, self(a))
+    }
+}
+
+impl<M, O, A, B> IntoModule<(A, B)> for M
+where
+    M: FnOnce(A, B) -> O,
+    O: Output,
+    A: FromContextTyped,
+    B: FromContext,
+{
+    type Vertex = A::Vertex;
+
+    fn into_module(self) -> Module {
+        let mut cx = Context::new();
+        let a = A::from_context_typed(&mut cx);
+        let b = B::from_context(&mut cx);
+        Module::new(cx, self(a, b))
+    }
+}
+
+impl<M, O, A, B, C> IntoModule<(A, B, C)> for M
+where
+    M: FnOnce(A, B, C) -> O,
+    O: Output,
+    A: FromContextTyped,
+    B: FromContext,
+    C: FromContext,
+{
+    type Vertex = A::Vertex;
+
+    fn into_module(self) -> Module {
+        let mut cx = Context::new();
+        let a = A::from_context_typed(&mut cx);
+        let b = B::from_context(&mut cx);
+        let c = C::from_context(&mut cx);
+        Module::new(cx, self(a, b, c))
+    }
+}
+
 pub struct Out<P, C> {
     pub place: P,
     pub color: C,
@@ -201,12 +341,15 @@ impl Module {
     {
         let Out { place, color } = output.output();
         let mut compl = Compiler::default();
-        let make_input = |info: &InputInfo| {
-            let mut new = info.decl.into_iter().map(Member::from_vecty);
-            compl.decl_input(&mut new)
+        let make_input = |kind| match kind {
+            InputKind::Type(InputInfo { decl, .. }) => {
+                let mut new = decl.into_iter().map(Member::from_vecty);
+                compl.decl_input(&mut new)
+            }
+            InputKind::Index => compl.decl_index(),
         };
 
-        let inputs: Vec<_> = cx.inputs.iter().map(make_input).collect();
+        let inputs: Vec<_> = cx.inputs.iter().copied().map(make_input).collect();
         for (id, &GroupEntry { decl, .. }) in iter::zip(0.., &cx.groups) {
             compl.decl_group(id, decl);
         }
@@ -256,71 +399,6 @@ impl Module {
         }
 
         Self { cx, nm }
-    }
-}
-
-pub trait IntoModule<A> {
-    type Vertex;
-    fn into_module(self) -> Module;
-}
-
-impl<M, O> IntoModule<()> for M
-where
-    M: FnOnce() -> O,
-    O: Output,
-{
-    type Vertex = ();
-
-    fn into_module(self) -> Module {
-        let cx = Context::default();
-        Module::new(cx, self())
-    }
-}
-
-impl<M, O, V> IntoModule<(Input<V>,)> for M
-where
-    M: FnOnce(Input<V>) -> O,
-    O: Output,
-    V: Vertex,
-{
-    type Vertex = V;
-
-    fn into_module(self) -> Module {
-        let mut cx = Context::default();
-        let input = Input::from_context(&mut cx);
-        Module::new(cx, self(input))
-    }
-}
-
-impl<M, O, G> IntoModule<(Groups<G>,)> for M
-where
-    M: FnOnce(Groups<G>) -> O,
-    O: Output,
-    G: ProjectionFromContext,
-{
-    type Vertex = ();
-
-    fn into_module(self) -> Module {
-        let mut cx = Context::default();
-        let groups = Groups::from_context(&mut cx);
-        Module::new(cx, self(groups))
-    }
-}
-
-impl<M, O, V, G> IntoModule<(Input<V>, Groups<G>)> for M
-where
-    M: FnOnce(Input<V>, Groups<G>) -> O,
-    O: Output,
-    V: Vertex,
-    G: ProjectionFromContext,
-{
-    type Vertex = V;
-
-    fn into_module(self) -> Module {
-        let mut cx = Context::default();
-        let input = Input::from_context(&mut cx);
-        let groups = Groups::from_context(&mut cx);
-        Module::new(cx, self(input, groups))
     }
 }
 
@@ -449,6 +527,32 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         Expr(en.get().literal(self))
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Index {
+    id: u32,
+}
+
+impl Index {
+    pub const fn new<T>(id: u32) -> Ret<Self, T> {
+        ret(Self { id })
+    }
+}
+
+impl FromContext for Index {
+    fn from_context(cx: &mut Context) -> Self {
+        let id = cx.declare_index();
+        Self { id }
+    }
+}
+
+impl<T> Eval<VsEntry> for Ret<Index, T> {
+    type Out = T;
+
+    fn eval(self, en: &mut VsEntry) -> Expr {
+        Expr(en.inner.argument(self.a.id))
     }
 }
 
@@ -970,6 +1074,18 @@ struct Compiler {
 }
 
 impl Compiler {
+    fn decl_index(&mut self) -> Handle<Type> {
+        let ty = Type {
+            name: None,
+            inner: TypeInner::Scalar {
+                kind: ScalarKind::Uint,
+                width: 4,
+            },
+        };
+
+        self.types.insert(ty, Span::UNDEFINED)
+    }
+
     fn decl_input(&mut self, new: &mut Members) -> Handle<Type> {
         const VECTOR_SIZE: u32 = mem::size_of::<f32>() as u32 * 4;
 
