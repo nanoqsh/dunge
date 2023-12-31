@@ -17,6 +17,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
           - uses: actions/checkout@v3
+          - name: Build
+            run: cargo build --verbose
+          - name: Clippy
+            run: cargo clippy
           - name: Install mesa
             run: |
                 set -e
@@ -25,9 +29,5 @@ jobs:
                 sudo apt-get update
                 sudo apt install mesa-utils
 
-          - name: Build
-            run: cargo build --verbose
-          - name: Clippy
-            run: cargo clippy
           - name: Tests
             run: cargo test --verbose
