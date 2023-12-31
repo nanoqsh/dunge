@@ -23,7 +23,7 @@ impl Context {
         use wgpu::{Backends, Instance, InstanceDescriptor};
 
         let desc = InstanceDescriptor {
-            backends: Backends::GL,
+            backends: Backends::VULKAN,
             ..Default::default()
         };
 
