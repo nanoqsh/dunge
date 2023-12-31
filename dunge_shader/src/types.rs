@@ -193,3 +193,132 @@ impl GroupMemberType {
         }
     }
 }
+
+pub trait IntoVector {
+    type Vector: Vector;
+    type Scalar;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar);
+}
+
+impl IntoVector for glam::Vec2 {
+    type Vector = Vec2<f32>;
+    type Scalar = f32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::Vec3 {
+    type Vector = Vec3<f32>;
+    type Scalar = f32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::Vec3A {
+    type Vector = Vec3<f32>;
+    type Scalar = f32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::Vec4 {
+    type Vector = Vec4<f32>;
+    type Scalar = f32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::IVec2 {
+    type Vector = Vec2<i32>;
+    type Scalar = i32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::IVec3 {
+    type Vector = Vec3<i32>;
+    type Scalar = i32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::IVec4 {
+    type Vector = Vec4<i32>;
+    type Scalar = i32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::UVec2 {
+    type Vector = Vec2<u32>;
+    type Scalar = u32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::UVec3 {
+    type Vector = Vec3<u32>;
+    type Scalar = u32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::UVec4 {
+    type Vector = Vec4<u32>;
+    type Scalar = u32;
+
+    fn visit<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}

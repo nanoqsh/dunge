@@ -37,6 +37,7 @@ default-features = false
 features = ["android-native-activity"]
 
 [dev-dependencies]
+glam = "0.25"
 futures = { version = "2.1", package = "futures-lite" }
 
 [lints]

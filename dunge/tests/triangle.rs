@@ -1,7 +1,20 @@
-#[test]
-fn render() {
-    use {dunge::context::Context, futures::future};
+use {
+    dunge::{
+        context::{Context, Error},
+        sl::{Index, Out},
+    },
+    futures::future,
+    glam::Vec4,
+};
 
-    let cx = future::block_on(Context::new()).expect("create context");
-    _ = cx;
+#[test]
+fn render() -> Result<(), Error> {
+    let triangle = |Index(_): Index| Out {
+        place: Vec4::splat(1.),
+        color: Vec4::splat(1.),
+    };
+
+    let cx = future::block_on(Context::new())?;
+    _ = cx.make_shader(triangle);
+    Ok(())
 }

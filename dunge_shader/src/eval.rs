@@ -1,9 +1,9 @@
 use {
     crate::{
-        glam,
-        group::{self, DeclareGroup, Group},
-        types::{self, Scalar, ScalarType, Vector, VectorType},
-        vertex::{self, DeclareInput, Vertex},
+        context::{Context, InputInfo, InputKind, Stages},
+        group::DeclareGroup,
+        module::{Module, Out, Output},
+        types::{self, IntoVector, Scalar, ScalarType, Vector, VectorType},
     },
     naga::{
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
@@ -11,410 +11,76 @@ use {
         ResourceBinding, SampleLevel, ShaderStage, Span, Statement, StructMember, Type, TypeInner,
         UniqueArena,
     },
-    std::{
-        any::TypeId, array, cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, ops,
-        rc::Rc,
-    },
+    std::{array, cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, ops, rc::Rc},
 };
 
-#[derive(Clone, Copy)]
-pub struct GroupInfo {
-    pub tyid: TypeId,
-    pub decl: DeclareGroup,
-    pub stages: Stages,
-}
-
-#[derive(Clone, Copy)]
-enum InputKind {
-    Type(InputInfo),
-    Index,
-}
-
-impl InputKind {
-    fn into_input_info(self) -> Option<InputInfo> {
-        match self {
-            Self::Type(info) => Some(info),
-            _ => None,
+pub(crate) fn make<O>(cx: Context, output: O) -> Module
+where
+    O: Output,
+{
+    let Out { place, color } = output.output();
+    let mut compl = Compiler::default();
+    let make_input = |kind| match kind {
+        InputKind::Type(InputInfo { decl, .. }) => {
+            let mut new = decl.into_iter().map(Member::from_vecty);
+            Argument::from_type(compl.decl_input(&mut new))
         }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct InputInfo {
-    pub decl: DeclareInput,
-    pub size: usize,
-}
-
-struct GroupEntry {
-    tyid: TypeId,
-    decl: DeclareGroup,
-    out: GlobalOut,
-}
-
-struct Limits {
-    index: u8,
-    input: u8,
-    group: u8,
-}
-
-fn countdown(v: &mut u8, msg: &str) {
-    match v.checked_sub(1) {
-        Some(n) => *v = n,
-        None => panic!("{msg}"),
-    }
-}
-
-pub struct Context {
-    inputs: Vec<InputKind>,
-    groups: Vec<GroupEntry>,
-    limits: Limits,
-}
-
-impl Context {
-    fn new() -> Self {
-        Self {
-            inputs: vec![],
-            groups: vec![],
-            limits: Limits {
-                index: 1,
-                input: 1,
-                group: 4,
-            },
-        }
-    }
-
-    fn declare_index(&mut self) -> u32 {
-        countdown(&mut self.limits.index, "too many indices in the shader");
-        let id = self.inputs.len() as u32;
-        self.inputs.push(InputKind::Index);
-        id
-    }
-
-    fn declare_input(&mut self, decl: DeclareInput, size: usize) -> u32 {
-        countdown(&mut self.limits.input, "too many inputs in the shader");
-        let id = self.inputs.len() as u32;
-        let info = InputInfo { decl, size };
-        self.inputs.push(InputKind::Type(info));
-        id
-    }
-
-    fn declare_group(&mut self, tyid: TypeId, decl: DeclareGroup) -> (u32, GlobalOut) {
-        countdown(&mut self.limits.group, "too many groups in the shader");
-        let out = GlobalOut::default();
-        let en = GroupEntry {
-            tyid,
-            decl,
-            out: out.clone(),
-        };
-
-        let id = self.groups.len() as u32;
-        self.groups.push(en);
-        (id, out)
-    }
-
-    pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
-        self.groups.iter().map(|entry| GroupInfo {
-            tyid: entry.tyid,
-            decl: entry.decl,
-            stages: entry.out.stage.get(),
-        })
-    }
-
-    pub fn inputs(&self) -> impl Iterator<Item = InputInfo> + '_ {
-        self.inputs
-            .iter()
-            .copied()
-            .flat_map(InputKind::into_input_info)
-    }
-}
-
-pub trait FromContextTyped {
-    type Vertex;
-    fn from_context_typed(cx: &mut Context) -> Self;
-}
-
-impl<V> FromContextTyped for V
-where
-    V: FromContext,
-{
-    type Vertex = ();
-
-    fn from_context_typed(cx: &mut Context) -> Self {
-        V::from_context(cx)
-    }
-}
-
-pub struct Input<V>(V::Projection)
-where
-    V: Vertex;
-
-impl<V> ops::Deref for Input<V>
-where
-    V: Vertex,
-{
-    type Target = V::Projection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<V> FromContextTyped for Input<V>
-where
-    V: Vertex,
-{
-    type Vertex = V;
-
-    fn from_context_typed(cx: &mut Context) -> Self {
-        let id = cx.declare_input(V::DECL, mem::size_of::<V>());
-        Self(vertex::Projection::projection(id))
-    }
-}
-
-pub trait FromContext {
-    fn from_context(cx: &mut Context) -> Self;
-}
-
-#[derive(Clone, Copy)]
-pub struct Index(pub Ret<ReadIndex, u32>);
-
-impl FromContext for Index {
-    fn from_context(cx: &mut Context) -> Self {
-        let id = cx.declare_index();
-        Self(ReadIndex::new(id))
-    }
-}
-
-pub trait ProjectionFromContext {
-    type Projection;
-    fn from_context(cx: &mut Context) -> Self::Projection;
-}
-
-impl ProjectionFromContext for () {
-    type Projection = ();
-    fn from_context(_: &mut Context) -> Self::Projection {}
-}
-
-impl<A> ProjectionFromContext for A
-where
-    A: Group,
-{
-    type Projection = A::Projection;
-
-    fn from_context(cx: &mut Context) -> Self::Projection {
-        let (id, out) = cx.declare_group(TypeId::of::<A::Projection>(), A::DECL);
-        group::Projection::projection(id, out)
-    }
-}
-
-macro_rules! impl_projection_from_context {
-    ($($t:ident),*) => {
-        impl<$($t),*> ProjectionFromContext for ($($t),*,)
-        where
-            $(
-                $t: Group,
-            )*
-        {
-            type Projection = ($($t::Projection),*,);
-
-            fn from_context(cx: &mut Context) -> Self::Projection {
-                (
-                    $({
-                        let (id, out) = cx.declare_group(TypeId::of::<$t::Projection>(), $t::DECL);
-                        group::Projection::projection(id, out)
-                    }),*,
-                )
-            }
-        }
+        InputKind::Index => Argument {
+            ty: compl.decl_index(),
+            binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
+        },
     };
-}
 
-impl_projection_from_context!(A);
-impl_projection_from_context!(A, B);
-impl_projection_from_context!(A, B, C);
-impl_projection_from_context!(A, B, C, D);
-
-pub struct Groups<G>(pub G::Projection)
-where
-    G: ProjectionFromContext;
-
-impl<G> FromContext for Groups<G>
-where
-    G: ProjectionFromContext,
-{
-    fn from_context(cx: &mut Context) -> Self {
-        Self(G::from_context(cx))
+    let inputs: Vec<_> = cx.inputs.iter().copied().map(make_input).collect();
+    for (id, en) in iter::zip(0.., &cx.groups) {
+        compl.decl_group(id, en.decl());
     }
-}
 
-pub trait IntoModule<A> {
-    type Vertex;
-    fn into_module(self) -> Module;
-}
+    let (fs, required, fsty) = {
+        let mut fs = FsEntry::new(compl);
+        let Expr(ex) = color.eval(&mut fs);
+        fs.inner.ret(ex);
+        let fsty = fs.define_fragment_ty();
+        let mut args = [fsty].into_iter().map(Argument::from_type);
+        let built = fs.inner.build(Stage::Fragment, &mut args, Return::Color);
+        (built, fs.required, fsty)
+    };
 
-impl<M, O> IntoModule<()> for M
-where
-    M: FnOnce() -> O,
-    O: Output,
-{
-    type Vertex = ();
+    let vs = {
+        let mut vs = VsEntry::new(fs.compl);
+        let ex = place.eval(&mut vs);
+        let eval = |req: Required| match req.evalf {
+            EvalFunction::Position => ex.0,
+            EvalFunction::Fn(f) => f(&mut vs).0,
+        };
 
-    fn into_module(self) -> Module {
-        let cx = Context::new();
-        Module::new(cx, self())
-    }
-}
+        let out: Vec<_> = required.into_iter().map(eval).collect();
+        let res = vs.inner.compose(fsty, out);
+        vs.inner.ret(res);
+        let mut args = inputs.into_iter();
+        vs.inner.build(Stage::Vertex, &mut args, Return::Ty(fsty))
+    };
 
-impl<M, O, A> IntoModule<(A,)> for M
-where
-    M: FnOnce(A) -> O,
-    O: Output,
-    A: FromContextTyped,
-{
-    type Vertex = A::Vertex;
+    let compl = vs.compl;
+    let nm = naga::Module {
+        types: compl.types,
+        global_variables: compl.globs.vars,
+        entry_points: vec![vs.point, fs.point],
+        ..Default::default()
+    };
 
-    fn into_module(self) -> Module {
-        let mut cx = Context::new();
-        let a = A::from_context_typed(&mut cx);
-        Module::new(cx, self(a))
-    }
-}
-
-impl<M, O, A, B> IntoModule<(A, B)> for M
-where
-    M: FnOnce(A, B) -> O,
-    O: Output,
-    A: FromContextTyped,
-    B: FromContext,
-{
-    type Vertex = A::Vertex;
-
-    fn into_module(self) -> Module {
-        let mut cx = Context::new();
-        let a = A::from_context_typed(&mut cx);
-        let b = B::from_context(&mut cx);
-        Module::new(cx, self(a, b))
-    }
-}
-
-impl<M, O, A, B, C> IntoModule<(A, B, C)> for M
-where
-    M: FnOnce(A, B, C) -> O,
-    O: Output,
-    A: FromContextTyped,
-    B: FromContext,
-    C: FromContext,
-{
-    type Vertex = A::Vertex;
-
-    fn into_module(self) -> Module {
-        let mut cx = Context::new();
-        let a = A::from_context_typed(&mut cx);
-        let b = B::from_context(&mut cx);
-        let c = C::from_context(&mut cx);
-        Module::new(cx, self(a, b, c))
-    }
-}
-
-pub struct Out<P, C> {
-    pub place: P,
-    pub color: C,
-}
-
-pub trait Output {
-    type Place: Eval<VsEntry, Out = types::Vec4<f32>>;
-    type Color: Eval<FsEntry, Out = types::Vec4<f32>>;
-
-    fn output(self) -> Out<Self::Place, Self::Color>;
-}
-
-impl<P, C> Output for Out<P, C>
-where
-    P: Eval<VsEntry, Out = types::Vec4<f32>>,
-    C: Eval<FsEntry, Out = types::Vec4<f32>>,
-{
-    type Place = P;
-    type Color = C;
-
-    fn output(self) -> Self {
-        self
-    }
-}
-
-pub struct Module {
-    pub cx: Context,
-    pub nm: naga::Module,
-}
-
-impl Module {
-    fn new<O>(cx: Context, output: O) -> Self
-    where
-        O: Output,
+    #[cfg(debug_assertions)]
     {
-        let Out { place, color } = output.output();
-        let mut compl = Compiler::default();
-        let make_input = |kind| match kind {
-            InputKind::Type(InputInfo { decl, .. }) => {
-                let mut new = decl.into_iter().map(Member::from_vecty);
-                Argument::from_type(compl.decl_input(&mut new))
-            }
-            InputKind::Index => Argument {
-                ty: compl.decl_index(),
-                binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
-            },
-        };
+        use naga::valid::{Capabilities, ValidationFlags, Validator};
 
-        let inputs: Vec<_> = cx.inputs.iter().copied().map(make_input).collect();
-        for (id, &GroupEntry { decl, .. }) in iter::zip(0.., &cx.groups) {
-            compl.decl_group(id, decl);
+        let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
+        if let Err(err) = validator.validate(&nm) {
+            eprintln!("{nm:#?}");
+            panic!("shader error: {err}\n{val:#?}", val = err.as_inner());
         }
-
-        let (fs, required, fsty) = {
-            let mut fs = FsEntry::new(compl);
-            let Expr(ex) = color.eval(&mut fs);
-            fs.inner.ret(ex);
-            let fsty = fs.define_fragment_ty();
-            let mut args = [fsty].into_iter().map(Argument::from_type);
-            let built = fs.inner.build(Stage::Fragment, &mut args, Return::Color);
-            (built, fs.required, fsty)
-        };
-
-        let vs = {
-            let mut vs = VsEntry::new(fs.compl);
-            let ex = place.eval(&mut vs);
-            let eval = |req: Required| match req.evalf {
-                EvalFunction::Position => ex.0,
-                EvalFunction::Fn(f) => f(&mut vs).0,
-            };
-
-            let out: Vec<_> = required.into_iter().map(eval).collect();
-            let res = vs.inner.compose(fsty, out);
-            vs.inner.ret(res);
-            let mut args = inputs.into_iter();
-            vs.inner.build(Stage::Vertex, &mut args, Return::Ty(fsty))
-        };
-
-        let compl = vs.compl;
-        let nm = naga::Module {
-            types: compl.types,
-            global_variables: compl.globs.vars,
-            entry_points: vec![vs.point, fs.point],
-            ..Default::default()
-        };
-
-        #[cfg(debug_assertions)]
-        {
-            use naga::valid::{Capabilities, ValidationFlags, Validator};
-
-            let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
-            if let Err(err) = validator.validate(&nm) {
-                eprintln!("{nm:#?}");
-                panic!("shader error: {err}\n{val:#?}", val = err.as_inner());
-            }
-        }
-
-        Self { cx, nm }
     }
+
+    Module { cx, nm }
 }
 
 trait Get {
@@ -551,21 +217,21 @@ where
 
 impl<V, E> Eval<E> for V
 where
-    V: glam::Vector,
+    V: IntoVector,
     V::Scalar: Eval<E>,
     E: Get,
 {
-    type Out = Self;
+    type Out = V::Vector;
 
     fn eval(self, en: &mut E) -> Expr {
-        let mut components = Vec::with_capacity(V::TYPE.dims());
+        let mut components = Vec::with_capacity(V::Vector::TYPE.dims());
         self.visit(|scalar| {
             let Expr(v) = scalar.eval(en);
             components.push(v);
         });
 
         let en = en.get();
-        let ty = en.new_type(V::TYPE.ty());
+        let ty = en.new_type(V::Vector::TYPE.ty());
         Expr(en.compose(ty, components))
     }
 }
@@ -576,7 +242,7 @@ pub struct ReadIndex {
 }
 
 impl ReadIndex {
-    const fn new(id: u32) -> Ret<Self, u32> {
+    pub(crate) const fn new(id: u32) -> Ret<Self, u32> {
         ret(Self { id })
     }
 }
@@ -612,13 +278,15 @@ impl<T> Eval<VsEntry> for Ret<ReadInput, T> {
 }
 
 #[derive(Clone, Default)]
-pub struct GlobalOut {
-    stage: Rc<Cell<Stages>>,
-}
+pub struct GlobalOut(Rc<Cell<Stages>>);
 
 impl GlobalOut {
     fn with_stage(&self, stage: Stage) {
-        self.stage.set(self.stage.get().with(stage));
+        self.0.set(self.0.get().with(stage));
+    }
+
+    pub fn get(&self) -> Stages {
+        self.0.get()
     }
 }
 
@@ -888,8 +556,160 @@ where
     }
 }
 
+pub fn cos<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    ret(Math {
+        args: (x,),
+        func: Func::Cos,
+    })
+}
+
+pub fn cosh<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    ret(Math {
+        args: (x,),
+        func: Func::Cosh,
+    })
+}
+
+pub fn sin<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    ret(Math {
+        args: (x,),
+        func: Func::Sin,
+    })
+}
+
+pub fn sinh<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    ret(Math {
+        args: (x,),
+        func: Func::Sinh,
+    })
+}
+
+pub fn tan<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    ret(Math {
+        args: (x,),
+        func: Func::Tan,
+    })
+}
+
+pub fn tanh<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    ret(Math {
+        args: (x,),
+        func: Func::Tanh,
+    })
+}
+
+enum Func {
+    Cos,
+    Cosh,
+    Sin,
+    Sinh,
+    Tan,
+    Tanh,
+}
+
+impl Func {
+    fn expr(self, MathExprs(exprs): MathExprs) -> Expression {
+        use naga::MathFunction;
+
+        let fun = match self {
+            Self::Cos => MathFunction::Cos,
+            Self::Cosh => MathFunction::Cosh,
+            Self::Sin => MathFunction::Sin,
+            Self::Sinh => MathFunction::Sinh,
+            Self::Tan => MathFunction::Tan,
+            Self::Tanh => MathFunction::Tanh,
+        };
+
+        let [Some(x), y, z, w] = exprs else {
+            unreachable!();
+        };
+
+        Expression::Math {
+            fun,
+            arg: x.0,
+            arg1: y.map(|ex| ex.0),
+            arg2: z.map(|ex| ex.0),
+            arg3: w.map(|ex| ex.0),
+        }
+    }
+}
+
+pub struct Math<A> {
+    args: A,
+    func: Func,
+}
+
+impl<A, O, E> Eval<E> for Ret<Math<A>, O>
+where
+    A: EvalArgs<E>,
+    E: Get,
+{
+    type Out = O;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let mut exprs = MathExprs::default();
+        self.a.args.eval_args(en, &mut exprs);
+        Expr(en.get().math(self.a.func, exprs))
+    }
+}
+
+#[derive(Default)]
+struct MathExprs([Option<Expr>; 4]);
+
+impl MathExprs {
+    fn push(&mut self, expr: Expr) {
+        if let Some(slot) = self.0.iter_mut().find_map(|h| h.as_mut()) {
+            *slot = expr;
+        }
+    }
+}
+
+trait EvalArgs<E> {
+    fn eval_args(self, en: &mut E, o: &mut MathExprs);
+}
+
+impl<X, E> EvalArgs<E> for (X,)
+where
+    X: Eval<E>,
+{
+    fn eval_args(self, en: &mut E, o: &mut MathExprs) {
+        let (x,) = self;
+        o.push(x.eval(en));
+    }
+}
+
+impl<X, Y, E> EvalArgs<E> for (X, Y)
+where
+    X: Eval<E>,
+    Y: Eval<E>,
+{
+    fn eval_args(self, en: &mut E, o: &mut MathExprs) {
+        let (x, y) = self;
+        o.push(x.eval(en));
+        o.push(y.eval(en));
+    }
+}
+
 #[derive(Clone, Copy)]
-enum Stage {
+pub(crate) enum Stage {
     Vertex,
     Fragment,
 }
@@ -906,21 +726,6 @@ impl Stage {
         match self {
             Self::Vertex => ShaderStage::Vertex,
             Self::Fragment => ShaderStage::Fragment,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Default)]
-pub struct Stages {
-    pub vs: bool,
-    pub fs: bool,
-}
-
-impl Stages {
-    fn with(self, stage: Stage) -> Self {
-        match stage {
-            Stage::Vertex => Self { vs: true, ..self },
-            Stage::Fragment => Self { fs: true, ..self },
         }
     }
 }
@@ -1112,6 +917,14 @@ impl Entry {
             right: b,
         };
 
+        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+        self.stats.push(st, &self.exprs);
+        handle
+    }
+
+    fn math(&mut self, f: Func, exprs: MathExprs) -> Handle<Expression> {
+        let ex = f.expr(exprs);
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
