@@ -24,7 +24,7 @@ impl<'a> BindTexture<'a> {
     }
 }
 
-fn visit<'a, G>(group: &'a G) -> Vec<BindGroupEntry<'a>>
+fn visit<G>(group: &G) -> Vec<BindGroupEntry>
 where
     G: Group,
 {

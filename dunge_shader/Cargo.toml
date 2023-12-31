@@ -8,6 +8,7 @@ documentation = "https://docs.rs/dunge"
 repository = "https://github.com/nanoqsh/dunge"
 
 [dependencies]
+glam = "0.25"
 naga = "0.14"
 
 [lints]

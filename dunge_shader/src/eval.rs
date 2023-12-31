@@ -1,13 +1,15 @@
 use {
     crate::{
+        glam,
         group::{self, DeclareGroup, Group},
-        types::{self, IntoLiteral, Scalar, ScalarType, VectorType},
+        types::{self, Scalar, ScalarType, Vector, VectorType},
         vertex::{self, DeclareInput, Vertex},
     },
     naga::{
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
-        Function, FunctionArgument, FunctionResult, GlobalVariable, Handle, Range, ResourceBinding,
-        SampleLevel, ShaderStage, Span, Statement, StructMember, Type, TypeInner, UniqueArena,
+        Function, FunctionArgument, FunctionResult, GlobalVariable, Handle, Literal, Range,
+        ResourceBinding, SampleLevel, ShaderStage, Span, Statement, StructMember, Type, TypeInner,
+        UniqueArena,
     },
     std::{
         any::TypeId, array, cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, ops,
@@ -171,6 +173,16 @@ where
 
 pub trait FromContext {
     fn from_context(cx: &mut Context) -> Self;
+}
+
+#[derive(Clone, Copy)]
+pub struct Index(pub Ret<ReadIndex, u32>);
+
+impl FromContext for Index {
+    fn from_context(cx: &mut Context) -> Self {
+        let id = cx.declare_index();
+        Self(ReadIndex::new(id))
+    }
 }
 
 pub trait ProjectionFromContext {
@@ -493,37 +505,83 @@ where
     }
 }
 
-impl<P, E> Eval<E> for P
+impl<E> Eval<E> for i32
 where
-    P: IntoLiteral,
     E: Get,
 {
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        Expr(en.get().literal(self))
+        Expr(en.get().literal(Literal::I32(self)))
+    }
+}
+
+impl<E> Eval<E> for u32
+where
+    E: Get,
+{
+    type Out = Self;
+
+    fn eval(self, en: &mut E) -> Expr {
+        Expr(en.get().literal(Literal::U32(self)))
+    }
+}
+
+impl<E> Eval<E> for bool
+where
+    E: Get,
+{
+    type Out = Self;
+
+    fn eval(self, en: &mut E) -> Expr {
+        Expr(en.get().literal(Literal::Bool(self)))
+    }
+}
+
+impl<E> Eval<E> for f32
+where
+    E: Get,
+{
+    type Out = Self;
+
+    fn eval(self, en: &mut E) -> Expr {
+        Expr(en.get().literal(Literal::F32(self)))
+    }
+}
+
+impl<V, E> Eval<E> for V
+where
+    V: glam::Vector,
+    V::Scalar: Eval<E>,
+    E: Get,
+{
+    type Out = Self;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let mut components = Vec::with_capacity(V::TYPE.dims());
+        self.visit(|scalar| {
+            let Expr(v) = scalar.eval(en);
+            components.push(v);
+        });
+
+        let en = en.get();
+        let ty = en.new_type(V::TYPE.ty());
+        Expr(en.compose(ty, components))
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct Index {
+pub struct ReadIndex {
     id: u32,
 }
 
-impl Index {
-    pub const fn new(id: u32) -> Ret<Self, u32> {
+impl ReadIndex {
+    const fn new(id: u32) -> Ret<Self, u32> {
         ret(Self { id })
     }
 }
 
-impl FromContext for Index {
-    fn from_context(cx: &mut Context) -> Self {
-        let id = cx.declare_index();
-        Self { id }
-    }
-}
-
-impl Eval<VsEntry> for Ret<Index, u32> {
+impl Eval<VsEntry> for Ret<ReadIndex, u32> {
     type Out = u32;
 
     fn eval(self, en: &mut VsEntry) -> Expr {
@@ -739,6 +797,49 @@ enum State<A> {
     Expr(Handle<Expression>),
 }
 
+pub const fn splat_vec2<A, E>(a: A) -> Ret<Splat<A>, types::Vec2<A::Out>>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(Splat(a))
+}
+
+pub const fn splat_vec3<A, E>(a: A) -> Ret<Splat<A>, types::Vec3<A::Out>>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(Splat(a))
+}
+
+pub const fn splat_vec4<A, E>(a: A) -> Ret<Splat<A>, types::Vec4<A::Out>>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(Splat(a))
+}
+
+pub struct Splat<A>(A);
+
+impl<A, O, E> Eval<E> for Ret<Splat<A>, O>
+where
+    A: Eval<E>,
+    O: Vector,
+    E: Get,
+{
+    type Out = O;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let Expr(v) = self.a.0.eval(en);
+        let en = en.get();
+        let ty = en.new_type(O::TYPE.ty());
+        let components: Vec<_> = (0..O::TYPE.dims()).map(|_| v).collect();
+        Expr(en.compose(ty, components))
+    }
+}
+
 pub const fn vec2<A, B, E>(a: A, b: B) -> Vec2f<Compose<A, B>>
 where
     A: Eval<E, Out = B::Out>,
@@ -784,17 +885,6 @@ where
         let en = en.get();
         let ty = en.new_type(O::TYPE.ty());
         Expr(en.compose(ty, [x, y]))
-    }
-}
-
-struct Member {
-    vecty: VectorType,
-    built: Option<BuiltIn>,
-}
-
-impl Member {
-    fn from_vecty(vecty: VectorType) -> Self {
-        Self { vecty, built: None }
     }
 }
 
@@ -857,6 +947,17 @@ impl Get for VsEntry {
 
     fn get(&mut self) -> &mut Entry {
         &mut self.inner
+    }
+}
+
+struct Member {
+    vecty: VectorType,
+    built: Option<BuiltIn>,
+}
+
+impl Member {
+    fn from_vecty(vecty: VectorType) -> Self {
+        Self { vecty, built: None }
     }
 }
 
@@ -967,12 +1068,8 @@ impl Entry {
         self.compl.types.insert(ty, Span::UNDEFINED)
     }
 
-    fn literal<L>(&mut self, l: L) -> Handle<Expression>
-    where
-        L: IntoLiteral,
-    {
-        self.new_type(L::TYPE.ty());
-        let ex = Expression::Literal(l.into_literal());
+    fn literal(&mut self, literal: Literal) -> Handle<Expression> {
+        let ex = Expression::Literal(literal);
         self.exprs.append(ex, Span::UNDEFINED)
     }
 

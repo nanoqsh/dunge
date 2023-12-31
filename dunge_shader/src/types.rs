@@ -1,5 +1,5 @@
 use {
-    naga::{ImageClass, ImageDimension, Literal, ScalarKind, Type, TypeInner, VectorSize},
+    naga::{ImageClass, ImageDimension, ScalarKind, Type, TypeInner, VectorSize},
     std::marker::PhantomData,
 };
 
@@ -21,34 +21,6 @@ impl Scalar for f32 {
 
 impl Scalar for bool {
     const TYPE: ScalarType = ScalarType::Bool;
-}
-
-pub(crate) trait IntoLiteral: Scalar {
-    fn into_literal(self) -> Literal;
-}
-
-impl IntoLiteral for f32 {
-    fn into_literal(self) -> Literal {
-        Literal::F32(self)
-    }
-}
-
-impl IntoLiteral for u32 {
-    fn into_literal(self) -> Literal {
-        Literal::U32(self)
-    }
-}
-
-impl IntoLiteral for i32 {
-    fn into_literal(self) -> Literal {
-        Literal::I32(self)
-    }
-}
-
-impl IntoLiteral for bool {
-    fn into_literal(self) -> Literal {
-        Literal::Bool(self)
-    }
 }
 
 pub enum ScalarType {
@@ -95,6 +67,14 @@ pub enum VectorType {
 }
 
 impl VectorType {
+    pub(crate) const fn dims(self) -> usize {
+        match self {
+            Self::Vec2f | Self::Vec2u | Self::Vec2i => 2,
+            Self::Vec3f | Self::Vec3u | Self::Vec3i => 3,
+            Self::Vec4f | Self::Vec4u | Self::Vec4i => 4,
+        }
+    }
+
     pub(crate) const fn ty(self) -> Type {
         match self {
             Self::Vec2f => VEC2F,

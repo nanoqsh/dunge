@@ -1,6 +1,7 @@
 use {
     crate::{
         color::Rgba,
+        context::Error,
         draw::Draw,
         layer::{Layer, SetLayer},
         texture::{CopyBuffer, CopyTexture, Format, Texture},
@@ -17,39 +18,45 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new(instance: &Instance) -> Self {
-        use wgpu::*;
-
+    pub async fn new(instance: &Instance) -> Result<Self, Error> {
         let adapter = {
+            use wgpu::{PowerPreference, RequestAdapterOptions};
+
             let options = RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
-                compatible_surface: None,
-                force_fallback_adapter: false,
+                ..Default::default()
             };
 
-            instance.request_adapter(&options).await.unwrap()
+            instance
+                .request_adapter(&options)
+                .await
+                .ok_or(Error::BackendSelection)?
         };
 
         let (device, queue) = {
+            use wgpu::{DeviceDescriptor, Limits};
+
             let desc = DeviceDescriptor {
-                label: None,
-                features: Features::empty(),
                 limits: if cfg!(target_arch = "wasm32") {
                     Limits::downlevel_webgl2_defaults()
                 } else {
                     Limits::default()
                 },
+                ..Default::default()
             };
 
-            adapter.request_device(&desc, None).await.unwrap()
+            adapter
+                .request_device(&desc, None)
+                .await
+                .map_err(|_| Error::RequestDevice)?
         };
 
-        Self {
+        Ok(Self {
             adapter,
             device,
             queue,
             shader_ids: AtomicUsize::default(),
-        }
+        })
     }
 
     #[allow(dead_code)]
@@ -66,9 +73,7 @@ impl State {
     }
 
     pub fn next_shader_id(&self) -> usize {
-        use atomic::Ordering;
-
-        self.shader_ids.fetch_add(1, Ordering::Relaxed)
+        self.shader_ids.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
     pub fn draw<V, D>(&self, render: &mut Render, view: &V, draw: D)

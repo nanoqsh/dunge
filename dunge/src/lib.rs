@@ -10,4 +10,4 @@ pub mod texture;
 #[allow(dead_code)]
 mod time;
 
-pub use dunge_shader::{eval, types, vertex};
+pub use dunge_shader::{sl, vertex};

@@ -1,11 +1,11 @@
 use {
     crate::{
         draw::Draw,
-        eval::IntoModule,
         group::{self, Binder, Group, GroupHandler, UniqueGroupBinding, Update},
         layer::Layer,
         mesh::{self, Mesh},
         shader::Shader,
+        sl::IntoModule,
         state::{Render, State},
         texture::{
             self, CopyBuffer, CopyBufferView, DrawTexture, Format, Make, MapResult, Mapped, Sampler,
@@ -19,12 +19,10 @@ use {
 pub struct Context(Arc<State>);
 
 impl Context {
-    pub async fn new() -> Self {
-        use wgpu::Instance;
-
-        let instance = Instance::default();
-        let state = State::new(&instance).await;
-        Self(Arc::new(state))
+    pub async fn new() -> Result<Self, Error> {
+        let instance = wgpu::Instance::default();
+        let state = State::new(&instance).await?;
+        Ok(Self(Arc::new(state)))
     }
 
     pub fn make_shader<M, A>(&self, module: M) -> Shader<M::Vertex>
@@ -94,4 +92,11 @@ impl Context {
     {
         group::update(&self.0, uni, handler, group)
     }
+}
+
+/// An error returned from the [`Context`] constructor.
+#[derive(Debug)]
+pub enum Error {
+    BackendSelection,
+    RequestDevice,
 }
