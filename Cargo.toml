@@ -13,9 +13,6 @@ opt-level = 1
 panic = "abort"
 split-debuginfo = "unpacked"
 
-[profile.dev.package."*"]
-opt-level = 3
-
 [profile.release]
 codegen-units = 1
 lto = true

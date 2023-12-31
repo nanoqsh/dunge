@@ -23,6 +23,8 @@ jobs:
                 sudo apt-get update -y -qq
                 sudo add-apt-repository ppa:kisak/kisak-mesa
                 sudo apt-get update
+                sudo apt install mesa-utils
+                glxinfo | grep "OpenGL version"
 
           - name: Build
             run: cargo build --verbose
