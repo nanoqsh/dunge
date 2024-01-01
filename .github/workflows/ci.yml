@@ -20,7 +20,7 @@ jobs:
           - name: Build
             run: cargo build --profile ci --verbose
           - name: Clippy
-            run: cargo --profile ci clippy
+            run: cargo clippy --profile ci
           - name: Install vulkan
             run: |
                 set -e

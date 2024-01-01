@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+async-channel = "2.1"
+bytemuck = { workspace = true }
+futures-lite = "2.1"
 png = "0.17"
 
 [lints]
