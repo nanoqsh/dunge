@@ -1,5 +1,5 @@
 [workspace]
-members = ["dunge", "dunge_macros", "dunge_shader"]
+members = ["dunge", "dunge_macros", "dunge_shader", "helpers"]
 default-members = ["dunge"]
 resolver = "2"
 
@@ -15,6 +15,13 @@ split-debuginfo = "unpacked"
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.ci]
+inherits = "dev"
+opt-level = 1
+
+[profile.ci.package."*"]
+opt-level = 1
 
 [profile.release]
 codegen-units = 1

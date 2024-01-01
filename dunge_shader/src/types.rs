@@ -7,6 +7,10 @@ pub trait Scalar {
     const TYPE: ScalarType;
 }
 
+impl Scalar for f32 {
+    const TYPE: ScalarType = ScalarType::Float;
+}
+
 impl Scalar for i32 {
     const TYPE: ScalarType = ScalarType::Sint;
 }
@@ -15,27 +19,23 @@ impl Scalar for u32 {
     const TYPE: ScalarType = ScalarType::Uint;
 }
 
-impl Scalar for f32 {
-    const TYPE: ScalarType = ScalarType::Float;
-}
-
 impl Scalar for bool {
     const TYPE: ScalarType = ScalarType::Bool;
 }
 
 pub enum ScalarType {
+    Float,
     Sint,
     Uint,
-    Float,
     Bool,
 }
 
 impl ScalarType {
     pub(crate) const fn inner(self) -> (ScalarKind, u8) {
         match self {
+            Self::Float => (ScalarKind::Float, 4),
             Self::Sint => (ScalarKind::Sint, 4),
             Self::Uint => (ScalarKind::Uint, 4),
-            Self::Float => (ScalarKind::Float, 4),
             Self::Bool => (ScalarKind::Bool, 1),
         }
     }

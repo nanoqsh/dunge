@@ -96,7 +96,7 @@ pub struct Render {
 
 #[derive(Clone, Copy, Default)]
 pub struct Options {
-    clear_color: Option<Rgba>,
+    pub clear_color: Option<Rgba>,
 }
 
 impl Options {

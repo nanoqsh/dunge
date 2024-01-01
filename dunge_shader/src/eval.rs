@@ -38,7 +38,7 @@ where
 
     let (fs, required, fsty) = {
         let mut fs = FsEntry::new(compl);
-        let Expr(ex) = color.eval(&mut fs);
+        let ex = color.eval(&mut fs);
         fs.inner.ret(ex);
         let fsty = fs.define_fragment_ty();
         let mut args = [fsty].into_iter().map(Argument::from_type);
@@ -50,11 +50,11 @@ where
         let mut vs = VsEntry::new(fs.compl);
         let ex = place.eval(&mut vs);
         let eval = |req: Required| match req.evalf {
-            EvalFunction::Position => ex.0,
-            EvalFunction::Fn(f) => f(&mut vs).0,
+            EvalFunction::Position => ex,
+            EvalFunction::Fn(f) => f(&mut vs),
         };
 
-        let out: Vec<_> = required.into_iter().map(eval).collect();
+        let out = required.into_iter().map(eval).collect();
         let res = vs.inner.compose(fsty, out);
         vs.inner.ret(res);
         let mut args = inputs.into_iter();
@@ -88,25 +88,22 @@ trait Get {
     fn get(&mut self) -> &mut Entry;
 }
 
+#[derive(Clone, Copy)]
 pub struct Expr(Handle<Expression>);
+
+struct Exprs(Vec<Handle<Expression>>);
+
+impl FromIterator<Expr> for Exprs {
+    fn from_iter<T: IntoIterator<Item = Expr>>(iter: T) -> Self {
+        Self(iter.into_iter().map(|Expr(e)| e).collect())
+    }
+}
 
 pub trait Eval<E>: Sized {
     type Out;
 
     fn eval(self, en: &mut E) -> Expr;
 }
-
-pub type Vec2f<A> = Ret<A, types::Vec2<f32>>;
-pub type Vec3f<A> = Ret<A, types::Vec3<f32>>;
-pub type Vec4f<A> = Ret<A, types::Vec4<f32>>;
-pub type Vec2u<A> = Ret<A, types::Vec2<u32>>;
-pub type Vec3u<A> = Ret<A, types::Vec3<u32>>;
-pub type Vec4u<A> = Ret<A, types::Vec4<u32>>;
-pub type Vec2i<A> = Ret<A, types::Vec2<i32>>;
-pub type Vec3i<A> = Ret<A, types::Vec3<i32>>;
-pub type Vec4i<A> = Ret<A, types::Vec4<i32>>;
-pub type Tx2df<A> = Ret<A, types::Texture2d<f32>>;
-pub type Sampl<A> = Ret<A, types::Sampler>;
 
 pub struct Ret<A, T> {
     a: A,
@@ -126,6 +123,22 @@ impl<A, T> Copy for Ret<A, T> where A: Copy {}
 
 const fn ret<A, T>(a: A) -> Ret<A, T> {
     Ret { a, t: PhantomData }
+}
+
+impl<A> ops::Mul<Ret<A, Self>> for f32 {
+    type Output = Ret<Mul<Self, Ret<A, Self>>, Self>;
+
+    fn mul(self, b: Ret<A, Self>) -> Self::Output {
+        ret(Mul { a: self, b })
+    }
+}
+
+impl<A> ops::Mul<f32> for Ret<A, f32> {
+    type Output = Ret<Mul<Self, f32>, f32>;
+
+    fn mul(self, b: f32) -> Self::Output {
+        ret(Mul { a: self, b })
+    }
 }
 
 impl<A, O> ops::Mul<f32> for Ret<A, O>
@@ -164,10 +177,9 @@ where
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let Expr(x) = self.a.a.eval(en);
-        let Expr(y) = self.a.b.eval(en);
-        let ex = en.get().binary([x, y]);
-        Expr(ex)
+        let x = self.a.a.eval(en);
+        let y = self.a.b.eval(en);
+        en.get().binary(Op::Mul, x, y)
     }
 }
 
@@ -178,7 +190,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        Expr(en.get().literal(Literal::I32(self)))
+        en.get().literal(Literal::I32(self))
     }
 }
 
@@ -189,7 +201,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        Expr(en.get().literal(Literal::U32(self)))
+        en.get().literal(Literal::U32(self))
     }
 }
 
@@ -200,7 +212,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        Expr(en.get().literal(Literal::Bool(self)))
+        en.get().literal(Literal::Bool(self))
     }
 }
 
@@ -211,7 +223,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        Expr(en.get().literal(Literal::F32(self)))
+        en.get().literal(Literal::F32(self))
     }
 }
 
@@ -232,7 +244,7 @@ where
 
         let en = en.get();
         let ty = en.new_type(V::Vector::TYPE.ty());
-        Expr(en.compose(ty, components))
+        en.compose(ty, Exprs(components))
     }
 }
 
@@ -251,7 +263,7 @@ impl Eval<VsEntry> for Ret<ReadIndex, u32> {
     type Out = u32;
 
     fn eval(self, en: &mut VsEntry) -> Expr {
-        Expr(en.inner.argument(self.a.id))
+        en.inner.argument(self.a.id)
     }
 }
 
@@ -273,7 +285,7 @@ impl<T> Eval<VsEntry> for Ret<ReadInput, T> {
     fn eval(self, en: &mut VsEntry) -> Expr {
         let en = &mut en.inner;
         let arg = en.argument(self.a.id);
-        Expr(en.access_index(arg, self.a.index))
+        en.access_index(arg, self.a.index)
     }
 }
 
@@ -316,8 +328,16 @@ where
             binding: self.a.binding,
         });
 
-        Expr(en.global(var))
+        en.global(var)
     }
+}
+
+pub const fn f32<A, E>(a: A) -> Ret<As<A>, f32>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+{
+    ret(As(a))
 }
 
 pub const fn i32<A, E>(a: A) -> Ret<As<A>, i32>
@@ -329,14 +349,6 @@ where
 }
 
 pub const fn u32<A, E>(a: A) -> Ret<As<A>, u32>
-where
-    A: Eval<E>,
-    A::Out: Scalar,
-{
-    ret(As(a))
-}
-
-pub const fn f32<A, E>(a: A) -> Ret<As<A>, f32>
 where
     A: Eval<E>,
     A::Out: Scalar,
@@ -357,18 +369,22 @@ pub struct As<A>(A);
 impl<A, O, E> Eval<E> for Ret<As<A>, O>
 where
     A: Eval<E>,
-    A::Out: Scalar,
+    O: Scalar,
     E: Get,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let Expr(v) = self.a.0.eval(en);
-        Expr(en.get().convert(v, A::Out::TYPE))
+        let v = self.a.0.eval(en);
+        en.get().convert(v, O::TYPE)
     }
 }
 
-pub const fn texture_sample<T, S, C, E, F>(tex: T, sam: S, crd: C) -> Vec4f<Sample<T, S, C>>
+pub const fn texture_sample<T, S, C, E, F>(
+    tex: T,
+    sam: S,
+    crd: C,
+) -> Ret<Sample<T, S, C>, types::Vec4<f32>>
 where
     T: Eval<E, Out = types::Texture2d<F>>,
     S: Eval<E, Out = types::Sampler>,
@@ -383,7 +399,7 @@ pub struct Sample<T, S, C> {
     crd: C,
 }
 
-impl<T, S, C, E, F> Eval<E> for Vec4f<Sample<T, S, C>>
+impl<T, S, C, F, E> Eval<E> for Ret<Sample<T, S, C>, types::Vec4<F>>
 where
     T: Eval<E, Out = types::Texture2d<F>>,
     S: Eval<E, Out = types::Sampler>,
@@ -393,13 +409,13 @@ where
     type Out = types::Vec4<F>;
 
     fn eval(self, en: &mut E) -> Expr {
-        let ex = SampleExpr {
-            tex: self.a.tex.eval(en).0,
-            sam: self.a.sam.eval(en).0,
-            crd: self.a.crd.eval(en).0,
+        let ex = Sampled {
+            tex: self.a.tex.eval(en),
+            sam: self.a.sam.eval(en),
+            crd: self.a.crd.eval(en),
         };
 
-        Expr(en.get().sample(ex))
+        en.get().sample(ex)
     }
 }
 
@@ -425,7 +441,7 @@ where
         let index = en.push_evalf(vecty, |en| self.a.0.eval(en));
         let en = &mut en.inner;
         let arg = en.argument(0);
-        Expr(en.access_index(arg, index))
+        en.access_index(arg, index)
     }
 }
 
@@ -500,15 +516,71 @@ where
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let Expr(v) = self.a.0.eval(en);
+        let val = self.a.0.eval(en);
         let en = en.get();
         let ty = en.new_type(O::TYPE.ty());
-        let components: Vec<_> = (0..O::TYPE.dims()).map(|_| v).collect();
-        Expr(en.compose(ty, components))
+        let components = (0..O::TYPE.dims()).map(|_| val).collect();
+        en.compose(ty, components)
     }
 }
 
-pub const fn vec2<A, B, E>(a: A, b: B) -> Vec2f<Compose<A, B>>
+type Vector2<X, Y, O> = Ret<New<(X, Y)>, types::Vec4<O>>;
+
+pub const fn vec2<X, Y, E>(x: X, y: Y) -> Vector2<X, Y, X::Out>
+where
+    X: Eval<E>,
+    X::Out: Scalar,
+    Y: Eval<E, Out = X::Out>,
+{
+    ret(New((x, y)))
+}
+
+type Vector3<X, Y, Z, O> = Ret<New<(X, Y, Z)>, types::Vec4<O>>;
+
+pub const fn vec3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Vector3<X, Y, Z, X::Out>
+where
+    X: Eval<E>,
+    X::Out: Scalar,
+    Y: Eval<E, Out = X::Out>,
+    Z: Eval<E, Out = X::Out>,
+{
+    ret(New((x, y, z)))
+}
+
+type Vector4<X, Y, Z, W, O> = Ret<New<(X, Y, Z, W)>, types::Vec4<O>>;
+
+pub const fn vec4<X, Y, Z, W, E>(x: X, y: Y, z: Z, w: W) -> Vector4<X, Y, Z, W, X::Out>
+where
+    X: Eval<E>,
+    X::Out: Scalar,
+    Y: Eval<E, Out = X::Out>,
+    Z: Eval<E, Out = X::Out>,
+    W: Eval<E, Out = X::Out>,
+{
+    ret(New((x, y, z, w)))
+}
+
+pub struct New<A>(A);
+
+impl<A, O, E> Eval<E> for Ret<New<A>, O>
+where
+    A: EvalTuple<E>,
+    O: Vector,
+    E: Get,
+{
+    type Out = O;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let mut o = Evaluated::default();
+        self.a.0.eval(en, &mut o);
+        let en = en.get();
+        let ty = en.new_type(O::TYPE.ty());
+        let components = o.into_iter().collect();
+        en.compose(ty, components)
+    }
+}
+
+pub const fn compose_vec2<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec2<f32>>
 where
     A: Eval<E, Out = B::Out>,
     B: Eval<E>,
@@ -516,7 +588,7 @@ where
     ret(Compose { a, b })
 }
 
-pub const fn vec3<A, B, E>(a: A, b: B) -> Vec3f<Compose<A, B>>
+pub const fn compose_vec3<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<f32>>
 where
     A: Eval<E, Out = types::Vec2<B::Out>>,
     B: Eval<E>,
@@ -524,7 +596,7 @@ where
     ret(Compose { a, b })
 }
 
-pub const fn vec4<A, B, E>(a: A, b: B) -> Vec4f<Compose<A, B>>
+pub const fn compose_vec4<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<f32>>
 where
     A: Eval<E, Out = types::Vec3<B::Out>>,
     B: Eval<E>,
@@ -552,7 +624,7 @@ where
         let Expr(y) = b.eval(en);
         let en = en.get();
         let ty = en.new_type(O::TYPE.ty());
-        Expr(en.compose(ty, [x, y]))
+        en.compose(ty, Exprs(vec![x, y]))
     }
 }
 
@@ -626,7 +698,7 @@ enum Func {
 }
 
 impl Func {
-    fn expr(self, MathExprs(exprs): MathExprs) -> Expression {
+    fn expr(self, ev: Evaluated) -> Expression {
         use naga::MathFunction;
 
         let fun = match self {
@@ -638,16 +710,13 @@ impl Func {
             Self::Tanh => MathFunction::Tanh,
         };
 
-        let [Some(x), y, z, w] = exprs else {
-            unreachable!();
-        };
-
+        let mut exprs = ev.into_iter().map(|Expr(e)| e);
         Expression::Math {
             fun,
-            arg: x.0,
-            arg1: y.map(|ex| ex.0),
-            arg2: z.map(|ex| ex.0),
-            arg3: w.map(|ex| ex.0),
+            arg: exprs.next().expect("first argument"),
+            arg1: exprs.next(),
+            arg2: exprs.next(),
+            arg3: exprs.next(),
         }
     }
 }
@@ -659,54 +728,64 @@ pub struct Math<A> {
 
 impl<A, O, E> Eval<E> for Ret<Math<A>, O>
 where
-    A: EvalArgs<E>,
+    A: EvalTuple<E>,
     E: Get,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let mut exprs = MathExprs::default();
-        self.a.args.eval_args(en, &mut exprs);
-        Expr(en.get().math(self.a.func, exprs))
+        let mut o = Evaluated::default();
+        self.a.args.eval(en, &mut o);
+        en.get().math(self.a.func, o)
     }
 }
 
 #[derive(Default)]
-struct MathExprs([Option<Expr>; 4]);
+struct Evaluated([Option<Expr>; 4]);
 
-impl MathExprs {
+impl Evaluated {
     fn push(&mut self, expr: Expr) {
-        if let Some(slot) = self.0.iter_mut().find_map(|h| h.as_mut()) {
-            *slot = expr;
+        let slot = self
+            .0
+            .iter_mut()
+            .find(|slot| slot.is_none())
+            .expect("empty slot");
+
+        *slot = Some(expr);
+    }
+
+    fn into_iter(self) -> impl Iterator<Item = Expr> {
+        self.0.into_iter().flatten()
+    }
+}
+
+trait EvalTuple<E> {
+    fn eval(self, en: &mut E, o: &mut Evaluated);
+}
+
+macro_rules! impl_eval_tuple {
+    ($($t:ident),*) => {
+        impl<$($t),*, E> EvalTuple<E> for ($($t),*,)
+        where
+            $(
+                $t: Eval<E>,
+            )*
+        {
+            #[allow(non_snake_case)]
+            fn eval(self, en: &mut E, o: &mut Evaluated) {
+                let ($($t),*,) = self;
+                $(
+                    o.push($t.eval(en));
+                )*
+            }
         }
-    }
+    };
 }
 
-trait EvalArgs<E> {
-    fn eval_args(self, en: &mut E, o: &mut MathExprs);
-}
-
-impl<X, E> EvalArgs<E> for (X,)
-where
-    X: Eval<E>,
-{
-    fn eval_args(self, en: &mut E, o: &mut MathExprs) {
-        let (x,) = self;
-        o.push(x.eval(en));
-    }
-}
-
-impl<X, Y, E> EvalArgs<E> for (X, Y)
-where
-    X: Eval<E>,
-    Y: Eval<E>,
-{
-    fn eval_args(self, en: &mut E, o: &mut MathExprs) {
-        let (x, y) = self;
-        o.push(x.eval(en));
-        o.push(y.eval(en));
-    }
-}
+impl_eval_tuple!(X);
+impl_eval_tuple!(X, Y);
+impl_eval_tuple!(X, Y, Z);
+impl_eval_tuple!(X, Y, Z, W);
 
 #[derive(Clone, Copy)]
 pub(crate) enum Stage {
@@ -852,6 +931,10 @@ impl Argument {
     }
 }
 
+enum Op {
+    Mul,
+}
+
 type Args<'a> = dyn Iterator<Item = Argument> + 'a;
 
 pub struct Entry {
@@ -873,33 +956,37 @@ impl Entry {
         self.compl.types.insert(ty, Span::UNDEFINED)
     }
 
-    fn literal(&mut self, literal: Literal) -> Handle<Expression> {
+    fn literal(&mut self, literal: Literal) -> Expr {
         let ex = Expression::Literal(literal);
-        self.exprs.append(ex, Span::UNDEFINED)
+        Expr(self.exprs.append(ex, Span::UNDEFINED))
     }
 
-    fn argument(&mut self, n: u32) -> Handle<Expression> {
+    fn argument(&mut self, n: u32) -> Expr {
         let ex = Expression::FunctionArgument(n);
-        self.exprs.append(ex, Span::UNDEFINED)
+        Expr(self.exprs.append(ex, Span::UNDEFINED))
     }
 
-    fn global(&mut self, var: Handle<GlobalVariable>) -> Handle<Expression> {
+    fn global(&mut self, var: Handle<GlobalVariable>) -> Expr {
         let ex = Expression::GlobalVariable(var);
-        self.exprs.append(ex, Span::UNDEFINED)
+        Expr(self.exprs.append(ex, Span::UNDEFINED))
     }
 
-    fn access_index(&mut self, base: Handle<Expression>, index: u32) -> Handle<Expression> {
-        let ex = Expression::AccessIndex { base, index };
+    fn access_index(&mut self, base: Expr, index: u32) -> Expr {
+        let ex = Expression::AccessIndex {
+            base: base.0,
+            index,
+        };
+
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
-        handle
+        Expr(handle)
     }
 
-    fn convert(&mut self, expr: Handle<Expression>, ty: ScalarType) -> Handle<Expression> {
+    fn convert(&mut self, expr: Expr, ty: ScalarType) -> Expr {
         let (kind, width) = ty.inner();
         let ex = Expression::As {
-            expr,
+            expr: expr.0,
             kind,
             convert: Some(width),
         };
@@ -907,51 +994,58 @@ impl Entry {
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
-        handle
+        Expr(handle)
     }
 
-    fn binary(&mut self, [a, b]: [Handle<Expression>; 2]) -> Handle<Expression> {
+    fn binary(&mut self, op: Op, a: Expr, b: Expr) -> Expr {
+        let op = match op {
+            Op::Mul => BinaryOperator::Multiply,
+        };
+
         let ex = Expression::Binary {
-            op: BinaryOperator::Multiply,
-            left: a,
-            right: b,
+            op,
+            left: a.0,
+            right: b.0,
         };
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
-        handle
+        Expr(handle)
     }
 
-    fn math(&mut self, f: Func, exprs: MathExprs) -> Handle<Expression> {
+    fn math(&mut self, f: Func, exprs: Evaluated) -> Expr {
         let ex = f.expr(exprs);
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
-        handle
+        Expr(handle)
     }
 
-    fn compose<C>(&mut self, ty: Handle<Type>, components: C) -> Handle<Expression>
-    where
-        C: Into<Vec<Handle<Expression>>>,
-    {
-        let components = components.into();
-        let ex = Expression::Compose { ty, components };
+    fn compose(&mut self, ty: Handle<Type>, exprs: Exprs) -> Expr {
+        let ex = Expression::Compose {
+            ty,
+            components: exprs.0,
+        };
+
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
-        handle
+        Expr(handle)
     }
 
-    fn sample(&mut self, ex: SampleExpr) -> Handle<Expression> {
+    fn sample(&mut self, ex: Sampled) -> Expr {
         let handle = self.exprs.append(ex.expr(), Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
-        handle
+        Expr(handle)
     }
 
-    fn ret(&mut self, value: Handle<Expression>) {
-        let st = Statement::Return { value: Some(value) };
+    fn ret(&mut self, value: Expr) {
+        let st = Statement::Return {
+            value: Some(value.0),
+        };
+
         self.stats.push(st, &self.exprs);
     }
 
@@ -1008,19 +1102,19 @@ impl Statements {
     }
 }
 
-struct SampleExpr {
-    tex: Handle<Expression>,
-    sam: Handle<Expression>,
-    crd: Handle<Expression>,
+struct Sampled {
+    tex: Expr,
+    sam: Expr,
+    crd: Expr,
 }
 
-impl SampleExpr {
+impl Sampled {
     fn expr(self) -> Expression {
         Expression::ImageSample {
-            image: self.tex,
-            sampler: self.sam,
+            image: self.tex.0,
+            sampler: self.sam.0,
             gather: None,
-            coordinate: self.crd,
+            coordinate: self.crd.0,
             array_index: None,
             offset: None,
             level: SampleLevel::Auto,

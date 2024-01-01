@@ -12,7 +12,7 @@ use {
         },
         vertex::Vertex,
     },
-    std::{future::IntoFuture, sync::Arc},
+    std::{error, fmt, future::IntoFuture, sync::Arc},
 };
 
 #[derive(Clone)]
@@ -62,13 +62,12 @@ impl Context {
         CopyBuffer::new(&self.0, size)
     }
 
-    pub async fn map_view<'a, S, R, F>(&self, view: CopyBufferView<'a>, chan: (S, R)) -> Mapped<'a>
+    pub async fn map_view<'a, S, R, F>(&self, view: CopyBufferView<'a>, tx: S, rx: R) -> Mapped<'a>
     where
         S: FnOnce(MapResult) + wgpu::WasmNotSend + 'static,
         R: FnOnce() -> F,
         F: IntoFuture<Output = MapResult>,
     {
-        let (tx, rx) = chan;
         view.map(&self.0, tx, rx).await
     }
 
@@ -100,3 +99,14 @@ pub enum Error {
     BackendSelection,
     RequestDevice,
 }
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::BackendSelection => write!(f, "failed to select backend"),
+            Self::RequestDevice => write!(f, "failed to get device"),
+        }
+    }
+}
+
+impl error::Error for Error {}

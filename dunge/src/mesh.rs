@@ -3,7 +3,7 @@ use {
         state::State,
         vertex::{self, Vertex},
     },
-    std::{borrow::Cow, marker::PhantomData, mem, slice},
+    std::{borrow::Cow, error, fmt, marker::PhantomData, mem, slice},
     wgpu::{Buffer, RenderPass},
 };
 
@@ -28,7 +28,7 @@ impl<'a, V> Data<'a, V> {
     pub fn new(verts: &'a [V], indxs: &'a [Face]) -> Result<Self, Error> {
         let len: u16 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
         if let Some(index) = indxs.iter().flatten().copied().find(|&i| i >= len) {
-            return Err(Error::WrongIndex { index });
+            return Err(Error::InvalidIndex { index });
         }
 
         let indxs = Some(Cow::Borrowed(indxs));
@@ -68,12 +68,31 @@ pub enum Error {
     TooManyVertices,
 
     /// The vertex index is out of bounds of the vertex slice.
-    WrongIndex { index: u16 },
+    InvalidIndex { index: u16 },
 }
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::TooManyVertices => write!(f, "too many vertices"),
+            Self::InvalidIndex { index } => write!(f, "invalid index: {index}"),
+        }
+    }
+}
+
+impl error::Error for Error {}
 
 /// Vertices length doesn't fit in [`u16`](std::u16) integer.
 #[derive(Debug)]
 pub struct TooManyVertices;
+
+impl fmt::Display for TooManyVertices {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "too many vertices")
+    }
+}
+
+impl error::Error for TooManyVertices {}
 
 pub struct Mesh<V> {
     verts: Buffer,

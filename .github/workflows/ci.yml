@@ -17,16 +17,19 @@ jobs:
         runs-on: ubuntu-latest
         steps:
           - uses: actions/checkout@v3
-          - name: Install mesa
+          - name: Build
+            run: cargo build --profile ci --verbose
+          - name: Clippy
+            run: cargo --profile ci clippy
+          - name: Install vulkan
             run: |
                 set -e
                 sudo apt-get update -y -qq
+                wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+                sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
                 sudo add-apt-repository ppa:kisak/kisak-mesa
                 sudo apt-get update
+                sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev vulkan-sdk mesa-vulkan-drivers
 
-          - name: Build
-            run: cargo build --verbose
-          - name: Clippy
-            run: cargo clippy
           - name: Tests
-            run: cargo test --verbose
+            run: cargo test --profile ci --verbose

@@ -1,6 +1,6 @@
 use {
     crate::state::State,
-    std::{future::IntoFuture, mem},
+    std::{error, fmt, future::IntoFuture, mem},
     wgpu::{
         Buffer, BufferAsyncError, BufferSlice, BufferView, CommandEncoder, TextureFormat,
         TextureUsages, TextureView, WasmNotSend,
@@ -71,9 +71,28 @@ pub enum Error {
     InvalidLen,
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::ZeroSized => write!(f, "zero sized data"),
+            Self::InvalidLen => write!(f, "invalid data length"),
+        }
+    }
+}
+
+impl error::Error for Error {}
+
 /// The [texture data](crate::texture::Data) is zero sized.
 #[derive(Debug)]
 pub struct ZeroSized;
+
+impl fmt::Display for ZeroSized {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "zero sized data")
+    }
+}
+
+impl error::Error for ZeroSized {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Format {
@@ -174,6 +193,16 @@ impl Texture {
     }
 }
 
+pub(crate) fn make<M>(state: &State, data: M) -> M::Out
+where
+    M: Make,
+{
+    data.make(Maker {
+        state,
+        usage: TextureUsages::empty(),
+    })
+}
+
 pub struct Sampler(wgpu::Sampler);
 
 impl Sampler {
@@ -196,16 +225,6 @@ impl Sampler {
     pub(crate) fn inner(&self) -> &wgpu::Sampler {
         &self.0
     }
-}
-
-pub(crate) fn make<M>(state: &State, data: M) -> M::Out
-where
-    M: Make,
-{
-    data.make(Maker {
-        state,
-        usage: TextureUsages::empty(),
-    })
 }
 
 pub struct CopyBuffer {
