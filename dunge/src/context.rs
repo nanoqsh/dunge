@@ -20,7 +20,14 @@ pub struct Context(Arc<State>);
 
 impl Context {
     pub async fn new() -> Result<Self, Error> {
-        let instance = wgpu::Instance::default();
+        use wgpu::{Backends, Instance, InstanceDescriptor};
+
+        let desc = InstanceDescriptor {
+            backends: Backends::PRIMARY,
+            ..Default::default()
+        };
+
+        let instance = Instance::new(desc);
         let state = State::new(&instance).await?;
         Ok(Self(Arc::new(state)))
     }

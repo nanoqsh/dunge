@@ -125,19 +125,75 @@ const fn ret<A, T>(a: A) -> Ret<A, T> {
     Ret { a, t: PhantomData }
 }
 
+impl<A> ops::Add<Ret<A, Self>> for f32 {
+    type Output = Ret<Binary<Self, Ret<A, Self>>, Self>;
+
+    fn add(self, b: Ret<A, Self>) -> Self::Output {
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Add,
+        })
+    }
+}
+
+impl<A> ops::Add<f32> for Ret<A, f32> {
+    type Output = Ret<Binary<Self, f32>, f32>;
+
+    fn add(self, b: f32) -> Self::Output {
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Add,
+        })
+    }
+}
+
+impl<A> ops::Sub<Ret<A, Self>> for f32 {
+    type Output = Ret<Binary<Self, Ret<A, Self>>, Self>;
+
+    fn sub(self, b: Ret<A, Self>) -> Self::Output {
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Sub,
+        })
+    }
+}
+
+impl<A> ops::Sub<f32> for Ret<A, f32> {
+    type Output = Ret<Binary<Self, f32>, f32>;
+
+    fn sub(self, b: f32) -> Self::Output {
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Sub,
+        })
+    }
+}
+
 impl<A> ops::Mul<Ret<A, Self>> for f32 {
-    type Output = Ret<Mul<Self, Ret<A, Self>>, Self>;
+    type Output = Ret<Binary<Self, Ret<A, Self>>, Self>;
 
     fn mul(self, b: Ret<A, Self>) -> Self::Output {
-        ret(Mul { a: self, b })
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Mul,
+        })
     }
 }
 
 impl<A> ops::Mul<f32> for Ret<A, f32> {
-    type Output = Ret<Mul<Self, f32>, f32>;
+    type Output = Ret<Binary<Self, f32>, f32>;
 
     fn mul(self, b: f32) -> Self::Output {
-        ret(Mul { a: self, b })
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Mul,
+        })
     }
 }
 
@@ -145,10 +201,14 @@ impl<A, O> ops::Mul<f32> for Ret<A, O>
 where
     O: types::Vector,
 {
-    type Output = Ret<Mul<Self, f32>, O>;
+    type Output = Ret<Binary<Self, f32>, O>;
 
     fn mul(self, b: f32) -> Self::Output {
-        ret(Mul { a: self, b })
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Mul,
+        })
     }
 }
 
@@ -156,19 +216,30 @@ impl<A, O> ops::Mul<Ret<A, O>> for f32
 where
     O: types::Vector,
 {
-    type Output = Ret<Mul<Self, Ret<A, O>>, O>;
+    type Output = Ret<Binary<Self, Ret<A, O>>, O>;
 
     fn mul(self, b: Ret<A, O>) -> Self::Output {
-        ret(Mul { a: self, b })
+        ret(Binary {
+            a: self,
+            b,
+            op: Op::Mul,
+        })
     }
 }
 
-pub struct Mul<A, B> {
-    a: A,
-    b: B,
+enum Op {
+    Add,
+    Sub,
+    Mul,
 }
 
-impl<A, B, O, E> Eval<E> for Ret<Mul<A, B>, O>
+pub struct Binary<A, B> {
+    a: A,
+    b: B,
+    op: Op,
+}
+
+impl<A, B, O, E> Eval<E> for Ret<Binary<A, B>, O>
 where
     A: Eval<E>,
     B: Eval<E>,
@@ -179,7 +250,7 @@ where
     fn eval(self, en: &mut E) -> Expr {
         let x = self.a.a.eval(en);
         let y = self.a.b.eval(en);
-        en.get().binary(Op::Mul, x, y)
+        en.get().binary(self.a.op, x, y)
     }
 }
 
@@ -445,22 +516,22 @@ where
     }
 }
 
-pub fn share<A, E, const N: usize>(a: A) -> [Ret<Share<A>, A::Out>; N]
+pub fn thunk<A, E, const N: usize>(a: A) -> [Ret<Thunk<A>, A::Out>; N]
 where
     A: Eval<E>,
 {
     let state = State::Eval(a);
     let inner = Rc::new(Cell::new(state));
-    array::from_fn(|_| ret(Share(Rc::clone(&inner))))
+    array::from_fn(|_| ret(Thunk(Rc::clone(&inner))))
 }
 
-pub struct Share<A>(Rc<Cell<State<A>>>);
+pub struct Thunk<A>(Rc<Cell<State<A>>>);
 
-impl<A, O, E> Eval<E> for Ret<Share<A>, O>
+impl<A, O, E> Eval<E> for Ret<Thunk<A>, O>
 where
     A: Eval<E>,
 {
-    type Out = A::Out;
+    type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
         match self.a.0.replace(State::None) {
@@ -931,10 +1002,6 @@ impl Argument {
     }
 }
 
-enum Op {
-    Mul,
-}
-
 type Args<'a> = dyn Iterator<Item = Argument> + 'a;
 
 pub struct Entry {
@@ -999,6 +1066,8 @@ impl Entry {
 
     fn binary(&mut self, op: Op, a: Expr, b: Expr) -> Expr {
         let op = match op {
+            Op::Add => BinaryOperator::Add,
+            Op::Sub => BinaryOperator::Subtract,
             Op::Mul => BinaryOperator::Multiply,
         };
 

@@ -20,7 +20,7 @@ fn render() -> Result<(), Error> {
     const THIRD: f32 = consts::TAU / 3.;
 
     let triangle = |Index(index): Index| {
-        let [x, y] = sl::share(sl::f32(index) * THIRD);
+        let [x, y] = sl::thunk(sl::f32(index) * THIRD);
         Out {
             place: sl::vec4(sl::cos(x), sl::sin(y), 0., 1.),
             color: Vec4::new(1., 0., 0., 1.),
