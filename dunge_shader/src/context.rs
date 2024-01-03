@@ -1,7 +1,8 @@
 use {
     crate::{
-        eval::{GlobalOut, ReadIndex, Ret, Stage},
+        eval::{GlobalOut, ReadIndex, Stage},
         group::{self, DeclareGroup, Group},
+        ret::Ret,
         vertex::{self, DeclareInput, Vertex},
     },
     std::{any::TypeId, mem, ops},

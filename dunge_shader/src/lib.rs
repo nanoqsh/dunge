@@ -2,6 +2,8 @@ mod context;
 mod eval;
 pub mod group;
 mod module;
+mod ops;
+mod ret;
 mod types;
 pub mod vertex;
 
