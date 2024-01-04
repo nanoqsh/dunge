@@ -4,7 +4,7 @@ use {
         group::DeclareGroup,
         module::{Module, Out, Output},
         ret::Ret,
-        types::{self, IntoVector, Scalar, ScalarType, Vector, VectorType},
+        types::{self, IntoVector, ScalarType, Vector, VectorType},
     },
     naga::{
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
@@ -97,31 +97,13 @@ pub(crate) struct Exprs(pub Vec<Handle<Expression>>);
 
 impl FromIterator<Expr> for Exprs {
     fn from_iter<T: IntoIterator<Item = Expr>>(iter: T) -> Self {
-        Self(iter.into_iter().map(|Expr(e)| e).collect())
+        Self(iter.into_iter().map(Expr::get).collect())
     }
 }
 
 pub trait Eval<E>: Sized {
     type Out;
     fn eval(self, en: &mut E) -> Expr;
-}
-
-pub trait IntoEval<E>: Sized {
-    type Out;
-    type Eval: Eval<E, Out = Self::Out>;
-    fn into_eval(self) -> Self::Eval;
-}
-
-impl<T, E> IntoEval<E> for T
-where
-    T: Eval<E>,
-{
-    type Out = T::Out;
-    type Eval = T;
-
-    fn into_eval(self) -> Self::Eval {
-        self
-    }
 }
 
 impl<E> Eval<E> for f32
@@ -179,7 +161,7 @@ where
     fn eval(self, en: &mut E) -> Expr {
         let mut components = Vec::with_capacity(V::Vector::TYPE.dims());
         self.into_vector(|scalar| {
-            let Expr(v) = scalar.eval(en);
+            let v = scalar.eval(en).get();
             components.push(v);
         });
 
@@ -270,54 +252,6 @@ where
     }
 }
 
-pub const fn f32<A, E>(a: A) -> Ret<As<A>, f32>
-where
-    A: Eval<E>,
-    A::Out: Scalar,
-{
-    Ret::new(As(a))
-}
-
-pub const fn i32<A, E>(a: A) -> Ret<As<A>, i32>
-where
-    A: Eval<E>,
-    A::Out: Scalar,
-{
-    Ret::new(As(a))
-}
-
-pub const fn u32<A, E>(a: A) -> Ret<As<A>, u32>
-where
-    A: Eval<E>,
-    A::Out: Scalar,
-{
-    Ret::new(As(a))
-}
-
-pub const fn bool<A, E>(a: A) -> Ret<As<A>, bool>
-where
-    A: Eval<E>,
-    A::Out: Scalar,
-{
-    Ret::new(As(a))
-}
-
-pub struct As<A>(A);
-
-impl<A, O, E> Eval<E> for Ret<As<A>, O>
-where
-    A: Eval<E>,
-    O: Scalar,
-    E: GetEntry,
-{
-    type Out = O;
-
-    fn eval(self, en: &mut E) -> Expr {
-        let v = self.get().0.eval(en);
-        en.get_entry().convert(v, O::TYPE)
-    }
-}
-
 pub const fn fragment<A>(a: A) -> Ret<Fragment<A>, A::Out>
 where
     A: Eval<Vs>,
@@ -367,10 +301,10 @@ where
             State::None => unreachable!(),
             State::Eval(a) => {
                 let ex = a.eval(en);
-                state.set(State::Expr(ex.0));
+                state.set(State::Expr(ex));
                 ex
             }
-            State::Expr(ex) => Expr(ex),
+            State::Expr(ex) => ex,
         }
     }
 }
@@ -378,7 +312,7 @@ where
 enum State<A> {
     None,
     Eval(A),
-    Expr(Handle<Expression>),
+    Expr(Expr),
 }
 
 #[derive(Default)]
@@ -699,7 +633,7 @@ impl Entry {
         Expr(handle)
     }
 
-    fn convert(&mut self, expr: Expr, ty: ScalarType) -> Expr {
+    pub(crate) fn convert(&mut self, expr: Expr, ty: ScalarType) -> Expr {
         let (kind, width) = ty.inner();
         let ex = Expression::As {
             expr: expr.0,

@@ -81,27 +81,28 @@ impl State {
         V: AsView,
         D: Draw,
     {
-        let frame = render.encoders.make(&self.device, view.as_view());
-        draw.draw(frame);
-
-        let buffers = render.encoders.drain().map(CommandEncoder::finish);
+        draw.draw(render.0.make(&self.device, view.as_view()));
+        let buffers = render.0.drain().map(CommandEncoder::finish);
         self.queue.submit(buffers);
     }
 }
 
 #[derive(Default)]
-pub struct Render {
-    encoders: Encoders,
-}
+pub struct Render(Encoders);
 
 #[derive(Clone, Copy, Default)]
 pub struct Options {
-    pub clear_color: Option<Rgba>,
+    clear: Option<Rgba>,
 }
 
 impl Options {
-    fn clear_color(self) -> LoadOp<Color> {
-        self.clear_color.map_or(LoadOp::Load, |col| {
+    pub fn with_clear(mut self, clear: Rgba) -> Self {
+        self.clear = Some(clear);
+        self
+    }
+
+    fn clear(self) -> LoadOp<Color> {
+        self.clear.map_or(LoadOp::Load, |col| {
             let [r, g, b, a] = col.0.map(f64::from);
             LoadOp::Clear(Color { r, g, b, a })
         })
@@ -134,7 +135,7 @@ impl Frame<'_, '_> {
             view: self.view.txview,
             resolve_target: None,
             ops: Operations {
-                load: opts.clear_color(),
+                load: opts.clear(),
                 store: StoreOp::Store,
             },
         };

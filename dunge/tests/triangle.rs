@@ -17,34 +17,31 @@ type Error = Box<dyn error::Error>;
 #[test]
 fn render() -> Result<(), Error> {
     const SIZE: (u32, u32) = (300, 300);
+    const COLOR: Vec4 = Vec4::new(1., 0., 0., 1.);
     const THIRD: f32 = consts::TAU / 3.;
+    const R_OFFSET: f32 = -consts::TAU / 4.;
+    const Y_OFFSET: f32 = 0.25;
 
     let triangle = |Index(index): Index| {
-        let [x, y] = sl::thunk(sl::f32(index) * THIRD);
+        let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
         Out {
-            place: sl::vec4(sl::cos(x), sl::sin(y), 0., 1.),
-            color: Vec4::new(1., 0., 0., 1.),
+            place: sl::vec4(sl::cos(x), sl::sin(y) + Y_OFFSET, 0., 1.),
+            color: COLOR,
         }
     };
 
     let cx = helpers::block_on(Context::new())?;
     let shader = cx.make_shader(triangle);
-    let bind = cx.make_binder(&shader).into_binding();
     let layer = cx.make_layer(Format::RgbAlpha, &shader);
-
     let view = {
         let data = Data::empty(SIZE, Format::RgbAlpha)?.with_draw().with_copy();
         cx.make_texture(data)
     };
 
-    let clear = Rgba::from_standard([0., 0., 0., 1.]);
     let buffer = cx.make_copy_buffer(SIZE);
-    let options = Options {
-        clear_color: Some(clear),
-    };
-
+    let options = Options::default().with_clear(Rgba::from_standard([0., 0., 0., 1.]));
     let draw = draw::from_fn(|mut frame| {
-        frame.layer(&layer, options).bind(&bind).draw_triangles(1);
+        frame.layer(&layer, options).bind_empty().draw_triangles(1);
         frame.copy_texture(&buffer, &view);
     });
 
@@ -56,14 +53,13 @@ fn render() -> Result<(), Error> {
         cx.map_view(buffer.view(), tx, rx)
     });
 
-    let mapped = mapped.data();
+    let data = mapped.data();
     let image = Image::from_fn(SIZE, |x, y| {
         let (width, _) = buffer.size();
         let idx = x + y * width;
-        mapped[idx as usize]
+        data[idx as usize]
     });
 
-    let data = image.encode();
-    fs::write("tests/triangle.png", data)?;
+    fs::write("tests/triangle.png", image.encode())?;
     Ok(())
 }

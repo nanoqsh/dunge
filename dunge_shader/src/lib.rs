@@ -1,17 +1,18 @@
 mod context;
+mod convert;
 mod eval;
 pub mod group;
 mod math;
 mod module;
-mod ops;
 mod ret;
 mod texture;
 mod types;
-mod vec;
+mod vector;
 pub mod vertex;
 
 pub mod sl {
     pub use crate::{
-        context::*, eval::*, math::*, module::*, ret::*, texture::*, types::*, vec::*,
+        context::*, convert::*, eval::*, math::*, module::*, ret::*, texture::*, types::*,
+        vector::*,
     };
 }

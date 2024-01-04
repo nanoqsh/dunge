@@ -6,6 +6,7 @@ use {
 
 pub struct SetLayer<'p, V> {
     shader_id: usize,
+    has_bindings: bool,
     pass: RenderPass<'p>,
     vert: PhantomData<V>,
 }
@@ -24,10 +25,15 @@ impl<'p, V> SetLayer<'p, V> {
             self.pass.set_bind_group(id, group, &[]);
         }
 
-        BoundLayer {
-            pass: &mut self.pass,
-            vert: PhantomData,
+        BoundLayer::new(&mut self.pass)
+    }
+
+    pub fn bind_empty(&mut self) -> BoundLayer<'_, 'p, V> {
+        if self.has_bindings {
+            panic!("ths shader has bindings");
         }
+
+        BoundLayer::new(&mut self.pass)
     }
 }
 
@@ -36,20 +42,28 @@ pub struct BoundLayer<'s, 'p, V> {
     vert: PhantomData<V>,
 }
 
-impl<'p> BoundLayer<'_, 'p, ()> {
-    pub fn draw_triangles(&mut self, n: u32) {
-        self.pass.draw(0..n * 3, 0..1);
+impl<'s, 'p, V> BoundLayer<'s, 'p, V> {
+    fn new(pass: &'s mut RenderPass<'p>) -> Self {
+        Self {
+            pass,
+            vert: PhantomData,
+        }
     }
-}
 
-impl<'p, V> BoundLayer<'_, 'p, V> {
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
         mesh.draw(self.pass);
     }
 }
 
+impl BoundLayer<'_, '_, ()> {
+    pub fn draw_triangles(&mut self, n: u32) {
+        self.pass.draw(0..n * 3, 0..1);
+    }
+}
+
 pub struct Layer<V> {
     shader_id: usize,
+    has_bindings: bool,
     format: Format,
     render: RenderPipeline,
     vertex: PhantomData<V>,
@@ -97,6 +111,7 @@ impl<V> Layer<V> {
         let render = state.device().create_render_pipeline(&desc);
         Self {
             shader_id: shader.id(),
+            has_bindings: !shader.groups().is_empty(),
             format,
             render,
             vertex: PhantomData,
@@ -111,6 +126,7 @@ impl<V> Layer<V> {
         pass.set_pipeline(&self.render);
         SetLayer {
             shader_id: self.shader_id,
+            has_bindings: self.has_bindings,
             pass,
             vert: PhantomData,
         }
