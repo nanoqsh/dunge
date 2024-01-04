@@ -75,7 +75,7 @@ impl_op!(Rem::rem(u32, u32) -> u32);
 
 impl<A, O> ops::Mul<f32> for Ret<A, O>
 where
-    O: types::Vector,
+    O: types::Vector<Scalar = f32>,
 {
     type Output = Ret<Binary<Self, f32>, O>;
 
@@ -90,7 +90,7 @@ where
 
 impl<A, O> ops::Mul<Ret<A, O>> for f32
 where
-    O: types::Vector,
+    O: types::Vector<Scalar = Self>,
 {
     type Output = Ret<Binary<Self, Ret<A, O>>, O>;
 
@@ -99,6 +99,36 @@ where
             a: self,
             b,
             op: Op::Mul,
+        })
+    }
+}
+
+impl<A, B, O> ops::Add<Ret<B, O>> for Ret<A, O>
+where
+    O: types::Vector,
+{
+    type Output = Ret<Binary<Self, Ret<B, O>>, O>;
+
+    fn add(self, b: Ret<B, O>) -> Self::Output {
+        Ret::new(Binary {
+            a: self,
+            b,
+            op: Op::Add,
+        })
+    }
+}
+
+impl<A, B, O> ops::Sub<Ret<B, O>> for Ret<A, O>
+where
+    O: types::Vector,
+{
+    type Output = Ret<Binary<Self, Ret<B, O>>, O>;
+
+    fn sub(self, b: Ret<B, O>) -> Self::Output {
+        Ret::new(Binary {
+            a: self,
+            b,
+            op: Op::Sub,
         })
     }
 }
