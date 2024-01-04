@@ -38,7 +38,7 @@ where
     }
 
     let (fs, required, fsty) = {
-        let mut fs = FsEntry::new(compl);
+        let mut fs = Fs::new(compl);
         let ex = color.eval(&mut fs);
         fs.inner.ret(ex);
         let fsty = fs.define_fragment_ty();
@@ -48,7 +48,7 @@ where
     };
 
     let vs = {
-        let mut vs = VsEntry::new(fs.compl);
+        let mut vs = Vs::new(fs.compl);
         let ex = place.eval(&mut vs);
         let eval = |req: Required| match req.evalf {
             EvalFunction::Position => ex,
@@ -84,11 +84,6 @@ where
     Module { cx, nm }
 }
 
-pub(crate) trait Get {
-    const STAGE: Stage;
-    fn get(&mut self) -> &mut Entry;
-}
-
 #[derive(Clone, Copy)]
 pub struct Expr(Handle<Expression>);
 
@@ -108,51 +103,68 @@ impl FromIterator<Expr> for Exprs {
 
 pub trait Eval<E>: Sized {
     type Out;
-
     fn eval(self, en: &mut E) -> Expr;
 }
 
-impl<E> Eval<E> for i32
-where
-    E: Get,
-{
-    type Out = Self;
-
-    fn eval(self, en: &mut E) -> Expr {
-        en.get().literal(Literal::I32(self))
-    }
+pub trait IntoEval<E>: Sized {
+    type Out;
+    type Eval: Eval<E, Out = Self::Out>;
+    fn into_eval(self) -> Self::Eval;
 }
 
-impl<E> Eval<E> for u32
+impl<T, E> IntoEval<E> for T
 where
-    E: Get,
+    T: Eval<E>,
 {
-    type Out = Self;
+    type Out = T::Out;
+    type Eval = T;
 
-    fn eval(self, en: &mut E) -> Expr {
-        en.get().literal(Literal::U32(self))
-    }
-}
-
-impl<E> Eval<E> for bool
-where
-    E: Get,
-{
-    type Out = Self;
-
-    fn eval(self, en: &mut E) -> Expr {
-        en.get().literal(Literal::Bool(self))
+    fn into_eval(self) -> Self::Eval {
+        self
     }
 }
 
 impl<E> Eval<E> for f32
 where
-    E: Get,
+    E: GetEntry,
 {
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        en.get().literal(Literal::F32(self))
+        en.get_entry().literal(Literal::F32(self))
+    }
+}
+
+impl<E> Eval<E> for i32
+where
+    E: GetEntry,
+{
+    type Out = Self;
+
+    fn eval(self, en: &mut E) -> Expr {
+        en.get_entry().literal(Literal::I32(self))
+    }
+}
+
+impl<E> Eval<E> for u32
+where
+    E: GetEntry,
+{
+    type Out = Self;
+
+    fn eval(self, en: &mut E) -> Expr {
+        en.get_entry().literal(Literal::U32(self))
+    }
+}
+
+impl<E> Eval<E> for bool
+where
+    E: GetEntry,
+{
+    type Out = Self;
+
+    fn eval(self, en: &mut E) -> Expr {
+        en.get_entry().literal(Literal::Bool(self))
     }
 }
 
@@ -160,7 +172,7 @@ impl<V, E> Eval<E> for V
 where
     V: IntoVector,
     <V::Vector as Vector>::Scalar: Eval<E>,
-    E: Get,
+    E: GetEntry,
 {
     type Out = V::Vector;
 
@@ -171,7 +183,7 @@ where
             components.push(v);
         });
 
-        let en = en.get();
+        let en = en.get_entry();
         let ty = en.new_type(V::Vector::TYPE.ty());
         en.compose(ty, Exprs(components))
     }
@@ -188,10 +200,10 @@ impl ReadIndex {
     }
 }
 
-impl Eval<VsEntry> for Ret<ReadIndex, u32> {
+impl Eval<Vs> for Ret<ReadIndex, u32> {
     type Out = u32;
 
-    fn eval(self, en: &mut VsEntry) -> Expr {
+    fn eval(self, en: &mut Vs) -> Expr {
         en.inner.argument(self.get().id)
     }
 }
@@ -208,10 +220,10 @@ impl ReadInput {
     }
 }
 
-impl<T> Eval<VsEntry> for Ret<ReadInput, T> {
+impl<T> Eval<Vs> for Ret<ReadInput, T> {
     type Out = T;
 
-    fn eval(self, en: &mut VsEntry) -> Expr {
+    fn eval(self, en: &mut Vs) -> Expr {
         let en = &mut en.inner;
         let arg = en.argument(self.get().id);
         en.access_index(arg, self.get().index)
@@ -245,14 +257,14 @@ impl ReadGlobal {
 
 impl<T, E> Eval<E> for Ret<ReadGlobal, T>
 where
-    E: Get,
+    E: GetEntry,
 {
     type Out = T;
 
     fn eval(self, en: &mut E) -> Expr {
         let ReadGlobal { id, binding, out } = self.get();
         out.with_stage(E::STAGE);
-        let en = en.get();
+        let en = en.get_entry();
         let var = en.compl.globs.get(ResourceBinding { group: id, binding });
         en.global(var)
     }
@@ -296,59 +308,19 @@ impl<A, O, E> Eval<E> for Ret<As<A>, O>
 where
     A: Eval<E>,
     O: Scalar,
-    E: Get,
+    E: GetEntry,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
         let v = self.get().0.eval(en);
-        en.get().convert(v, O::TYPE)
-    }
-}
-
-pub const fn texture_sample<T, S, C, E, F>(
-    tex: T,
-    sam: S,
-    crd: C,
-) -> Ret<Sample<T, S, C>, types::Vec4<f32>>
-where
-    T: Eval<E, Out = types::Texture2d<F>>,
-    S: Eval<E, Out = types::Sampler>,
-    C: Eval<E, Out = types::Vec2<f32>>,
-{
-    Ret::new(Sample { tex, sam, crd })
-}
-
-pub struct Sample<T, S, C> {
-    tex: T,
-    sam: S,
-    crd: C,
-}
-
-impl<T, S, C, F, E> Eval<E> for Ret<Sample<T, S, C>, types::Vec4<F>>
-where
-    T: Eval<E, Out = types::Texture2d<F>>,
-    S: Eval<E, Out = types::Sampler>,
-    C: Eval<E, Out = types::Vec2<f32>>,
-    E: Get,
-{
-    type Out = types::Vec4<F>;
-
-    fn eval(self, en: &mut E) -> Expr {
-        let Sample { tex, sam, crd } = self.get();
-        let ex = Sampled {
-            tex: tex.eval(en),
-            sam: sam.eval(en),
-            crd: crd.eval(en),
-        };
-
-        en.get().sample(ex)
+        en.get_entry().convert(v, O::TYPE)
     }
 }
 
 pub const fn fragment<A>(a: A) -> Ret<Fragment<A>, A::Out>
 where
-    A: Eval<VsEntry>,
+    A: Eval<Vs>,
     A::Out: types::Vector,
 {
     Ret::new(Fragment(a))
@@ -356,14 +328,14 @@ where
 
 pub struct Fragment<A>(A);
 
-impl<A> Eval<FsEntry> for Ret<Fragment<A>, A::Out>
+impl<A> Eval<Fs> for Ret<Fragment<A>, A::Out>
 where
-    A: Eval<VsEntry> + 'static,
+    A: Eval<Vs> + 'static,
     A::Out: types::Vector,
 {
     type Out = A::Out;
 
-    fn eval(self, en: &mut FsEntry) -> Expr {
+    fn eval(self, en: &mut Fs) -> Expr {
         let vecty = <A::Out as types::Vector>::TYPE;
         let index = en.push_evalf(vecty, |en| self.get().0.eval(en));
         let en = &mut en.inner;
@@ -478,16 +450,16 @@ impl Stage {
     }
 }
 
-enum Return {
-    Ty(Handle<Type>),
-    Color,
+pub(crate) trait GetEntry {
+    const STAGE: Stage;
+    fn get_entry(&mut self) -> &mut Entry;
 }
 
-pub struct VsEntry {
+pub struct Vs {
     inner: Entry,
 }
 
-impl VsEntry {
+impl Vs {
     fn new(compl: Compiler) -> Self {
         Self {
             inner: Entry::new(compl),
@@ -495,10 +467,10 @@ impl VsEntry {
     }
 }
 
-impl Get for VsEntry {
+impl GetEntry for Vs {
     const STAGE: Stage = Stage::Vertex;
 
-    fn get(&mut self) -> &mut Entry {
+    fn get_entry(&mut self) -> &mut Entry {
         &mut self.inner
     }
 }
@@ -516,7 +488,7 @@ impl Member {
 
 enum EvalFunction {
     Position,
-    Fn(Box<dyn FnOnce(&mut VsEntry) -> Expr>),
+    Fn(Box<dyn FnOnce(&mut Vs) -> Expr>),
 }
 
 struct Required {
@@ -524,12 +496,12 @@ struct Required {
     evalf: EvalFunction,
 }
 
-pub struct FsEntry {
+pub struct Fs {
     inner: Entry,
     required: Vec<Required>,
 }
 
-impl FsEntry {
+impl Fs {
     fn new(compl: Compiler) -> Self {
         Self {
             inner: Entry::new(compl),
@@ -542,7 +514,7 @@ impl FsEntry {
 
     fn push_evalf<F>(&mut self, vecty: VectorType, f: F) -> u32
     where
-        F: FnOnce(&mut VsEntry) -> Expr + 'static,
+        F: FnOnce(&mut Vs) -> Expr + 'static,
     {
         let req = Required {
             vecty,
@@ -568,10 +540,10 @@ impl FsEntry {
     }
 }
 
-impl Get for FsEntry {
+impl GetEntry for Fs {
     const STAGE: Stage = Stage::Fragment;
 
-    fn get(&mut self) -> &mut Entry {
+    fn get_entry(&mut self) -> &mut Entry {
         &mut self.inner
     }
 }
@@ -580,6 +552,13 @@ struct Built {
     compl: Compiler,
     point: EntryPoint,
 }
+
+enum Return {
+    Ty(Handle<Type>),
+    Color,
+}
+
+type Args<'a> = dyn Iterator<Item = Argument> + 'a;
 
 struct Argument {
     ty: Handle<Type>,
@@ -653,7 +632,26 @@ impl Func {
     }
 }
 
-type Args<'a> = dyn Iterator<Item = Argument> + 'a;
+pub(crate) struct Sampled {
+    pub tex: Expr,
+    pub sam: Expr,
+    pub crd: Expr,
+}
+
+impl Sampled {
+    fn expr(self) -> Expression {
+        Expression::ImageSample {
+            image: self.tex.0,
+            sampler: self.sam.0,
+            gather: None,
+            coordinate: self.crd.0,
+            array_index: None,
+            offset: None,
+            level: SampleLevel::Auto,
+            depth_ref: None,
+        }
+    }
+}
 
 pub struct Entry {
     compl: Compiler,
@@ -748,7 +746,7 @@ impl Entry {
         Expr(handle)
     }
 
-    fn sample(&mut self, ex: Sampled) -> Expr {
+    pub(crate) fn sample(&mut self, ex: Sampled) -> Expr {
         let handle = self.exprs.append(ex.expr(), Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stats.push(st, &self.exprs);
@@ -813,27 +811,6 @@ impl Statements {
         }
 
         self.0.push(st);
-    }
-}
-
-struct Sampled {
-    tex: Expr,
-    sam: Expr,
-    crd: Expr,
-}
-
-impl Sampled {
-    fn expr(self) -> Expression {
-        Expression::ImageSample {
-            image: self.tex.0,
-            sampler: self.sam.0,
-            gather: None,
-            coordinate: self.crd.0,
-            array_index: None,
-            offset: None,
-            level: SampleLevel::Auto,
-            depth_ref: None,
-        }
     }
 }
 

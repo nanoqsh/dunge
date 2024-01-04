@@ -1,6 +1,6 @@
 use crate::{
     context::{Context, FromContext, FromContextTyped},
-    eval::{self, Eval, FsEntry, VsEntry},
+    eval::{self, Eval, Fs, Vs},
     types,
 };
 
@@ -79,16 +79,16 @@ pub struct Out<P, C> {
 }
 
 pub trait Output {
-    type Place: Eval<VsEntry, Out = types::Vec4<f32>>;
-    type Color: Eval<FsEntry, Out = types::Vec4<f32>>;
+    type Place: Eval<Vs, Out = types::Vec4<f32>>;
+    type Color: Eval<Fs, Out = types::Vec4<f32>>;
 
     fn output(self) -> Out<Self::Place, Self::Color>;
 }
 
 impl<P, C> Output for Out<P, C>
 where
-    P: Eval<VsEntry, Out = types::Vec4<f32>>,
-    C: Eval<FsEntry, Out = types::Vec4<f32>>,
+    P: Eval<Vs, Out = types::Vec4<f32>>,
+    C: Eval<Fs, Out = types::Vec4<f32>>,
 {
     type Place = P;
     type Color = C;

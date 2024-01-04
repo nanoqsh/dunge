@@ -1,5 +1,5 @@
 use crate::{
-    eval::{Eval, EvalTuple, Evaluated, Expr, Func, Get},
+    eval::{Eval, EvalTuple, Evaluated, Expr, Func, GetEntry},
     ret::Ret,
 };
 
@@ -71,7 +71,7 @@ pub struct Math<A> {
 impl<A, O, E> Eval<E> for Ret<Math<A>, O>
 where
     A: EvalTuple<E>,
-    E: Get,
+    E: GetEntry,
 {
     type Out = O;
 
@@ -79,6 +79,6 @@ where
         let mut o = Evaluated::default();
         let Math { args, func } = self.get();
         args.eval(en, &mut o);
-        en.get().math(func, o)
+        en.get_entry().math(func, o)
     }
 }

@@ -1,6 +1,6 @@
 use {
     crate::{
-        eval::{Eval, Expr, Get, Op},
+        eval::{Eval, Expr, GetEntry, Op},
         ret::Ret,
         types,
     },
@@ -17,7 +17,7 @@ impl<A, B, O, E> Eval<E> for Ret<Binary<A, B>, O>
 where
     A: Eval<E>,
     B: Eval<E>,
-    E: Get,
+    E: GetEntry,
 {
     type Out = O;
 
@@ -25,7 +25,7 @@ where
         let Binary { a, b, op } = self.get();
         let x = a.eval(en);
         let y = b.eval(en);
-        en.get().binary(op, x, y)
+        en.get_entry().binary(op, x, y)
     }
 }
 

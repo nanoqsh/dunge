@@ -1,5 +1,5 @@
 use crate::{
-    eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, Get},
+    eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
     ret::Ret,
     types::{self, Scalar, Vector},
 };
@@ -34,13 +34,13 @@ impl<A, O, E> Eval<E> for Ret<Splat<A>, O>
 where
     A: Eval<E>,
     O: Vector,
-    E: Get,
+    E: GetEntry,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
         let val = self.get().0.eval(en);
-        let en = en.get();
+        let en = en.get_entry();
         let ty = en.new_type(O::TYPE.ty());
         let components = (0..O::TYPE.dims()).map(|_| val).collect();
         en.compose(ty, components)
@@ -89,14 +89,14 @@ impl<A, O, E> Eval<E> for Ret<New<A>, O>
 where
     A: EvalTuple<E>,
     O: Vector,
-    E: Get,
+    E: GetEntry,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
         self.get().0.eval(en, &mut o);
-        let en = en.get();
+        let en = en.get_entry();
         let ty = en.new_type(O::TYPE.ty());
         let components = o.into_iter().collect();
         en.compose(ty, components)
@@ -137,7 +137,7 @@ where
     A: Eval<E>,
     B: Eval<E>,
     O: types::Vector,
-    E: Get,
+    E: GetEntry,
 {
     type Out = O;
 
@@ -145,7 +145,7 @@ where
         let Compose { a, b } = self.get();
         let x = a.eval(en).get();
         let y = b.eval(en).get();
-        let en = en.get();
+        let en = en.get_entry();
         let ty = en.new_type(O::TYPE.ty());
         en.compose(ty, Exprs(vec![x, y]))
     }
