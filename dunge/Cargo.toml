@@ -14,6 +14,7 @@ rust-version = "1.71"
 dunge_macros = { version = "0.2.3", path = "../dunge_macros" }
 dunge_shader = { version = "0.2.3", path = "../dunge_shader" }
 bytemuck = { workspace = true }
+glam = { workspace = true }
 instant = "0.1"
 log = "0.4"
 wgpu = { version = "0.18", default-features = false, features = ["naga"] }
@@ -38,7 +39,6 @@ features = ["android-native-activity"]
 
 [dev-dependencies]
 helpers = { path = "../helpers" }
-glam = "0.25"
 
 [lints]
 workspace = true

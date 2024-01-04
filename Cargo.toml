@@ -1,10 +1,10 @@
 [workspace]
 members = ["dunge", "dunge_macros", "dunge_shader", "helpers"]
-default-members = ["dunge"]
 resolver = "2"
 
 [workspace.dependencies]
-bytemuck = { version = "1.13" }
+bytemuck = "1.13"
+glam = "0.25"
 
 [workspace.lints.clippy]
 use_self = "deny"

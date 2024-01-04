@@ -47,7 +47,7 @@ where
     }
 }
 
-type Vector2<X, Y, O> = Ret<New<(X, Y)>, types::Vec4<O>>;
+type Vector2<X, Y, O> = Ret<New<(X, Y)>, types::Vec2<O>>;
 
 pub const fn vec2<X, Y, E>(x: X, y: Y) -> Vector2<X, Y, X::Out>
 where
@@ -58,7 +58,7 @@ where
     Ret::new(New((x, y)))
 }
 
-type Vector3<X, Y, Z, O> = Ret<New<(X, Y, Z)>, types::Vec4<O>>;
+type Vector3<X, Y, Z, O> = Ret<New<(X, Y, Z)>, types::Vec3<O>>;
 
 pub const fn vec3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Vector3<X, Y, Z, X::Out>
 where
@@ -103,26 +103,29 @@ where
     }
 }
 
-pub const fn compose_vec2<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec2<f32>>
+pub const fn compose<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<S>>
 where
-    A: Eval<E, Out = B::Out>,
-    B: Eval<E>,
+    A: Eval<E, Out = types::Vec2<S>>,
+    B: Eval<E, Out = types::Vec2<S>>,
+    S: Scalar,
 {
     Ret::new(Compose { a, b })
 }
 
-pub const fn compose_vec3<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<f32>>
+pub const fn vec3_with<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<B::Out>>
 where
     A: Eval<E, Out = types::Vec2<B::Out>>,
     B: Eval<E>,
+    B::Out: Scalar,
 {
     Ret::new(Compose { a, b })
 }
 
-pub const fn compose_vec4<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<f32>>
+pub const fn vec4_with<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<B::Out>>
 where
     A: Eval<E, Out = types::Vec3<B::Out>>,
     B: Eval<E>,
+    B::Out: Scalar,
 {
     Ret::new(Compose { a, b })
 }

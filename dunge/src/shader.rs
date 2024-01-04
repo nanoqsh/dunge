@@ -1,8 +1,9 @@
 use {
     crate::{
         group::TypedGroup,
-        sl::{GroupMemberType, InputInfo, IntoModule, Module, Stages, VectorType},
+        sl::{InputInfo, IntoModule, Module, Stages},
         state::State,
+        types::{GroupMemberType, VectorType},
     },
     std::marker::PhantomData,
     wgpu::{PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout},

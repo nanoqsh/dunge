@@ -73,7 +73,11 @@ where
     }
 }
 
-pub struct Out<P, C> {
+pub struct Out<P, C>
+where
+    P: Eval<Vs, Out = types::Vec4<f32>>,
+    C: Eval<Fs, Out = types::Vec4<f32>>,
+{
     pub place: P,
     pub color: C,
 }

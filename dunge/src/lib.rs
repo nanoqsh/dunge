@@ -9,5 +9,10 @@ pub mod state;
 pub mod texture;
 #[allow(dead_code)]
 mod time;
+pub mod vertex;
 
-pub use dunge_shader::{sl, vertex};
+pub use {
+    dunge_macros::Vertex,
+    dunge_shader::{group::Group, sl, types, vertex::Vertex},
+    glam,
+};

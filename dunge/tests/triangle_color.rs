@@ -2,14 +2,15 @@ use {
     dunge::{
         color::Rgba,
         context::Context,
-        draw,
-        sl::{self, Index, Out},
+        draw, mesh,
+        sl::{self, Input, Out},
         state::{Options, Render},
         texture::{self, Format},
+        Vertex,
     },
-    glam::Vec4,
+    glam::{Vec2, Vec3},
     helpers::Image,
-    std::{error, f32::consts, fs},
+    std::{error, fs},
 };
 
 type Error = Box<dyn error::Error>;
@@ -17,17 +18,17 @@ type Error = Box<dyn error::Error>;
 #[test]
 fn render() -> Result<(), Error> {
     const SIZE: (u32, u32) = (300, 300);
-    const COLOR: Vec4 = Vec4::new(1., 0., 0., 1.);
-    const THIRD: f32 = consts::TAU / 3.;
-    const R_OFFSET: f32 = -consts::TAU / 4.;
-    const Y_OFFSET: f32 = 0.25;
 
-    let triangle = |Index(index): Index| {
-        let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
-        Out {
-            place: sl::vec4(sl::cos(x), sl::sin(y) + Y_OFFSET, 0., 1.),
-            color: COLOR,
-        }
+    #[repr(C)]
+    #[derive(Vertex)]
+    struct Vert {
+        pos: Vec2,
+        col: Vec3,
+    }
+
+    let triangle = |input: Input<Vert>| Out {
+        place: sl::compose(input.pos, Vec2::new(0., 1.)),
+        color: sl::vec4_with(sl::fragment(input.col), 1.),
     };
 
     let cx = helpers::block_on(Context::new())?;
@@ -40,10 +41,32 @@ fn render() -> Result<(), Error> {
         cx.make_texture(data)
     };
 
+    let mesh = {
+        use mesh::Data;
+
+        const VERTS: [Vert; 3] = [
+            Vert {
+                pos: Vec2::new(0., -0.75),
+                col: Vec3::new(1., 0., 0.),
+            },
+            Vert {
+                pos: Vec2::new(0.866, 0.75),
+                col: Vec3::new(0., 1., 0.),
+            },
+            Vert {
+                pos: Vec2::new(-0.866, 0.75),
+                col: Vec3::new(0., 0., 1.),
+            },
+        ];
+
+        let data = Data::from_verts(&VERTS);
+        cx.make_mesh(&data)
+    };
+
     let buffer = cx.make_copy_buffer(SIZE);
     let options = Options::default().with_clear(Rgba::from_standard([0., 0., 0., 1.]));
     let draw = draw::from_fn(|mut frame| {
-        frame.layer(&layer, options).bind_empty().draw_triangles(1);
+        frame.layer(&layer, options).bind_empty().draw(&mesh);
         frame.copy_texture(&buffer, &view);
     });
 
@@ -62,6 +85,6 @@ fn render() -> Result<(), Error> {
         data[idx as usize]
     });
 
-    fs::write("tests/triangle.png", image.encode())?;
+    fs::write("tests/triangle_color.png", image.encode())?;
     Ok(())
 }
