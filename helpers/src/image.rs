@@ -24,12 +24,16 @@ impl Image {
     }
 
     pub fn decode(bytes: &[u8]) -> Self {
-        use png::Decoder;
+        use png::{ColorType, Decoder};
 
         let decoder = Decoder::new(bytes);
         let mut reader = decoder.read_info().expect("png reader");
         let mut data = Box::from(vec![0; reader.output_buffer_size()]);
         let info = reader.next_frame(&mut data).expect("read image");
+        if info.color_type != ColorType::Rgba {
+            panic!("only rgba format is supported");
+        }
+
         Self {
             data,
             size: (info.width, info.height),

@@ -3,14 +3,13 @@ use {
     std::{iter, slice},
 };
 
-/// Group description.
+/// The group type description.
 pub trait Group {
     type Projection: Projection + 'static;
+    type Visitor: Visitor;
     const DECL: DeclareGroup;
 
-    fn group<V>(&self, visit: &mut V)
-    where
-        V: Visitor;
+    fn group(&self, visit: &mut Self::Visitor);
 }
 
 pub trait Projection {

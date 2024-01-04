@@ -1,5 +1,5 @@
 use {
-    crate::{group::Binding, mesh::Mesh, shader::Shader, state::State, texture::Format},
+    crate::{bind::Binding, mesh::Mesh, shader::Shader, state::State, texture::Format},
     std::{iter, marker::PhantomData},
     wgpu::{RenderPass, RenderPipeline},
 };

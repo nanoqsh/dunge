@@ -1,7 +1,8 @@
 use {
     crate::{
+        bind::{self, Binder, GroupHandler, UniqueGroupBinding, Update, VisitGroup},
         draw::Draw,
-        group::{self, Binder, Group, GroupHandler, UniqueGroupBinding, Update},
+        group::Group,
         layer::Layer,
         mesh::{self, Mesh},
         shader::Shader,
@@ -87,16 +88,16 @@ impl Context {
         self.0.draw(render, view, draw)
     }
 
-    pub fn update_group<G>(
+    pub fn update_group<'g, G>(
         &self,
         uni: &mut UniqueGroupBinding,
         handler: GroupHandler<G>,
-        group: &G,
+        group: &'g G,
     ) -> Update
     where
-        G: Group,
+        G: Group<Visitor = VisitGroup<'g>>,
     {
-        group::update(&self.0, uni, handler, group)
+        bind::update(&self.0, uni, handler, group)
     }
 }
 

@@ -1,6 +1,6 @@
 use {
     crate::{
-        group::TypedGroup,
+        bind::TypedGroup,
         sl::{InputInfo, IntoModule, Module, Stages},
         state::State,
         types::{GroupMemberType, VectorType},

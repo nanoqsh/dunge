@@ -3,25 +3,30 @@ use {
     std::{iter, mem, slice},
 };
 
-/// Vertex type description.
+/// The vertex type description.
 ///
 /// # Safety
 /// The fields of [`DeclareInput`] must exactly match the actual struct fields.
-/// To do this, the fields must be ordered, so the struct must have the `#[repr(C)]` attribute
-/// and the fields must have the same order as specified in [`DeclareInput`].
+/// To do this, the fields must be ordered, so the struct must have the `#[repr(C)]`
+/// attribute and the fields must have the same order as specified in [`DeclareInput`].
 ///
-/// # Example
-/// TODO
-///
-/// Note that the implementation of the trait requires `unsafe` code,
-/// so instead of writing this yourself you can derive it:
-/// ```rust,ignore
+/// # Deriving
+/// Although the library tries to formalize the safety invariant, you still shouldn’t
+/// implement the vertex yourself. The most reliable and simple way to do this is to
+/// use a derive macro:
+/// ```rust
+/// # mod dunge {
+/// #    // fake `Vertex` derive
+/// #    pub use std::default::Default as Vertex;
+/// # }
+/// #
 /// use dunge::Vertex;
 ///
 /// #[repr(C)]
 /// #[derive(Vertex)]
 /// struct Vert {
-///     /* TODO */
+///     pos: [f32; 2],
+///     col: [f32; 3],
 /// }
 /// ```
 ///
