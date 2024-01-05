@@ -1,10 +1,11 @@
 use {
+    crate::utils,
     proc_macro2::TokenStream,
     syn::{meta::ParseNestedMeta, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput},
 };
 
-pub(crate) fn impl_vertex(input: DeriveInput) -> TokenStream {
-    use std::{borrow::Cow, iter};
+pub(crate) fn derive(input: DeriveInput) -> TokenStream {
+    use std::iter;
 
     let Data::Struct(DataStruct { fields, .. }) = input.data else {
         return quote::quote_spanned! { input.ident.span() =>
@@ -30,11 +31,6 @@ pub(crate) fn impl_vertex(input: DeriveInput) -> TokenStream {
         };
     }
 
-    let make_ident = |index: u32, ident| match ident {
-        Some(ident) => Cow::Borrowed(ident),
-        None => Cow::Owned(quote::format_ident!("f{index}")),
-    };
-
     let name = input.ident;
     let projection_name = quote::format_ident!("{name}Projection");
     let vector_types = fields.iter().map(|field| {
@@ -43,13 +39,13 @@ pub(crate) fn impl_vertex(input: DeriveInput) -> TokenStream {
     });
 
     let projection_fields = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = make_ident(index, field.ident.as_ref());
+        let ident = utils::make_ident(index, field.ident.as_ref());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::Field }
     });
 
     let projection_inputs = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = make_ident(index, field.ident.as_ref());
+        let ident = utils::make_ident(index, field.ident.as_ref());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::input_projection(id, #index) }
     });
@@ -67,7 +63,7 @@ pub(crate) fn impl_vertex(input: DeriveInput) -> TokenStream {
         }
 
         impl ::dunge::vertex::Projection for #projection_name {
-            fn projection(id: u32) -> Self {
+            fn projection(id: ::core::primitive::u32) -> Self {
                 Self {
                     #(#projection_inputs),*,
                 }
@@ -103,7 +99,7 @@ mod tests {
         };
 
         let input = syn::parse2(input).expect("parse input");
-        let actual = impl_vertex(input);
+        let actual = derive(input);
         let expected = quote::quote! {
             unsafe impl ::dunge::vertex::Vertex for Vert {
                 type Projection = VertProjection;
@@ -119,7 +115,7 @@ mod tests {
             }
 
             impl ::dunge::vertex::Projection for VertProjection {
-                fn projection(id: u32) -> Self {
+                fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
                         pos: <[f32; 2] as ::dunge::vertex::InputProjection>::input_projection(id, 0u32),
                         col: <[f32; 3] as ::dunge::vertex::InputProjection>::input_projection(id, 1u32),

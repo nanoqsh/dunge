@@ -13,7 +13,7 @@ mod time;
 pub mod vertex;
 
 pub use {
-    dunge_macros::Vertex,
+    dunge_macros::{Group, Vertex},
     dunge_shader::{group::Group, sl, types, vertex::Vertex},
     glam,
 };

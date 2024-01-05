@@ -1,15 +1,14 @@
 use {
     dunge::{
-        bind::VisitGroup,
         color::Rgba,
         context::Context,
         draw,
-        group::{BoundTexture, DeclareGroup, Group, MemberProjection, Projection, Visitor},
+        group::BoundTexture,
         mesh,
-        sl::{self, GlobalOut, Groups, Input, Out},
+        sl::{self, Groups, Input, Out},
         state::{Options, Render},
         texture::{self, Format, Sampler},
-        Vertex,
+        Group, Vertex,
     },
     glam::Vec2,
     helpers::Image,
@@ -29,44 +28,10 @@ fn render() -> Result<(), Error> {
         tex: Vec2,
     }
 
-    struct Map<'g> {
-        tex: BoundTexture<'g>,
-        sam: &'g Sampler,
-    }
-
-    impl Group for Map<'_> {
-        type Projection = MapProjection;
-        type Visitor<'g> = VisitGroup<'g>
-        where
-            Self: 'g;
-
-        const DECL: DeclareGroup = DeclareGroup::new(&[
-            <BoundTexture<'static> as MemberProjection>::TYPE,
-            <&'static Sampler as MemberProjection>::TYPE,
-        ]);
-
-        fn group<'g>(&'g self, visit: &mut Self::Visitor<'g>) {
-            visit.visit_texture(self.tex);
-            visit.visit_sampler(self.sam);
-        }
-    }
-
-    struct MapProjection {
-        tex: <BoundTexture<'static> as MemberProjection>::Field,
-        sam: <&'static Sampler as MemberProjection>::Field,
-    }
-
-    impl Projection for MapProjection {
-        fn projection(id: u32, out: GlobalOut) -> Self {
-            Self {
-                tex: <BoundTexture<'static> as MemberProjection>::member_projection(
-                    id,
-                    0,
-                    out.clone(),
-                ),
-                sam: <&'static Sampler as MemberProjection>::member_projection(id, 1, out.clone()),
-            }
-        }
+    #[derive(Group)]
+    struct Map<'a> {
+        tex: BoundTexture<'a>,
+        sam: &'a Sampler,
     }
 
     let triangle = |vert: Input<Vert>, groups: Groups<Map>| {

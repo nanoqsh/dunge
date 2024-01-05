@@ -1,6 +1,6 @@
 use {
     crate::{
-        group::{BoundTexture, Group, Visitor},
+        group::{BoundTexture, Group},
         shader::Shader,
         state::State,
         texture::Sampler,
@@ -11,44 +11,42 @@ use {
     },
 };
 
-#[derive(Default)]
-pub struct VisitGroup<'g>(Vec<BindGroupEntry<'g>>);
+pub trait Visit: Group {
+    fn visit<'a>(&'a self, visitor: &mut Visitor<'a>);
+}
 
-impl<'g> VisitGroup<'g> {
-    fn visit_texture(&mut self, texture: BoundTexture<'g>) {
-        self.push_resource(BindingResource::TextureView(texture.get().view()));
-    }
+pub struct Visitor<'a>(Vec<BindGroupEntry<'a>>);
 
-    fn visit_sampler(&mut self, sampler: &'g Sampler) {
-        self.push_resource(BindingResource::Sampler(sampler.inner()));
-    }
-
-    fn push_resource(&mut self, resource: BindingResource<'g>) {
+impl<'a> Visitor<'a> {
+    fn push(&mut self, resource: BindingResource<'a>) {
         let binding = self.0.len() as u32;
         self.0.push(BindGroupEntry { binding, resource });
     }
 }
 
-impl<'g> Visitor for VisitGroup<'g> {
-    type Texture = BoundTexture<'g>;
-    type Sampler = &'g Sampler;
+pub trait VisitMember<'a> {
+    fn visit_member(self, visitor: &mut Visitor<'a>);
+}
 
-    fn visit_texture(&mut self, texture: Self::Texture) {
-        self.visit_texture(texture);
-    }
-
-    fn visit_sampler(&mut self, sampler: Self::Sampler) {
-        self.visit_sampler(sampler);
+impl<'a> VisitMember<'a> for BoundTexture<'a> {
+    fn visit_member(self, visitor: &mut Visitor<'a>) {
+        visitor.push(BindingResource::TextureView(self.get().view()));
     }
 }
 
-fn visit<'g, G>(group: &'g G) -> Vec<BindGroupEntry<'g>>
+impl<'a> VisitMember<'a> for &'a Sampler {
+    fn visit_member(self, visitor: &mut Visitor<'a>) {
+        visitor.push(BindingResource::Sampler(self.inner()));
+    }
+}
+
+fn visit<G>(group: &G) -> Vec<BindGroupEntry>
 where
-    G: Group<Visitor<'g> = VisitGroup<'g>>,
+    G: Visit,
 {
-    let mut visit = VisitGroup::default();
-    group.group(&mut visit);
-    visit.0
+    let mut visitor = Visitor(vec![]);
+    group.visit(&mut visitor);
+    visitor.0
 }
 
 pub struct GroupHandler<G> {
@@ -101,14 +99,14 @@ impl Binding for GroupBinding {
 
 pub type Update = Result<(), ForeignShader>;
 
-pub(crate) fn update<'g, G>(
+pub(crate) fn update<G>(
     state: &State,
     uni: &mut UniqueGroupBinding,
     handler: GroupHandler<G>,
-    group: &'g G,
+    group: &G,
 ) -> Update
 where
-    G: Group<Visitor<'g> = VisitGroup<'g>>,
+    G: Visit,
 {
     if handler.shader_id != uni.0.shader_id {
         return Err(ForeignShader);
@@ -181,9 +179,9 @@ impl<'a> Binder<'a> {
         }
     }
 
-    pub fn bind<'g, G>(&mut self, group: &'g G) -> GroupHandler<G>
+    pub fn bind<G>(&mut self, group: &G) -> GroupHandler<G>
     where
-        G: Group<Visitor<'g> = VisitGroup<'g>>,
+        G: Visit,
     {
         let id = self.groups.len();
         let Some(layout) = self.layout.get(id) else {
