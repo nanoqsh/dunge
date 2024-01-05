@@ -95,7 +95,7 @@ impl Context {
         group: &'g G,
     ) -> Update
     where
-        G: Group<Visitor = VisitGroup<'g>>,
+        G: Group<Visitor<'g> = VisitGroup<'g>>,
     {
         bind::update(&self.0, uni, handler, group)
     }

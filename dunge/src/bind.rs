@@ -44,7 +44,7 @@ impl<'g> Visitor for VisitGroup<'g> {
 
 fn visit<'g, G>(group: &'g G) -> Vec<BindGroupEntry<'g>>
 where
-    G: Group<Visitor = VisitGroup<'g>>,
+    G: Group<Visitor<'g> = VisitGroup<'g>>,
 {
     let mut visit = VisitGroup::default();
     group.group(&mut visit);
@@ -108,7 +108,7 @@ pub(crate) fn update<'g, G>(
     group: &'g G,
 ) -> Update
 where
-    G: Group<Visitor = VisitGroup<'g>>,
+    G: Group<Visitor<'g> = VisitGroup<'g>>,
 {
     if handler.shader_id != uni.0.shader_id {
         return Err(ForeignShader);
@@ -183,7 +183,7 @@ impl<'a> Binder<'a> {
 
     pub fn bind<'g, G>(&mut self, group: &'g G) -> GroupHandler<G>
     where
-        G: Group<Visitor = VisitGroup<'g>>,
+        G: Group<Visitor<'g> = VisitGroup<'g>>,
     {
         let id = self.groups.len();
         let Some(layout) = self.layout.get(id) else {

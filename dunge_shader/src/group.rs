@@ -6,10 +6,13 @@ use {
 /// The group type description.
 pub trait Group {
     type Projection: Projection + 'static;
-    type Visitor: Visitor;
+    type Visitor<'g>: Visitor
+    where
+        Self: 'g;
+
     const DECL: DeclareGroup;
 
-    fn group(&self, visit: &mut Self::Visitor);
+    fn group<'g>(&'g self, visit: &mut Self::Visitor<'g>);
 }
 
 pub trait Projection {

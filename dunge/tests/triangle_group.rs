@@ -4,12 +4,11 @@ use {
         color::Rgba,
         context::Context,
         draw,
-        group::{BoundTexture, DeclareGroup, Group, Projection, Visitor},
+        group::{BoundTexture, DeclareGroup, Group, MemberProjection, Projection, Visitor},
         mesh,
-        sl::{self, GlobalOut, Groups, Input, Out, ReadGlobal, Ret},
+        sl::{self, GlobalOut, Groups, Input, Out},
         state::{Options, Render},
         texture::{self, Format, Sampler},
-        types::{self, GroupMemberType},
         Vertex,
     },
     glam::Vec2,
@@ -35,38 +34,47 @@ fn render() -> Result<(), Error> {
         sam: &'g Sampler,
     }
 
-    impl<'g> Group for Map<'g> {
+    impl Group for Map<'_> {
         type Projection = MapProjection;
-        type Visitor = VisitGroup<'g>;
-        const DECL: DeclareGroup =
-            DeclareGroup::new(&[GroupMemberType::Tx2df, GroupMemberType::Sampl]);
+        type Visitor<'g> = VisitGroup<'g>
+        where
+            Self: 'g;
 
-        fn group(&self, visit: &mut Self::Visitor) {
+        const DECL: DeclareGroup = DeclareGroup::new(&[
+            <BoundTexture<'static> as MemberProjection>::TYPE,
+            <&'static Sampler as MemberProjection>::TYPE,
+        ]);
+
+        fn group<'g>(&'g self, visit: &mut Self::Visitor<'g>) {
             visit.visit_texture(self.tex);
             visit.visit_sampler(self.sam);
         }
     }
 
     struct MapProjection {
-        tex: Ret<ReadGlobal, types::Texture2d<f32>>,
-        sam: Ret<ReadGlobal, types::Sampler>,
+        tex: <BoundTexture<'static> as MemberProjection>::Field,
+        sam: <&'static Sampler as MemberProjection>::Field,
     }
 
     impl Projection for MapProjection {
         fn projection(id: u32, out: GlobalOut) -> Self {
             Self {
-                tex: ReadGlobal::new(id, 0, out.clone()),
-                sam: ReadGlobal::new(id, 1, out.clone()),
+                tex: <BoundTexture<'static> as MemberProjection>::member_projection(
+                    id,
+                    0,
+                    out.clone(),
+                ),
+                sam: <&'static Sampler as MemberProjection>::member_projection(id, 1, out.clone()),
             }
         }
     }
 
-    let triangle = |vert: Input<Vert>, groups: Groups<Map>| Out {
-        place: sl::concat(vert.pos, Vec2::new(0., 1.)),
-        color: {
-            let Groups(map) = groups;
-            sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex))
-        },
+    let triangle = |vert: Input<Vert>, groups: Groups<Map>| {
+        let Groups(map) = groups;
+        Out {
+            place: sl::concat(vert.pos, Vec2::new(0., 1.)),
+            color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
+        }
     };
 
     let cx = helpers::block_on(Context::new())?;
@@ -105,15 +113,15 @@ fn render() -> Result<(), Error> {
         const VERTS: [Vert; 3] = [
             Vert {
                 pos: Vec2::new(0., -0.75),
-                tex: Vec2::new(0., 0.),
-            },
-            Vert {
-                pos: Vec2::new(0.866, 0.75),
                 tex: Vec2::new(0., 1.),
             },
             Vert {
-                pos: Vec2::new(-0.866, 0.75),
+                pos: Vec2::new(0.866, 0.75),
                 tex: Vec2::new(1., 1.),
+            },
+            Vert {
+                pos: Vec2::new(-0.866, 0.75),
+                tex: Vec2::new(1., 0.),
             },
         ];
 

@@ -104,7 +104,7 @@ mod tests {
 
         let input = syn::parse2(input).expect("parse input");
         let actual = impl_vertex(input);
-        let expectd = quote::quote! {
+        let expected = quote::quote! {
             unsafe impl ::dunge::vertex::Vertex for Vert {
                 type Projection = VertProjection;
                 const DECL: ::dunge::vertex::DeclareInput = ::dunge::vertex::DeclareInput::new(&[
@@ -128,6 +128,6 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expectd.to_string());
+        assert_eq!(actual.to_string(), expected.to_string());
     }
 }
