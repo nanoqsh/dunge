@@ -13,20 +13,20 @@ where
     }
 }
 
-pub fn from_fn<F>(f: F) -> impl Draw
+pub fn from_fn<D>(draw: D) -> impl Draw
 where
-    F: Fn(Frame),
+    D: Fn(Frame),
 {
-    struct Func<F>(F);
+    struct Func<D>(D);
 
-    impl<F> Draw for Func<F>
+    impl<D> Draw for Func<D>
     where
-        F: Fn(Frame),
+        D: Fn(Frame),
     {
         fn draw(&self, frame: Frame) {
             (self.0)(frame);
         }
     }
 
-    Func(f)
+    Func(draw)
 }

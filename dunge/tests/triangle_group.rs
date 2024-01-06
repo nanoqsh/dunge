@@ -1,7 +1,6 @@
 use {
     dunge::{
         color::Rgba,
-        context::Context,
         draw,
         group::BoundTexture,
         mesh,
@@ -39,7 +38,7 @@ fn render() -> Result<(), Error> {
         color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
     };
 
-    let cx = helpers::block_on(Context::new())?;
+    let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
     let map = {
         let texture = {

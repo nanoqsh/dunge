@@ -1,7 +1,6 @@
 use {
     dunge::{
         color::Rgba,
-        context::Context,
         draw,
         sl::{self, Index, Out},
         state::{Options, Render},
@@ -30,7 +29,7 @@ fn render() -> Result<(), Error> {
         }
     };
 
-    let cx = helpers::block_on(Context::new())?;
+    let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
     let layer = cx.make_layer(Format::RgbAlpha, &shader);
     let view = {

@@ -6,7 +6,7 @@ use {
         mesh::{self, Mesh},
         shader::Shader,
         sl::IntoModule,
-        state::{Render, State, View},
+        state::{Render, RenderView, State},
         texture::{
             self, CopyBuffer, CopyBufferView, DrawTexture, Format, Make, MapResult, Mapped, Sampler,
         },
@@ -19,17 +19,13 @@ use {
 pub struct Context(Arc<State>);
 
 impl Context {
-    pub async fn new() -> Result<Self, Error> {
-        use wgpu::{Backends, Instance, InstanceDescriptor};
+    pub(crate) fn new(state: State) -> Self {
+        Self(Arc::new(state))
+    }
 
-        let desc = InstanceDescriptor {
-            backends: Backends::PRIMARY,
-            ..Default::default()
-        };
-
-        let instance = Instance::new(desc);
-        let state = State::new(&instance).await?;
-        Ok(Self(Arc::new(state)))
+    #[cfg(feature = "winit")]
+    pub(crate) fn state(&self) -> &State {
+        &self.0
     }
 
     pub fn make_shader<M, A>(&self, module: M) -> Shader<M::Vertex>
@@ -83,7 +79,7 @@ impl Context {
         T: DrawTexture,
         D: Draw,
     {
-        let view = View::from_texture(texture.draw_texture());
+        let view = RenderView::from_texture(texture.draw_texture());
         self.0.draw(render, view, draw)
     }
 

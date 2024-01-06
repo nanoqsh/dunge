@@ -7,10 +7,14 @@ use {
         texture::{CopyBuffer, CopyTexture, DrawTexture, Format, Texture},
     },
     std::sync::atomic::{self, AtomicUsize},
-    wgpu::{Adapter, Color, CommandEncoder, Device, Instance, LoadOp, Queue, TextureView},
+    wgpu::{Color, CommandEncoder, Device, Instance, LoadOp, Queue, TextureView},
 };
 
+#[cfg(feature = "winit")]
+use {crate::window::Output, wgpu::Adapter};
+
 pub(crate) struct State {
+    #[cfg(feature = "winit")]
     adapter: Adapter,
     device: Device,
     queue: Queue,
@@ -52,6 +56,7 @@ impl State {
         };
 
         Ok(Self {
+            #[cfg(feature = "winit")]
             adapter,
             device,
             queue,
@@ -59,7 +64,7 @@ impl State {
         })
     }
 
-    #[allow(dead_code)]
+    #[cfg(feature = "winit")]
     pub fn adapter(&self) -> &Adapter {
         &self.adapter
     }
@@ -76,7 +81,7 @@ impl State {
         self.shader_ids.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
-    pub fn draw<D>(&self, render: &mut Render, view: View, draw: D)
+    pub fn draw<D>(&self, render: &mut Render, view: RenderView, draw: D)
     where
         D: Draw,
     {
@@ -109,7 +114,7 @@ impl Options {
 }
 
 pub struct Frame<'v, 'e> {
-    view: View<'v>,
+    view: RenderView<'v>,
     device: &'e Device,
     encoders: &'e mut Encoders,
     id: usize,
@@ -120,7 +125,7 @@ impl Frame<'_, '_> {
     where
         T: DrawTexture,
     {
-        let view = View::from_texture(texture.draw_texture());
+        let view = RenderView::from_texture(texture.draw_texture());
         self.encoders.make(self.device, view)
     }
 
@@ -163,7 +168,7 @@ impl Frame<'_, '_> {
 struct Encoders(Vec<CommandEncoder>);
 
 impl Encoders {
-    fn make<'e, 'v>(&'e mut self, device: &'e Device, view: View<'v>) -> Frame<'v, 'e> {
+    fn make<'e, 'v>(&'e mut self, device: &'e Device, view: RenderView<'v>) -> Frame<'v, 'e> {
         use wgpu::CommandEncoderDescriptor;
 
         let encoder = {
@@ -191,16 +196,24 @@ impl Encoders {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct View<'v> {
+pub(crate) struct RenderView<'v> {
     txview: &'v TextureView,
     format: Format,
 }
 
-impl<'v> View<'v> {
+impl<'v> RenderView<'v> {
     pub fn from_texture(texture: &'v Texture) -> Self {
         Self {
             txview: texture.view(),
             format: texture.format(),
+        }
+    }
+
+    #[cfg(feature = "winit")]
+    pub fn from_output(output: &'v Output) -> Self {
+        Self {
+            txview: output.view(),
+            format: output.format(),
         }
     }
 }

@@ -1,7 +1,6 @@
 use {
     dunge::{
         color::Rgba,
-        context::Context,
         draw, mesh,
         sl::{self, Input, Out},
         state::{Options, Render},
@@ -31,7 +30,7 @@ fn render() -> Result<(), Error> {
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
 
-    let cx = helpers::block_on(Context::new())?;
+    let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
     let layer = cx.make_layer(Format::RgbAlpha, &shader);
     let view = {
