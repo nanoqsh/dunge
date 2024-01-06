@@ -1,8 +1,5 @@
 use {
-    crate::{
-        state::State,
-        vertex::{self, Vertex},
-    },
+    crate::{state::State, vertex, Vertex},
     std::{borrow::Cow, error, fmt, marker::PhantomData, mem, slice},
     wgpu::{Buffer, RenderPass},
 };

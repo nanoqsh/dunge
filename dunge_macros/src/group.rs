@@ -1,5 +1,5 @@
 use {
-    crate::utils,
+    crate::ident,
     proc_macro2::{Span, TokenStream},
     syn::{spanned::Spanned, Data, DataStruct, DeriveInput, GenericParam, Ident, Lifetime},
 };
@@ -66,24 +66,24 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     });
 
     let group_visit_members = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = utils::make_ident(index, field.ident.as_ref());
+        let ident = ident::make(index, field.ident.as_ref());
         quote::quote! { ::dunge::bind::VisitMember::visit_member(self.#ident, visitor) }
     });
 
     let group_fields = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = utils::make_ident(index, field.ident.as_ref());
+        let ident = ident::make(index, field.ident.as_ref());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::group::MemberProjection>::Field }
     });
 
     let group_member_projections = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = utils::make_ident(index, field.ident.as_ref());
+        let ident = ident::make(index, field.ident.as_ref());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::group::MemberProjection>::member_projection(id, #index, out.clone()) }
     });
 
     quote::quote! {
-        impl<#(#lts),*> ::dunge::group::Group for #name<#(#lts),*> {
+        impl<#(#lts),*> ::dunge::Group for #name<#(#lts),*> {
             type Projection = #projection_name<#(#static_lts),*>;
             const DECL: ::dunge::group::DeclareGroup = ::dunge::group::DeclareGroup::new(&[
                 #(#group_types),*,
@@ -126,7 +126,7 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            impl<'a> ::dunge::group::Group for Map<'a> {
+            impl<'a> ::dunge::Group for Map<'a> {
                 type Projection = MapProjection<'static>;
                 const DECL: ::dunge::group::DeclareGroup = ::dunge::group::DeclareGroup::new(&[
                     <BoundTexture<'a> as ::dunge::group::MemberProjection>::TYPE,

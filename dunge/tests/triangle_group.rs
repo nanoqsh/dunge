@@ -34,12 +34,9 @@ fn render() -> Result<(), Error> {
         sam: &'a Sampler,
     }
 
-    let triangle = |vert: Input<Vert>, groups: Groups<Map>| {
-        let Groups(map) = groups;
-        Out {
-            place: sl::concat(vert.pos, Vec2::new(0., 1.)),
-            color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
-        }
+    let triangle = |vert: Input<Vert>, Groups(map): Groups<Map>| Out {
+        place: sl::concat(vert.pos, Vec2::new(0., 1.)),
+        color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
     };
 
     let cx = helpers::block_on(Context::new())?;

@@ -1,10 +1,5 @@
 use {
-    crate::{
-        group::{BoundTexture, Group},
-        shader::Shader,
-        state::State,
-        texture::Sampler,
-    },
+    crate::{group::BoundTexture, shader::Shader, state::State, texture::Sampler, Group},
     std::{any::TypeId, fmt, marker::PhantomData, sync::Arc},
     wgpu::{
         BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
@@ -74,12 +69,12 @@ pub struct Bind<'a> {
 }
 
 #[derive(Clone)]
-pub struct GroupBinding {
+pub struct SharedBinding {
     shader_id: usize,
     groups: Arc<[BindGroup]>,
 }
 
-impl GroupBinding {
+impl SharedBinding {
     fn new(shader_id: usize, groups: Vec<BindGroup>) -> Self {
         Self {
             shader_id,
@@ -88,7 +83,7 @@ impl GroupBinding {
     }
 }
 
-impl Binding for GroupBinding {
+impl Binding for SharedBinding {
     fn binding(&self) -> Bind {
         Bind {
             shader_id: self.shader_id,
@@ -101,7 +96,7 @@ pub type Update = Result<(), ForeignShader>;
 
 pub(crate) fn update<G>(
     state: &State,
-    uni: &mut UniqueGroupBinding,
+    uni: &mut UniqueBinding,
     handler: GroupHandler<G>,
     group: &G,
 ) -> Update
@@ -125,10 +120,10 @@ where
     Ok(())
 }
 
-pub struct UniqueGroupBinding(GroupBinding);
+pub struct UniqueBinding(SharedBinding);
 
-impl UniqueGroupBinding {
-    pub fn into_inner(self) -> GroupBinding {
+impl UniqueBinding {
+    pub fn shared(self) -> SharedBinding {
         self.0
     }
 
@@ -137,7 +132,7 @@ impl UniqueGroupBinding {
     }
 }
 
-impl Binding for UniqueGroupBinding {
+impl Binding for UniqueBinding {
     fn binding(&self) -> Bind {
         self.0.binding()
     }
@@ -211,12 +206,12 @@ impl<'a> Binder<'a> {
         }
     }
 
-    pub fn into_binding(self) -> UniqueGroupBinding {
+    pub fn into_binding(self) -> UniqueBinding {
         if self.groups.len() != self.layout.len() {
             panic!("some group bindings is not set");
         }
 
-        let binding = GroupBinding::new(self.shader_id, self.groups);
-        UniqueGroupBinding(binding)
+        let binding = SharedBinding::new(self.shader_id, self.groups);
+        UniqueBinding(binding)
     }
 }

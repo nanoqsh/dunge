@@ -4,7 +4,7 @@ use {
         context::Error,
         draw::Draw,
         layer::{Layer, SetLayer},
-        texture::{CopyBuffer, CopyTexture, Format, Texture},
+        texture::{CopyBuffer, CopyTexture, DrawTexture, Format, Texture},
     },
     std::sync::atomic::{self, AtomicUsize},
     wgpu::{Adapter, Color, CommandEncoder, Device, Instance, LoadOp, Queue, TextureView},
@@ -76,12 +76,11 @@ impl State {
         self.shader_ids.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
-    pub fn draw<V, D>(&self, render: &mut Render, view: &V, draw: D)
+    pub fn draw<D>(&self, render: &mut Render, view: View, draw: D)
     where
-        V: AsView,
         D: Draw,
     {
-        draw.draw(render.0.make(&self.device, view.as_view()));
+        draw.draw(render.0.make(&self.device, view));
         let buffers = render.0.drain().map(CommandEncoder::finish);
         self.queue.submit(buffers);
     }
@@ -117,11 +116,12 @@ pub struct Frame<'v, 'e> {
 }
 
 impl Frame<'_, '_> {
-    pub fn subframe<'e, 'v, V>(&'e mut self, view: &'v V) -> Frame<'v, 'e>
+    pub fn subframe<'e, 'v, T>(&'e mut self, texture: &'v T) -> Frame<'v, 'e>
     where
-        V: AsView,
+        T: DrawTexture,
     {
-        self.encoders.make(self.device, view.as_view())
+        let view = View::from_texture(texture.draw_texture());
+        self.encoders.make(self.device, view)
     }
 
     pub fn layer<'p, V>(&'p mut self, layer: &'p Layer<V>, opts: Options) -> SetLayer<'p, V> {
@@ -190,21 +190,17 @@ impl Encoders {
     }
 }
 
-pub trait AsView {
-    fn as_view(&self) -> View;
-}
-
 #[derive(Clone, Copy)]
-pub struct View<'v> {
+pub(crate) struct View<'v> {
     txview: &'v TextureView,
     format: Format,
 }
 
-impl AsView for Texture {
-    fn as_view(&self) -> View {
-        View {
-            txview: self.view(),
-            format: self.format(),
+impl<'v> View<'v> {
+    pub fn from_texture(texture: &'v Texture) -> Self {
+        Self {
+            txview: texture.view(),
+            format: texture.format(),
         }
     }
 }

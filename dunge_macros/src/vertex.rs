@@ -1,5 +1,5 @@
 use {
-    crate::utils,
+    crate::ident,
     proc_macro2::TokenStream,
     syn::{meta::ParseNestedMeta, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput},
 };
@@ -39,19 +39,19 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     });
 
     let projection_fields = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = utils::make_ident(index, field.ident.as_ref());
+        let ident = ident::make(index, field.ident.as_ref());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::Field }
     });
 
     let projection_inputs = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = utils::make_ident(index, field.ident.as_ref());
+        let ident = ident::make(index, field.ident.as_ref());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::input_projection(id, #index) }
     });
 
     quote::quote! {
-        unsafe impl ::dunge::vertex::Vertex for #name {
+        unsafe impl ::dunge::Vertex for #name {
             type Projection = #projection_name;
             const DECL: ::dunge::vertex::DeclareInput = ::dunge::vertex::DeclareInput::new(&[
                 #(#vector_types),*,
@@ -101,7 +101,7 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            unsafe impl ::dunge::vertex::Vertex for Vert {
+            unsafe impl ::dunge::Vertex for Vert {
                 type Projection = VertProjection;
                 const DECL: ::dunge::vertex::DeclareInput = ::dunge::vertex::DeclareInput::new(&[
                     <[f32; 2] as ::dunge::vertex::InputProjection>::TYPE,

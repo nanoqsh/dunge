@@ -8,9 +8,10 @@ pub mod mesh;
 pub mod shader;
 pub mod state;
 pub mod texture;
-#[allow(dead_code)]
-mod time;
 pub mod vertex;
+
+#[cfg(feature = "winit")]
+mod time;
 
 pub use {
     dunge_macros::{Group, Vertex},
