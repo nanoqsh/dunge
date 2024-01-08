@@ -13,6 +13,8 @@ pub mod update;
 pub mod vertex;
 
 #[cfg(feature = "winit")]
+mod el;
+#[cfg(feature = "winit")]
 mod time;
 #[cfg(feature = "winit")]
 pub mod window;

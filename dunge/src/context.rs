@@ -8,7 +8,8 @@ use {
         sl::IntoModule,
         state::{Render, RenderView, State},
         texture::{
-            self, CopyBuffer, CopyBufferView, DrawTexture, Format, Make, MapResult, Mapped, Sampler,
+            self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Format, Make, MapResult, Mapped,
+            Sampler,
         },
         Vertex,
     },
@@ -57,8 +58,8 @@ impl Context {
         texture::make(&self.0, data)
     }
 
-    pub fn make_sampler(&self) -> Sampler {
-        Sampler::new(&self.0)
+    pub fn make_sampler(&self, filter: Filter) -> Sampler {
+        Sampler::new(&self.0, filter)
     }
 
     pub fn make_copy_buffer(&self, size: (u32, u32)) -> CopyBuffer {

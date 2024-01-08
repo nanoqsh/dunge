@@ -1,9 +1,9 @@
 use {
     crate::{
         context::{self, Context},
-        state::{Render, RenderView, State},
+        el::Loop,
+        state::State,
         texture::Format,
-        time::{Fps, Time},
         update::Update,
     },
     std::{error, fmt},
@@ -13,11 +13,13 @@ use {
     },
     winit::{
         error::{EventLoopError, OsError},
-        event,
-        event_loop::{self, EventLoop},
-        keyboard, window,
+        event_loop::EventLoop,
+        window::{self, WindowId},
     },
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::el::LoopError;
 
 pub struct WindowBuilder {
     title: String,
@@ -72,16 +74,17 @@ impl WindowBuilder {
         };
 
         let view = View::new(cx.state(), instance, inner)?;
-        Ok(Window { cx, el, view })
+        Ok(Window {
+            cx,
+            el: Loop(el),
+            view,
+        })
     }
 }
 
-type Event = event::Event<()>;
-type Target = event_loop::EventLoopWindowTarget<()>;
-
 pub struct Window {
     cx: Context,
-    el: EventLoop<()>,
+    el: Loop,
     view: View,
 }
 
@@ -90,99 +93,24 @@ impl Window {
         self.cx.clone()
     }
 
-    pub fn run<U>(self, mut update: U) -> Result<(), LoopError>
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn run<U>(self, update: U) -> Result<(), LoopError>
     where
         U: Update,
     {
-        use {
-            event::{KeyEvent, StartCause, WindowEvent},
-            event_loop::ControlFlow,
-            keyboard::{KeyCode, PhysicalKey},
-            std::time::Duration,
-        };
+        self.el.run(self.cx, self.view, update)
+    }
 
-        let Self { cx, el, mut view } = self;
-        let mut render = Render::default();
-        let mut time = Time::now();
-        let mut fps = Fps::default();
-        let handler = |ev: Event, target: &Target| match ev {
-            Event::NewEvents(cause) => match cause {
-                StartCause::ResumeTimeReached { .. } => view.inner.request_redraw(),
-                StartCause::WaitCancelled {
-                    requested_resume, ..
-                } => target.set_control_flow(match requested_resume {
-                    Some(resume) => ControlFlow::WaitUntil(resume),
-                    None => {
-                        const WAIT_TIME: Duration = Duration::from_millis(100);
-
-                        ControlFlow::wait_duration(WAIT_TIME)
-                    }
-                }),
-                StartCause::Poll => {}
-                StartCause::Init => {}
-            },
-            Event::WindowEvent { event, window_id } if window_id == view.inner.id() => {
-                match event {
-                    WindowEvent::Resized(_) => view.resize(cx.state()),
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        event:
-                            KeyEvent {
-                                physical_key: PhysicalKey::Code(KeyCode::Escape),
-                                ..
-                            },
-                        ..
-                    } => target.exit(),
-                    WindowEvent::RedrawRequested => {
-                        let delta_time = time.delta();
-                        let min_delta_time = 1. / 60.;
-                        if delta_time < min_delta_time {
-                            let wait = Duration::from_secs_f32(min_delta_time - delta_time);
-                            target.set_control_flow(ControlFlow::wait_duration(wait));
-                            return;
-                        }
-
-                        time.reset();
-                        if let Some(fps) = fps.count(delta_time) {
-                            println!("fps: {fps}");
-                        }
-
-                        update.update();
-                        match view.output() {
-                            Ok(output) => {
-                                let view = RenderView::from_output(&output);
-                                cx.state().draw(&mut render, view, &update);
-                                output.surface.present();
-                            }
-                            Err(SurfaceError::Lost) => view.resize(cx.state()),
-                            Err(SurfaceError::OutOfMemory) => target.exit(),
-                            Err(err) => eprintln!("{err:?}"),
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            Event::Suspended => {}
-            Event::Resumed => view.inner.request_redraw(),
-            _ => {}
-        };
-
-        el.run(handler).map_err(LoopError)
+    #[cfg(target_arch = "wasm32")]
+    pub fn spawn<U>(self, update: U)
+    where
+        U: Update + 'static,
+    {
+        self.el.spawn(self.cx, self.view, update)
     }
 }
 
-#[derive(Debug)]
-pub struct LoopError(EventLoopError);
-
-impl fmt::Display for LoopError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl error::Error for LoopError {}
-
-struct View {
+pub(crate) struct View {
     conf: SurfaceConfiguration,
     surface: Surface,
 
@@ -230,7 +158,15 @@ impl View {
         })
     }
 
-    fn output(&self) -> Result<Output, SurfaceError> {
+    pub fn id(&self) -> WindowId {
+        self.inner.id()
+    }
+
+    pub fn request_redraw(&self) {
+        self.inner.request_redraw();
+    }
+
+    pub fn output(&self) -> Result<Output, SurfaceError> {
         use wgpu::TextureViewDescriptor;
 
         let output = self.surface.get_current_texture()?;
@@ -246,7 +182,7 @@ impl View {
         })
     }
 
-    fn resize(&mut self, state: &State) {
+    pub fn resize(&mut self, state: &State) {
         let size = self.inner.inner_size();
         if size.width > 0 && size.height > 0 {
             self.conf.width = size.width;
@@ -269,6 +205,10 @@ impl Output {
 
     pub fn format(&self) -> Format {
         self.format
+    }
+
+    pub fn present(self) {
+        self.surface.present();
     }
 }
 

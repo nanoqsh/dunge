@@ -2,8 +2,8 @@ use {
     crate::state::State,
     std::{error, fmt, future::IntoFuture, mem},
     wgpu::{
-        Buffer, BufferAsyncError, BufferSlice, BufferView, CommandEncoder, TextureFormat,
-        TextureUsages, TextureView, WasmNotSend,
+        Buffer, BufferAsyncError, BufferSlice, BufferView, CommandEncoder, FilterMode,
+        TextureFormat, TextureUsages, TextureView, WasmNotSend,
     },
 };
 
@@ -203,16 +203,32 @@ where
     })
 }
 
+#[derive(Clone, Copy)]
+pub enum Filter {
+    Nearest,
+    Linear,
+}
+
+impl Filter {
+    pub(crate) const fn wgpu(self) -> FilterMode {
+        match self {
+            Self::Nearest => FilterMode::Nearest,
+            Self::Linear => FilterMode::Linear,
+        }
+    }
+}
+
 pub struct Sampler(wgpu::Sampler);
 
 impl Sampler {
-    pub(crate) fn new(state: &State) -> Self {
+    pub(crate) fn new(state: &State, filter: Filter) -> Self {
         use wgpu::*;
 
         let inner = {
+            let filter = filter.wgpu();
             let desc = SamplerDescriptor {
-                mag_filter: FilterMode::Nearest,
-                min_filter: FilterMode::Nearest,
+                mag_filter: filter,
+                min_filter: filter,
                 ..Default::default()
             };
 

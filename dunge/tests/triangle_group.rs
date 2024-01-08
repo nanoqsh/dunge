@@ -1,3 +1,5 @@
+#![cfg(not(target_family = "wasm"))]
+
 use {
     dunge::{
         color::Rgba,
@@ -6,7 +8,7 @@ use {
         mesh,
         sl::{self, Groups, Input, Out},
         state::{Options, Render},
-        texture::{self, Format, Sampler},
+        texture::{self, Filter, Format, Sampler},
         Group, Vertex,
     },
     glam::Vec2,
@@ -49,7 +51,7 @@ fn render() -> Result<(), Error> {
             cx.make_texture(data)
         };
 
-        let sampler = cx.make_sampler();
+        let sampler = cx.make_sampler(Filter::Nearest);
         let map = Map {
             tex: BoundTexture::new(&texture),
             sam: &sampler,
