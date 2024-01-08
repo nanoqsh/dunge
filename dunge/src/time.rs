@@ -1,46 +1,50 @@
-use instant::Instant;
+use {instant::Instant, std::time::Duration};
 
 pub(crate) struct Time {
     last: Instant,
-    delta: f32,
+    delta: Duration,
 }
 
 impl Time {
     pub fn now() -> Self {
         Self {
             last: Instant::now(),
-            delta: 0.,
+            delta: Duration::ZERO,
         }
     }
 
-    pub fn delta(&mut self) -> f32 {
+    pub fn delta(&mut self) -> Duration {
         let now = Instant::now();
         let delta = now.duration_since(self.last);
         self.last = now;
-        self.delta += delta.as_secs_f32();
+        self.delta += delta;
         self.delta
     }
 
     pub fn reset(&mut self) {
-        self.delta = 0.;
+        self.delta = Duration::ZERO;
     }
 }
 
 #[derive(Default)]
 pub(crate) struct Fps {
-    timer: f32,
+    timer: Duration,
     counter: u32,
 }
 
 impl Fps {
-    pub fn count(&mut self, delta_time: f32) -> Option<u32> {
+    pub fn count(&mut self, delta_time: Duration) -> Option<u32> {
+        const SECOND: Duration = Duration::from_secs(1);
+
         self.timer += delta_time;
         self.counter += 1;
-        (self.timer > 1.).then(|| {
-            self.timer = 0.;
+        if self.timer > SECOND {
+            self.timer = Duration::ZERO;
             let n = self.counter;
             self.counter = 0;
-            n
-        })
+            Some(n)
+        } else {
+            None
+        }
     }
 }

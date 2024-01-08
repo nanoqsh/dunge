@@ -1,12 +1,12 @@
-use crate::{draw::Draw, state::Frame};
+use crate::{draw::Draw, el::Control, state::Frame};
 
 pub trait Update: Draw {
-    fn update(&mut self);
+    fn update(&mut self, ctrl: &mut Control);
 }
 
 pub fn from_fn<U, D>(update: U, draw: D) -> impl Update
 where
-    U: FnMut(),
+    U: FnMut(&mut Control),
     D: Fn(Frame),
 {
     struct Func<U, D>(U, D);
@@ -22,11 +22,11 @@ where
 
     impl<U, D> Update for Func<U, D>
     where
-        U: FnMut(),
+        U: FnMut(&mut Control),
         D: Fn(Frame),
     {
-        fn update(&mut self) {
-            (self.0)();
+        fn update(&mut self, ctrl: &mut Control) {
+            (self.0)(ctrl);
         }
     }
 

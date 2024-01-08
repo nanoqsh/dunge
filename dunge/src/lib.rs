@@ -9,13 +9,14 @@ pub mod mesh;
 pub mod shader;
 pub mod state;
 pub mod texture;
-pub mod update;
 pub mod vertex;
 
 #[cfg(feature = "winit")]
 mod el;
 #[cfg(feature = "winit")]
 mod time;
+#[cfg(feature = "winit")]
+pub mod update;
 #[cfg(feature = "winit")]
 pub mod window;
 
@@ -27,4 +28,4 @@ pub use {
 };
 
 #[cfg(feature = "winit")]
-pub use crate::init::window;
+pub use {crate::init::window, el::Control};

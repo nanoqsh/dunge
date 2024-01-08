@@ -6,7 +6,7 @@ use {
         update::Update,
         window::View,
     },
-    std::{error, fmt},
+    std::{error, fmt, time::Duration},
     wgpu::SurfaceError,
     winit::{
         error::EventLoopError,
@@ -16,9 +16,20 @@ use {
     },
 };
 
-pub(crate) struct Loop(pub EventLoop<()>);
+pub(crate) struct Loop(EventLoop<()>);
 
 impl Loop {
+    pub fn new() -> Result<Self, EventLoopError> {
+        use winit::event_loop::EventLoopBuilder;
+
+        let inner = EventLoopBuilder::with_user_event().build()?;
+        Ok(Self(inner))
+    }
+
+    pub fn inner(&self) -> &EventLoop<()> {
+        &self.0
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run<U>(self, cx: Context, view: View, update: U) -> Result<(), LoopError>
     where
@@ -51,6 +62,26 @@ impl fmt::Display for LoopError {
 
 impl error::Error for LoopError {}
 
+pub struct Control {
+    close: bool,
+    min_delta_time: Duration,
+    fps: u32,
+}
+
+impl Control {
+    pub fn close(&mut self) {
+        self.close = true;
+    }
+
+    pub fn set_min_delta_time(&mut self, min_delta_time: Duration) {
+        self.min_delta_time = min_delta_time;
+    }
+
+    pub fn fps(&self) -> u32 {
+        self.fps
+    }
+}
+
 type Event = event::Event<()>;
 type Target = event_loop::EventLoopWindowTarget<()>;
 
@@ -62,15 +93,27 @@ where
         event::{KeyEvent, StartCause, WindowEvent},
         event_loop::ControlFlow,
         keyboard::{KeyCode, PhysicalKey},
-        std::time::Duration,
+    };
+
+    let mut ctrl = Control {
+        close: false,
+        min_delta_time: Duration::from_secs_f32(1. / 60.),
+        fps: 0,
     };
 
     let mut render = Render::default();
     let mut time = Time::now();
     let mut fps = Fps::default();
-    move |ev: Event, target: &Target| match ev {
+    move |ev, target| match ev {
         Event::NewEvents(cause) => match cause {
-            StartCause::ResumeTimeReached { .. } => view.request_redraw(),
+            StartCause::ResumeTimeReached { .. } => {
+                if ctrl.close {
+                    target.exit();
+                    return;
+                }
+
+                view.request_redraw()
+            }
             StartCause::WaitCancelled {
                 requested_resume, ..
             } => {
@@ -101,19 +144,18 @@ where
             } => target.exit(),
             WindowEvent::RedrawRequested => {
                 let delta_time = time.delta();
-                let min_delta_time = 1. / 60.;
-                if delta_time < min_delta_time {
-                    let wait = Duration::from_secs_f32(min_delta_time - delta_time);
+                if delta_time < ctrl.min_delta_time {
+                    let wait = ctrl.min_delta_time - delta_time;
                     target.set_control_flow(ControlFlow::wait_duration(wait));
                     return;
                 }
 
                 time.reset();
                 if let Some(fps) = fps.count(delta_time) {
-                    println!("fps: {fps}");
+                    ctrl.fps = fps;
                 }
 
-                update.update();
+                update.update(&mut ctrl);
                 match view.output() {
                     Ok(output) => {
                         let view = RenderView::from_output(&output);

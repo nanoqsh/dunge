@@ -13,7 +13,6 @@ use {
     },
     winit::{
         error::{EventLoopError, OsError},
-        event_loop::EventLoop,
         window::{self, WindowId},
     },
 };
@@ -62,7 +61,7 @@ impl WindowBuilder {
     pub(crate) fn build(self, cx: Context, instance: &Instance) -> Result<Window, Error> {
         use winit::{dpi::PhysicalSize, window::Fullscreen};
 
-        let el = EventLoop::new()?;
+        let el = Loop::new()?;
         let inner = {
             let builder = window::WindowBuilder::new().with_title(self.title);
             let builder = match self.size {
@@ -70,15 +69,11 @@ impl WindowBuilder {
                 None => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
             };
 
-            builder.build(&el)?
+            builder.build(el.inner())?
         };
 
         let view = View::new(cx.state(), instance, inner)?;
-        Ok(Window {
-            cx,
-            el: Loop(el),
-            view,
-        })
+        Ok(Window { cx, el, view })
     }
 }
 
