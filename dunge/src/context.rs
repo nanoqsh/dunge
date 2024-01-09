@@ -81,13 +81,13 @@ impl Context {
         D: Draw,
     {
         let view = RenderView::from_texture(texture.draw_texture());
-        self.0.draw(render, view, draw)
+        self.0.draw(render, view, draw);
     }
 
     pub fn update_group<G>(
         &self,
         uni: &mut UniqueBinding,
-        handler: GroupHandler<G>,
+        handler: &GroupHandler<G>,
         group: &G,
     ) -> Update
     where

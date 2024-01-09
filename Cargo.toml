@@ -15,6 +15,7 @@ flat-map-option = "deny"
 semicolon-if-nothing-returned = "deny"
 manual-assert = "deny"
 needless-pass-by-value = "deny"
+trivially-copy-pass-by-ref = "deny"
 
 [profile.dev]
 opt-level = 1

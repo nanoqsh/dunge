@@ -100,7 +100,7 @@ where
                     return;
                 }
 
-                view.request_redraw()
+                view.request_redraw();
             }
             StartCause::WaitCancelled {
                 requested_resume, ..
@@ -111,7 +111,7 @@ where
                     None => ControlFlow::wait_duration(WAIT_TIME),
                 };
 
-                target.set_control_flow(flow)
+                target.set_control_flow(flow);
             }
             StartCause::Poll => log::debug!("poll"),
             StartCause::Init => log::debug!("init"),

@@ -17,7 +17,7 @@ impl<'a> BoundTexture<'a> {
         Self(texture.bind_texture())
     }
 
-    pub(crate) fn get(&self) -> &'a Texture {
+    pub(crate) fn get(self) -> &'a Texture {
         self.0
     }
 }

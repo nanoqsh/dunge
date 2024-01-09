@@ -135,9 +135,10 @@ impl Frame<'_, '_> {
     pub fn layer<'p, V>(&'p mut self, layer: &'p Layer<V>, opts: Options) -> SetLayer<'p, V> {
         use wgpu::*;
 
-        if self.view.format != layer.format() {
-            panic!("layer format doesn't match frame format");
-        }
+        assert!(
+            self.view.format == layer.format(),
+            "layer format doesn't match frame format",
+        );
 
         let attachment = RenderPassColorAttachment {
             view: self.view.txview,

@@ -280,9 +280,11 @@ impl CopyBuffer {
 
         let texture = &texture.inner;
         let (width, height) = self.size;
-        if texture.width() > width || texture.height() != height {
-            panic!("texture size doesn't match buffer size");
-        }
+
+        assert!(
+            texture.width() <= width && texture.height() == height,
+            "texture size doesn't match buffer size",
+        );
 
         encoder.copy_texture_to_buffer(
             ImageCopyTexture {

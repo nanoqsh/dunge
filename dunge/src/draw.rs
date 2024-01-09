@@ -9,7 +9,7 @@ where
     D: Draw + ?Sized,
 {
     fn draw(&self, frame: Frame) {
-        (**self).draw(frame)
+        (**self).draw(frame);
     }
 }
 

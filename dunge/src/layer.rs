@@ -6,7 +6,7 @@ use {
 
 pub struct SetLayer<'p, V> {
     shader_id: usize,
-    has_bindings: bool,
+    no_bindings: bool,
     pass: RenderPass<'p>,
     vert: PhantomData<V>,
 }
@@ -17,9 +17,11 @@ impl<'p, V> SetLayer<'p, V> {
         B: Binding,
     {
         let bind = bind.binding();
-        if self.shader_id != bind.shader_id {
-            panic!("the binding doesn't belong to this shader");
-        }
+
+        assert!(
+            self.shader_id == bind.shader_id,
+            "the binding doesn't belong to this shader",
+        );
 
         for (id, group) in iter::zip(0.., bind.groups) {
             self.pass.set_bind_group(id, group, &[]);
@@ -29,10 +31,7 @@ impl<'p, V> SetLayer<'p, V> {
     }
 
     pub fn bind_empty(&mut self) -> BoundLayer<'_, 'p, V> {
-        if self.has_bindings {
-            panic!("ths shader has bindings");
-        }
-
+        assert!(self.no_bindings, "ths shader has any bindings");
         BoundLayer::new(&mut self.pass)
     }
 }
@@ -63,7 +62,7 @@ impl BoundLayer<'_, '_, ()> {
 
 pub struct Layer<V> {
     shader_id: usize,
-    has_bindings: bool,
+    no_bindings: bool,
     format: Format,
     render: RenderPipeline,
     vertex: PhantomData<V>,
@@ -111,7 +110,7 @@ impl<V> Layer<V> {
         let render = state.device().create_render_pipeline(&desc);
         Self {
             shader_id: shader.id(),
-            has_bindings: !shader.groups().is_empty(),
+            no_bindings: shader.groups().is_empty(),
             format,
             render,
             vertex: PhantomData,
@@ -126,7 +125,7 @@ impl<V> Layer<V> {
         pass.set_pipeline(&self.render);
         SetLayer {
             shader_id: self.shader_id,
-            has_bindings: self.has_bindings,
+            no_bindings: self.no_bindings,
             pass,
             vert: PhantomData,
         }

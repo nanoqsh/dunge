@@ -97,7 +97,7 @@ pub type Update = Result<(), ForeignShader>;
 pub(crate) fn update<G>(
     state: &State,
     uni: &mut UniqueBinding,
-    handler: GroupHandler<G>,
+    handler: &GroupHandler<G>,
     group: &G,
 ) -> Update
 where
@@ -183,9 +183,10 @@ impl<'a> Binder<'a> {
             panic!("too many bindings");
         };
 
-        if layout.tyid != TypeId::of::<G::Projection>() {
-            panic!("group type doesn't match");
-        }
+        assert!(
+            layout.tyid == TypeId::of::<G::Projection>(),
+            "group type doesn't match",
+        );
 
         let layout = Arc::clone(&layout.bind);
         let entries = visit(group);
@@ -207,9 +208,10 @@ impl<'a> Binder<'a> {
     }
 
     pub fn into_binding(self) -> UniqueBinding {
-        if self.groups.len() != self.layout.len() {
-            panic!("some group bindings is not set");
-        }
+        assert!(
+            self.groups.len() == self.layout.len(),
+            "some group bindings is not set",
+        );
 
         let binding = SharedBinding::new(self.shader_id, self.groups);
         UniqueBinding(binding)
