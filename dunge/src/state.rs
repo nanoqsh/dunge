@@ -3,15 +3,16 @@ use {
         color::Rgba,
         context::Error,
         draw::Draw,
+        format::Format,
         layer::{Layer, SetLayer},
-        texture::{CopyBuffer, CopyTexture, DrawTexture, Format, Texture},
+        texture::{CopyBuffer, CopyTexture, DrawTexture},
     },
     std::sync::atomic::{self, AtomicUsize},
     wgpu::{Color, CommandEncoder, Device, Instance, LoadOp, Queue, TextureView},
 };
 
 #[cfg(feature = "winit")]
-use {crate::window::Output, wgpu::Adapter};
+use wgpu::Adapter;
 
 pub(crate) struct State {
     #[cfg(feature = "winit")]
@@ -116,6 +117,12 @@ impl Options {
     }
 }
 
+impl From<Rgba> for Options {
+    fn from(v: Rgba) -> Self {
+        Self::default().with_clear(v)
+    }
+}
+
 pub struct Frame<'v, 'e> {
     view: RenderView<'v>,
     device: &'e Device,
@@ -128,11 +135,14 @@ impl Frame<'_, '_> {
     where
         T: DrawTexture,
     {
-        let view = RenderView::from_texture(texture.draw_texture());
+        let view = texture.draw_texture().render_view();
         self.encoders.make(self.device, view)
     }
 
-    pub fn layer<'p, V>(&'p mut self, layer: &'p Layer<V>, opts: Options) -> SetLayer<'p, V> {
+    pub fn layer<'p, V, O>(&'p mut self, layer: &'p Layer<V>, opts: O) -> SetLayer<'p, V>
+    where
+        O: Into<Options>,
+    {
         use wgpu::*;
 
         assert!(
@@ -140,6 +150,7 @@ impl Frame<'_, '_> {
             "layer format doesn't match frame format",
         );
 
+        let opts = opts.into();
         let attachment = RenderPassColorAttachment {
             view: self.view.txview,
             resolve_target: None,
@@ -206,18 +217,7 @@ pub(crate) struct RenderView<'v> {
 }
 
 impl<'v> RenderView<'v> {
-    pub fn from_texture(texture: &'v Texture) -> Self {
-        Self {
-            txview: texture.view(),
-            format: texture.format(),
-        }
-    }
-
-    #[cfg(feature = "winit")]
-    pub fn from_output(output: &'v Output) -> Self {
-        Self {
-            txview: output.view(),
-            format: output.format(),
-        }
+    pub fn new(txview: &'v TextureView, format: Format) -> Self {
+        Self { txview, format }
     }
 }

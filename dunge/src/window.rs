@@ -2,8 +2,8 @@ use {
     crate::{
         context::{self, Context},
         el::Loop,
-        state::State,
-        texture::Format,
+        format::Format,
+        state::{RenderView, State},
         update::Update,
     },
     std::{error, fmt},
@@ -23,7 +23,6 @@ use crate::el::LoopError;
 pub struct WindowBuilder {
     title: String,
     size: Option<(u32, u32)>,
-    show_cursor: bool,
 }
 
 impl WindowBuilder {
@@ -31,7 +30,6 @@ impl WindowBuilder {
         Self {
             title: String::default(),
             size: Some((600, 600)),
-            show_cursor: true,
         }
     }
 
@@ -50,11 +48,6 @@ impl WindowBuilder {
 
     pub fn with_fullscreen(mut self) -> Self {
         self.size = None;
-        self
-    }
-
-    pub fn with_show_cursor(mut self, show_cursor: bool) -> Self {
-        self.show_cursor = show_cursor;
         self
     }
 
@@ -88,6 +81,10 @@ impl Window {
         self.cx.clone()
     }
 
+    pub fn format(&self) -> Format {
+        self.view.format()
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run<U>(self, update: U) -> Result<(), LoopError>
     where
@@ -116,10 +113,10 @@ pub(crate) struct View {
 }
 
 impl View {
-    const FORMAT: Format = Format::RgbAlpha;
-
     fn new(state: &State, instance: &Instance, inner: window::Window) -> Result<Self, Error> {
         use wgpu::*;
+
+        const SUPPORTED_FORMATS: [Format; 2] = [Format::RgbAlpha, Format::BgrAlpha];
 
         // # Safety
         //
@@ -128,10 +125,15 @@ impl View {
         let surface = unsafe { instance.create_surface(&inner)? };
         let conf = {
             let caps = surface.get_capabilities(state.adapter());
-            let format = Self::FORMAT.wgpu();
-            if !caps.formats.contains(&format) {
+            let format = SUPPORTED_FORMATS.into_iter().find_map(|format| {
+                let format = format.wgpu();
+                caps.formats.contains(&format).then_some(format)
+            });
+
+            let Some(format) = format else {
+                log::error!("surface formats: {formats:?}", formats = &caps.formats);
                 return Err(ErrorKind::UnsupportedSurface.into());
-            }
+            };
 
             let size = inner.inner_size();
             SurfaceConfiguration {
@@ -153,6 +155,10 @@ impl View {
         })
     }
 
+    fn format(&self) -> Format {
+        Format::from_wgpu(self.conf.format).expect("supported format")
+    }
+
     pub fn id(&self) -> WindowId {
         self.inner.id()
     }
@@ -172,7 +178,7 @@ impl View {
 
         Ok(Output {
             view,
-            format: Self::FORMAT,
+            format: self.format(),
             surface: output,
         })
     }
@@ -194,12 +200,8 @@ pub(crate) struct Output {
 }
 
 impl Output {
-    pub fn view(&self) -> &TextureView {
-        &self.view
-    }
-
-    pub fn format(&self) -> Format {
-        self.format
+    pub fn render_view(&self) -> RenderView {
+        RenderView::new(&self.view, self.format)
     }
 
     pub fn present(self) {

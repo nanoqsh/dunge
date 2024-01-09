@@ -1,10 +1,17 @@
 [workspace]
-members = ["dunge", "dunge_macros", "dunge_shader", "helpers"]
 resolver = "2"
+members = [
+    "dunge",
+    "dunge_macros",
+    "dunge_shader",
+    "examples/triangle",
+    "helpers",
+]
 
 [workspace.dependencies]
 bytemuck = "1.13"
 glam = "0.25"
+log = "0.4"
 
 [workspace.lints.clippy]
 use-self = "deny"

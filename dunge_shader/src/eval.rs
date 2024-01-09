@@ -76,7 +76,7 @@ where
 
         let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
         if let Err(err) = validator.validate(&nm) {
-            eprintln!("{nm:#?}");
+            log::error!("{nm:#?}");
             panic!("shader error: {err}\n{val:#?}", val = err.as_inner());
         }
     }

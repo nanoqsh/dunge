@@ -3,11 +3,12 @@
 use {
     dunge::{
         color::Rgba,
-        draw, mesh,
+        draw,
+        format::Format,
+        mesh,
         sl::{self, Input, Out},
         state::{Options, Render},
-        texture::{self, Format},
-        Vertex,
+        texture, Vertex,
     },
     glam::{Vec2, Vec3},
     helpers::Image,

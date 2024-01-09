@@ -2,6 +2,7 @@ pub mod bind;
 pub mod color;
 pub mod context;
 pub mod draw;
+pub mod format;
 pub mod group;
 mod init;
 pub mod layer;
@@ -21,7 +22,7 @@ pub mod update;
 pub mod window;
 
 pub use {
-    crate::init::context,
+    crate::{init::context, state::Frame},
     dunge_macros::{Group, Vertex},
     dunge_shader::{group::Group, sl, types, vertex::Vertex},
     glam,

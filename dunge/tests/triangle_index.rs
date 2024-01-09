@@ -4,9 +4,10 @@ use {
     dunge::{
         color::Rgba,
         draw,
+        format::Format,
         sl::{self, Index, Out},
         state::{Options, Render},
-        texture::{self, Format},
+        texture,
     },
     glam::Vec4,
     helpers::Image,

@@ -2,14 +2,14 @@ use {
     crate::{
         bind::{self, Binder, GroupHandler, UniqueBinding, Update, Visit},
         draw::Draw,
+        format::Format,
         layer::Layer,
         mesh::{self, Mesh},
         shader::Shader,
         sl::IntoModule,
-        state::{Render, RenderView, State},
+        state::{Render, State},
         texture::{
-            self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Format, Make, MapResult, Mapped,
-            Sampler,
+            self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
         },
         Vertex,
     },
@@ -80,7 +80,7 @@ impl Context {
         T: DrawTexture,
         D: Draw,
     {
-        let view = RenderView::from_texture(texture.draw_texture());
+        let view = texture.draw_texture().render_view();
         self.0.draw(render, view, draw);
     }
 

@@ -1,20 +1,23 @@
 use {
     crate::{
         context::Context,
-        state::{Render, RenderView},
+        state::Render,
         time::{Fps, Time},
         update::Update,
         window::View,
     },
-    std::{error, fmt, time::Duration},
+    std::{cell::Cell, error, fmt, time::Duration},
     wgpu::SurfaceError,
     winit::{
         error::EventLoopError,
         event,
         event_loop::{self, EventLoop},
-        keyboard::{KeyCode, PhysicalKey, SmolStr},
+        keyboard,
     },
 };
+
+pub type KeyCode = keyboard::KeyCode;
+pub type SmolStr = keyboard::SmolStr;
 
 pub(crate) struct Loop(EventLoop<()>);
 
@@ -72,14 +75,15 @@ where
     use {
         event::{ElementState, KeyEvent, StartCause, WindowEvent},
         event_loop::ControlFlow,
+        keyboard::PhysicalKey,
         winit::dpi::PhysicalSize,
     };
 
     const WAIT_TIME: Duration = Duration::from_millis(100);
 
     let mut ctrl = Control {
-        close: false,
-        min_delta_time: Duration::from_secs_f32(1. / 60.),
+        close: Cell::default(),
+        min_delta_time: Cell::new(Duration::from_secs_f32(1. / 60.)),
         fps: 0,
         pressed_keys: vec![],
         released_keys: vec![],
@@ -94,12 +98,6 @@ where
         Event::NewEvents(cause) => match cause {
             StartCause::ResumeTimeReached { .. } => {
                 log::debug!("resume time reached");
-                if ctrl.close {
-                    log::debug!("close");
-                    target.exit();
-                    return;
-                }
-
                 view.request_redraw();
             }
             StartCause::WaitCancelled {
@@ -173,8 +171,9 @@ where
                 }
 
                 let delta_time = time.delta();
-                if delta_time < ctrl.min_delta_time {
-                    let wait = ctrl.min_delta_time - delta_time;
+                let min_delta_time = ctrl.min_delta_time.get();
+                if delta_time < min_delta_time {
+                    let wait = min_delta_time - delta_time;
                     target.set_control_flow(ControlFlow::wait_duration(wait));
                     return;
                 }
@@ -184,11 +183,17 @@ where
                     ctrl.fps = fps;
                 }
 
-                update.update(&mut ctrl);
+                update.update(&ctrl);
+                if ctrl.close.get() {
+                    log::debug!("close");
+                    target.exit();
+                    return;
+                }
+
                 ctrl.clear_keys();
                 match view.output() {
                     Ok(output) => {
-                        let view = RenderView::from_output(&output);
+                        let view = output.render_view();
                         cx.state().draw(&mut render, view, &update);
                         output.present();
                     }
@@ -224,20 +229,20 @@ where
 }
 
 pub struct Control {
-    close: bool,
-    min_delta_time: Duration,
+    close: Cell<bool>,
+    min_delta_time: Cell<Duration>,
     fps: u32,
     pressed_keys: Vec<Key>,
     released_keys: Vec<Key>,
 }
 
 impl Control {
-    pub fn close(&mut self) {
-        self.close = true;
+    pub fn close(&self) {
+        self.close.set(true);
     }
 
-    pub fn set_min_delta_time(&mut self, min_delta_time: Duration) {
-        self.min_delta_time = min_delta_time;
+    pub fn set_min_delta_time(&self, min_delta_time: Duration) {
+        self.min_delta_time.set(min_delta_time);
     }
 
     pub fn fps(&self) -> u32 {

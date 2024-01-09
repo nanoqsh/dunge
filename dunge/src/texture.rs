@@ -1,9 +1,12 @@
 use {
-    crate::state::State,
+    crate::{
+        format::Format,
+        state::{RenderView, State},
+    },
     std::{error, fmt, future::IntoFuture, mem},
     wgpu::{
         Buffer, BufferAsyncError, BufferSlice, BufferView, CommandEncoder, FilterMode,
-        TextureFormat, TextureUsages, TextureView, WasmNotSend,
+        TextureUsages, TextureView, WasmNotSend,
     },
 };
 
@@ -94,33 +97,6 @@ impl fmt::Display for ZeroSized {
 
 impl error::Error for ZeroSized {}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Format {
-    RgbAlpha,
-}
-
-impl Format {
-    const fn bytes(self) -> u32 {
-        match self {
-            Self::RgbAlpha => 4,
-        }
-    }
-
-    pub(crate) const fn wgpu(self) -> TextureFormat {
-        match self {
-            Self::RgbAlpha => TextureFormat::Rgba8UnormSrgb,
-        }
-    }
-
-    #[allow(dead_code)]
-    const fn from_wgpu(format: TextureFormat) -> Option<Self> {
-        match format {
-            TextureFormat::Rgba8UnormSrgb => Some(Self::RgbAlpha),
-            _ => None,
-        }
-    }
-}
-
 pub struct Texture {
     inner: wgpu::Texture,
     view: TextureView,
@@ -190,6 +166,10 @@ impl Texture {
 
     pub(crate) fn view(&self) -> &TextureView {
         &self.view
+    }
+
+    pub(crate) fn render_view(&self) -> RenderView {
+        RenderView::new(&self.view, self.format())
     }
 }
 

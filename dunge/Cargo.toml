@@ -16,7 +16,7 @@ dunge_shader = { version = "0.2.3", path = "../dunge_shader" }
 bytemuck = { workspace = true }
 glam = { workspace = true }
 instant = { version = "0.1", optional = true }
-log = "0.4"
+log = { workspace = true }
 wgpu = { version = "0.18", default-features = false, features = ["naga"] }
 
 [dependencies.winit]

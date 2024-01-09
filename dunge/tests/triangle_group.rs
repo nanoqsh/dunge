@@ -4,11 +4,12 @@ use {
     dunge::{
         color::Rgba,
         draw,
+        format::Format,
         group::BoundTexture,
         mesh,
         sl::{self, Groups, Input, Out},
         state::{Options, Render},
-        texture::{self, Filter, Format, Sampler},
+        texture::{self, Filter, Sampler},
         Group, Vertex,
     },
     glam::Vec2,

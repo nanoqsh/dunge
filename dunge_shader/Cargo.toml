@@ -9,6 +9,7 @@ repository = "https://github.com/nanoqsh/dunge"
 
 [dependencies]
 glam = { workspace = true }
+log = { workspace = true }
 naga = "0.14"
 
 [lints]
