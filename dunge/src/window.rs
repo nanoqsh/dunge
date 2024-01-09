@@ -3,10 +3,16 @@ use {
         context::{self, Context},
         el::Loop,
         format::Format,
+        init,
         state::{RenderView, State},
         update::Update,
     },
-    std::{error, fmt},
+    std::{
+        error, fmt,
+        future::{Future, IntoFuture},
+        pin::Pin,
+        task::{self, Poll},
+    },
     wgpu::{
         CreateSurfaceError, Instance, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture,
         TextureView,
@@ -51,12 +57,16 @@ impl WindowBuilder {
         self
     }
 
-    pub(crate) fn build(self, cx: Context, instance: &Instance) -> Result<Window, Error> {
-        use winit::{dpi::PhysicalSize, window::Fullscreen};
+    fn build(&mut self, cx: Context, instance: &Instance) -> Result<Window, Error> {
+        use {
+            std::mem,
+            winit::{dpi::PhysicalSize, window::Fullscreen},
+        };
 
         let el = Loop::new()?;
         let inner = {
-            let builder = window::WindowBuilder::new().with_title(self.title);
+            let title = mem::take(&mut self.title);
+            let builder = window::WindowBuilder::new().with_title(title);
             let builder = match self.size {
                 Some((width, height)) => builder.with_inner_size(PhysicalSize::new(width, height)),
                 None => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
@@ -67,6 +77,32 @@ impl WindowBuilder {
 
         let view = View::new(cx.state(), instance, inner)?;
         Ok(Window { cx, el, view })
+    }
+}
+
+impl IntoFuture for WindowBuilder {
+    type Output = Result<Window, Error>;
+    type IntoFuture = Build;
+
+    fn into_future(mut self) -> Self::IntoFuture {
+        let fut = async move {
+            let (cx, instance) = init::make().await?;
+            self.build(cx, &instance)
+        };
+
+        Build(Box::pin(fut))
+    }
+}
+
+type BoxFuture<T> = Pin<Box<dyn Future<Output = T>>>;
+
+pub struct Build(BoxFuture<Result<Window, Error>>);
+
+impl Future for Build {
+    type Output = Result<Window, Error>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
+        self.get_mut().0.as_mut().poll(cx)
     }
 }
 

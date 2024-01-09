@@ -7,36 +7,29 @@ use {
 };
 
 #[cfg(feature = "winit")]
-use crate::window::{self, Window, WindowBuilder};
+use crate::window::WindowBuilder;
 
-fn instance() -> Instance {
+pub(crate) async fn make() -> Result<(Context, Instance), context::Error> {
     use wgpu::{Backends, InstanceDescriptor};
 
-    let desc = InstanceDescriptor {
-        backends: Backends::PRIMARY,
-        ..Default::default()
+    let instance = {
+        let desc = InstanceDescriptor {
+            backends: Backends::PRIMARY,
+            ..Default::default()
+        };
+
+        Instance::new(desc)
     };
 
-    Instance::new(desc)
+    let state = State::new(&instance).await?;
+    Ok((Context::new(state), instance))
 }
 
 pub async fn context() -> Result<Context, context::Error> {
-    let instance = instance();
-    let state = State::new(&instance).await?;
-    Ok(Context::new(state))
+    make().await.map(|(cx, _)| cx)
 }
 
 #[cfg(feature = "winit")]
 pub fn window() -> WindowBuilder {
     WindowBuilder::new()
-}
-
-#[cfg(feature = "winit")]
-impl WindowBuilder {
-    pub async fn make(self) -> Result<Window, window::Error> {
-        let instance = instance();
-        let state = State::new(&instance).await?;
-        let cx = Context::new(state);
-        self.build(cx, &instance)
-    }
 }

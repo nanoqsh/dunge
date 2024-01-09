@@ -2,12 +2,12 @@ type Error = Box<dyn std::error::Error>;
 
 fn main() {
     env_logger::init();
-    if let Err(err) = run() {
+    if let Err(err) = helpers::block_on(run()) {
         eprintln!("error: {err}");
     }
 }
 
-fn run() -> Result<(), Error> {
+async fn run() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
@@ -32,7 +32,7 @@ fn run() -> Result<(), Error> {
         }
     };
 
-    let window = helpers::block_on(dunge::window().with_title("Triangle").make())?;
+    let window = dunge::window().with_title("Triangle").await?;
     let cx = window.context();
     let shader = cx.make_shader(triangle);
     let layer = cx.make_layer(window.format(), &shader);
