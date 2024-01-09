@@ -247,7 +247,8 @@ where
         let ReadGlobal { id, binding, out } = self.get();
         out.with_stage(E::STAGE);
         let en = en.get_entry();
-        let var = en.compl.globs.get(ResourceBinding { group: id, binding });
+        let res = ResourceBinding { group: id, binding };
+        let var = en.compl.globs.get(&res);
         en.global(var)
     }
 }
@@ -487,6 +488,7 @@ struct Built {
     point: EntryPoint,
 }
 
+#[derive(Clone, Copy)]
 enum Return {
     Ty(Handle<Type>),
     Color,
@@ -828,8 +830,8 @@ impl Globals {
         });
     }
 
-    fn get(&self, res: ResourceBinding) -> Handle<GlobalVariable> {
-        self.handles[&res]
+    fn get(&self, res: &ResourceBinding) -> Handle<GlobalVariable> {
+        self.handles[res]
     }
 }
 

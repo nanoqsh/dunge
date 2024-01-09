@@ -37,6 +37,9 @@ impl State {
                 .ok_or(Error::BackendSelection)?
         };
 
+        let backend = adapter.get_info().backend;
+        log::info!("selected backend: {backend:?}");
+
         let (device, queue) = {
             use wgpu::{DeviceDescriptor, Limits};
 

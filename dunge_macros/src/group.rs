@@ -33,7 +33,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
             };
         }
 
-        lts.push(param.lifetime)
+        lts.push(param.lifetime);
     }
 
     if fields.is_empty() {

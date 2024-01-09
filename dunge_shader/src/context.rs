@@ -40,7 +40,7 @@ impl InputKind {
     fn into_input_info(self) -> Option<InputInfo> {
         match self {
             Self::Type(info) => Some(info),
-            _ => None,
+            Self::Index => None,
         }
     }
 }
@@ -136,7 +136,7 @@ impl Context {
         self.inputs
             .iter()
             .copied()
-            .flat_map(InputKind::into_input_info)
+            .filter_map(InputKind::into_input_info)
     }
 }
 

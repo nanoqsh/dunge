@@ -30,9 +30,11 @@ impl Image {
         let mut reader = decoder.read_info().expect("png reader");
         let mut data = Box::from(vec![0; reader.output_buffer_size()]);
         let info = reader.next_frame(&mut data).expect("read image");
-        if info.color_type != ColorType::Rgba {
-            panic!("only rgba format is supported");
-        }
+
+        assert!(
+            info.color_type == ColorType::Rgba,
+            "only rgba format is supported",
+        );
 
         Self {
             data,

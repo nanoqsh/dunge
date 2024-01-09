@@ -12,7 +12,7 @@ pub mod texture;
 pub mod vertex;
 
 #[cfg(feature = "winit")]
-mod el;
+pub mod el;
 #[cfg(feature = "winit")]
 mod time;
 #[cfg(feature = "winit")]
