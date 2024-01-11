@@ -84,6 +84,7 @@ where
     let mut ctrl = Control {
         close: Cell::default(),
         min_delta_time: Cell::new(Duration::from_secs_f32(1. / 60.)),
+        delta_time: Duration::ZERO,
         fps: 0,
         pressed_keys: vec![],
         released_keys: vec![],
@@ -179,6 +180,7 @@ where
                 }
 
                 time.reset();
+                ctrl.delta_time = delta_time;
                 if let Some(fps) = fps.count(delta_time) {
                     ctrl.fps = fps;
                 }
@@ -231,6 +233,7 @@ where
 pub struct Control {
     close: Cell<bool>,
     min_delta_time: Cell<Duration>,
+    delta_time: Duration,
     fps: u32,
     pressed_keys: Vec<Key>,
     released_keys: Vec<Key>,
@@ -243,6 +246,10 @@ impl Control {
 
     pub fn set_min_delta_time(&self, min_delta_time: Duration) {
         self.min_delta_time.set(min_delta_time);
+    }
+
+    pub fn delta_time(&self) -> Duration {
+        self.delta_time
     }
 
     pub fn fps(&self) -> u32 {

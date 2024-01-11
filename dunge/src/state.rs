@@ -89,6 +89,7 @@ impl State {
     where
         D: Draw,
     {
+        self.queue.submit([]);
         draw.draw(render.0.make(&self.device, view));
         let buffers = render.0.drain().map(CommandEncoder::finish);
         self.queue.submit(buffers);

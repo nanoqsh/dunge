@@ -79,6 +79,18 @@ macro_rules! impl_op {
                 })
             }
         }
+
+        impl<A, B> ops::$o<Ret<B, $b>> for Ret<A, $a> {
+            type Output = Ret<Binary<Ret<A, $a>, Ret<B, $b>>, $r>;
+
+            fn $f(self, b: Ret<B, $b>) -> Self::Output {
+                Ret::new(Binary {
+                    a: self,
+                    b,
+                    op: Op::$o,
+                })
+            }
+        }
     };
 }
 

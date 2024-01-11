@@ -1,5 +1,5 @@
 use {
-    naga::{ImageClass, ImageDimension, ScalarKind, Type, TypeInner, VectorSize},
+    naga::{AddressSpace, ImageClass, ImageDimension, ScalarKind, Type, TypeInner, VectorSize},
     std::marker::PhantomData,
 };
 
@@ -23,6 +23,7 @@ impl Scalar for bool {
     const TYPE: ScalarType = ScalarType::Bool;
 }
 
+#[derive(Clone, Copy)]
 pub enum ScalarType {
     Float,
     Sint,
@@ -190,16 +191,31 @@ const SAMPLER: Type = Type {
 };
 
 #[derive(Clone, Copy)]
-pub enum GroupMemberType {
+pub enum MemberType {
+    Scalar(ScalarType),
+    Vector(VectorType),
     Tx2df,
     Sampl,
 }
 
-impl GroupMemberType {
+impl MemberType {
+    pub const fn is_value(self) -> bool {
+        matches!(self, Self::Scalar(_) | Self::Vector(_))
+    }
+
     pub(crate) const fn ty(self) -> Type {
         match self {
+            Self::Scalar(v) => v.ty(),
+            Self::Vector(v) => v.ty(),
             Self::Tx2df => TEXTURE2DF,
             Self::Sampl => SAMPLER,
+        }
+    }
+
+    pub(crate) const fn address_space(self) -> AddressSpace {
+        match self {
+            Self::Scalar(_) | Self::Vector(_) => AddressSpace::Uniform,
+            Self::Tx2df | Self::Sampl => AddressSpace::Handle,
         }
     }
 }

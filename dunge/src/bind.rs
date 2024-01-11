@@ -1,5 +1,8 @@
 use {
-    crate::{group::BoundTexture, shader::Shader, state::State, texture::Sampler, Group},
+    crate::{
+        group::BoundTexture, shader::Shader, state::State, texture::Sampler, uniform::Uniform,
+        Group,
+    },
     std::{any::TypeId, fmt, marker::PhantomData, sync::Arc},
     wgpu::{
         BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
@@ -21,6 +24,13 @@ impl<'a> Visitor<'a> {
 
 pub trait VisitMember<'a> {
     fn visit_member(self, visitor: &mut Visitor<'a>);
+}
+
+impl<'a, V> VisitMember<'a> for &'a Uniform<V> {
+    fn visit_member(self, visitor: &mut Visitor<'a>) {
+        let binding = self.buffer().as_entire_buffer_binding();
+        visitor.push(BindingResource::Buffer(binding));
+    }
 }
 
 impl<'a> VisitMember<'a> for BoundTexture<'a> {

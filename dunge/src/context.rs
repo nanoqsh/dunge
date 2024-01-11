@@ -11,6 +11,7 @@ use {
         texture::{
             self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
         },
+        uniform::{Uniform, Value},
         Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
@@ -24,7 +25,6 @@ impl Context {
         Self(Arc::new(state))
     }
 
-    #[cfg(feature = "winit")]
     pub(crate) fn state(&self) -> &State {
         &self.0
     }
@@ -38,6 +38,13 @@ impl Context {
 
     pub fn make_binder<'a, V>(&'a self, shader: &'a Shader<V>) -> Binder<'a> {
         Binder::new(&self.0, shader)
+    }
+
+    pub fn make_uniform<V>(&self, val: V) -> Uniform<V>
+    where
+        V: Value,
+    {
+        Uniform::new(&self.0, &val.value())
     }
 
     pub fn make_layer<V>(&self, format: Format, shader: &Shader<V>) -> Layer<V> {

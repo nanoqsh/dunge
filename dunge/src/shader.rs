@@ -3,7 +3,7 @@ use {
         bind::TypedGroup,
         sl::{InputInfo, IntoModule, Module, Stages},
         state::State,
-        types::{GroupMemberType, VectorType},
+        types::{MemberType, VectorType},
     },
     std::marker::PhantomData,
     wgpu::{PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout},
@@ -98,7 +98,17 @@ impl Inner {
             entries.clear();
             for (binding, member) in iter::zip(0.., info.decl) {
                 let entry = match member {
-                    GroupMemberType::Tx2df => BindGroupLayoutEntry {
+                    MemberType::Scalar(_) | MemberType::Vector(_) => BindGroupLayoutEntry {
+                        binding,
+                        visibility: visibility(info.stages),
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    MemberType::Tx2df => BindGroupLayoutEntry {
                         binding,
                         visibility: visibility(info.stages),
                         ty: BindingType::Texture {
@@ -108,7 +118,7 @@ impl Inner {
                         },
                         count: None,
                     },
-                    GroupMemberType::Sampl => BindGroupLayoutEntry {
+                    MemberType::Sampl => BindGroupLayoutEntry {
                         binding,
                         visibility: visibility(info.stages),
                         ty: BindingType::Sampler(SamplerBindingType::Filtering),

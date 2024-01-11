@@ -10,6 +10,7 @@ pub mod mesh;
 pub mod shader;
 pub mod state;
 pub mod texture;
+pub mod uniform;
 pub mod vertex;
 
 #[cfg(feature = "winit")]

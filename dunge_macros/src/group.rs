@@ -90,7 +90,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
             ]);
         }
 
-        impl ::dunge::bind::Visit for Map<#(#anon_lts),*> {
+        impl ::dunge::bind::Visit for #name<#(#anon_lts),*> {
             fn visit<'a>(&'a self, visitor: &mut ::dunge::bind::Visitor<'a>) {
                 #(#group_visit_members);*;
             }

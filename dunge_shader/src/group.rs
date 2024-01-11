@@ -1,5 +1,5 @@
 use {
-    crate::{eval::GlobalOut, types::GroupMemberType},
+    crate::{eval::GlobalOut, types::MemberType},
     std::{iter, slice},
 };
 
@@ -14,16 +14,16 @@ pub trait Projection {
 }
 
 #[derive(Clone, Copy)]
-pub struct DeclareGroup(&'static [GroupMemberType]);
+pub struct DeclareGroup(&'static [MemberType]);
 
 impl DeclareGroup {
-    pub const fn new(ts: &'static [GroupMemberType]) -> Self {
+    pub const fn new(ts: &'static [MemberType]) -> Self {
         Self(ts)
     }
 }
 
 impl IntoIterator for DeclareGroup {
-    type Item = GroupMemberType;
+    type Item = MemberType;
     type IntoIter = iter::Copied<slice::Iter<'static, Self::Item>>;
 
     fn into_iter(self) -> Self::IntoIter {

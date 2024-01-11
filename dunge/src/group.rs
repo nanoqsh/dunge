@@ -1,7 +1,8 @@
 use crate::{
     sl::{GlobalOut, ReadGlobal, Ret},
     texture::{BindTexture, Sampler, Texture},
-    types::{self, GroupMemberType},
+    types::{self, MemberType},
+    uniform::{Uniform, Value},
 };
 
 pub use dunge_shader::group::{DeclareGroup, Projection};
@@ -26,30 +27,44 @@ impl<'a> BoundTexture<'a> {
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
 pub trait MemberProjection: private::Sealed {
-    const TYPE: GroupMemberType;
+    const TYPE: MemberType;
     type Field;
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field;
+}
+
+impl<V> private::Sealed for &Uniform<V> where V: Value {}
+
+impl<V> MemberProjection for &Uniform<V>
+where
+    V: Value,
+{
+    const TYPE: MemberType = V::TYPE;
+    type Field = Ret<ReadGlobal, V::Type>;
+
+    fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
+        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
+    }
 }
 
 impl private::Sealed for BoundTexture<'_> {}
 
 impl MemberProjection for BoundTexture<'_> {
-    const TYPE: GroupMemberType = GroupMemberType::Tx2df;
+    const TYPE: MemberType = MemberType::Tx2df;
     type Field = Ret<ReadGlobal, types::Texture2d<f32>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, out)
+        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
     }
 }
 
 impl private::Sealed for &Sampler {}
 
 impl MemberProjection for &Sampler {
-    const TYPE: GroupMemberType = GroupMemberType::Sampl;
+    const TYPE: MemberType = MemberType::Sampl;
     type Field = Ret<ReadGlobal, types::Sampler>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, out)
+        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
     }
 }
 

@@ -228,12 +228,18 @@ impl GlobalOut {
 pub struct ReadGlobal {
     id: u32,
     binding: u32,
+    is_value: bool,
     out: GlobalOut,
 }
 
 impl ReadGlobal {
-    pub const fn new<T>(id: u32, binding: u32, out: GlobalOut) -> Ret<Self, T> {
-        Ret::new(Self { id, binding, out })
+    pub const fn new<T>(id: u32, binding: u32, is_value: bool, out: GlobalOut) -> Ret<Self, T> {
+        Ret::new(Self {
+            id,
+            binding,
+            is_value,
+            out,
+        })
     }
 }
 
@@ -244,12 +250,23 @@ where
     type Out = T;
 
     fn eval(self, en: &mut E) -> Expr {
-        let ReadGlobal { id, binding, out } = self.get();
+        let ReadGlobal {
+            id,
+            binding,
+            is_value,
+            out,
+        } = self.get();
+
         out.with_stage(E::STAGE);
         let en = en.get_entry();
         let res = ResourceBinding { group: id, binding };
         let var = en.compl.globs.get(&res);
-        en.global(var)
+        let global = en.global(var);
+        if is_value {
+            en.load(global)
+        } else {
+            global
+        }
     }
 }
 
@@ -623,6 +640,14 @@ impl Entry {
         Expr(self.exprs.append(ex, Span::UNDEFINED))
     }
 
+    fn load(&mut self, ptr: Expr) -> Expr {
+        let ex = Expression::Load { pointer: ptr.0 };
+        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+        self.stats.push(st, &self.exprs);
+        Expr(handle)
+    }
+
     fn access_index(&mut self, base: Expr, index: u32) -> Expr {
         let ex = Expression::AccessIndex {
             base: base.0,
@@ -802,9 +827,10 @@ impl Compiler {
 
     fn decl_group(&mut self, group: u32, decl: DeclareGroup) {
         for (binding, member) in iter::zip(0.., decl) {
+            let space = member.address_space();
             let ty = self.types.insert(member.ty(), Span::UNDEFINED);
             let res = ResourceBinding { group, binding };
-            self.globs.add(ty, res);
+            self.globs.add(space, ty, res);
         }
     }
 }
@@ -816,11 +842,11 @@ struct Globals {
 }
 
 impl Globals {
-    fn add(&mut self, ty: Handle<Type>, res: ResourceBinding) {
+    fn add(&mut self, space: AddressSpace, ty: Handle<Type>, res: ResourceBinding) {
         self.handles.entry(res.clone()).or_insert_with(|| {
             let var = GlobalVariable {
                 name: None,
-                space: AddressSpace::Handle,
+                space,
                 binding: Some(res),
                 ty,
                 init: None,
