@@ -3,6 +3,7 @@ mod convert;
 mod eval;
 pub mod group;
 mod math;
+mod matrix;
 mod module;
 mod ret;
 mod texture;

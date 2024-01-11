@@ -162,6 +162,66 @@ const fn vec(size: VectorSize, kind: ScalarKind) -> Type {
     }
 }
 
+pub struct Mat2;
+pub struct Mat3;
+pub struct Mat4;
+
+#[derive(Clone, Copy)]
+pub enum MatrixType {
+    Mat2,
+    Mat3,
+    Mat4,
+}
+
+impl MatrixType {
+    pub(crate) const fn dims(self) -> usize {
+        match self {
+            Self::Mat2 => 2,
+            Self::Mat3 => 3,
+            Self::Mat4 => 4,
+        }
+    }
+
+    pub(crate) const fn ty(self) -> Type {
+        match self {
+            Self::Mat2 => MAT2F,
+            Self::Mat3 => MAT3F,
+            Self::Mat4 => MAT4F,
+        }
+    }
+}
+
+pub trait Matrix {
+    const TYPE: MatrixType;
+}
+
+impl Matrix for Mat2 {
+    const TYPE: MatrixType = MatrixType::Mat2;
+}
+
+impl Matrix for Mat3 {
+    const TYPE: MatrixType = MatrixType::Mat3;
+}
+
+impl Matrix for Mat4 {
+    const TYPE: MatrixType = MatrixType::Mat4;
+}
+
+const MAT2F: Type = mat(VectorSize::Bi);
+const MAT3F: Type = mat(VectorSize::Tri);
+const MAT4F: Type = mat(VectorSize::Quad);
+
+const fn mat(size: VectorSize) -> Type {
+    Type {
+        name: None,
+        inner: TypeInner::Matrix {
+            columns: size,
+            rows: size,
+            width: 4,
+        },
+    }
+}
+
 pub struct Texture2d<T>(PhantomData<T>);
 
 const TEXTURE2DF: Type = texture(ImageDimension::D2, ScalarKind::Float);
@@ -194,19 +254,21 @@ const SAMPLER: Type = Type {
 pub enum MemberType {
     Scalar(ScalarType),
     Vector(VectorType),
+    Matrix(MatrixType),
     Tx2df,
     Sampl,
 }
 
 impl MemberType {
     pub const fn is_value(self) -> bool {
-        matches!(self, Self::Scalar(_) | Self::Vector(_))
+        matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
     }
 
     pub(crate) const fn ty(self) -> Type {
         match self {
             Self::Scalar(v) => v.ty(),
             Self::Vector(v) => v.ty(),
+            Self::Matrix(v) => v.ty(),
             Self::Tx2df => TEXTURE2DF,
             Self::Sampl => SAMPLER,
         }
@@ -214,126 +276,8 @@ impl MemberType {
 
     pub(crate) const fn address_space(self) -> AddressSpace {
         match self {
-            Self::Scalar(_) | Self::Vector(_) => AddressSpace::Uniform,
+            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
             Self::Tx2df | Self::Sampl => AddressSpace::Handle,
         }
-    }
-}
-
-pub trait IntoVector {
-    type Vector: Vector;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar);
-}
-
-impl IntoVector for glam::Vec2 {
-    type Vector = Vec2<f32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::Vec3 {
-    type Vector = Vec3<f32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::Vec3A {
-    type Vector = Vec3<f32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::Vec4 {
-    type Vector = Vec4<f32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::IVec2 {
-    type Vector = Vec2<i32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::IVec3 {
-    type Vector = Vec3<i32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::IVec4 {
-    type Vector = Vec4<i32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::UVec2 {
-    type Vector = Vec2<u32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::UVec3 {
-    type Vector = Vec3<u32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
-    }
-}
-
-impl IntoVector for glam::UVec4 {
-    type Vector = Vec4<u32>;
-
-    fn into_vector<F>(self, f: F)
-    where
-        F: FnMut(<Self::Vector as Vector>::Scalar),
-    {
-        self.to_array().map(f);
     }
 }

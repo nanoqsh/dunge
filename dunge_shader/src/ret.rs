@@ -69,7 +69,7 @@ macro_rules! impl_op {
         }
 
         impl<A> ops::$o<$a> for Ret<A, $b> {
-            type Output = Ret<Binary<Ret<A, $a>, $b>, $r>;
+            type Output = Ret<Binary<Ret<A, $b>, $a>, $r>;
 
             fn $f(self, b: $a) -> Self::Output {
                 Ret::new(Binary {
@@ -110,62 +110,31 @@ impl_op!(Mul::mul(u32, u32) -> u32);
 impl_op!(Div::div(u32, u32) -> u32);
 impl_op!(Rem::rem(u32, u32) -> u32);
 
-impl<A, O> ops::Mul<f32> for Ret<A, O>
-where
-    O: types::Vector<Scalar = f32>,
-{
-    type Output = Ret<Binary<Self, f32>, O>;
+impl_op!(Add::add(types::Vec2<f32>, types::Vec2<f32>) -> types::Vec2<f32>);
+impl_op!(Add::add(types::Vec3<f32>, types::Vec3<f32>) -> types::Vec3<f32>);
+impl_op!(Add::add(types::Vec4<f32>, types::Vec4<f32>) -> types::Vec4<f32>);
+impl_op!(Sub::sub(types::Vec2<f32>, types::Vec2<f32>) -> types::Vec2<f32>);
+impl_op!(Sub::sub(types::Vec3<f32>, types::Vec3<f32>) -> types::Vec3<f32>);
+impl_op!(Sub::sub(types::Vec4<f32>, types::Vec4<f32>) -> types::Vec4<f32>);
+impl_op!(Mul::mul(f32, types::Vec2<f32>) -> types::Vec2<f32>);
+impl_op!(Mul::mul(types::Vec2<f32>, f32) -> types::Vec2<f32>);
+impl_op!(Mul::mul(f32, types::Vec3<f32>) -> types::Vec3<f32>);
+impl_op!(Mul::mul(types::Vec3<f32>, f32) -> types::Vec3<f32>);
+impl_op!(Mul::mul(f32, types::Vec4<f32>) -> types::Vec4<f32>);
+impl_op!(Mul::mul(types::Vec4<f32>, f32) -> types::Vec4<f32>);
 
-    fn mul(self, b: f32) -> Self::Output {
-        Ret::new(Binary {
-            a: self,
-            b,
-            op: Op::Mul,
-        })
-    }
-}
-
-impl<A, O> ops::Mul<Ret<A, O>> for f32
-where
-    O: types::Vector<Scalar = Self>,
-{
-    type Output = Ret<Binary<Self, Ret<A, O>>, O>;
-
-    fn mul(self, b: Ret<A, O>) -> Self::Output {
-        Ret::new(Binary {
-            a: self,
-            b,
-            op: Op::Mul,
-        })
-    }
-}
-
-impl<A, B, O> ops::Add<Ret<B, O>> for Ret<A, O>
-where
-    O: types::Vector,
-{
-    type Output = Ret<Binary<Self, Ret<B, O>>, O>;
-
-    fn add(self, b: Ret<B, O>) -> Self::Output {
-        Ret::new(Binary {
-            a: self,
-            b,
-            op: Op::Add,
-        })
-    }
-}
-
-impl<A, B, O> ops::Sub<Ret<B, O>> for Ret<A, O>
-where
-    O: types::Vector,
-{
-    type Output = Ret<Binary<Self, Ret<B, O>>, O>;
-
-    fn sub(self, b: Ret<B, O>) -> Self::Output {
-        Ret::new(Binary {
-            a: self,
-            b,
-            op: Op::Sub,
-        })
-    }
-}
+impl_op!(Add::add(types::Mat2, types::Mat2) -> types::Mat2);
+impl_op!(Add::add(types::Mat3, types::Mat3) -> types::Mat3);
+impl_op!(Add::add(types::Mat4, types::Mat4) -> types::Mat4);
+impl_op!(Sub::sub(types::Mat2, types::Mat2) -> types::Mat2);
+impl_op!(Sub::sub(types::Mat3, types::Mat3) -> types::Mat3);
+impl_op!(Sub::sub(types::Mat4, types::Mat4) -> types::Mat4);
+impl_op!(Mul::mul(types::Mat2, types::Mat2) -> types::Mat2);
+impl_op!(Mul::mul(types::Mat3, types::Mat3) -> types::Mat3);
+impl_op!(Mul::mul(types::Mat4, types::Mat4) -> types::Mat4);
+impl_op!(Mul::mul(f32, types::Mat2) -> types::Mat2);
+impl_op!(Mul::mul(f32, types::Mat3) -> types::Mat3);
+impl_op!(Mul::mul(f32, types::Mat4) -> types::Mat4);
+impl_op!(Mul::mul(types::Mat2, types::Vec2<f32>) -> types::Vec2<f32>);
+impl_op!(Mul::mul(types::Mat3, types::Vec3<f32>) -> types::Vec3<f32>);
+impl_op!(Mul::mul(types::Mat4, types::Vec4<f32>) -> types::Vec4<f32>);

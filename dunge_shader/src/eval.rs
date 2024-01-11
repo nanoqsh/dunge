@@ -4,7 +4,7 @@ use {
         group::DeclareGroup,
         module::{Module, Out, Output},
         ret::Ret,
-        types::{self, IntoVector, ScalarType, Vector, VectorType},
+        types::{self, ScalarType, VectorType},
     },
     naga::{
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
@@ -147,27 +147,6 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         en.get_entry().literal(Literal::Bool(self))
-    }
-}
-
-impl<V, E> Eval<E> for V
-where
-    V: IntoVector,
-    <V::Vector as Vector>::Scalar: Eval<E>,
-    E: GetEntry,
-{
-    type Out = V::Vector;
-
-    fn eval(self, en: &mut E) -> Expr {
-        let mut components = Vec::with_capacity(V::Vector::TYPE.dims());
-        self.into_vector(|scalar| {
-            let v = scalar.eval(en).get();
-            components.push(v);
-        });
-
-        let en = en.get_entry();
-        let ty = en.new_type(V::Vector::TYPE.ty());
-        en.compose(ty, Exprs(components))
     }
 }
 

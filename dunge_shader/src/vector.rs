@@ -4,6 +4,40 @@ use crate::{
     types::{self, Scalar, Vector},
 };
 
+macro_rules! impl_eval_vec {
+    ($g:ty => $t:ty) => {
+        impl<E> Eval<E> for $g
+        where
+            E: GetEntry,
+        {
+            type Out = $t;
+
+            fn eval(self, en: &mut E) -> Expr {
+                let mut components = Vec::with_capacity(<$t>::TYPE.dims());
+                self.into_vector(|scalar| {
+                    let v = scalar.eval(en).get();
+                    components.push(v);
+                });
+
+                let en = en.get_entry();
+                let ty = en.new_type(<$t>::TYPE.ty());
+                en.compose(ty, Exprs(components))
+            }
+        }
+    };
+}
+
+impl_eval_vec!(glam::Vec2 => types::Vec2<f32>);
+impl_eval_vec!(glam::Vec3 => types::Vec3<f32>);
+impl_eval_vec!(glam::Vec3A => types::Vec3<f32>);
+impl_eval_vec!(glam::Vec4 => types::Vec4<f32>);
+impl_eval_vec!(glam::IVec2 => types::Vec2<i32>);
+impl_eval_vec!(glam::IVec3 => types::Vec3<i32>);
+impl_eval_vec!(glam::IVec4 => types::Vec4<i32>);
+impl_eval_vec!(glam::UVec2 => types::Vec2<u32>);
+impl_eval_vec!(glam::UVec3 => types::Vec3<u32>);
+impl_eval_vec!(glam::UVec4 => types::Vec4<u32>);
+
 pub const fn splat_vec2<A, E>(a: A) -> Ret<Splat<A>, types::Vec2<A::Out>>
 where
     A: Eval<E>,
@@ -47,7 +81,7 @@ where
     }
 }
 
-type Vector2<X, Y, O> = Ret<New<(X, Y)>, types::Vec2<O>>;
+type Vector2<X, Y, O> = Ret<NewVec<(X, Y)>, types::Vec2<O>>;
 
 pub const fn vec2<X, Y, E>(x: X, y: Y) -> Vector2<X, Y, X::Out>
 where
@@ -55,10 +89,10 @@ where
     X::Out: Scalar,
     Y: Eval<E, Out = X::Out>,
 {
-    Ret::new(New((x, y)))
+    Ret::new(NewVec((x, y)))
 }
 
-type Vector3<X, Y, Z, O> = Ret<New<(X, Y, Z)>, types::Vec3<O>>;
+type Vector3<X, Y, Z, O> = Ret<NewVec<(X, Y, Z)>, types::Vec3<O>>;
 
 pub const fn vec3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Vector3<X, Y, Z, X::Out>
 where
@@ -67,10 +101,10 @@ where
     Y: Eval<E, Out = X::Out>,
     Z: Eval<E, Out = X::Out>,
 {
-    Ret::new(New((x, y, z)))
+    Ret::new(NewVec((x, y, z)))
 }
 
-type Vector4<X, Y, Z, W, O> = Ret<New<(X, Y, Z, W)>, types::Vec4<O>>;
+type Vector4<X, Y, Z, W, O> = Ret<NewVec<(X, Y, Z, W)>, types::Vec4<O>>;
 
 pub const fn vec4<X, Y, Z, W, E>(x: X, y: Y, z: Z, w: W) -> Vector4<X, Y, Z, W, X::Out>
 where
@@ -80,12 +114,12 @@ where
     Z: Eval<E, Out = X::Out>,
     W: Eval<E, Out = X::Out>,
 {
-    Ret::new(New((x, y, z, w)))
+    Ret::new(NewVec((x, y, z, w)))
 }
 
-pub struct New<A>(A);
+pub struct NewVec<A>(A);
 
-impl<A, O, E> Eval<E> for Ret<New<A>, O>
+impl<A, O, E> Eval<E> for Ret<NewVec<A>, O>
 where
     A: EvalTuple<E>,
     O: Vector,
@@ -151,5 +185,123 @@ where
         let en = en.get_entry();
         let ty = en.new_type(O::TYPE.ty());
         en.compose(ty, Exprs(vec![x, y]))
+    }
+}
+
+trait IntoVector {
+    type Scalar;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar);
+}
+
+impl IntoVector for glam::Vec2 {
+    type Scalar = f32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::Vec3 {
+    type Scalar = f32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::Vec3A {
+    type Scalar = f32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::Vec4 {
+    type Scalar = f32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::IVec2 {
+    type Scalar = i32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::IVec3 {
+    type Scalar = i32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::IVec4 {
+    type Scalar = i32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::UVec2 {
+    type Scalar = u32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::UVec3 {
+    type Scalar = u32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
+    }
+}
+
+impl IntoVector for glam::UVec4 {
+    type Scalar = u32;
+
+    fn into_vector<F>(self, f: F)
+    where
+        F: FnMut(Self::Scalar),
+    {
+        self.to_array().map(f);
     }
 }
