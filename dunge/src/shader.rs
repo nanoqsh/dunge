@@ -11,7 +11,7 @@ use {
 
 pub struct Shader<V> {
     inner: Inner,
-    ty: PhantomData<V>,
+    vert: PhantomData<V>,
 }
 
 impl<V> Shader<V> {
@@ -21,7 +21,7 @@ impl<V> Shader<V> {
     {
         Self {
             inner: Inner::new(state, module.into_module()),
-            ty: PhantomData,
+            vert: PhantomData,
         }
     }
 

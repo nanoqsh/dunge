@@ -2,20 +2,19 @@ use {
     crate::{
         context::Context,
         state::State,
-        types::{self, MemberType, ScalarType, VectorType},
+        types::{self, MatrixType, MemberType, ScalarType, VectorType},
     },
-    std::{marker::PhantomData, sync::Arc},
+    std::marker::PhantomData,
     wgpu::Buffer,
 };
 
-#[derive(Clone)]
 pub struct Uniform<V> {
-    buf: Arc<Buffer>,
-    ty: PhantomData<V>,
+    buf: Buffer,
+    vert: PhantomData<V>,
 }
 
 impl<V> Uniform<V> {
-    pub(crate) fn new(state: &State, data: &Data) -> Self {
+    pub(crate) fn new(state: &State, contents: &[u8]) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BufferUsages,
@@ -24,7 +23,7 @@ impl<V> Uniform<V> {
         let buf = {
             let desc = BufferInitDescriptor {
                 label: None,
-                contents: data.as_slice(),
+                contents,
                 usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             };
 
@@ -32,8 +31,8 @@ impl<V> Uniform<V> {
         };
 
         Self {
-            buf: Arc::new(buf),
-            ty: PhantomData,
+            buf,
+            vert: PhantomData,
         }
     }
 
@@ -43,7 +42,7 @@ impl<V> Uniform<V> {
     {
         let queue = cx.state().queue();
         let data = val.value();
-        queue.write_buffer(&self.buf, 0, data.as_slice());
+        queue.write_buffer(&self.buf, 0, data.as_ref());
     }
 
     pub(crate) fn buffer(&self) -> &Buffer {
@@ -54,7 +53,8 @@ impl<V> Uniform<V> {
 pub trait Value: private::Sealed {
     const TYPE: MemberType;
     type Type;
-    fn value(self) -> Data;
+    type Data: AsRef<[u8]>;
+    fn value(self) -> Self::Data;
 }
 
 impl private::Sealed for f32 {}
@@ -62,8 +62,9 @@ impl private::Sealed for f32 {}
 impl Value for f32 {
     const TYPE: MemberType = MemberType::Scalar(ScalarType::Float);
     type Type = Self;
+    type Data = Data;
 
-    fn value(self) -> Data {
+    fn value(self) -> Self::Data {
         Data([self, 0., 0., 0.])
     }
 }
@@ -73,8 +74,9 @@ impl private::Sealed for [f32; 2] {}
 impl Value for [f32; 2] {
     const TYPE: MemberType = MemberType::Vector(VectorType::Vec2f);
     type Type = types::Vec2<f32>;
+    type Data = Data;
 
-    fn value(self) -> Data {
+    fn value(self) -> Self::Data {
         let [x, y] = self;
         Data([x, y, 0., 0.])
     }
@@ -85,8 +87,9 @@ impl private::Sealed for [f32; 3] {}
 impl Value for [f32; 3] {
     const TYPE: MemberType = MemberType::Vector(VectorType::Vec3f);
     type Type = types::Vec3<f32>;
+    type Data = Data;
 
-    fn value(self) -> Data {
+    fn value(self) -> Self::Data {
         let [x, y, z] = self;
         Data([x, y, z, 0.])
     }
@@ -97,10 +100,10 @@ impl private::Sealed for [f32; 4] {}
 impl Value for [f32; 4] {
     const TYPE: MemberType = MemberType::Vector(VectorType::Vec4f);
     type Type = types::Vec4<f32>;
+    type Data = Data;
 
-    fn value(self) -> Data {
-        let [x, y, z, w] = self;
-        Data([x, y, z, w])
+    fn value(self) -> Self::Data {
+        Data(self)
     }
 }
 
@@ -109,8 +112,9 @@ impl private::Sealed for glam::Vec2 {}
 impl Value for glam::Vec2 {
     const TYPE: MemberType = MemberType::Vector(VectorType::Vec2f);
     type Type = types::Vec2<f32>;
+    type Data = Data;
 
-    fn value(self) -> Data {
+    fn value(self) -> Self::Data {
         self.to_array().value()
     }
 }
@@ -120,8 +124,9 @@ impl private::Sealed for glam::Vec3 {}
 impl Value for glam::Vec3 {
     const TYPE: MemberType = MemberType::Vector(VectorType::Vec3f);
     type Type = types::Vec3<f32>;
+    type Data = Data;
 
-    fn value(self) -> Data {
+    fn value(self) -> Self::Data {
         self.to_array().value()
     }
 }
@@ -131,16 +136,53 @@ impl private::Sealed for glam::Vec4 {}
 impl Value for glam::Vec4 {
     const TYPE: MemberType = MemberType::Vector(VectorType::Vec4f);
     type Type = types::Vec4<f32>;
+    type Data = Data;
 
-    fn value(self) -> Data {
+    fn value(self) -> Self::Data {
         self.to_array().value()
     }
 }
 
-pub struct Data([f32; 4]);
+impl private::Sealed for glam::Mat2 {}
 
-impl Data {
-    fn as_slice(&self) -> &[u8] {
+impl Value for glam::Mat2 {
+    const TYPE: MemberType = MemberType::Matrix(MatrixType::Mat2);
+    type Type = types::Mat2;
+    type Data = Data;
+
+    fn value(self) -> Self::Data {
+        self.to_cols_array().value()
+    }
+}
+
+impl private::Sealed for glam::Mat3 {}
+
+impl Value for glam::Mat3 {
+    const TYPE: MemberType = MemberType::Matrix(MatrixType::Mat3);
+    type Type = types::Mat3;
+    type Data = Data<9>;
+
+    fn value(self) -> Self::Data {
+        Data(self.to_cols_array())
+    }
+}
+
+impl private::Sealed for glam::Mat4 {}
+
+impl Value for glam::Mat4 {
+    const TYPE: MemberType = MemberType::Matrix(MatrixType::Mat4);
+    type Type = types::Mat4;
+    type Data = Data<16>;
+
+    fn value(self) -> Self::Data {
+        Data(self.to_cols_array())
+    }
+}
+
+pub struct Data<const N: usize = 4>([f32; N]);
+
+impl<const N: usize> AsRef<[u8]> for Data<N> {
+    fn as_ref(&self) -> &[u8] {
         bytemuck::cast_slice(&self.0)
     }
 }

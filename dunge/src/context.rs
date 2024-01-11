@@ -44,7 +44,7 @@ impl Context {
     where
         V: Value,
     {
-        Uniform::new(&self.0, &val.value())
+        Uniform::new(&self.0, val.value().as_ref())
     }
 
     pub fn make_layer<V>(&self, format: Format, shader: &Shader<V>) -> Layer<V> {
