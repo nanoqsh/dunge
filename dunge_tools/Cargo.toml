@@ -1,6 +1,6 @@
 [package]
 name = "dunge_tools"
-version = "0.2.3"
+version = "0.3.0-alpha"
 edition = "2021"
 description = "Additional tools for the dunge library"
 license = "MIT"
@@ -8,7 +8,7 @@ documentation = "https://docs.rs/dunge"
 repository = "https://github.com/nanoqsh/dunge"
 
 [dependencies]
-dunge = { version = "=0.2.3", path = "../dunge" }
+dunge = { version = "=0.3.0-alpha", path = "../dunge" }
 
 [lints]
 workspace = true

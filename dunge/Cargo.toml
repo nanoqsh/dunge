@@ -1,6 +1,6 @@
 [package]
 name = "dunge"
-version = "0.2.3"
+version = "0.3.0-alpha"
 edition = "2021"
 description = "Simple and portable 3d render library"
 license = "MIT"
@@ -11,8 +11,8 @@ repository = "https://github.com/nanoqsh/dunge"
 rust-version = "1.71"
 
 [dependencies]
-dunge_macros = { version = "=0.2.3", path = "../dunge_macros" }
-dunge_shader = { version = "=0.2.3", path = "../dunge_shader" }
+dunge_macros = { version = "=0.3.0-alpha", path = "../dunge_macros" }
+dunge_shader = { version = "=0.3.0-alpha", path = "../dunge_shader" }
 bytemuck = { workspace = true }
 glam = { workspace = true }
 instant = { version = "0.1", optional = true }

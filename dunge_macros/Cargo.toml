@@ -1,6 +1,6 @@
 [package]
 name = "dunge_macros"
-version = "0.2.3"
+version = "0.3.0-alpha"
 edition = "2021"
 description = "Procmacro for the dunge library"
 license = "MIT"
