@@ -13,7 +13,8 @@
 
 ## Features
 * Simple and flexible API
-* Customizable vertices, groups and shaders
+* Customizable vertices and groups
+* Shader code described as a single rust function
 * High degree of typesafety with minimal runtime checks
 * Desktop, WASM and Android support
 * Built-in and optional window and event loop creation
