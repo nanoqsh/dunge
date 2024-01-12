@@ -9,7 +9,7 @@ env:
     CARGO_TERM_COLOR: always
     RUSTFLAGS: -Dwarnings
     RUST_BACKTRACE: full
-    MSRV: 1.71
+    MSRV: 1.75
     RUSTDOCFLAGS: -Dwarnings
     CACHE_SUFFIX: c
 jobs:
@@ -18,9 +18,9 @@ jobs:
         steps:
           - uses: actions/checkout@v3
           - name: Build
-            run: cargo build --profile ci --verbose
+            run: cargo build --all-features --profile ci --verbose
           - name: Clippy
-            run: cargo clippy --profile ci
+            run: cargo clippy --all-features --profile ci
           - name: Install vulkan
             run: |
                 set -e

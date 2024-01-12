@@ -124,6 +124,7 @@ impl Context {
         (id, out)
     }
 
+    #[doc(hidden)]
     pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
         self.groups.iter().map(|entry| GroupInfo {
             tyid: entry.tyid,
@@ -132,6 +133,7 @@ impl Context {
         })
     }
 
+    #[doc(hidden)]
     pub fn inputs(&self) -> impl Iterator<Item = InputInfo> + '_ {
         self.inputs
             .iter()
@@ -140,27 +142,33 @@ impl Context {
     }
 }
 
-pub trait FromContextTyped {
+pub trait FromContextInput {
     type Vertex;
-    fn from_context_typed(cx: &mut Context) -> Self;
+    type Instance;
+    fn from_context_input(cx: &mut Context) -> Self;
 }
 
-impl<V> FromContextTyped for V
+impl<V> FromContextInput for V
 where
     V: FromContext,
 {
     type Vertex = ();
+    type Instance = ();
 
-    fn from_context_typed(cx: &mut Context) -> Self {
+    fn from_context_input(cx: &mut Context) -> Self {
         V::from_context(cx)
     }
 }
 
-pub struct Input<V>(V::Projection)
+pub struct In<V, I>(pub V::Projection, pub I)
 where
     V: Vertex;
 
-impl<V> ops::Deref for Input<V>
+pub struct InVertex<V>(V::Projection)
+where
+    V: Vertex;
+
+impl<V> ops::Deref for InVertex<V>
 where
     V: Vertex,
 {
@@ -171,13 +179,14 @@ where
     }
 }
 
-impl<V> FromContextTyped for Input<V>
+impl<V> FromContextInput for InVertex<V>
 where
     V: Vertex,
 {
     type Vertex = V;
+    type Instance = ();
 
-    fn from_context_typed(cx: &mut Context) -> Self {
+    fn from_context_input(cx: &mut Context) -> Self {
         let id = cx.declare_input(V::DECL, mem::size_of::<V>());
         Self(vertex::Projection::projection(id))
     }

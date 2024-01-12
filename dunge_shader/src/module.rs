@@ -1,5 +1,5 @@
 use crate::{
-    context::{Context, FromContext, FromContextTyped},
+    context::{Context, FromContext, FromContextInput},
     eval::{self, Eval, Fs, Vs},
     types,
 };
@@ -22,56 +22,36 @@ where
     }
 }
 
-impl<M, O, A> IntoModule<(A,)> for M
-where
-    M: FnOnce(A) -> O,
-    O: Output,
-    A: FromContextTyped,
-{
-    type Vertex = A::Vertex;
+macro_rules! impl_into_module {
+    (A $(,)? $($t:ident),*) => {
+        impl<M, O, A, $($t),*> IntoModule<(A, $($t),*)> for M
+        where
+            M: FnOnce(A, $($t),*) -> O,
+            O: Output,
+            A: FromContextInput,
+            $(
+                $t: FromContext,
+            )*
+        {
+            type Vertex = A::Vertex;
 
-    fn into_module(self) -> Module {
-        let mut cx = Context::new();
-        let a = A::from_context_typed(&mut cx);
-        eval::make(cx, self(a))
-    }
+            #[allow(non_snake_case)]
+            fn into_module(self) -> Module {
+                let mut cx = Context::new();
+                let a = A::from_context_input(&mut cx);
+                $(
+                    let $t = $t::from_context(&mut cx);
+                )*
+                eval::make(cx, self(a, $($t),*))
+            }
+        }
+    };
 }
 
-impl<M, O, A, B> IntoModule<(A, B)> for M
-where
-    M: FnOnce(A, B) -> O,
-    O: Output,
-    A: FromContextTyped,
-    B: FromContext,
-{
-    type Vertex = A::Vertex;
-
-    fn into_module(self) -> Module {
-        let mut cx = Context::new();
-        let a = A::from_context_typed(&mut cx);
-        let b = B::from_context(&mut cx);
-        eval::make(cx, self(a, b))
-    }
-}
-
-impl<M, O, A, B, C> IntoModule<(A, B, C)> for M
-where
-    M: FnOnce(A, B, C) -> O,
-    O: Output,
-    A: FromContextTyped,
-    B: FromContext,
-    C: FromContext,
-{
-    type Vertex = A::Vertex;
-
-    fn into_module(self) -> Module {
-        let mut cx = Context::new();
-        let a = A::from_context_typed(&mut cx);
-        let b = B::from_context(&mut cx);
-        let c = C::from_context(&mut cx);
-        eval::make(cx, self(a, b, c))
-    }
-}
+impl_into_module!(A);
+impl_into_module!(A, B);
+impl_into_module!(A, B, C);
+impl_into_module!(A, B, C, D);
 
 pub struct Out<P, C>
 where

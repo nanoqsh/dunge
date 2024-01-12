@@ -1,10 +1,10 @@
 [package]
 name = "triangle"
 version = "0.1.0"
-edition = "2021"
+edition = { workspace = true }
 
 [dependencies]
-dunge = { path = "../../dunge", features = ["winit"] }
+dunge = { workspace = true, features = ["winit"] }
 env_logger = "0.10"
 helpers = { path = "../../helpers" }
 

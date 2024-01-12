@@ -17,7 +17,7 @@
 * Shader code described as a single rust function
 * High degree of typesafety with minimal runtime checks
 * Desktop, WASM and Android support
-* Built-in and optional window and event loop creation
+* Optional built-in window and event loop
 
 ## Application area
 Currently the library is for personal use only. Although, over time I plan to stabilize API so that someone could use it for their tasks.
@@ -29,7 +29,7 @@ Currently the library is for personal use only. Although, over time I plan to st
 For more examples using the window, see the [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory.
 To build and run an example do:
 ```sh
-cargo r -p <example_name>
+cargo run -p <example_name>
 ```
 
 Also see the [test](https://github.com/nanoqsh/dunge/tree/main/dunge/tests) directory for small examples of creation a single image.

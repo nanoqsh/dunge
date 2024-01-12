@@ -6,7 +6,7 @@ use {
         draw,
         format::Format,
         mesh,
-        sl::{self, Input, Out},
+        sl::{self, InVertex, Out},
         state::{Options, Render},
         texture, Vertex,
     },
@@ -28,7 +28,7 @@ fn render() -> Result<(), Error> {
         col: Vec3,
     }
 
-    let triangle = |vert: Input<Vert>| Out {
+    let triangle = |vert: InVertex<Vert>| Out {
         place: sl::concat(vert.pos, Vec2::new(0., 1.)),
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };

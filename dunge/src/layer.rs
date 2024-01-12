@@ -50,7 +50,7 @@ impl<'s, 'p, V> BoundLayer<'s, 'p, V> {
     }
 
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
-        mesh.draw(self.pass);
+        mesh.draw(self.pass, 1);
     }
 }
 
@@ -65,7 +65,7 @@ pub struct Layer<V> {
     no_bindings: bool,
     format: Format,
     render: RenderPipeline,
-    vertex: PhantomData<V>,
+    vert: PhantomData<V>,
 }
 
 impl<V> Layer<V> {
@@ -113,7 +113,7 @@ impl<V> Layer<V> {
             no_bindings: shader.groups().is_empty(),
             format,
             render,
-            vertex: PhantomData,
+            vert: PhantomData,
         }
     }
 

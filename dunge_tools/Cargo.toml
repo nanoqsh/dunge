@@ -1,14 +1,18 @@
 [package]
 name = "dunge_tools"
-version = "0.3.0-alpha"
-edition = "2021"
 description = "Additional tools for the dunge library"
-license = "MIT"
-documentation = "https://docs.rs/dunge"
-repository = "https://github.com/nanoqsh/dunge"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+keywords = { workspace = true }
+documentation = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 
 [dependencies]
-dunge = { version = "=0.3.0-alpha", path = "../dunge" }
+dunge = { workspace = true }
 
 [lints]
 workspace = true
