@@ -8,6 +8,14 @@ impl<T> Define<T> {
     pub const fn new(s: &'static [T]) -> Self {
         Self(s)
     }
+
+    pub const fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl<T> Clone for Define<T> {

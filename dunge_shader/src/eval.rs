@@ -1,6 +1,6 @@
 use {
     crate::{
-        context::{Context, Info, InputInfo, Stages},
+        context::{Context, InputInfo, InstInfo, Stages, VertInfo},
         define::Define,
         module::{Module, Out, Output},
         ret::Ret,
@@ -21,18 +21,23 @@ where
 {
     let Out { place, color } = output.output();
     let mut compl = Compiler::default();
-    let make_input = |info| match info {
-        InputInfo::Vert(Info { def, .. }) | InputInfo::Inst(Info { def, .. }) => {
+    let mut binds = Bindings::default();
+    let make_input = |info: &_| match info {
+        InputInfo::Vert(VertInfo { def, .. }) => {
             let mut new = def.into_iter().map(Member::from_vecty);
-            Argument::from_type(compl.define_input(&mut new))
+            Argument::from_type(compl.define_input(&mut new, &mut binds))
         }
+        InputInfo::Inst(InstInfo { vecty, .. }) => Argument {
+            ty: compl.define_instance(*vecty),
+            binding: Some(binds.next(&vecty.ty())),
+        },
         InputInfo::Index => Argument {
             ty: compl.define_index(),
             binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
         },
     };
 
-    let inputs: Vec<_> = cx.inputs.iter().copied().map(make_input).collect();
+    let inputs: Vec<_> = cx.inputs.iter().map(make_input).collect();
     for (id, en) in iter::zip(0.., &cx.groups) {
         compl.define_group(id, en.def());
     }
@@ -467,7 +472,8 @@ impl Fs {
         };
 
         let mut members = self.required.iter().map(member);
-        self.inner.compl.define_input(&mut members)
+        let mut binds = Bindings::default();
+        self.inner.compl.define_input(&mut members, &mut binds)
     }
 }
 
@@ -706,10 +712,13 @@ impl Entry {
 
         let res = match ret {
             Return::Ty(ty) => FunctionResult { ty, binding: None },
-            Return::Color => FunctionResult {
-                ty: self.new_type(COLOR_TYPE),
-                binding: Some(binding_location(0, &COLOR_TYPE.inner)),
-            },
+            Return::Color => {
+                let mut binds = Bindings::default();
+                FunctionResult {
+                    ty: self.new_type(COLOR_TYPE),
+                    binding: Some(binds.next(&COLOR_TYPE)),
+                }
+            }
         };
 
         let point = EntryPoint {
@@ -767,21 +776,16 @@ impl Compiler {
         self.types.insert(ScalarType::Uint.ty(), Span::UNDEFINED)
     }
 
-    fn define_input(&mut self, new: &mut Members) -> Handle<Type> {
+    fn define_input(&mut self, new: &mut Members, binds: &mut Bindings) -> Handle<Type> {
         const VECTOR_SIZE: u32 = mem::size_of::<f32>() as u32 * 4;
 
         let len = new.len();
         let mut members = Vec::with_capacity(len);
-        let mut location = 0;
         for (idx, Member { vecty, built }) in iter::zip(0.., new) {
             let ty = vecty.ty();
             let binding = match built {
                 Some(bi @ BuiltIn::Position { .. }) => Binding::BuiltIn(bi),
-                None => {
-                    let curr = location;
-                    location += 1;
-                    binding_location(curr, &ty.inner)
-                }
+                None => binds.next(&ty),
                 _ => unimplemented!(),
             };
 
@@ -802,6 +806,10 @@ impl Compiler {
         };
 
         self.types.insert(ty, Span::UNDEFINED)
+    }
+
+    fn define_instance(&mut self, vecty: VectorType) -> Handle<Type> {
+        self.types.insert(vecty.ty(), Span::UNDEFINED)
     }
 
     fn define_group(&mut self, group: u32, def: Define<MemberType>) {
@@ -840,14 +848,20 @@ impl Globals {
     }
 }
 
-fn binding_location(location: u32, inner: &TypeInner) -> Binding {
-    let mut binding = Binding::Location {
-        location,
-        second_blend_source: false,
-        interpolation: None,
-        sampling: None,
-    };
+#[derive(Default)]
+struct Bindings(u32);
 
-    binding.apply_default_interpolation(inner);
-    binding
+impl Bindings {
+    fn next(&mut self, ty: &Type) -> Binding {
+        let mut binding = Binding::Location {
+            location: self.0,
+            second_blend_source: false,
+            interpolation: None,
+            sampling: None,
+        };
+
+        self.0 += 1;
+        binding.apply_default_interpolation(&ty.inner);
+        binding
+    }
 }

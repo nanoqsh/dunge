@@ -1,12 +1,12 @@
 use {
     crate::{
         bind::TypedGroup,
-        sl::{Info, IntoModule, Module, Stages},
+        sl::{InstInfo, IntoModule, Module, Stages, VertInfo},
         state::State,
         types::{MemberType, VectorType},
     },
     std::marker::PhantomData,
-    wgpu::{PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout},
+    wgpu::{BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout},
 };
 
 pub struct Shader<V> {
@@ -42,7 +42,7 @@ impl<V> Shader<V> {
 
         fn layout(Vertex { size, attributes }: &Vertex) -> VertexBufferLayout {
             VertexBufferLayout {
-                array_stride: *size as BufferAddress,
+                array_stride: *size,
                 step_mode: VertexStepMode::Vertex,
                 attributes,
             }
@@ -57,7 +57,7 @@ impl<V> Shader<V> {
 }
 
 struct Vertex {
-    size: usize,
+    size: BufferAddress,
     attributes: Box<[VertexAttribute]>,
 }
 
@@ -152,48 +152,62 @@ impl Inner {
             state.device().create_pipeline_layout(&desc)
         };
 
-        let vertex = {
-            let vert = |info: Info| {
-                let mut offset = 0;
-                let mut shader_location = 0;
-                let attr = |vecty| {
-                    let format = match vecty {
-                        VectorType::Vec2f => VertexFormat::Float32x2,
-                        VectorType::Vec3f => VertexFormat::Float32x3,
-                        VectorType::Vec4f => VertexFormat::Float32x4,
-                        VectorType::Vec2u => VertexFormat::Uint32x2,
-                        VectorType::Vec3u => VertexFormat::Uint32x3,
-                        VectorType::Vec4u => VertexFormat::Uint32x4,
-                        VectorType::Vec2i => VertexFormat::Sint32x2,
-                        VectorType::Vec3i => VertexFormat::Sint32x3,
-                        VectorType::Vec4i => VertexFormat::Sint32x4,
-                    };
-
-                    let attr = VertexAttribute {
-                        format,
-                        offset,
-                        shader_location,
-                    };
-
-                    offset += format.size();
-                    shader_location += 1;
-                    attr
-                };
-
-                Vertex {
-                    size: info.size,
-                    attributes: info.def.into_iter().map(attr).collect(),
-                }
-            };
-
-            cx.verts().map(vert).collect()
+        let to_format = |vecty| match vecty {
+            VectorType::Vec2f => VertexFormat::Float32x2,
+            VectorType::Vec3f => VertexFormat::Float32x3,
+            VectorType::Vec4f => VertexFormat::Float32x4,
+            VectorType::Vec2u => VertexFormat::Uint32x2,
+            VectorType::Vec3u => VertexFormat::Uint32x3,
+            VectorType::Vec4u => VertexFormat::Uint32x4,
+            VectorType::Vec2i => VertexFormat::Sint32x2,
+            VectorType::Vec3i => VertexFormat::Sint32x3,
+            VectorType::Vec4i => VertexFormat::Sint32x4,
         };
 
+        let mut vertex = Vec::with_capacity(cx.count_verts());
+        let vert = |info: VertInfo| {
+            let mut offset = 0;
+            let mut location = info.start_location;
+            let attr = |vecty| {
+                let format = to_format(vecty);
+                let attr = VertexAttribute {
+                    format,
+                    offset,
+                    shader_location: location,
+                };
+
+                offset += format.size();
+                location += 1;
+                attr
+            };
+
+            Vertex {
+                size: info.size as BufferAddress,
+                attributes: info.def.into_iter().map(attr).collect(),
+            }
+        };
+
+        vertex.extend(cx.verts().map(vert));
+        let inst = |info: InstInfo| {
+            let format = to_format(info.vecty);
+            let attr = VertexAttribute {
+                format,
+                offset: 0,
+                shader_location: info.location,
+            };
+
+            Vertex {
+                size: format.size(),
+                attributes: Box::from([attr]),
+            }
+        };
+
+        vertex.extend(cx.insts().map(inst));
         Self {
             id: state.next_shader_id(),
             module,
             layout,
-            vertex,
+            vertex: Box::from(vertex),
             groups,
         }
     }

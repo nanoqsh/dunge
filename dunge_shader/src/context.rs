@@ -33,26 +33,39 @@ impl Stages {
     }
 }
 
-#[derive(Clone, Copy)]
 pub(crate) enum InputInfo {
-    Vert(Info),
-    Inst(Info),
+    Vert(VertInfo),
+    Inst(InstInfo),
     Index,
 }
 
 impl InputInfo {
-    fn into_vert(self) -> Option<Info> {
+    fn as_vert(&self) -> Option<VertInfo> {
         match self {
-            Self::Vert(info) => Some(info),
+            Self::Vert(info) => Some(*info),
+            _ => None,
+        }
+    }
+
+    fn as_inst(&self) -> Option<InstInfo> {
+        match self {
+            Self::Inst(info) => Some(*info),
             _ => None,
         }
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct Info {
+pub struct VertInfo {
     pub def: Define<VectorType>,
     pub size: usize,
+    pub start_location: u32,
+}
+
+#[derive(Clone, Copy)]
+pub struct InstInfo {
+    pub vecty: VectorType,
+    pub location: u32,
 }
 
 pub(crate) struct GroupEntry {
@@ -84,6 +97,7 @@ fn countdown(v: &mut u8, msg: &str) {
 pub struct Context {
     pub(crate) inputs: Vec<InputInfo>,
     pub(crate) groups: Vec<GroupEntry>,
+    location: u32,
     limits: Limits,
 }
 
@@ -92,6 +106,7 @@ impl Context {
         Self {
             inputs: vec![],
             groups: vec![],
+            location: 0,
             limits: Limits {
                 index: 1,
                 verts: 1,
@@ -111,15 +126,26 @@ impl Context {
     fn add_vertex(&mut self, def: Define<VectorType>, size: usize) -> u32 {
         countdown(&mut self.limits.verts, "too many vertices in the shader");
         let id = self.inputs.len() as u32;
-        let info = Info { def, size };
+        let info = VertInfo {
+            def,
+            size,
+            start_location: self.location,
+        };
+
+        self.location += def.len() as u32;
         self.inputs.push(InputInfo::Vert(info));
         id
     }
 
-    fn add_instance(&mut self, def: Define<VectorType>, size: usize) -> u32 {
+    fn add_instance(&mut self, vec: VectorType) -> u32 {
         countdown(&mut self.limits.insts, "too many instances in the shader");
         let id = self.inputs.len() as u32;
-        let info = Info { def, size };
+        let info = InstInfo {
+            vecty: vec,
+            location: self.location,
+        };
+
+        self.location += 1;
         self.inputs.push(InputInfo::Inst(info));
         id
     }
@@ -139,8 +165,21 @@ impl Context {
     }
 
     #[doc(hidden)]
-    pub fn verts(&self) -> impl Iterator<Item = Info> + '_ {
-        self.inputs.iter().copied().filter_map(InputInfo::into_vert)
+    pub fn count_verts(&self) -> usize {
+        self.inputs
+            .iter()
+            .filter(|info| matches!(info, InputInfo::Vert(_) | InputInfo::Inst(_)))
+            .count()
+    }
+
+    #[doc(hidden)]
+    pub fn verts(&self) -> impl Iterator<Item = VertInfo> + '_ {
+        self.inputs.iter().filter_map(InputInfo::as_vert)
+    }
+
+    #[doc(hidden)]
+    pub fn insts(&self) -> impl Iterator<Item = InstInfo> + '_ {
+        self.inputs.iter().filter_map(InputInfo::as_inst)
     }
 
     #[doc(hidden)]
@@ -222,7 +261,12 @@ where
     type Instance = I;
 
     fn from_context_input(cx: &mut Context) -> Self {
-        let id = cx.add_instance(I::DEF, mem::size_of::<I>());
+        let mut id = None;
+        for vec in I::DEF {
+            id.get_or_insert(cx.add_instance(vec));
+        }
+
+        let id = id.expect("the instance must have at least one field");
         Self(instance::Projection::projection(id))
     }
 }
