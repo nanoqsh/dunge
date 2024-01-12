@@ -5,14 +5,13 @@ use {
         color::Rgba,
         draw,
         format::Format,
-        mesh,
-        sl::{self, InVertex, Out},
+        sl::{self, Index, Out},
         state::Render,
-        texture, Vertex,
+        texture,
     },
-    glam::{Vec2, Vec3},
+    glam::Vec4,
     helpers::Image,
-    std::{error, fs},
+    std::{error, f32::consts, fs},
 };
 
 type Error = Box<dyn error::Error>;
@@ -20,17 +19,17 @@ type Error = Box<dyn error::Error>;
 #[test]
 fn render() -> Result<(), Error> {
     const SIZE: (u32, u32) = (300, 300);
+    const COLOR: Vec4 = Vec4::new(1., 0., 0., 1.);
+    const THIRD: f32 = consts::TAU / 3.;
+    const R_OFFSET: f32 = -consts::TAU / 4.;
+    const Y_OFFSET: f32 = 0.25;
 
-    #[repr(C)]
-    #[derive(Vertex)]
-    struct Vert {
-        pos: Vec2,
-        col: Vec3,
-    }
-
-    let triangle = |vert: InVertex<Vert>| Out {
-        place: sl::concat(vert.pos, Vec2::new(0., 1.)),
-        color: sl::vec4_with(sl::fragment(vert.col), 1.),
+    let triangle = |Index(index): Index| {
+        let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
+        Out {
+            place: sl::vec4(sl::cos(x), sl::sin(y) + Y_OFFSET, 0., 1.),
+            color: COLOR,
+        }
     };
 
     let cx = helpers::block_on(dunge::context())?;
@@ -43,32 +42,10 @@ fn render() -> Result<(), Error> {
         cx.make_texture(data)
     };
 
-    let mesh = {
-        use mesh::Data;
-
-        const VERTS: [Vert; 3] = [
-            Vert {
-                pos: Vec2::new(0., -0.75),
-                col: Vec3::new(1., 0., 0.),
-            },
-            Vert {
-                pos: Vec2::new(0.866, 0.75),
-                col: Vec3::new(0., 1., 0.),
-            },
-            Vert {
-                pos: Vec2::new(-0.866, 0.75),
-                col: Vec3::new(0., 0., 1.),
-            },
-        ];
-
-        let data = Data::from_verts(&VERTS);
-        cx.make_mesh(&data)
-    };
-
     let buffer = cx.make_copy_buffer(SIZE);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = draw::from_fn(|mut frame| {
-        frame.layer(&layer, opts).bind_empty().draw(&mesh);
+        frame.layer(&layer, opts).bind_empty().draw_triangles(1);
         frame.copy_texture(&buffer, &view);
     });
 
@@ -87,6 +64,6 @@ fn render() -> Result<(), Error> {
         data[idx as usize]
     });
 
-    fs::write("tests/triangle_vertex.png", image.encode())?;
+    fs::write("tests/triangle_instance.png", image.encode())?;
     Ok(())
 }

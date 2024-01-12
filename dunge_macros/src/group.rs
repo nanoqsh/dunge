@@ -85,7 +85,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     quote::quote! {
         impl<#(#lts),*> ::dunge::Group for #name<#(#lts),*> {
             type Projection = #projection_name<#(#static_lts),*>;
-            const DECL: ::dunge::group::DeclareGroup = ::dunge::group::DeclareGroup::new(&[
+            const DEF: ::dunge::sl::Define<::dunge::types::MemberType> = ::dunge::sl::Define::new(&[
                 #(#group_types),*,
             ]);
         }
@@ -128,7 +128,7 @@ mod tests {
         let expected = quote::quote! {
             impl<'a> ::dunge::Group for Map<'a> {
                 type Projection = MapProjection<'static>;
-                const DECL: ::dunge::group::DeclareGroup = ::dunge::group::DeclareGroup::new(&[
+                const DEF: ::dunge::sl::Define<::dunge::types::MemberType> = ::dunge::sl::Define::new(&[
                     <BoundTexture<'a> as ::dunge::group::MemberProjection>::TYPE,
                     <&'a Sampler as ::dunge::group::MemberProjection>::TYPE,
                 ]);

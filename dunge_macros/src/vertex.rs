@@ -53,7 +53,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     quote::quote! {
         unsafe impl ::dunge::Vertex for #name {
             type Projection = #projection_name;
-            const DECL: ::dunge::vertex::DeclareInput = ::dunge::vertex::DeclareInput::new(&[
+            const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
                 #(#vector_types),*,
             ]);
         }
@@ -103,7 +103,7 @@ mod tests {
         let expected = quote::quote! {
             unsafe impl ::dunge::Vertex for Vert {
                 type Projection = VertProjection;
-                const DECL: ::dunge::vertex::DeclareInput = ::dunge::vertex::DeclareInput::new(&[
+                const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
                     <[f32; 2] as ::dunge::vertex::InputProjection>::TYPE,
                     <[f32; 3] as ::dunge::vertex::InputProjection>::TYPE,
                 ]);

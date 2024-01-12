@@ -8,7 +8,7 @@ use {
         group::BoundTexture,
         mesh,
         sl::{self, Groups, InVertex, Out},
-        state::{Options, Render},
+        state::Render,
         texture::{self, Filter, Sampler},
         Group, Vertex,
     },
@@ -94,9 +94,9 @@ fn render() -> Result<(), Error> {
     };
 
     let buffer = cx.make_copy_buffer(SIZE);
-    let options = Options::default().with_clear(Rgba::from_standard([0., 0., 0., 1.]));
+    let opts = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = draw::from_fn(|mut frame| {
-        frame.layer(&layer, options).bind(&map).draw(&mesh);
+        frame.layer(&layer, opts).bind(&map).draw(&mesh);
         frame.copy_texture(&buffer, &view);
     });
 

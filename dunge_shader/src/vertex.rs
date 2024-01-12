@@ -1,14 +1,14 @@
 use {
-    crate::types::VectorType,
-    std::{iter, mem, slice},
+    crate::{define::Define, types::VectorType},
+    std::{mem, slice},
 };
 
 /// The vertex type description.
 ///
 /// # Safety
-/// The fields of [`DeclareInput`] must exactly match the actual struct fields.
+/// The fields of [`Define`] must exactly match the actual struct fields.
 /// To do this, the fields must be ordered, so the struct must have the `#[repr(C)]`
-/// attribute and the fields must have the same order as specified in [`DeclareInput`].
+/// attribute and the fields must have the same order as specified in [`Define`].
 ///
 /// # Deriving
 /// Although the library tries to formalize the safety invariant, you still shouldn’t
@@ -32,7 +32,7 @@ use {
 ///
 pub unsafe trait Vertex {
     type Projection: Projection + 'static;
-    const DECL: DeclareInput;
+    const DEF: Define<VectorType>;
 }
 
 pub fn verts_as_bytes<V>(verts: &[V]) -> &[u8]
@@ -46,22 +46,4 @@ where
 
 pub trait Projection {
     fn projection(id: u32) -> Self;
-}
-
-#[derive(Clone, Copy)]
-pub struct DeclareInput(&'static [VectorType]);
-
-impl DeclareInput {
-    pub const fn new(ts: &'static [VectorType]) -> Self {
-        Self(ts)
-    }
-}
-
-impl IntoIterator for DeclareInput {
-    type Item = VectorType;
-    type IntoIter = iter::Copied<slice::Iter<'static, Self::Item>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter().copied()
-    }
 }

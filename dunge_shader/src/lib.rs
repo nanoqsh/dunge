@@ -1,7 +1,9 @@
 mod context;
 mod convert;
+mod define;
 mod eval;
 pub mod group;
+pub mod instance;
 mod math;
 mod matrix;
 mod module;
@@ -13,6 +15,7 @@ pub mod vertex;
 
 pub mod sl {
     pub use crate::{
-        context::*, convert::*, eval::*, math::*, module::*, ret::*, texture::*, vector::*,
+        context::*, convert::*, define::*, eval::*, math::*, module::*, ret::*, texture::*,
+        vector::*,
     };
 }

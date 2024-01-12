@@ -1,9 +1,12 @@
 use {
     crate::{
+        define::Define,
         eval::{GlobalOut, ReadIndex, Stage},
-        group::{self, DeclareGroup, Group},
+        group::{self, Group},
+        instance::{self, Instance},
         ret::Ret,
-        vertex::{self, DeclareInput, Vertex},
+        types::{MemberType, VectorType},
+        vertex::{self, Vertex},
     },
     std::{any::TypeId, mem, ops},
 };
@@ -11,7 +14,7 @@ use {
 #[derive(Clone, Copy)]
 pub struct GroupInfo {
     pub tyid: TypeId,
-    pub decl: DeclareGroup,
+    pub def: Define<MemberType>,
     pub stages: Stages,
 }
 
@@ -31,41 +34,43 @@ impl Stages {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) enum InputKind {
-    Type(InputInfo),
+pub(crate) enum InputInfo {
+    Vert(Info),
+    Inst(Info),
     Index,
 }
 
-impl InputKind {
-    fn into_input_info(self) -> Option<InputInfo> {
+impl InputInfo {
+    fn into_vert(self) -> Option<Info> {
         match self {
-            Self::Type(info) => Some(info),
-            Self::Index => None,
+            Self::Vert(info) => Some(info),
+            _ => None,
         }
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct InputInfo {
-    pub decl: DeclareInput,
+pub struct Info {
+    pub def: Define<VectorType>,
     pub size: usize,
 }
 
 pub(crate) struct GroupEntry {
     tyid: TypeId,
-    decl: DeclareGroup,
+    def: Define<MemberType>,
     out: GlobalOut,
 }
 
 impl GroupEntry {
-    pub fn decl(&self) -> DeclareGroup {
-        self.decl
+    pub fn def(&self) -> Define<MemberType> {
+        self.def
     }
 }
 
 struct Limits {
     index: u8,
-    input: u8,
+    verts: u8,
+    insts: u8,
     group: u8,
 }
 
@@ -77,7 +82,7 @@ fn countdown(v: &mut u8, msg: &str) {
 }
 
 pub struct Context {
-    pub(crate) inputs: Vec<InputKind>,
+    pub(crate) inputs: Vec<InputInfo>,
     pub(crate) groups: Vec<GroupEntry>,
     limits: Limits,
 }
@@ -89,33 +94,42 @@ impl Context {
             groups: vec![],
             limits: Limits {
                 index: 1,
-                input: 1,
+                verts: 1,
+                insts: 2,
                 group: 4,
             },
         }
     }
 
-    fn declare_index(&mut self) -> u32 {
+    fn add_index(&mut self) -> u32 {
         countdown(&mut self.limits.index, "too many indices in the shader");
         let id = self.inputs.len() as u32;
-        self.inputs.push(InputKind::Index);
+        self.inputs.push(InputInfo::Index);
         id
     }
 
-    fn declare_input(&mut self, decl: DeclareInput, size: usize) -> u32 {
-        countdown(&mut self.limits.input, "too many inputs in the shader");
+    fn add_vertex(&mut self, def: Define<VectorType>, size: usize) -> u32 {
+        countdown(&mut self.limits.verts, "too many vertices in the shader");
         let id = self.inputs.len() as u32;
-        let info = InputInfo { decl, size };
-        self.inputs.push(InputKind::Type(info));
+        let info = Info { def, size };
+        self.inputs.push(InputInfo::Vert(info));
         id
     }
 
-    fn declare_group(&mut self, tyid: TypeId, decl: DeclareGroup) -> (u32, GlobalOut) {
+    fn add_instance(&mut self, def: Define<VectorType>, size: usize) -> u32 {
+        countdown(&mut self.limits.insts, "too many instances in the shader");
+        let id = self.inputs.len() as u32;
+        let info = Info { def, size };
+        self.inputs.push(InputInfo::Inst(info));
+        id
+    }
+
+    fn add_group(&mut self, tyid: TypeId, def: Define<MemberType>) -> (u32, GlobalOut) {
         countdown(&mut self.limits.group, "too many groups in the shader");
         let out = GlobalOut::default();
         let en = GroupEntry {
             tyid,
-            decl,
+            def,
             out: out.clone(),
         };
 
@@ -125,20 +139,17 @@ impl Context {
     }
 
     #[doc(hidden)]
-    pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
-        self.groups.iter().map(|entry| GroupInfo {
-            tyid: entry.tyid,
-            decl: entry.decl,
-            stages: entry.out.get(),
-        })
+    pub fn verts(&self) -> impl Iterator<Item = Info> + '_ {
+        self.inputs.iter().copied().filter_map(InputInfo::into_vert)
     }
 
     #[doc(hidden)]
-    pub fn inputs(&self) -> impl Iterator<Item = InputInfo> + '_ {
-        self.inputs
-            .iter()
-            .copied()
-            .filter_map(InputKind::into_input_info)
+    pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
+        self.groups.iter().map(|entry| GroupInfo {
+            tyid: entry.tyid,
+            def: entry.def,
+            stages: entry.out.get(),
+        })
     }
 }
 
@@ -159,10 +170,6 @@ where
         V::from_context(cx)
     }
 }
-
-pub struct In<V, I>(pub V::Projection, pub I)
-where
-    V: Vertex;
 
 pub struct InVertex<V>(V::Projection)
 where
@@ -187,8 +194,56 @@ where
     type Instance = ();
 
     fn from_context_input(cx: &mut Context) -> Self {
-        let id = cx.declare_input(V::DECL, mem::size_of::<V>());
+        let id = cx.add_vertex(V::DEF, mem::size_of::<V>());
         Self(vertex::Projection::projection(id))
+    }
+}
+
+pub struct InInstance<I>(I::Projection)
+where
+    I: Instance;
+
+impl<I> ops::Deref for InInstance<I>
+where
+    I: Instance,
+{
+    type Target = I::Projection;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<I> FromContextInput for InInstance<I>
+where
+    I: Instance,
+{
+    type Vertex = ();
+    type Instance = I;
+
+    fn from_context_input(cx: &mut Context) -> Self {
+        let id = cx.add_instance(I::DEF, mem::size_of::<I>());
+        Self(instance::Projection::projection(id))
+    }
+}
+
+pub struct In<V, I>(pub V::Projection, pub I::Projection)
+where
+    V: Vertex,
+    I: Instance;
+
+impl<V, I> FromContextInput for In<V, I>
+where
+    V: Vertex,
+    I: Instance,
+{
+    type Vertex = V;
+    type Instance = I;
+
+    fn from_context_input(cx: &mut Context) -> Self {
+        let InVertex(vert): InVertex<V> = InVertex::from_context_input(cx);
+        let InInstance(inst): InInstance<I> = InInstance::from_context_input(cx);
+        Self(vert, inst)
     }
 }
 
@@ -201,7 +256,7 @@ pub struct Index(pub Ret<ReadIndex, u32>);
 
 impl FromContext for Index {
     fn from_context(cx: &mut Context) -> Self {
-        let id = cx.declare_index();
+        let id = cx.add_index();
         Self(ReadIndex::new(id))
     }
 }
@@ -223,7 +278,7 @@ where
     type Projection = A::Projection;
 
     fn from_context(cx: &mut Context) -> Self::Projection {
-        let (id, out) = cx.declare_group(TypeId::of::<A::Projection>(), A::DECL);
+        let (id, out) = cx.add_group(TypeId::of::<A::Projection>(), A::DEF);
         group::Projection::projection(id, out)
     }
 }
@@ -241,7 +296,7 @@ macro_rules! impl_projection_from_context {
             fn from_context(cx: &mut Context) -> Self::Projection {
                 (
                     $({
-                        let (id, out) = cx.declare_group(TypeId::of::<$t::Projection>(), $t::DECL);
+                        let (id, out) = cx.add_group(TypeId::of::<$t::Projection>(), $t::DEF);
                         group::Projection::projection(id, out)
                     }),*,
                 )

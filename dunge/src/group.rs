@@ -5,7 +5,7 @@ use crate::{
     uniform::{Uniform, Value},
 };
 
-pub use dunge_shader::group::{DeclareGroup, Projection};
+pub use dunge_shader::group::Projection;
 
 #[derive(Clone, Copy)]
 pub struct BoundTexture<'a>(&'a Texture);

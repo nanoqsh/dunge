@@ -1,7 +1,7 @@
 use {
     crate::{
         bind::TypedGroup,
-        sl::{InputInfo, IntoModule, Module, Stages},
+        sl::{Info, IntoModule, Module, Stages},
         state::State,
         types::{MemberType, VectorType},
     },
@@ -96,7 +96,7 @@ impl Inner {
         let mut groups = vec![];
         for info in cx.groups() {
             entries.clear();
-            for (binding, member) in iter::zip(0.., info.decl) {
+            for (binding, member) in iter::zip(0.., info.def) {
                 let entry = match member {
                     MemberType::Scalar(_) | MemberType::Vector(_) | MemberType::Matrix(_) => {
                         BindGroupLayoutEntry {
@@ -153,7 +153,7 @@ impl Inner {
         };
 
         let vertex = {
-            let vert = |info: InputInfo| {
+            let vert = |info: Info| {
                 let mut offset = 0;
                 let mut shader_location = 0;
                 let attr = |vecty| {
@@ -182,11 +182,11 @@ impl Inner {
 
                 Vertex {
                     size: info.size,
-                    attributes: info.decl.into_iter().map(attr).collect(),
+                    attributes: info.def.into_iter().map(attr).collect(),
                 }
             };
 
-            cx.inputs().map(vert).collect()
+            cx.verts().map(vert).collect()
         };
 
         Self {

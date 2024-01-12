@@ -3,7 +3,7 @@ use crate::{
     types::{self, VectorType},
 };
 
-pub use dunge_shader::vertex::{verts_as_bytes, DeclareInput, Projection};
+pub use dunge_shader::vertex::{verts_as_bytes, Projection};
 
 /// Describes an input type projection.
 ///

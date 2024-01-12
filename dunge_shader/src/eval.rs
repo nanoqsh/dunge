@@ -1,10 +1,10 @@
 use {
     crate::{
-        context::{Context, InputInfo, InputKind, Stages},
-        group::DeclareGroup,
+        context::{Context, Info, InputInfo, Stages},
+        define::Define,
         module::{Module, Out, Output},
         ret::Ret,
-        types::{self, ScalarType, VectorType},
+        types::{self, MemberType, ScalarType, VectorType},
     },
     naga::{
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
@@ -21,20 +21,20 @@ where
 {
     let Out { place, color } = output.output();
     let mut compl = Compiler::default();
-    let make_input = |kind| match kind {
-        InputKind::Type(InputInfo { decl, .. }) => {
-            let mut new = decl.into_iter().map(Member::from_vecty);
-            Argument::from_type(compl.decl_input(&mut new))
+    let make_input = |info| match info {
+        InputInfo::Vert(Info { def, .. }) | InputInfo::Inst(Info { def, .. }) => {
+            let mut new = def.into_iter().map(Member::from_vecty);
+            Argument::from_type(compl.define_input(&mut new))
         }
-        InputKind::Index => Argument {
-            ty: compl.decl_index(),
+        InputInfo::Index => Argument {
+            ty: compl.define_index(),
             binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
         },
     };
 
     let inputs: Vec<_> = cx.inputs.iter().copied().map(make_input).collect();
     for (id, en) in iter::zip(0.., &cx.groups) {
-        compl.decl_group(id, en.decl());
+        compl.define_group(id, en.def());
     }
 
     let (fs, required, fsty) = {
@@ -467,7 +467,7 @@ impl Fs {
         };
 
         let mut members = self.required.iter().map(member);
-        self.inner.compl.decl_input(&mut members)
+        self.inner.compl.define_input(&mut members)
     }
 }
 
@@ -763,11 +763,11 @@ struct Compiler {
 }
 
 impl Compiler {
-    fn decl_index(&mut self) -> Handle<Type> {
+    fn define_index(&mut self) -> Handle<Type> {
         self.types.insert(ScalarType::Uint.ty(), Span::UNDEFINED)
     }
 
-    fn decl_input(&mut self, new: &mut Members) -> Handle<Type> {
+    fn define_input(&mut self, new: &mut Members) -> Handle<Type> {
         const VECTOR_SIZE: u32 = mem::size_of::<f32>() as u32 * 4;
 
         let len = new.len();
@@ -804,8 +804,8 @@ impl Compiler {
         self.types.insert(ty, Span::UNDEFINED)
     }
 
-    fn decl_group(&mut self, group: u32, decl: DeclareGroup) {
-        for (binding, member) in iter::zip(0.., decl) {
+    fn define_group(&mut self, group: u32, def: Define<MemberType>) {
+        for (binding, member) in iter::zip(0.., def) {
             let space = member.address_space();
             let ty = self.types.insert(member.ty(), Span::UNDEFINED);
             let res = ResourceBinding { group, binding };
