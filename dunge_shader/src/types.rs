@@ -23,7 +23,7 @@ impl Scalar for bool {
     const TYPE: ScalarType = ScalarType::Bool;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ScalarType {
     Float,
     Sint,
@@ -54,7 +54,7 @@ pub struct Vec2<T>(PhantomData<T>);
 pub struct Vec3<T>(PhantomData<T>);
 pub struct Vec4<T>(PhantomData<T>);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum VectorType {
     Vec2f,
     Vec3f,
@@ -166,7 +166,7 @@ pub struct Mat2;
 pub struct Mat3;
 pub struct Mat4;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MatrixType {
     Mat2,
     Mat3,
@@ -222,6 +222,13 @@ const fn mat(size: VectorSize) -> Type {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ValueType {
+    Scalar(ScalarType),
+    Vector(VectorType),
+    Matrix(MatrixType),
+}
+
 pub struct Texture2d<T>(PhantomData<T>);
 
 const TEXTURE2DF: Type = texture(ImageDimension::D2, ScalarKind::Float);
@@ -250,7 +257,7 @@ const SAMPLER: Type = Type {
     inner: TypeInner::Sampler { comparison: false },
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MemberType {
     Scalar(ScalarType),
     Vector(VectorType),
@@ -260,6 +267,14 @@ pub enum MemberType {
 }
 
 impl MemberType {
+    pub const fn from_value(v: ValueType) -> Self {
+        match v {
+            ValueType::Scalar(v) => Self::Scalar(v),
+            ValueType::Vector(v) => Self::Vector(v),
+            ValueType::Matrix(v) => Self::Matrix(v),
+        }
+    }
+
     pub const fn is_value(self) -> bool {
         matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
     }

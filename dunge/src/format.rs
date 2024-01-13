@@ -9,8 +9,7 @@ pub enum Format {
 impl Format {
     pub(crate) const fn bytes(self) -> u32 {
         match self {
-            Self::RgbAlpha => 4,
-            Self::BgrAlpha => 4,
+            Self::RgbAlpha | Self::BgrAlpha => 4,
         }
     }
 

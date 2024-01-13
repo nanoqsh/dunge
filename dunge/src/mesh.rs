@@ -112,7 +112,7 @@ impl<V> Mesh<V> {
             let desc = BufferInitDescriptor {
                 label: None,
                 contents: vertex::verts_as_bytes(data.verts),
-                usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+                usage: BufferUsages::VERTEX,
             };
 
             device.create_buffer_init(&desc)
@@ -122,7 +122,7 @@ impl<V> Mesh<V> {
             let desc = BufferInitDescriptor {
                 label: None,
                 contents: bytemuck::cast_slice(indxs),
-                usage: BufferUsages::INDEX | BufferUsages::COPY_DST,
+                usage: BufferUsages::INDEX,
             };
 
             device.create_buffer_init(&desc)
@@ -135,19 +135,19 @@ impl<V> Mesh<V> {
         }
     }
 
-    pub(crate) fn draw<'a>(&'a self, pass: &mut RenderPass<'a>, n: u32) {
+    pub(crate) fn draw<'a>(&'a self, pass: &mut RenderPass<'a>, slot: u32, count: u32) {
         use wgpu::IndexFormat;
 
-        pass.set_vertex_buffer(0, self.verts.slice(..));
+        pass.set_vertex_buffer(slot, self.verts.slice(..));
         match &self.indxs {
             Some(indxs) => {
                 pass.set_index_buffer(indxs.slice(..), IndexFormat::Uint16);
                 let len = indxs.size() as u32 / mem::size_of::<u16>() as u32;
-                pass.draw_indexed(0..len, 0, 0..n);
+                pass.draw_indexed(0..len, 0, 0..count);
             }
             None => {
                 let len = self.verts.size() as u32 / mem::size_of::<V>() as u32;
-                pass.draw(0..len, 0..n);
+                pass.draw(0..len, 0..count);
             }
         }
     }

@@ -5,11 +5,14 @@ use {
         color::Rgba,
         draw,
         format::Format,
-        sl::{self, Index, Out},
+        instance::Projection,
+        sl::{self, Define, InInstance, Index, Out, ReadInstance, Ret},
         state::Render,
         texture,
+        types::{self, VectorType},
+        Instance,
     },
-    glam::Vec4,
+    glam::Vec2,
     helpers::Image,
     std::{error, f32::consts, fs},
 };
@@ -19,16 +22,40 @@ type Error = Box<dyn error::Error>;
 #[test]
 fn render() -> Result<(), Error> {
     const SIZE: (u32, u32) = (300, 300);
-    const COLOR: Vec4 = Vec4::new(1., 0., 0., 1.);
     const THIRD: f32 = consts::TAU / 3.;
     const R_OFFSET: f32 = -consts::TAU / 4.;
-    const Y_OFFSET: f32 = 0.25;
 
-    let triangle = |Index(index): Index| {
+    #[allow(dead_code)]
+    struct Transform {
+        pos: [f32; 2],
+        col: [f32; 3],
+    }
+
+    impl Instance for Transform {
+        type Projection = TransformProjection;
+        const DEF: Define<VectorType> = Define::new(&[VectorType::Vec2f, VectorType::Vec3f]);
+    }
+
+    struct TransformProjection {
+        pos: Ret<ReadInstance, types::Vec2<f32>>,
+        col: Ret<ReadInstance, types::Vec3<f32>>,
+    }
+
+    impl Projection for TransformProjection {
+        fn projection(id: u32) -> Self {
+            Self {
+                pos: ReadInstance::new(id),
+                col: ReadInstance::new(id + 1),
+            }
+        }
+    }
+
+    let triangle = |t: InInstance<Transform>, Index(index): Index| {
         let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
+        let p = sl::vec2(sl::cos(x) * 0.4, sl::sin(y) * 0.4) + t.pos;
         Out {
-            place: sl::vec4(sl::cos(x), sl::sin(y) + Y_OFFSET, 0., 1.),
-            color: COLOR,
+            place: sl::concat(p, Vec2::new(0., 1.)),
+            color: sl::vec4_with(sl::fragment(t.col), 1.),
         }
     };
 
@@ -42,10 +69,26 @@ fn render() -> Result<(), Error> {
         cx.make_texture(data)
     };
 
+    let table = {
+        use dunge::table::{Data, Row};
+
+        const ROS: [[f32; 2]; 3] = [[0.0, -0.375], [0.433, 0.375], [-0.433, 0.375]];
+        const COL: [[f32; 3]; 3] = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+
+        let rows = [Row::new(&ROS), Row::new(&COL)];
+        let data = Data::new(&rows).expect("create table");
+        cx.make_table(data)
+    };
+
     let buffer = cx.make_copy_buffer(SIZE);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = draw::from_fn(|mut frame| {
-        frame.layer(&layer, opts).bind_empty().draw_triangles(1);
+        frame
+            .layer(&layer, opts)
+            .bind_empty()
+            .instance(&table)
+            .draw_triangles(1);
+
         frame.copy_texture(&buffer, &view);
     });
 

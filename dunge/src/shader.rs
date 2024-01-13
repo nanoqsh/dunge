@@ -6,7 +6,10 @@ use {
         types::{MemberType, VectorType},
     },
     std::{cell::Cell, marker::PhantomData},
-    wgpu::{BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout},
+    wgpu::{
+        BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout,
+        VertexStepMode,
+    },
 };
 
 pub struct Shader<V, I> {
@@ -40,15 +43,19 @@ impl<V, I> Shader<V, I> {
     pub(crate) fn buffers(&self) -> Box<[VertexBufferLayout]> {
         use wgpu::*;
 
-        fn layout(Vertex { size, attributes }: &Vertex) -> VertexBufferLayout {
+        fn layout(vert: &Vertex) -> VertexBufferLayout {
             VertexBufferLayout {
-                array_stride: *size,
-                step_mode: VertexStepMode::Vertex,
-                attributes,
+                array_stride: vert.array_stride,
+                step_mode: vert.step_mode,
+                attributes: &vert.attributes,
             }
         }
 
         self.inner.vertex.iter().map(layout).collect()
+    }
+
+    pub(crate) fn slots(&self) -> Slots {
+        self.inner.slots
     }
 
     pub(crate) fn groups(&self) -> &[TypedGroup] {
@@ -57,8 +64,15 @@ impl<V, I> Shader<V, I> {
 }
 
 struct Vertex {
-    size: BufferAddress,
+    array_stride: BufferAddress,
+    step_mode: VertexStepMode,
     attributes: Box<[VertexAttribute]>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Slots {
+    pub vertex: u32,
+    pub instance: u32,
 }
 
 struct Inner {
@@ -66,6 +80,7 @@ struct Inner {
     module: ShaderModule,
     layout: PipelineLayout,
     vertex: Box<[Vertex]>,
+    slots: Slots,
     groups: Box<[TypedGroup]>,
 }
 
@@ -188,7 +203,8 @@ impl Inner {
             };
 
             Vertex {
-                size: info.size as BufferAddress,
+                array_stride: info.size as BufferAddress,
+                step_mode: VertexStepMode::Vertex,
                 attributes: info.def.into_iter().map(attr).collect(),
             }
         };
@@ -202,16 +218,33 @@ impl Inner {
             };
 
             Vertex {
-                size: format.size(),
+                array_stride: format.size(),
+                step_mode: VertexStepMode::Instance,
                 attributes: Box::from([attr]),
             }
+        };
+
+        let mut set_instance = true;
+        let mut slots = Slots {
+            vertex: 0,
+            instance: 0,
         };
 
         let mut vertex = Vec::with_capacity(cx.count_input());
         for input in cx.input() {
             match input {
-                InputInfo::Vert(v) => vertex.push(vert(v)),
-                InputInfo::Inst(i) => vertex.push(inst(i)),
+                InputInfo::Vert(v) => {
+                    slots.vertex = vertex.len() as u32;
+                    vertex.push(vert(v));
+                }
+                InputInfo::Inst(i) => {
+                    if set_instance {
+                        slots.instance = vertex.len() as u32;
+                        set_instance = false;
+                    }
+
+                    vertex.push(inst(i));
+                }
                 InputInfo::Index => {}
             }
         }
@@ -221,6 +254,7 @@ impl Inner {
             module,
             layout,
             vertex: Box::from(vertex),
+            slots,
             groups,
         }
     }

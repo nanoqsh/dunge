@@ -16,6 +16,10 @@ impl<T> Define<T> {
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub fn get(&self, index: usize) -> Option<&'static T> {
+        self.0.get(index)
+    }
 }
 
 impl<T> Clone for Define<T> {

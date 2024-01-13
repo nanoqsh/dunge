@@ -8,11 +8,12 @@ use {
         shader::Shader,
         sl::IntoModule,
         state::{Render, State},
+        table::{self, Table},
         texture::{
             self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
         },
         uniform::{Uniform, Value},
-        Vertex,
+        Instance, Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
 };
@@ -56,6 +57,13 @@ impl Context {
         V: Vertex,
     {
         Mesh::new(&self.0, data)
+    }
+
+    pub fn make_table<I>(&self, data: table::Data<I>) -> Table<I>
+    where
+        I: Instance,
+    {
+        Table::new(&self.0, data)
     }
 
     pub fn make_texture<M>(&self, data: M) -> M::Out

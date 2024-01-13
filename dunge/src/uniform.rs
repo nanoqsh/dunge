@@ -2,9 +2,9 @@ use {
     crate::{
         context::Context,
         state::State,
-        types::{self, MatrixType, MemberType, ScalarType, VectorType},
+        types::{self, MatrixType, ScalarType, ValueType, VectorType},
     },
-    std::marker::PhantomData,
+    std::{marker::PhantomData, mem, slice},
     wgpu::Buffer,
 };
 
@@ -51,16 +51,25 @@ impl<U> Uniform<U> {
 }
 
 pub trait Value: private::Sealed {
-    const TYPE: MemberType;
+    const TYPE: ValueType;
     type Type;
     type Data: AsRef<[u8]>;
     fn value(self) -> Self::Data;
 }
 
+pub(crate) fn values_as_bytes<U>(values: &[U]) -> &[u8]
+where
+    U: Value,
+{
+    // SAFETY:
+    // * The `Value` invariant states converting a slice of values to bytes is safe
+    unsafe { slice::from_raw_parts(values.as_ptr().cast(), mem::size_of_val(values)) }
+}
+
 impl private::Sealed for f32 {}
 
 impl Value for f32 {
-    const TYPE: MemberType = MemberType::Scalar(ScalarType::Float);
+    const TYPE: ValueType = ValueType::Scalar(ScalarType::Float);
     type Type = Self;
     type Data = Data;
 
@@ -72,7 +81,7 @@ impl Value for f32 {
 impl private::Sealed for [f32; 2] {}
 
 impl Value for [f32; 2] {
-    const TYPE: MemberType = MemberType::Vector(VectorType::Vec2f);
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
     type Type = types::Vec2<f32>;
     type Data = Data;
 
@@ -85,7 +94,7 @@ impl Value for [f32; 2] {
 impl private::Sealed for [f32; 3] {}
 
 impl Value for [f32; 3] {
-    const TYPE: MemberType = MemberType::Vector(VectorType::Vec3f);
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
     type Type = types::Vec3<f32>;
     type Data = Data;
 
@@ -98,7 +107,7 @@ impl Value for [f32; 3] {
 impl private::Sealed for [f32; 4] {}
 
 impl Value for [f32; 4] {
-    const TYPE: MemberType = MemberType::Vector(VectorType::Vec4f);
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
     type Type = types::Vec4<f32>;
     type Data = Data;
 
@@ -110,7 +119,7 @@ impl Value for [f32; 4] {
 impl private::Sealed for glam::Vec2 {}
 
 impl Value for glam::Vec2 {
-    const TYPE: MemberType = MemberType::Vector(VectorType::Vec2f);
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
     type Type = types::Vec2<f32>;
     type Data = Data;
 
@@ -122,7 +131,7 @@ impl Value for glam::Vec2 {
 impl private::Sealed for glam::Vec3 {}
 
 impl Value for glam::Vec3 {
-    const TYPE: MemberType = MemberType::Vector(VectorType::Vec3f);
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
     type Type = types::Vec3<f32>;
     type Data = Data;
 
@@ -134,7 +143,7 @@ impl Value for glam::Vec3 {
 impl private::Sealed for glam::Vec4 {}
 
 impl Value for glam::Vec4 {
-    const TYPE: MemberType = MemberType::Vector(VectorType::Vec4f);
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
     type Type = types::Vec4<f32>;
     type Data = Data;
 
@@ -146,7 +155,7 @@ impl Value for glam::Vec4 {
 impl private::Sealed for glam::Mat2 {}
 
 impl Value for glam::Mat2 {
-    const TYPE: MemberType = MemberType::Matrix(MatrixType::Mat2);
+    const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat2);
     type Type = types::Mat2;
     type Data = Data;
 
@@ -158,7 +167,7 @@ impl Value for glam::Mat2 {
 impl private::Sealed for glam::Mat3 {}
 
 impl Value for glam::Mat3 {
-    const TYPE: MemberType = MemberType::Matrix(MatrixType::Mat3);
+    const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat3);
     type Type = types::Mat3;
     type Data = Data<9>;
 
@@ -170,7 +179,7 @@ impl Value for glam::Mat3 {
 impl private::Sealed for glam::Mat4 {}
 
 impl Value for glam::Mat4 {
-    const TYPE: MemberType = MemberType::Matrix(MatrixType::Mat4);
+    const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat4);
     type Type = types::Mat4;
     type Data = Data<16>;
 

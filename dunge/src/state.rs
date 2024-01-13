@@ -140,7 +140,7 @@ impl Frame<'_, '_> {
         self.encoders.make(self.device, view)
     }
 
-    pub fn layer<'p, V, I, O>(&'p mut self, layer: &'p Layer<V, I>, opts: O) -> SetLayer<'p, V>
+    pub fn layer<'p, V, I, O>(&'p mut self, layer: &'p Layer<V, I>, opts: O) -> SetLayer<'p, V, I>
     where
         O: Into<Options>,
     {

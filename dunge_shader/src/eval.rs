@@ -175,24 +175,44 @@ impl Eval<Vs> for Ret<ReadIndex, u32> {
 }
 
 #[derive(Clone, Copy)]
-pub struct ReadInput {
+pub struct ReadVertex {
     id: u32,
     index: u32,
 }
 
-impl ReadInput {
+impl ReadVertex {
     pub const fn new<T>(id: u32, index: u32) -> Ret<Self, T> {
         Ret::new(Self { id, index })
     }
 }
 
-impl<T> Eval<Vs> for Ret<ReadInput, T> {
+impl<T> Eval<Vs> for Ret<ReadVertex, T> {
     type Out = T;
 
     fn eval(self, en: &mut Vs) -> Expr {
         let en = &mut en.inner;
         let arg = en.argument(self.get().id);
         en.access_index(arg, self.get().index)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ReadInstance {
+    id: u32,
+}
+
+impl ReadInstance {
+    pub const fn new<T>(id: u32) -> Ret<Self, T> {
+        Ret::new(Self { id })
+    }
+}
+
+impl<T> Eval<Vs> for Ret<ReadInstance, T> {
+    type Out = T;
+
+    fn eval(self, en: &mut Vs) -> Expr {
+        let en = &mut en.inner;
+        en.argument(self.get().id)
     }
 }
 

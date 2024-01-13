@@ -38,7 +38,7 @@ impl<V> MemberProjection for &Uniform<V>
 where
     V: Value,
 {
-    const TYPE: MemberType = V::TYPE;
+    const TYPE: MemberType = MemberType::from_value(V::TYPE);
     type Field = Ret<ReadGlobal, V::Type>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
