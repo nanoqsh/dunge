@@ -174,7 +174,7 @@ pub struct Binder<'a> {
 }
 
 impl<'a> Binder<'a> {
-    pub(crate) fn new<V>(state: &'a State, shader: &'a Shader<V>) -> Self {
+    pub(crate) fn new<V, I>(state: &'a State, shader: &'a Shader<V, I>) -> Self {
         let layout = shader.groups();
         Self {
             shader_id: shader.id(),

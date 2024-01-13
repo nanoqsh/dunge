@@ -6,6 +6,7 @@ use crate::{
 
 pub trait IntoModule<A> {
     type Vertex;
+    type Instance;
     fn into_module(self) -> Module;
 }
 
@@ -15,6 +16,7 @@ where
     O: Output,
 {
     type Vertex = ();
+    type Instance = ();
 
     fn into_module(self) -> Module {
         let cx = Context::new();
@@ -34,6 +36,7 @@ macro_rules! impl_into_module {
             )*
         {
             type Vertex = A::Vertex;
+            type Instance = A::Instance;
 
             #[allow(non_snake_case)]
             fn into_module(self) -> Module {

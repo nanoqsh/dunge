@@ -1,27 +1,27 @@
 use {
     crate::{
         bind::TypedGroup,
-        sl::{InstInfo, IntoModule, Module, Stages, VertInfo},
+        sl::{InputInfo, InstInfo, IntoModule, Module, Stages, VertInfo},
         state::State,
         types::{MemberType, VectorType},
     },
-    std::marker::PhantomData,
+    std::{cell::Cell, marker::PhantomData},
     wgpu::{BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout},
 };
 
-pub struct Shader<V> {
+pub struct Shader<V, I> {
     inner: Inner,
-    vert: PhantomData<V>,
+    ty: PhantomData<(V, I)>,
 }
 
-impl<V> Shader<V> {
+impl<V, I> Shader<V, I> {
     pub(crate) fn new<M, A>(state: &State, module: M) -> Self
     where
         M: IntoModule<A, Vertex = V>,
     {
         Self {
             inner: Inner::new(state, module.into_module()),
-            vert: PhantomData,
+            ty: PhantomData,
         }
     }
 
@@ -164,20 +164,26 @@ impl Inner {
             VectorType::Vec4i => VertexFormat::Sint32x4,
         };
 
-        let mut vertex = Vec::with_capacity(cx.count_verts());
+        let next_location = {
+            let location = Cell::default();
+            move || {
+                let current = location.get();
+                location.set(current + 1);
+                current
+            }
+        };
+
         let vert = |info: VertInfo| {
             let mut offset = 0;
-            let mut location = info.start_location;
             let attr = |vecty| {
                 let format = to_format(vecty);
                 let attr = VertexAttribute {
                     format,
                     offset,
-                    shader_location: location,
+                    shader_location: next_location(),
                 };
 
                 offset += format.size();
-                location += 1;
                 attr
             };
 
@@ -187,13 +193,12 @@ impl Inner {
             }
         };
 
-        vertex.extend(cx.verts().map(vert));
         let inst = |info: InstInfo| {
             let format = to_format(info.vecty);
             let attr = VertexAttribute {
                 format,
                 offset: 0,
-                shader_location: info.location,
+                shader_location: next_location(),
             };
 
             Vertex {
@@ -202,7 +207,15 @@ impl Inner {
             }
         };
 
-        vertex.extend(cx.insts().map(inst));
+        let mut vertex = Vec::with_capacity(cx.count_input());
+        for input in cx.input() {
+            match input {
+                InputInfo::Vert(v) => vertex.push(vert(v)),
+                InputInfo::Inst(i) => vertex.push(inst(i)),
+                InputInfo::Index => {}
+            }
+        }
+
         Self {
             id: state.next_shader_id(),
             module,

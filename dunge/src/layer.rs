@@ -60,16 +60,16 @@ impl BoundLayer<'_, '_, ()> {
     }
 }
 
-pub struct Layer<V> {
+pub struct Layer<V, I> {
     shader_id: usize,
     no_bindings: bool,
     format: Format,
     render: RenderPipeline,
-    vert: PhantomData<V>,
+    ty: PhantomData<(V, I)>,
 }
 
-impl<V> Layer<V> {
-    pub(crate) fn new(state: &State, format: Format, shader: &Shader<V>) -> Self {
+impl<V, I> Layer<V, I> {
+    pub(crate) fn new(state: &State, format: Format, shader: &Shader<V, I>) -> Self {
         use wgpu::*;
 
         let targets = [Some(ColorTargetState {
@@ -113,7 +113,7 @@ impl<V> Layer<V> {
             no_bindings: shader.groups().is_empty(),
             format,
             render,
-            vert: PhantomData,
+            ty: PhantomData,
         }
     }
 

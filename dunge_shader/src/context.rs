@@ -33,39 +33,25 @@ impl Stages {
     }
 }
 
-pub(crate) enum InputInfo {
+#[doc(hidden)]
+#[derive(Clone, Copy)]
+pub enum InputInfo {
     Vert(VertInfo),
     Inst(InstInfo),
     Index,
 }
 
-impl InputInfo {
-    fn as_vert(&self) -> Option<VertInfo> {
-        match self {
-            Self::Vert(info) => Some(*info),
-            _ => None,
-        }
-    }
-
-    fn as_inst(&self) -> Option<InstInfo> {
-        match self {
-            Self::Inst(info) => Some(*info),
-            _ => None,
-        }
-    }
-}
-
+#[doc(hidden)]
 #[derive(Clone, Copy)]
 pub struct VertInfo {
     pub def: Define<VectorType>,
     pub size: usize,
-    pub start_location: u32,
 }
 
+#[doc(hidden)]
 #[derive(Clone, Copy)]
 pub struct InstInfo {
     pub vecty: VectorType,
-    pub location: u32,
 }
 
 pub(crate) struct GroupEntry {
@@ -97,7 +83,6 @@ fn countdown(v: &mut u8, msg: &str) {
 pub struct Context {
     pub(crate) inputs: Vec<InputInfo>,
     pub(crate) groups: Vec<GroupEntry>,
-    location: u32,
     limits: Limits,
 }
 
@@ -106,7 +91,6 @@ impl Context {
         Self {
             inputs: vec![],
             groups: vec![],
-            location: 0,
             limits: Limits {
                 index: 1,
                 verts: 1,
@@ -126,13 +110,7 @@ impl Context {
     fn add_vertex(&mut self, def: Define<VectorType>, size: usize) -> u32 {
         countdown(&mut self.limits.verts, "too many vertices in the shader");
         let id = self.inputs.len() as u32;
-        let info = VertInfo {
-            def,
-            size,
-            start_location: self.location,
-        };
-
-        self.location += def.len() as u32;
+        let info = VertInfo { def, size };
         self.inputs.push(InputInfo::Vert(info));
         id
     }
@@ -140,12 +118,7 @@ impl Context {
     fn add_instance(&mut self, vec: VectorType) -> u32 {
         countdown(&mut self.limits.insts, "too many instances in the shader");
         let id = self.inputs.len() as u32;
-        let info = InstInfo {
-            vecty: vec,
-            location: self.location,
-        };
-
-        self.location += 1;
+        let info = InstInfo { vecty: vec };
         self.inputs.push(InputInfo::Inst(info));
         id
     }
@@ -165,7 +138,7 @@ impl Context {
     }
 
     #[doc(hidden)]
-    pub fn count_verts(&self) -> usize {
+    pub fn count_input(&self) -> usize {
         self.inputs
             .iter()
             .filter(|info| matches!(info, InputInfo::Vert(_) | InputInfo::Inst(_)))
@@ -173,13 +146,8 @@ impl Context {
     }
 
     #[doc(hidden)]
-    pub fn verts(&self) -> impl Iterator<Item = VertInfo> + '_ {
-        self.inputs.iter().filter_map(InputInfo::as_vert)
-    }
-
-    #[doc(hidden)]
-    pub fn insts(&self) -> impl Iterator<Item = InstInfo> + '_ {
-        self.inputs.iter().filter_map(InputInfo::as_inst)
+    pub fn input(&self) -> impl Iterator<Item = InputInfo> + '_ {
+        self.inputs.iter().copied()
     }
 
     #[doc(hidden)]

@@ -8,12 +8,12 @@ use {
     wgpu::Buffer,
 };
 
-pub struct Uniform<V> {
+pub struct Uniform<U> {
     buf: Buffer,
-    vert: PhantomData<V>,
+    ty: PhantomData<U>,
 }
 
-impl<V> Uniform<V> {
+impl<U> Uniform<U> {
     pub(crate) fn new(state: &State, contents: &[u8]) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -32,13 +32,13 @@ impl<V> Uniform<V> {
 
         Self {
             buf,
-            vert: PhantomData,
+            ty: PhantomData,
         }
     }
 
-    pub fn update(&self, cx: &Context, val: V)
+    pub fn update(&self, cx: &Context, val: U)
     where
-        V: Value,
+        U: Value,
     {
         let queue = cx.state().queue();
         let data = val.value();

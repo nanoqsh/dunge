@@ -29,25 +29,25 @@ impl Context {
         &self.0
     }
 
-    pub fn make_shader<M, A>(&self, module: M) -> Shader<M::Vertex>
+    pub fn make_shader<M, A>(&self, module: M) -> Shader<M::Vertex, M::Instance>
     where
         M: IntoModule<A>,
     {
         Shader::new(&self.0, module)
     }
 
-    pub fn make_binder<'a, V>(&'a self, shader: &'a Shader<V>) -> Binder<'a> {
+    pub fn make_binder<'a, V, I>(&'a self, shader: &'a Shader<V, I>) -> Binder<'a> {
         Binder::new(&self.0, shader)
     }
 
-    pub fn make_uniform<V>(&self, val: V) -> Uniform<V>
+    pub fn make_uniform<U>(&self, val: U) -> Uniform<U>
     where
-        V: Value,
+        U: Value,
     {
         Uniform::new(&self.0, val.value().as_ref())
     }
 
-    pub fn make_layer<V>(&self, format: Format, shader: &Shader<V>) -> Layer<V> {
+    pub fn make_layer<V, I>(&self, format: Format, shader: &Shader<V, I>) -> Layer<V, I> {
         Layer::new(&self.0, format, shader)
     }
 
