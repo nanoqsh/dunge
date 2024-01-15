@@ -116,75 +116,39 @@ impl Value for [f32; 4] {
     }
 }
 
-impl private::Sealed for glam::Vec2 {}
+impl private::Sealed for [[f32; 2]; 2] {}
 
-impl Value for glam::Vec2 {
-    const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
-    type Type = types::Vec2<f32>;
-    type Data = Data;
-
-    fn value(self) -> Self::Data {
-        self.to_array().value()
-    }
-}
-
-impl private::Sealed for glam::Vec3 {}
-
-impl Value for glam::Vec3 {
-    const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
-    type Type = types::Vec3<f32>;
-    type Data = Data;
-
-    fn value(self) -> Self::Data {
-        self.to_array().value()
-    }
-}
-
-impl private::Sealed for glam::Vec4 {}
-
-impl Value for glam::Vec4 {
-    const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
-    type Type = types::Vec4<f32>;
-    type Data = Data;
-
-    fn value(self) -> Self::Data {
-        self.to_array().value()
-    }
-}
-
-impl private::Sealed for glam::Mat2 {}
-
-impl Value for glam::Mat2 {
+impl Value for [[f32; 2]; 2] {
     const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat2);
     type Type = types::Mat2;
     type Data = Data;
 
     fn value(self) -> Self::Data {
-        self.to_cols_array().value()
+        Data(bytemuck::cast(self))
     }
 }
 
-impl private::Sealed for glam::Mat3 {}
+impl private::Sealed for [[f32; 3]; 3] {}
 
-impl Value for glam::Mat3 {
+impl Value for [[f32; 3]; 3] {
     const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat3);
     type Type = types::Mat3;
     type Data = Data<9>;
 
     fn value(self) -> Self::Data {
-        Data(self.to_cols_array())
+        Data(bytemuck::cast(self))
     }
 }
 
-impl private::Sealed for glam::Mat4 {}
+impl private::Sealed for [[f32; 4]; 4] {}
 
-impl Value for glam::Mat4 {
+impl Value for [[f32; 4]; 4] {
     const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat4);
     type Type = types::Mat4;
     type Data = Data<16>;
 
     fn value(self) -> Self::Data {
-        Data(self.to_cols_array())
+        Data(bytemuck::cast(self))
     }
 }
 

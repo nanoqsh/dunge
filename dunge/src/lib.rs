@@ -5,11 +5,11 @@ pub mod draw;
 pub mod format;
 pub mod group;
 mod init;
+pub mod instance;
 pub mod layer;
 pub mod mesh;
 pub mod shader;
 pub mod state;
-pub mod table;
 pub mod texture;
 pub mod uniform;
 pub mod vertex;
@@ -29,10 +29,6 @@ pub use {
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},
     glam,
 };
-
-pub mod instance {
-    pub use dunge_shader::instance::Projection;
-}
 
 #[cfg(feature = "winit")]
 pub use {crate::init::window, el::Control};

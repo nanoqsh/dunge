@@ -1,9 +1,8 @@
-use crate::table::Table;
-
 use {
     crate::{
         bind::Binding,
         format::Format,
+        instance::{Set, Setter},
         mesh::Mesh,
         shader::{Shader, Slots},
         state::State,
@@ -59,10 +58,14 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
         }
     }
 
-    pub fn instance(&'s mut self, table: &'p Table<I>) -> SetInstance<'s, 'p, V> {
-        table.set(self.pass, self.slots.instance);
+    pub fn instance(&'s mut self, instance: &'p I) -> SetInstance<'s, 'p, V>
+    where
+        I: Set,
+    {
+        let mut setter = Setter::new(self.slots.instance, self.pass);
+        instance.set(&mut setter);
         SetInstance {
-            count: table.count(),
+            len: setter.len(),
             slots: self.slots,
             pass: self.pass,
             ty: PhantomData,
@@ -83,7 +86,7 @@ impl SetBinding<'_, '_, (), ()> {
 }
 
 pub struct SetInstance<'s, 'p, V> {
-    count: u32,
+    len: u32,
     slots: Slots,
     pass: &'s mut RenderPass<'p>,
     ty: PhantomData<V>,
@@ -91,13 +94,13 @@ pub struct SetInstance<'s, 'p, V> {
 
 impl<'p, V> SetInstance<'_, 'p, V> {
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
-        mesh.draw(self.pass, self.slots.vertex, self.count);
+        mesh.draw(self.pass, self.slots.vertex, self.len);
     }
 }
 
 impl SetInstance<'_, '_, ()> {
     pub fn draw_triangles(&mut self, count: u32) {
-        self.pass.draw(0..count * 3, 0..self.count);
+        self.pass.draw(0..count * 3, 0..self.len);
     }
 }
 

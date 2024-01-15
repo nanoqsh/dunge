@@ -3,17 +3,17 @@ use {
         bind::{self, Binder, GroupHandler, UniqueBinding, Update, Visit},
         draw::Draw,
         format::Format,
+        instance::Row,
         layer::Layer,
         mesh::{self, Mesh},
         shader::Shader,
         sl::IntoModule,
         state::{Render, State},
-        table::{self, Table},
         texture::{
             self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
         },
         uniform::{Uniform, Value},
-        Instance, Vertex,
+        Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
 };
@@ -59,11 +59,11 @@ impl Context {
         Mesh::new(&self.0, data)
     }
 
-    pub fn make_table<I>(&self, data: table::Data<I>) -> Table<I>
+    pub fn make_row<U>(&self, data: &[U]) -> Row<U>
     where
-        I: Instance,
+        U: Value,
     {
-        Table::new(&self.0, data)
+        Row::new(&self.0, data)
     }
 
     pub fn make_texture<M>(&self, data: M) -> M::Out

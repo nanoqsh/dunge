@@ -5,7 +5,7 @@ use {
         color::Rgba,
         draw,
         format::Format,
-        instance::Projection,
+        instance::{Projection, Row, Set, SetMember, Setter},
         sl::{self, Define, InInstance, Index, Out, ReadInstance, Ret},
         state::Render,
         texture,
@@ -26,15 +26,21 @@ fn render() -> Result<(), Error> {
     const THIRD: f32 = consts::TAU / 3.;
     const R_OFFSET: f32 = -consts::TAU / 4.;
 
-    #[allow(dead_code)]
     struct Transform {
-        pos: [f32; 2],
-        col: [f32; 3],
+        pos: Row<[f32; 2]>,
+        col: Row<[f32; 3]>,
     }
 
     impl Instance for Transform {
         type Projection = TransformProjection;
         const DEF: Define<VectorType> = Define::new(&[VectorType::Vec2f, VectorType::Vec3f]);
+    }
+
+    impl Set for Transform {
+        fn set<'p>(&'p self, setter: &mut Setter<'_, 'p>) {
+            <Row<[f32; 2]> as SetMember>::set_member(&self.pos, setter);
+            <Row<[f32; 3]> as SetMember>::set_member(&self.col, setter);
+        }
     }
 
     struct TransformProjection {
@@ -70,15 +76,14 @@ fn render() -> Result<(), Error> {
         cx.make_texture(data)
     };
 
-    let table = {
-        use dunge::table::{Data, Row};
-
+    let transform = {
         const POS: [[f32; 2]; 3] = [[0.0, -0.375], [0.433, 0.375], [-0.433, 0.375]];
         const COL: [[f32; 3]; 3] = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 
-        let rows = [Row::new(&POS), Row::new(&COL)];
-        let data = Data::new(&rows).expect("create table");
-        cx.make_table(data)
+        Transform {
+            pos: cx.make_row(&POS),
+            col: cx.make_row(&COL),
+        }
     };
 
     let buffer = cx.make_copy_buffer(SIZE);
@@ -87,7 +92,7 @@ fn render() -> Result<(), Error> {
         frame
             .layer(&layer, opts)
             .bind_empty()
-            .instance(&table)
+            .instance(&transform)
             .draw_triangles(1);
 
         frame.copy_texture(&buffer, &view);
