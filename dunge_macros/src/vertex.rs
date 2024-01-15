@@ -1,5 +1,5 @@
 use {
-    crate::ident,
+    crate::member,
     proc_macro2::TokenStream,
     syn::{meta::ParseNestedMeta, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput},
 };
@@ -39,13 +39,13 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     });
 
     let projection_fields = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = ident::make(index, field.ident.as_ref());
+        let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::Field }
     });
 
     let projection_inputs = iter::zip(0.., &fields).map(|(index, field)| {
-        let ident = ident::make(index, field.ident.as_ref());
+        let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::input_projection(id, #index) }
     });
@@ -119,6 +119,42 @@ mod tests {
                     Self {
                         pos: <[f32; 2] as ::dunge::vertex::InputProjection>::input_projection(id, 0u32),
                         col: <[f32; 3] as ::dunge::vertex::InputProjection>::input_projection(id, 1u32),
+                    }
+                }
+            }
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn derive_tuple_vertex() {
+        let input = quote::quote! {
+            #[repr(C)]
+            struct Vert([f32; 2], [f32; 3]);
+        };
+
+        let input = syn::parse2(input).expect("parse input");
+        let actual = derive(input);
+        let expected = quote::quote! {
+            unsafe impl ::dunge::Vertex for Vert {
+                type Projection = VertProjection;
+                const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
+                    <[f32; 2] as ::dunge::vertex::InputProjection>::TYPE,
+                    <[f32; 3] as ::dunge::vertex::InputProjection>::TYPE,
+                ]);
+            }
+
+            struct VertProjection {
+                0: <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
+                1: <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
+            }
+
+            impl ::dunge::vertex::Projection for VertProjection {
+                fn projection(id: ::core::primitive::u32) -> Self {
+                    Self {
+                        0: <[f32; 2] as ::dunge::vertex::InputProjection>::input_projection(id, 0u32),
+                        1: <[f32; 3] as ::dunge::vertex::InputProjection>::input_projection(id, 1u32),
                     }
                 }
             }
