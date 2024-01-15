@@ -1,4 +1,5 @@
 mod group;
+mod instance;
 mod member;
 mod vertex;
 
@@ -9,6 +10,13 @@ use proc_macro::TokenStream;
 pub fn derive_group(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input);
     group::derive(input).into()
+}
+
+/// Derive implementation for the instance type.
+#[proc_macro_derive(Instance)]
+pub fn derive_instance(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input);
+    instance::derive(input).into()
 }
 
 /// Derive implementation for the vector type.

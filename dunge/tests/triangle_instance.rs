@@ -5,12 +5,10 @@ use {
         color::Rgba,
         draw,
         format::Format,
-        instance::{Projection, Row, Set, SetMember, Setter},
-        sl::{self, Define, InInstance, Index, Out, ReadInstance, Ret},
+        instance::Row,
+        sl::{self, InInstance, Index, Out},
         state::Render,
-        texture,
-        types::{self, VectorType},
-        Instance,
+        texture, Instance,
     },
     glam::Vec2,
     helpers::Image,
@@ -26,35 +24,10 @@ fn render() -> Result<(), Error> {
     const THIRD: f32 = consts::TAU / 3.;
     const R_OFFSET: f32 = -consts::TAU / 4.;
 
+    #[derive(Instance)]
     struct Transform {
         pos: Row<[f32; 2]>,
         col: Row<[f32; 3]>,
-    }
-
-    impl Instance for Transform {
-        type Projection = TransformProjection;
-        const DEF: Define<VectorType> = Define::new(&[VectorType::Vec2f, VectorType::Vec3f]);
-    }
-
-    impl Set for Transform {
-        fn set<'p>(&'p self, setter: &mut Setter<'_, 'p>) {
-            <Row<[f32; 2]> as SetMember>::set_member(&self.pos, setter);
-            <Row<[f32; 3]> as SetMember>::set_member(&self.col, setter);
-        }
-    }
-
-    struct TransformProjection {
-        pos: Ret<ReadInstance, types::Vec2<f32>>,
-        col: Ret<ReadInstance, types::Vec3<f32>>,
-    }
-
-    impl Projection for TransformProjection {
-        fn projection(id: u32) -> Self {
-            Self {
-                pos: ReadInstance::new(id),
-                col: ReadInstance::new(id + 1),
-            }
-        }
     }
 
     let triangle = |t: InInstance<Transform>, Index(index): Index| {

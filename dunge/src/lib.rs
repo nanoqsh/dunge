@@ -25,7 +25,7 @@ pub mod window;
 
 pub use {
     crate::{init::context, state::Frame},
-    dunge_macros::{Group, Vertex},
+    dunge_macros::{Group, Instance, Vertex},
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},
     glam,
 };

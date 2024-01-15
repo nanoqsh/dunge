@@ -1,6 +1,8 @@
 use {
     crate::{
+        sl::{ReadInstance, Ret},
         state::State,
+        types::{self, VectorType},
         uniform::{self, Value},
         Instance,
     },
@@ -9,6 +11,48 @@ use {
 };
 
 pub use dunge_shader::instance::Projection;
+
+/// Describes a group member type projection.
+///
+/// The trait is sealed because the derive macro relies on no new types being used.
+pub trait MemberProjection: private::Sealed {
+    const TYPE: VectorType;
+    type Field;
+    fn member_projection(id: u32) -> Self::Field;
+}
+
+impl private::Sealed for Row<[f32; 2]> {}
+
+impl MemberProjection for Row<[f32; 2]> {
+    const TYPE: VectorType = VectorType::Vec2f;
+    type Field = Ret<ReadInstance, types::Vec2<f32>>;
+
+    fn member_projection(id: u32) -> Self::Field {
+        ReadInstance::new(id)
+    }
+}
+
+impl private::Sealed for Row<[f32; 3]> {}
+
+impl MemberProjection for Row<[f32; 3]> {
+    const TYPE: VectorType = VectorType::Vec3f;
+    type Field = Ret<ReadInstance, types::Vec3<f32>>;
+
+    fn member_projection(id: u32) -> Self::Field {
+        ReadInstance::new(id)
+    }
+}
+
+impl private::Sealed for Row<[f32; 4]> {}
+
+impl MemberProjection for Row<[f32; 4]> {
+    const TYPE: VectorType = VectorType::Vec4f;
+    type Field = Ret<ReadInstance, types::Vec4<f32>>;
+
+    fn member_projection(id: u32) -> Self::Field {
+        ReadInstance::new(id)
+    }
+}
 
 pub trait Set: Instance {
     fn set<'p>(&'p self, setter: &mut Setter<'_, 'p>);
@@ -91,4 +135,8 @@ impl<U> Row<U> {
             ty: PhantomData,
         }
     }
+}
+
+mod private {
+    pub trait Sealed {}
 }
