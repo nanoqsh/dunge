@@ -26,8 +26,8 @@ fn render() -> Result<(), Error> {
     #[repr(C)]
     #[derive(Vertex)]
     struct Vert {
-        pos: Vec2,
-        tex: Vec2,
+        pos: [f32; 2],
+        tex: [f32; 2],
     }
 
     #[derive(Group)]
@@ -76,16 +76,16 @@ fn render() -> Result<(), Error> {
 
         const VERTS: [Vert; 3] = [
             Vert {
-                pos: Vec2::new(0., -0.75),
-                tex: Vec2::new(0., 1.),
+                pos: [0., -0.75],
+                tex: [0., 1.],
             },
             Vert {
-                pos: Vec2::new(0.866, 0.75),
-                tex: Vec2::new(1., 1.),
+                pos: [0.866, 0.75],
+                tex: [1., 1.],
             },
             Vert {
-                pos: Vec2::new(-0.866, 0.75),
-                tex: Vec2::new(1., 0.),
+                pos: [-0.866, 0.75],
+                tex: [1., 0.],
             },
         ];
 

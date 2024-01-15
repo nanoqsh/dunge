@@ -22,6 +22,7 @@ type Error = Box<dyn error::Error>;
 #[test]
 fn render() -> Result<(), Error> {
     const SIZE: (u32, u32) = (300, 300);
+    const TRIANGLE_SIZE: f32 = 0.4;
     const THIRD: f32 = consts::TAU / 3.;
     const R_OFFSET: f32 = -consts::TAU / 4.;
 
@@ -52,7 +53,7 @@ fn render() -> Result<(), Error> {
 
     let triangle = |t: InInstance<Transform>, Index(index): Index| {
         let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
-        let p = sl::vec2(sl::cos(x) * 0.4, sl::sin(y) * 0.4) + t.pos;
+        let p = sl::vec2(sl::cos(x), sl::sin(y)) * TRIANGLE_SIZE + t.pos;
         Out {
             place: sl::concat(p, Vec2::new(0., 1.)),
             color: sl::vec4_with(sl::fragment(t.col), 1.),
@@ -72,10 +73,10 @@ fn render() -> Result<(), Error> {
     let table = {
         use dunge::table::{Data, Row};
 
-        const ROS: [[f32; 2]; 3] = [[0.0, -0.375], [0.433, 0.375], [-0.433, 0.375]];
+        const POS: [[f32; 2]; 3] = [[0.0, -0.375], [0.433, 0.375], [-0.433, 0.375]];
         const COL: [[f32; 3]; 3] = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 
-        let rows = [Row::new(&ROS), Row::new(&COL)];
+        let rows = [Row::new(&POS), Row::new(&COL)];
         let data = Data::new(&rows).expect("create table");
         cx.make_table(data)
     };

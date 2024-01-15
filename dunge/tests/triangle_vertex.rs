@@ -10,7 +10,7 @@ use {
         state::Render,
         texture, Vertex,
     },
-    glam::{Vec2, Vec3},
+    glam::Vec2,
     helpers::Image,
     std::{error, fs},
 };
@@ -24,8 +24,8 @@ fn render() -> Result<(), Error> {
     #[repr(C)]
     #[derive(Vertex)]
     struct Vert {
-        pos: Vec2,
-        col: Vec3,
+        pos: [f32; 2],
+        col: [f32; 3],
     }
 
     let triangle = |vert: InVertex<Vert>| Out {
@@ -48,16 +48,16 @@ fn render() -> Result<(), Error> {
 
         const VERTS: [Vert; 3] = [
             Vert {
-                pos: Vec2::new(0., -0.75),
-                col: Vec3::new(1., 0., 0.),
+                pos: [0., -0.75],
+                col: [1., 0., 0.],
             },
             Vert {
-                pos: Vec2::new(0.866, 0.75),
-                col: Vec3::new(0., 1., 0.),
+                pos: [0.866, 0.75],
+                col: [0., 1., 0.],
             },
             Vert {
-                pos: Vec2::new(-0.866, 0.75),
-                col: Vec3::new(0., 0., 1.),
+                pos: [-0.866, 0.75],
+                col: [0., 0., 1.],
             },
         ];
 
