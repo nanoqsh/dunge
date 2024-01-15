@@ -1,7 +1,7 @@
 use {
     crate::member,
     proc_macro2::TokenStream,
-    syn::{spanned::Spanned, Data, DataStruct, DeriveInput},
+    syn::{spanned::Spanned, Data, DataStruct, DeriveInput, Fields},
 };
 
 pub(crate) fn derive(input: DeriveInput) -> TokenStream {
@@ -11,6 +11,16 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         return quote::quote_spanned! { input.ident.span() =>
             ::std::compile_error!("the instance type must be a struct");
         };
+    };
+
+    let named = match &fields {
+        Fields::Named(_) => true,
+        Fields::Unnamed(_) => false,
+        Fields::Unit => {
+            return quote::quote_spanned! { input.ident.span() =>
+                ::std::compile_error!("the instance type cannot be a unit struct");
+            }
+        }
     };
 
     if !input.generics.params.is_empty() {
@@ -40,7 +50,11 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let instance_fields = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
-        quote::quote! { #ident: <#ty as ::dunge::instance::MemberProjection>::Field }
+        if named {
+            quote::quote! { #ident: <#ty as ::dunge::instance::MemberProjection>::Field }
+        } else {
+            quote::quote! { <#ty as ::dunge::instance::MemberProjection>::Field }
+        }
     });
 
     let instance_member_projections = iter::zip(0.., &fields).map(|(index, field)| {
@@ -48,6 +62,20 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::instance::MemberProjection>::member_projection(id + #index) }
     });
+
+    let projection = if named {
+        quote::quote! {
+            struct #projection_name {
+                #(#instance_fields),*,
+            }
+        }
+    } else {
+        quote::quote! {
+            struct #projection_name(
+                #(#instance_fields),*,
+            );
+        }
+    };
 
     quote::quote! {
         impl ::dunge::Instance for #name {
@@ -63,9 +91,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
             }
         }
 
-        struct #projection_name {
-            #(#instance_fields),*,
-        }
+        #projection
 
         impl ::dunge::instance::Projection for #projection_name {
             fn projection(id: ::core::primitive::u32) -> Self {
@@ -150,10 +176,10 @@ mod tests {
                 }
             }
 
-            struct TransformProjection {
-                0: <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::Field,
-                1: <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::Field,
-            }
+            struct TransformProjection(
+                <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::Field,
+                <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::Field,
+            );
 
             impl ::dunge::instance::Projection for TransformProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {

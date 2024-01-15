@@ -1,7 +1,7 @@
 use {
     crate::{
         color::Rgba,
-        context::Error,
+        context::{Context, Error},
         draw::Draw,
         format::Format,
         layer::{Layer, SetLayer},
@@ -98,6 +98,17 @@ impl State {
 
 #[derive(Default)]
 pub struct Render(Encoders);
+
+impl Render {
+    pub fn draw_to<T, D>(&mut self, cx: &Context, texture: &T, draw: D)
+    where
+        T: DrawTexture,
+        D: Draw,
+    {
+        let view = texture.draw_texture().render_view();
+        cx.state().draw(self, view, draw);
+    }
+}
 
 #[derive(Clone, Copy, Default)]
 pub struct Options {

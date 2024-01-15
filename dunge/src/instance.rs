@@ -1,18 +1,19 @@
 use {
     crate::{
+        context::Context,
         sl::{ReadInstance, Ret},
         state::State,
         types::{self, VectorType},
         uniform::{self, Value},
         Instance,
     },
-    std::marker::PhantomData,
+    std::{error, fmt, marker::PhantomData},
     wgpu::{Buffer, RenderPass},
 };
 
 pub use dunge_shader::instance::Projection;
 
-/// Describes a group member type projection.
+/// Describes an instance member type projection.
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
 pub trait MemberProjection: private::Sealed {
@@ -135,7 +136,35 @@ impl<U> Row<U> {
             ty: PhantomData,
         }
     }
+
+    pub fn update(&self, cx: &Context, data: &[U]) -> Result<(), UpdateError>
+    where
+        U: Value,
+    {
+        if data.len() != self.len as usize {
+            return Err(UpdateError);
+        }
+
+        let queue = cx.state().queue();
+        let data = uniform::values_as_bytes(data);
+        queue.write_buffer(&self.buf, 0, data.as_ref());
+        Ok(())
+    }
 }
+
+/// An error returned from the [update](crate::instance::Row::update) function.
+///
+/// Returned when passed data size is invalid.
+#[derive(Debug)]
+pub struct UpdateError;
+
+impl fmt::Display for UpdateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "update error: the data size is invalid")
+    }
+}
+
+impl error::Error for UpdateError {}
 
 mod private {
     pub trait Sealed {}

@@ -24,12 +24,10 @@ async fn run() -> Result<(), Error> {
     const THIRD: f32 = consts::TAU / 3.;
 
     #[derive(Group)]
-    struct Offset<'a> {
-        r: &'a Uniform<f32>,
-    }
+    struct Offset<'a>(&'a Uniform<f32>);
 
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
-        let [x, y] = sl::thunk(sl::f32(idx) * THIRD + offset.r);
+        let [x, y] = sl::thunk(sl::f32(idx) * THIRD + offset.0);
         Out {
             place: sl::vec4(sl::cos(x), sl::sin(y), 0., 1.),
             color: COLOR,
@@ -43,7 +41,7 @@ async fn run() -> Result<(), Error> {
     let uniform = cx.make_uniform(r);
     let bind = {
         let mut binder = cx.make_binder(&shader);
-        let offset = Offset { r: &uniform };
+        let offset = Offset(&uniform);
         binder.bind(&offset);
         binder.into_binding()
     };

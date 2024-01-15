@@ -25,17 +25,14 @@ fn render() -> Result<(), Error> {
     const R_OFFSET: f32 = -consts::TAU / 4.;
 
     #[derive(Instance)]
-    struct Transform {
-        pos: Row<[f32; 2]>,
-        col: Row<[f32; 3]>,
-    }
+    struct Transform(Row<[f32; 2]>, Row<[f32; 3]>);
 
     let triangle = |t: InInstance<Transform>, Index(index): Index| {
         let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
-        let p = sl::vec2(sl::cos(x), sl::sin(y)) * TRIANGLE_SIZE + t.pos;
+        let p = sl::vec2(sl::cos(x), sl::sin(y)) * TRIANGLE_SIZE + t.0;
         Out {
             place: sl::concat(p, Vec2::new(0., 1.)),
-            color: sl::vec4_with(sl::fragment(t.col), 1.),
+            color: sl::vec4_with(sl::fragment(t.1), 1.),
         }
     };
 
@@ -53,10 +50,7 @@ fn render() -> Result<(), Error> {
         const POS: [[f32; 2]; 3] = [[0.0, -0.375], [0.433, 0.375], [-0.433, 0.375]];
         const COL: [[f32; 3]; 3] = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
 
-        Transform {
-            pos: cx.make_row(&POS),
-            col: cx.make_row(&COL),
-        }
+        Transform(cx.make_row(&POS), cx.make_row(&COL))
     };
 
     let buffer = cx.make_copy_buffer(SIZE);
@@ -71,9 +65,7 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    let mut render = Render::default();
-    cx.draw_to_texture(&mut render, &view, draw);
-
+    Render::default().draw_to(&cx, &view, draw);
     let mapped = helpers::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)

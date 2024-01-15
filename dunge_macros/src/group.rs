@@ -1,7 +1,7 @@
 use {
     crate::member,
     proc_macro2::{Span, TokenStream},
-    syn::{spanned::Spanned, Data, DataStruct, DeriveInput, GenericParam, Ident, Lifetime},
+    syn::{spanned::Spanned, Data, DataStruct, DeriveInput, Fields, GenericParam, Ident, Lifetime},
 };
 
 pub(crate) fn derive(input: DeriveInput) -> TokenStream {
@@ -11,6 +11,16 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         return quote::quote_spanned! { input.ident.span() =>
             ::std::compile_error!("the group type must be a struct");
         };
+    };
+
+    let named = match &fields {
+        Fields::Named(_) => true,
+        Fields::Unnamed(_) => false,
+        Fields::Unit => {
+            return quote::quote_spanned! { input.ident.span() =>
+                ::std::compile_error!("the group type cannot be a unit struct");
+            }
+        }
     };
 
     let mut lts = Vec::with_capacity(input.generics.params.len());
@@ -48,7 +58,6 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     };
 
     let static_lts = lts.iter().map(|_| &static_lt);
-
     let anon_lt = Lifetime {
         apostrophe: Span::call_site(),
         ident: Ident::new("_", Span::call_site()),
@@ -73,7 +82,11 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let group_fields = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
-        quote::quote! { #ident: <#ty as ::dunge::group::MemberProjection>::Field }
+        if named {
+            quote::quote! { #ident: <#ty as ::dunge::group::MemberProjection>::Field }
+        } else {
+            quote::quote! { <#ty as ::dunge::group::MemberProjection>::Field }
+        }
     });
 
     let group_member_projections = iter::zip(0.., &fields).map(|(index, field)| {
@@ -81,6 +94,20 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::group::MemberProjection>::member_projection(id, #index, out.clone()) }
     });
+
+    let projection = if named {
+        quote::quote! {
+            struct #projection_name<#(#lts),*> {
+                #(#group_fields),*,
+            }
+        }
+    } else {
+        quote::quote! {
+            struct #projection_name<#(#lts),*>(
+                #(#group_fields),*,
+            );
+        }
+    };
 
     quote::quote! {
         impl<#(#lts),*> ::dunge::Group for #name<#(#lts),*> {
@@ -96,9 +123,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
             }
         }
 
-        struct #projection_name<#(#lts),*> {
-            #(#group_fields),*,
-        }
+        #projection
 
         impl<#(#lts),*> ::dunge::group::Projection for #projection_name<#(#lts),*> {
             fn projection(id: ::core::primitive::u32, out: ::dunge::sl::GlobalOut) -> Self {
@@ -183,10 +208,10 @@ mod tests {
                 }
             }
 
-            struct MapProjection<'a> {
-                0: <BoundTexture<'a> as ::dunge::group::MemberProjection>::Field,
-                1: <&'a Sampler as ::dunge::group::MemberProjection>::Field,
-            }
+            struct MapProjection<'a>(
+                <BoundTexture<'a> as ::dunge::group::MemberProjection>::Field,
+                <&'a Sampler as ::dunge::group::MemberProjection>::Field,
+            );
 
             impl<'a> ::dunge::group::Projection for MapProjection<'a> {
                 fn projection(id: ::core::primitive::u32, out: ::dunge::sl::GlobalOut) -> Self {

@@ -49,9 +49,7 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    let mut render = Render::default();
-    cx.draw_to_texture(&mut render, &view, draw);
-
+    Render::default().draw_to(&cx, &view, draw);
     let mapped = helpers::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)

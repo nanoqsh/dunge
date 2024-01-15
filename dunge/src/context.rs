@@ -1,17 +1,14 @@
 use {
     crate::{
         bind::{self, Binder, GroupHandler, UniqueBinding, Update, Visit},
-        draw::Draw,
         format::Format,
         instance::Row,
         layer::Layer,
         mesh::{self, Mesh},
         shader::Shader,
         sl::IntoModule,
-        state::{Render, State},
-        texture::{
-            self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
-        },
+        state::State,
+        texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
         uniform::{Uniform, Value},
         Vertex,
     },
@@ -88,15 +85,6 @@ impl Context {
         F: IntoFuture<Output = MapResult>,
     {
         view.map(&self.0, tx, rx).await
-    }
-
-    pub fn draw_to_texture<T, D>(&self, render: &mut Render, texture: &T, draw: D)
-    where
-        T: DrawTexture,
-        D: Draw,
-    {
-        let view = texture.draw_texture().render_view();
-        self.0.draw(render, view, draw);
     }
 
     pub fn update_group<G>(

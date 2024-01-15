@@ -1,7 +1,9 @@
 use {
     crate::member,
     proc_macro2::TokenStream,
-    syn::{meta::ParseNestedMeta, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput},
+    syn::{
+        meta::ParseNestedMeta, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Fields,
+    },
 };
 
 pub(crate) fn derive(input: DeriveInput) -> TokenStream {
@@ -11,6 +13,16 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         return quote::quote_spanned! { input.ident.span() =>
             ::std::compile_error!("the vertex type must be a struct");
         };
+    };
+
+    let named = match &fields {
+        Fields::Named(_) => true,
+        Fields::Unnamed(_) => false,
+        Fields::Unit => {
+            return quote::quote_spanned! { input.ident.span() =>
+                ::std::compile_error!("the vertex type cannot be a unit struct");
+            }
+        }
     };
 
     if !input.generics.params.is_empty() {
@@ -41,7 +53,11 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let projection_fields = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
-        quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::Field }
+        if named {
+            quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::Field }
+        } else {
+            quote::quote! { <#ty as ::dunge::vertex::InputProjection>::Field }
+        }
     });
 
     let projection_inputs = iter::zip(0.., &fields).map(|(index, field)| {
@@ -49,6 +65,20 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         let ty = &field.ty;
         quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::input_projection(id, #index) }
     });
+
+    let projection = if named {
+        quote::quote! {
+            struct #projection_name {
+                #(#projection_fields),*,
+            }
+        }
+    } else {
+        quote::quote! {
+            struct #projection_name(
+                #(#projection_fields),*,
+            );
+        }
+    };
 
     quote::quote! {
         unsafe impl ::dunge::Vertex for #name {
@@ -58,9 +88,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
             ]);
         }
 
-        struct #projection_name {
-            #(#projection_fields),*,
-        }
+        #projection
 
         impl ::dunge::vertex::Projection for #projection_name {
             fn projection(id: ::core::primitive::u32) -> Self {
@@ -145,10 +173,10 @@ mod tests {
                 ]);
             }
 
-            struct VertProjection {
-                0: <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
-                1: <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
-            }
+            struct VertProjection(
+                <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
+                <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
+            );
 
             impl ::dunge::vertex::Projection for VertProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {

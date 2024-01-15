@@ -23,14 +23,11 @@ fn render() -> Result<(), Error> {
 
     #[repr(C)]
     #[derive(Vertex)]
-    struct Vert {
-        pos: [f32; 2],
-        col: [f32; 3],
-    }
+    struct Vert([f32; 2], [f32; 3]);
 
     let triangle = |vert: InVertex<Vert>| Out {
-        place: sl::concat(vert.pos, Vec2::new(0., 1.)),
-        color: sl::vec4_with(sl::fragment(vert.col), 1.),
+        place: sl::concat(vert.0, Vec2::new(0., 1.)),
+        color: sl::vec4_with(sl::fragment(vert.1), 1.),
     };
 
     let cx = helpers::block_on(dunge::context())?;
@@ -47,18 +44,9 @@ fn render() -> Result<(), Error> {
         use mesh::Data;
 
         const VERTS: [Vert; 3] = [
-            Vert {
-                pos: [0., -0.75],
-                col: [1., 0., 0.],
-            },
-            Vert {
-                pos: [0.866, 0.75],
-                col: [0., 1., 0.],
-            },
-            Vert {
-                pos: [-0.866, 0.75],
-                col: [0., 0., 1.],
-            },
+            Vert([0., -0.75], [1., 0., 0.]),
+            Vert([0.866, 0.75], [0., 1., 0.]),
+            Vert([-0.866, 0.75], [0., 0., 1.]),
         ];
 
         let data = Data::from_verts(&VERTS);
@@ -72,9 +60,7 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    let mut render = Render::default();
-    cx.draw_to_texture(&mut render, &view, draw);
-
+    Render::default().draw_to(&cx, &view, draw);
     let mapped = helpers::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)
