@@ -3,25 +3,72 @@ use {
     std::marker::PhantomData,
 };
 
-pub trait Scalar {
-    const TYPE: ScalarType;
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ValueType {
+    Scalar(ScalarType),
+    Vector(VectorType),
+    Matrix(MatrixType),
 }
 
-impl Scalar for f32 {
-    const TYPE: ScalarType = ScalarType::Float;
+impl ValueType {
+    pub(crate) const fn ty(self) -> Type {
+        match self {
+            Self::Scalar(v) => v.ty(),
+            Self::Vector(v) => v.ty(),
+            Self::Matrix(v) => v.ty(),
+        }
+    }
+
+    const fn into_scalar(self) -> ScalarType {
+        match self {
+            Self::Scalar(v) => v,
+            _ => panic!("non-scalar type"),
+        }
+    }
+
+    const fn into_vector(self) -> VectorType {
+        match self {
+            Self::Vector(v) => v,
+            _ => panic!("non-vector type"),
+        }
+    }
+
+    const fn into_matrix(self) -> MatrixType {
+        match self {
+            Self::Matrix(v) => v,
+            _ => panic!("non-matrix type"),
+        }
+    }
 }
 
-impl Scalar for i32 {
-    const TYPE: ScalarType = ScalarType::Sint;
+pub trait Value {
+    const VALUE_TYPE: ValueType;
 }
 
-impl Scalar for u32 {
-    const TYPE: ScalarType = ScalarType::Uint;
+impl Value for f32 {
+    const VALUE_TYPE: ValueType = ValueType::Scalar(ScalarType::Float);
 }
 
-impl Scalar for bool {
-    const TYPE: ScalarType = ScalarType::Bool;
+impl Value for i32 {
+    const VALUE_TYPE: ValueType = ValueType::Scalar(ScalarType::Sint);
 }
+
+impl Value for u32 {
+    const VALUE_TYPE: ValueType = ValueType::Scalar(ScalarType::Uint);
+}
+
+impl Value for bool {
+    const VALUE_TYPE: ValueType = ValueType::Scalar(ScalarType::Bool);
+}
+
+pub trait Scalar: Value {
+    const TYPE: ScalarType = Self::VALUE_TYPE.into_scalar();
+}
+
+impl Scalar for f32 {}
+impl Scalar for i32 {}
+impl Scalar for u32 {}
+impl Scalar for bool {}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ScalarType {
@@ -91,54 +138,81 @@ impl VectorType {
     }
 }
 
-pub trait Vector {
+pub trait Vector: Value {
     type Scalar;
-    const TYPE: VectorType;
+    const TYPE: VectorType = Self::VALUE_TYPE.into_vector();
+}
+
+impl Value for Vec2<f32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
+}
+
+impl Value for Vec3<f32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
+}
+
+impl Value for Vec4<f32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
+}
+
+impl Value for Vec2<u32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec2u);
+}
+
+impl Value for Vec3<u32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec3u);
+}
+
+impl Value for Vec4<u32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec4u);
+}
+
+impl Value for Vec2<i32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec2i);
+}
+
+impl Value for Vec3<i32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec3i);
+}
+
+impl Value for Vec4<i32> {
+    const VALUE_TYPE: ValueType = ValueType::Vector(VectorType::Vec4i);
 }
 
 impl Vector for Vec2<f32> {
     type Scalar = f32;
-    const TYPE: VectorType = VectorType::Vec2f;
 }
 
 impl Vector for Vec3<f32> {
     type Scalar = f32;
-    const TYPE: VectorType = VectorType::Vec3f;
 }
 
 impl Vector for Vec4<f32> {
     type Scalar = f32;
-    const TYPE: VectorType = VectorType::Vec4f;
 }
 
 impl Vector for Vec2<u32> {
     type Scalar = u32;
-    const TYPE: VectorType = VectorType::Vec2u;
 }
 
 impl Vector for Vec3<u32> {
     type Scalar = u32;
-    const TYPE: VectorType = VectorType::Vec3u;
 }
 
 impl Vector for Vec4<u32> {
     type Scalar = u32;
-    const TYPE: VectorType = VectorType::Vec4u;
 }
 
 impl Vector for Vec2<i32> {
     type Scalar = i32;
-    const TYPE: VectorType = VectorType::Vec2i;
 }
 
 impl Vector for Vec3<i32> {
     type Scalar = i32;
-    const TYPE: VectorType = VectorType::Vec3i;
 }
 
 impl Vector for Vec4<i32> {
     type Scalar = i32;
-    const TYPE: VectorType = VectorType::Vec4i;
 }
 
 const VEC2F: Type = vec(VectorSize::Bi, ScalarKind::Float);
@@ -174,7 +248,7 @@ pub enum MatrixType {
 }
 
 impl MatrixType {
-    pub(crate) const fn dims(self) -> usize {
+    pub const fn dims(self) -> u32 {
         match self {
             Self::Mat2 => 2,
             Self::Mat3 => 3,
@@ -189,23 +263,35 @@ impl MatrixType {
             Self::Mat4 => MAT4F,
         }
     }
+
+    pub const fn vector_type(self) -> VectorType {
+        match self {
+            Self::Mat2 => VectorType::Vec2f,
+            Self::Mat3 => VectorType::Vec3f,
+            Self::Mat4 => VectorType::Vec4f,
+        }
+    }
 }
 
-pub trait Matrix {
-    const TYPE: MatrixType;
+pub trait Matrix: Value {
+    const TYPE: MatrixType = Self::VALUE_TYPE.into_matrix();
 }
 
-impl Matrix for Mat2 {
-    const TYPE: MatrixType = MatrixType::Mat2;
+impl Value for Mat2 {
+    const VALUE_TYPE: ValueType = ValueType::Matrix(MatrixType::Mat2);
 }
 
-impl Matrix for Mat3 {
-    const TYPE: MatrixType = MatrixType::Mat3;
+impl Value for Mat3 {
+    const VALUE_TYPE: ValueType = ValueType::Matrix(MatrixType::Mat3);
 }
 
-impl Matrix for Mat4 {
-    const TYPE: MatrixType = MatrixType::Mat4;
+impl Value for Mat4 {
+    const VALUE_TYPE: ValueType = ValueType::Matrix(MatrixType::Mat4);
 }
+
+impl Matrix for Mat2 {}
+impl Matrix for Mat3 {}
+impl Matrix for Mat4 {}
 
 const MAT2F: Type = mat(VectorSize::Bi);
 const MAT3F: Type = mat(VectorSize::Tri);
@@ -220,13 +306,6 @@ const fn mat(size: VectorSize) -> Type {
             width: 4,
         },
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ValueType {
-    Scalar(ScalarType),
-    Vector(VectorType),
-    Matrix(MatrixType),
 }
 
 pub struct Texture2d<T>(PhantomData<T>);

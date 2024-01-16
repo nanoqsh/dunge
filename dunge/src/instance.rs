@@ -3,7 +3,7 @@ use {
         context::Context,
         sl::{ReadInstance, Ret},
         state::State,
-        types::{self, VectorType},
+        types::{self, ValueType, VectorType},
         uniform::{self, Value},
         Instance,
     },
@@ -17,7 +17,7 @@ pub use dunge_shader::instance::Projection;
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
 pub trait MemberProjection: private::Sealed {
-    const TYPE: VectorType;
+    const TYPE: ValueType;
     type Field;
     fn member_projection(id: u32) -> Self::Field;
 }
@@ -25,7 +25,7 @@ pub trait MemberProjection: private::Sealed {
 impl private::Sealed for Row<[f32; 2]> {}
 
 impl MemberProjection for Row<[f32; 2]> {
-    const TYPE: VectorType = VectorType::Vec2f;
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
     type Field = Ret<ReadInstance, types::Vec2<f32>>;
 
     fn member_projection(id: u32) -> Self::Field {
@@ -36,7 +36,7 @@ impl MemberProjection for Row<[f32; 2]> {
 impl private::Sealed for Row<[f32; 3]> {}
 
 impl MemberProjection for Row<[f32; 3]> {
-    const TYPE: VectorType = VectorType::Vec3f;
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
     type Field = Ret<ReadInstance, types::Vec3<f32>>;
 
     fn member_projection(id: u32) -> Self::Field {
@@ -47,7 +47,7 @@ impl MemberProjection for Row<[f32; 3]> {
 impl private::Sealed for Row<[f32; 4]> {}
 
 impl MemberProjection for Row<[f32; 4]> {
-    const TYPE: VectorType = VectorType::Vec4f;
+    const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
     type Field = Ret<ReadInstance, types::Vec4<f32>>;
 
     fn member_projection(id: u32) -> Self::Field {

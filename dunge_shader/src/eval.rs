@@ -4,7 +4,7 @@ use {
         define::Define,
         module::{Module, Out, Output},
         ret::Ret,
-        types::{self, MemberType, ScalarType, VectorType},
+        types::{self, MemberType, ScalarType, ValueType, VectorType},
     },
     naga::{
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
@@ -27,9 +27,12 @@ where
             let mut new = def.into_iter().map(Member::from_vecty);
             Argument::from_type(compl.define_input(&mut new, &mut binds))
         }
-        InputInfo::Inst(InstInfo { vecty, .. }) => Argument {
-            ty: compl.define_instance(*vecty),
-            binding: Some(binds.next(&vecty.ty())),
+        InputInfo::Inst(InstInfo { ty }) => Argument {
+            ty: compl.define_instance(*ty, &mut binds),
+            binding: match ty {
+                ValueType::Scalar(_) | ValueType::Vector(_) => Some(binds.next(&ty.ty())),
+                ValueType::Matrix(_) => None,
+            },
         },
         InputInfo::Index => Argument {
             ty: compl.define_index(),
@@ -207,12 +210,27 @@ impl ReadInstance {
     }
 }
 
-impl<T> Eval<Vs> for Ret<ReadInstance, T> {
+impl<T> Eval<Vs> for Ret<ReadInstance, T>
+where
+    T: types::Value,
+{
     type Out = T;
 
     fn eval(self, en: &mut Vs) -> Expr {
         let en = &mut en.inner;
-        en.argument(self.get().id)
+        let id = self.get().id;
+        match T::VALUE_TYPE {
+            ValueType::Scalar(_) | ValueType::Vector(_) => en.argument(id),
+            ValueType::Matrix(mat) => {
+                let ty = en.new_type(T::VALUE_TYPE.ty());
+                let arg = en.argument(id);
+                let exprs = (0..mat.dims())
+                    .map(|index| en.access_index(arg, index))
+                    .collect();
+
+                en.compose(ty, exprs)
+            }
+        }
     }
 }
 
@@ -615,6 +633,7 @@ pub struct Entry {
     compl: Compiler,
     exprs: Arena<Expression>,
     stats: Statements,
+    cached_args: HashMap<u32, Expr>,
 }
 
 impl Entry {
@@ -623,6 +642,7 @@ impl Entry {
             compl,
             exprs: Arena::default(),
             stats: Statements::default(),
+            cached_args: HashMap::default(),
         }
     }
 
@@ -636,8 +656,10 @@ impl Entry {
     }
 
     fn argument(&mut self, n: u32) -> Expr {
-        let ex = Expression::FunctionArgument(n);
-        Expr(self.exprs.append(ex, Span::UNDEFINED))
+        *self.cached_args.entry(n).or_insert_with(|| {
+            let ex = Expression::FunctionArgument(n);
+            Expr(self.exprs.append(ex, Span::UNDEFINED))
+        })
     }
 
     fn global(&mut self, var: Handle<GlobalVariable>) -> Expr {
@@ -792,13 +814,13 @@ struct Compiler {
 }
 
 impl Compiler {
+    const VECTOR_SIZE: u32 = mem::size_of::<f32>() as u32 * 4;
+
     fn define_index(&mut self) -> Handle<Type> {
         self.types.insert(ScalarType::Uint.ty(), Span::UNDEFINED)
     }
 
     fn define_input(&mut self, new: &mut Members, binds: &mut Bindings) -> Handle<Type> {
-        const VECTOR_SIZE: u32 = mem::size_of::<f32>() as u32 * 4;
-
         let len = new.len();
         let mut members = Vec::with_capacity(len);
         for (idx, Member { vecty, built }) in iter::zip(0.., new) {
@@ -813,7 +835,7 @@ impl Compiler {
                 name: None,
                 ty: self.types.insert(ty, Span::UNDEFINED),
                 binding: Some(binding),
-                offset: idx * VECTOR_SIZE,
+                offset: idx * Self::VECTOR_SIZE,
             });
         }
 
@@ -821,15 +843,41 @@ impl Compiler {
             name: None,
             inner: TypeInner::Struct {
                 members,
-                span: len as u32 * VECTOR_SIZE,
+                span: len as u32 * Self::VECTOR_SIZE,
             },
         };
 
         self.types.insert(ty, Span::UNDEFINED)
     }
 
-    fn define_instance(&mut self, vecty: VectorType) -> Handle<Type> {
-        self.types.insert(vecty.ty(), Span::UNDEFINED)
+    fn define_instance(&mut self, ty: ValueType, binds: &mut Bindings) -> Handle<Type> {
+        let ty = match ty {
+            ValueType::Scalar(_) | ValueType::Vector(_) => ty.ty(),
+            ValueType::Matrix(mat) => {
+                let len = mat.dims();
+                let mut members = Vec::with_capacity(len as usize);
+                for idx in 0..len {
+                    let ty = mat.vector_type().ty();
+                    let binding = binds.next(&ty);
+                    members.push(StructMember {
+                        name: None,
+                        ty: self.types.insert(ty, Span::UNDEFINED),
+                        binding: Some(binding),
+                        offset: idx * Self::VECTOR_SIZE,
+                    });
+                }
+
+                Type {
+                    name: None,
+                    inner: TypeInner::Struct {
+                        members,
+                        span: len * Self::VECTOR_SIZE,
+                    },
+                }
+            }
+        };
+
+        self.types.insert(ty, Span::UNDEFINED)
     }
 
     fn define_group(&mut self, group: u32, def: Define<MemberType>) {

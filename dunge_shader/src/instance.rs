@@ -1,9 +1,9 @@
-use crate::{define::Define, types::VectorType};
+use crate::{define::Define, types::ValueType};
 
 /// The instance type description.
 pub trait Instance {
     type Projection: Projection + 'static;
-    const DEF: Define<VectorType>;
+    const DEF: Define<ValueType>;
 }
 
 pub trait Projection {

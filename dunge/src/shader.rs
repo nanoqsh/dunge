@@ -1,14 +1,14 @@
 use {
     crate::{
         bind::TypedGroup,
-        sl::{InputInfo, InstInfo, IntoModule, Module, Stages, VertInfo},
+        sl::{InputInfo, IntoModule, Module, Stages},
         state::State,
-        types::{MemberType, VectorType},
+        types::{MemberType, ScalarType, ValueType, VectorType},
     },
     std::{cell::Cell, marker::PhantomData},
     wgpu::{
         BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout,
-        VertexStepMode,
+        VertexFormat, VertexStepMode,
     },
 };
 
@@ -167,60 +167,28 @@ impl Inner {
             state.device().create_pipeline_layout(&desc)
         };
 
-        let to_format = |vecty| match vecty {
-            VectorType::Vec2f => VertexFormat::Float32x2,
-            VectorType::Vec3f => VertexFormat::Float32x3,
-            VectorType::Vec4f => VertexFormat::Float32x4,
-            VectorType::Vec2u => VertexFormat::Uint32x2,
-            VectorType::Vec3u => VertexFormat::Uint32x3,
-            VectorType::Vec4u => VertexFormat::Uint32x4,
-            VectorType::Vec2i => VertexFormat::Sint32x2,
-            VectorType::Vec3i => VertexFormat::Sint32x3,
-            VectorType::Vec4i => VertexFormat::Sint32x4,
+        let location = Cell::default();
+        let next_location = || {
+            let current = location.get();
+            location.set(current + 1);
+            current
         };
 
-        let next_location = {
-            let location = Cell::default();
-            move || {
-                let current = location.get();
-                location.set(current + 1);
-                current
-            }
-        };
-
-        let vert = |info: VertInfo| {
+        let make_attr = || {
             let mut offset = 0;
-            let attr = |vecty| {
-                let format = to_format(vecty);
-                let attr = VertexAttribute {
-                    format,
-                    offset,
-                    shader_location: next_location(),
+            move |ty, attrs: &mut Vec<_>| {
+                let mut f = |format| {
+                    let attr = VertexAttribute {
+                        format,
+                        offset,
+                        shader_location: next_location(),
+                    };
+
+                    offset += format.size();
+                    attrs.push(attr);
                 };
 
-                offset += format.size();
-                attr
-            };
-
-            Vertex {
-                array_stride: info.size as BufferAddress,
-                step_mode: VertexStepMode::Vertex,
-                attributes: info.def.into_iter().map(attr).collect(),
-            }
-        };
-
-        let inst = |info: InstInfo| {
-            let format = to_format(info.vecty);
-            let attr = VertexAttribute {
-                format,
-                offset: 0,
-                shader_location: next_location(),
-            };
-
-            Vertex {
-                array_stride: format.size(),
-                step_mode: VertexStepMode::Instance,
-                attributes: Box::from([attr]),
+                to_format(ty, &mut f);
             }
         };
 
@@ -235,7 +203,22 @@ impl Inner {
             match input {
                 InputInfo::Vert(v) => {
                     slots.vertex = vertex.len() as u32;
-                    vertex.push(vert(v));
+
+                    let vert = {
+                        let mut attr = make_attr();
+                        let mut attrs = vec![];
+                        for vecty in v.def {
+                            attr(ValueType::Vector(vecty), &mut attrs);
+                        }
+
+                        Vertex {
+                            array_stride: v.size as BufferAddress,
+                            step_mode: VertexStepMode::Vertex,
+                            attributes: attrs.into(),
+                        }
+                    };
+
+                    vertex.push(vert);
                 }
                 InputInfo::Inst(i) => {
                     if set_instance {
@@ -243,7 +226,16 @@ impl Inner {
                         set_instance = false;
                     }
 
-                    vertex.push(inst(i));
+                    let mut attr = make_attr();
+                    let mut attrs = vec![];
+                    attr(i.ty, &mut attrs);
+                    let vert = Vertex {
+                        array_stride: attrs.iter().map(|attr| attr.format.size()).sum(),
+                        step_mode: VertexStepMode::Instance,
+                        attributes: attrs.into(),
+                    };
+
+                    vertex.push(vert);
                 }
                 InputInfo::Index => {}
             }
@@ -256,6 +248,33 @@ impl Inner {
             vertex: Box::from(vertex),
             slots,
             groups,
+        }
+    }
+}
+
+fn to_format<F>(ty: ValueType, f: &mut F)
+where
+    F: FnMut(VertexFormat),
+{
+    match ty {
+        ValueType::Scalar(ScalarType::Float) => f(VertexFormat::Float32),
+        ValueType::Scalar(ScalarType::Sint) => f(VertexFormat::Sint32),
+        ValueType::Scalar(ScalarType::Uint) | ValueType::Scalar(ScalarType::Bool) => {
+            f(VertexFormat::Uint32);
+        }
+        ValueType::Vector(VectorType::Vec2f) => f(VertexFormat::Float32x2),
+        ValueType::Vector(VectorType::Vec3f) => f(VertexFormat::Float32x3),
+        ValueType::Vector(VectorType::Vec4f) => f(VertexFormat::Float32x4),
+        ValueType::Vector(VectorType::Vec2u) => f(VertexFormat::Uint32x2),
+        ValueType::Vector(VectorType::Vec3u) => f(VertexFormat::Uint32x3),
+        ValueType::Vector(VectorType::Vec4u) => f(VertexFormat::Uint32x4),
+        ValueType::Vector(VectorType::Vec2i) => f(VertexFormat::Sint32x2),
+        ValueType::Vector(VectorType::Vec3i) => f(VertexFormat::Sint32x3),
+        ValueType::Vector(VectorType::Vec4i) => f(VertexFormat::Sint32x4),
+        ValueType::Matrix(mat) => {
+            for _ in 0..mat.dims() {
+                to_format(ValueType::Vector(mat.vector_type()), f);
+            }
         }
     }
 }

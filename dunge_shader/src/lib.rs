@@ -15,7 +15,7 @@ pub mod vertex;
 
 pub mod sl {
     pub use crate::{
-        context::*, convert::*, define::*, eval::*, math::*, module::*, ret::*, texture::*,
-        vector::*,
+        context::*, convert::*, define::*, eval::*, math::*, matrix::*, module::*, ret::*,
+        texture::*, vector::*,
     };
 }

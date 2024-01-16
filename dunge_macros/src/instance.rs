@@ -80,7 +80,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     quote::quote! {
         impl ::dunge::Instance for #name {
             type Projection = #projection_name;
-            const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
+            const DEF: ::dunge::sl::Define<::dunge::types::ValueType> = ::dunge::sl::Define::new(&[
                 #(#instance_types),*,
             ]);
         }
@@ -121,7 +121,7 @@ mod tests {
         let expected = quote::quote! {
             impl ::dunge::Instance for Transform {
                 type Projection = TransformProjection;
-                const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
+                const DEF: ::dunge::sl::Define<::dunge::types::ValueType> = ::dunge::sl::Define::new(&[
                     <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::TYPE,
                     <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::TYPE,
                 ]);
@@ -163,7 +163,7 @@ mod tests {
         let expected = quote::quote! {
             impl ::dunge::Instance for Transform {
                 type Projection = TransformProjection;
-                const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
+                const DEF: ::dunge::sl::Define<::dunge::types::ValueType> = ::dunge::sl::Define::new(&[
                     <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::TYPE,
                     <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::TYPE,
                 ]);

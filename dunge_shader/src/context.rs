@@ -5,7 +5,7 @@ use {
         group::{self, Group},
         instance::{self, Instance},
         ret::Ret,
-        types::{MemberType, VectorType},
+        types::{MemberType, ValueType, VectorType},
         vertex::{self, Vertex},
     },
     std::{any::TypeId, mem, ops},
@@ -51,7 +51,7 @@ pub struct VertInfo {
 #[doc(hidden)]
 #[derive(Clone, Copy)]
 pub struct InstInfo {
-    pub vecty: VectorType,
+    pub ty: ValueType,
 }
 
 pub(crate) struct GroupEntry {
@@ -115,10 +115,10 @@ impl Context {
         id
     }
 
-    fn add_instance(&mut self, vec: VectorType) -> u32 {
+    fn add_instance(&mut self, ty: ValueType) -> u32 {
         countdown(&mut self.limits.insts, "too many instances in the shader");
         let id = self.inputs.len() as u32;
-        let info = InstInfo { vecty: vec };
+        let info = InstInfo { ty };
         self.inputs.push(InputInfo::Inst(info));
         id
     }
@@ -230,8 +230,8 @@ where
 
     fn from_context_input(cx: &mut Context) -> Self {
         let mut id = None;
-        for vec in I::DEF {
-            id.get_or_insert(cx.add_instance(vec));
+        for ty in I::DEF {
+            id.get_or_insert(cx.add_instance(ty));
         }
 
         let id = id.expect("the instance must have at least one field");
