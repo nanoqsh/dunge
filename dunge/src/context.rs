@@ -1,9 +1,8 @@
 use {
     crate::{
         bind::{self, Binder, GroupHandler, UniqueBinding, Update, Visit},
-        format::Format,
         instance::Row,
-        layer::Layer,
+        layer::{Layer, Options},
         mesh::{self, Mesh},
         shader::Shader,
         sl::IntoModule,
@@ -45,8 +44,12 @@ impl Context {
         Uniform::new(&self.0, val.value().as_ref())
     }
 
-    pub fn make_layer<V, I>(&self, format: Format, shader: &Shader<V, I>) -> Layer<V, I> {
-        Layer::new(&self.0, format, shader)
+    pub fn make_layer<V, I, O>(&self, shader: &Shader<V, I>, opts: O) -> Layer<V, I>
+    where
+        O: Into<Options>,
+    {
+        let opts = opts.into();
+        Layer::new(&self.0, shader, &opts)
     }
 
     pub fn make_mesh<V>(&self, data: &mesh::Data<V>) -> Mesh<V>

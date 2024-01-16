@@ -8,12 +8,13 @@ use {
         state::State,
     },
     std::{iter, marker::PhantomData},
-    wgpu::{RenderPass, RenderPipeline},
+    wgpu::{BlendState, PrimitiveTopology, RenderPass, RenderPipeline},
 };
 
 pub struct SetLayer<'p, V, I> {
     shader_id: usize,
     no_bindings: bool,
+    only_indexed_mesh: bool,
     slots: Slots,
     pass: RenderPass<'p>,
     ty: PhantomData<(V, I)>,
@@ -34,24 +35,26 @@ impl<'p, V, I> SetLayer<'p, V, I> {
             self.pass.set_bind_group(id, group, &[]);
         }
 
-        SetBinding::new(self.slots, &mut self.pass)
+        SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
     }
 
     pub fn bind_empty(&mut self) -> SetBinding<'_, 'p, V, I> {
         assert!(self.no_bindings, "ths shader has any bindings");
-        SetBinding::new(self.slots, &mut self.pass)
+        SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
     }
 }
 
 pub struct SetBinding<'s, 'p, V, I> {
+    only_indexed_mesh: bool,
     slots: Slots,
     pass: &'s mut RenderPass<'p>,
     ty: PhantomData<(V, I)>,
 }
 
 impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
-    fn new(slots: Slots, pass: &'s mut RenderPass<'p>) -> Self {
+    fn new(only_indexed_mesh: bool, slots: Slots, pass: &'s mut RenderPass<'p>) -> Self {
         Self {
+            only_indexed_mesh,
             slots,
             pass,
             ty: PhantomData,
@@ -65,6 +68,7 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
         let mut setter = Setter::new(self.slots.instance, self.pass);
         instance.set(&mut setter);
         SetInstance {
+            only_indexed_mesh: self.only_indexed_mesh,
             len: setter.len(),
             slots: self.slots,
             pass: self.pass,
@@ -74,18 +78,31 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
 }
 
 impl<'p, V> SetBinding<'_, 'p, V, ()> {
+    #[inline]
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
+        assert!(
+            !self.only_indexed_mesh || mesh.is_indexed(),
+            "only an indexed mesh can be drawn on this layer",
+        );
+
         mesh.draw(self.pass, self.slots.vertex, 1);
     }
 }
 
 impl SetBinding<'_, '_, (), ()> {
-    pub fn draw_triangles(&mut self, count: u32) {
-        self.pass.draw(0..count * 3, 0..1);
+    #[inline]
+    pub fn draw_points(&mut self, n: u32) {
+        assert!(
+            !self.only_indexed_mesh,
+            "only an indexed mesh can be drawn on this layer",
+        );
+
+        self.pass.draw(0..n, 0..1);
     }
 }
 
 pub struct SetInstance<'s, 'p, V> {
+    only_indexed_mesh: bool,
     len: u32,
     slots: Slots,
     pass: &'s mut RenderPass<'p>,
@@ -93,20 +110,94 @@ pub struct SetInstance<'s, 'p, V> {
 }
 
 impl<'p, V> SetInstance<'_, 'p, V> {
+    #[inline]
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
+        assert!(
+            !self.only_indexed_mesh || mesh.is_indexed(),
+            "only an indexed mesh can be drawn on this layer",
+        );
+
         mesh.draw(self.pass, self.slots.vertex, self.len);
     }
 }
 
 impl SetInstance<'_, '_, ()> {
-    pub fn draw_triangles(&mut self, count: u32) {
-        self.pass.draw(0..count * 3, 0..self.len);
+    #[inline]
+    pub fn draw_points(&mut self, n: u32) {
+        assert!(
+            !self.only_indexed_mesh,
+            "only an indexed mesh can be drawn on this layer",
+        );
+
+        self.pass.draw(0..n, 0..self.len);
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+pub enum Blend {
+    #[default]
+    None,
+    Replace,
+    Alpha,
+}
+
+impl Blend {
+    fn wgpu(self) -> Option<BlendState> {
+        match self {
+            Self::None => None,
+            Self::Replace => Some(BlendState::REPLACE),
+            Self::Alpha => Some(BlendState::ALPHA_BLENDING),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+pub enum Topology {
+    PointList,
+    LineList,
+    LineStrip,
+    #[default]
+    TriangleList,
+    TriangleStrip,
+}
+
+impl Topology {
+    fn wgpu(self) -> PrimitiveTopology {
+        match self {
+            Self::PointList => PrimitiveTopology::PointList,
+            Self::LineList => PrimitiveTopology::LineList,
+            Self::LineStrip => PrimitiveTopology::LineStrip,
+            Self::TriangleList => PrimitiveTopology::TriangleList,
+            Self::TriangleStrip => PrimitiveTopology::TriangleStrip,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct Options {
+    pub format: Format,
+    pub blend: Blend,
+    pub topology: Topology,
+    pub indexed_mesh: bool,
+    pub depth: bool,
+}
+
+impl From<Format> for Options {
+    fn from(format: Format) -> Self {
+        Self {
+            format,
+            ..Default::default()
+        }
     }
 }
 
 pub struct Layer<V, I> {
     shader_id: usize,
     no_bindings: bool,
+
+    // Is indexed mesh used.
+    // This is necessary to draw a mesh with any strip mode.
+    only_indexed_mesh: bool,
     slots: Slots,
     format: Format,
     render: RenderPipeline,
@@ -114,17 +205,29 @@ pub struct Layer<V, I> {
 }
 
 impl<V, I> Layer<V, I> {
-    pub(crate) fn new(state: &State, format: Format, shader: &Shader<V, I>) -> Self {
+    pub(crate) fn new(state: &State, shader: &Shader<V, I>, opts: &Options) -> Self {
         use wgpu::*;
+
+        const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth24Plus;
+
+        let Options {
+            format,
+            blend,
+            topology,
+            indexed_mesh,
+            depth,
+        } = opts;
 
         let targets = [Some(ColorTargetState {
             format: format.wgpu(),
-            blend: Some(BlendState::REPLACE),
+            blend: blend.wgpu(),
             write_mask: ColorWrites::ALL,
         })];
 
         let module = shader.module();
         let buffers = shader.buffers();
+        let topology = topology.wgpu();
+        let only_indexed_mesh = *indexed_mesh && topology.is_strip();
         let desc = RenderPipelineDescriptor {
             label: None,
             layout: Some(shader.layout()),
@@ -134,15 +237,18 @@ impl<V, I> Layer<V, I> {
                 buffers: &buffers,
             },
             primitive: PrimitiveState {
-                topology: PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: FrontFace::Ccw,
+                topology,
+                strip_index_format: only_indexed_mesh.then_some(IndexFormat::Uint16),
                 cull_mode: Some(Face::Back),
-                polygon_mode: PolygonMode::Fill,
-                unclipped_depth: false,
-                conservative: false,
+                ..Default::default()
             },
-            depth_stencil: None,
+            depth_stencil: depth.then_some(DepthStencilState {
+                format: DEPTH_FORMAT,
+                depth_write_enabled: true,
+                depth_compare: CompareFunction::Less,
+                stencil: StencilState::default(),
+                bias: DepthBiasState::default(),
+            }),
             multisample: MultisampleState::default(),
             fragment: Some(FragmentState {
                 module,
@@ -156,8 +262,9 @@ impl<V, I> Layer<V, I> {
         Self {
             shader_id: shader.id(),
             no_bindings: shader.groups().is_empty(),
+            only_indexed_mesh,
             slots: shader.slots(),
-            format,
+            format: *format,
             render,
             ty: PhantomData,
         }
@@ -172,6 +279,7 @@ impl<V, I> Layer<V, I> {
         SetLayer {
             shader_id: self.shader_id,
             no_bindings: self.no_bindings,
+            only_indexed_mesh: self.only_indexed_mesh,
             slots: self.slots,
             pass,
             ty: PhantomData,

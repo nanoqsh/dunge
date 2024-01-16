@@ -32,7 +32,7 @@ fn render() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
-    let layer = cx.make_layer(Format::RgbAlpha, &shader);
+    let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
         use texture::Data;
 

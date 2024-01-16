@@ -46,7 +46,7 @@ async fn run() -> Result<(), Error> {
         binder.into_binding()
     };
 
-    let layer = cx.make_layer(window.format(), &shader);
+    let layer = cx.make_layer(&shader, window.format());
     let update = |ctrl: &Control| {
         for key in ctrl.pressed_keys() {
             if key.code == KeyCode::Escape {
@@ -60,7 +60,7 @@ async fn run() -> Result<(), Error> {
 
     let draw = |mut frame: Frame| {
         let clear = Rgba::from_standard([0., 0., 0., 1.]);
-        frame.layer(&layer, clear).bind(&bind).draw_triangles(1);
+        frame.layer(&layer, clear).bind(&bind).draw_points(3);
     };
 
     window.run(update::from_fn(update, draw))?;

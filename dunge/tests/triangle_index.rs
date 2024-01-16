@@ -34,7 +34,7 @@ fn render() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
-    let layer = cx.make_layer(Format::RgbAlpha, &shader);
+    let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
         use texture::Data;
 
@@ -45,7 +45,7 @@ fn render() -> Result<(), Error> {
     let buffer = cx.make_copy_buffer(SIZE);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = draw::from_fn(|mut frame| {
-        frame.layer(&layer, opts).bind_empty().draw_triangles(1);
+        frame.layer(&layer, opts).bind_empty().draw_points(3);
         frame.copy_texture(&buffer, &view);
     });
 

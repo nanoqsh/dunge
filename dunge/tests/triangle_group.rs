@@ -63,7 +63,7 @@ fn render() -> Result<(), Error> {
         binder.into_binding()
     };
 
-    let layer = cx.make_layer(Format::RgbAlpha, &shader);
+    let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
         use texture::Data;
 
