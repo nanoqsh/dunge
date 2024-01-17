@@ -14,7 +14,7 @@ rust-version = { workspace = true }
 [dependencies]
 glam = { workspace = true }
 log = { workspace = true }
-naga = "0.14"
+naga = "0.19"
 
 [lints]
 workspace = true

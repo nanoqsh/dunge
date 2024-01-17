@@ -107,14 +107,14 @@ impl Context {
 #[derive(Debug)]
 pub enum Error {
     BackendSelection,
-    RequestDevice,
+    RequestDevice(wgpu::RequestDeviceError),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::BackendSelection => write!(f, "failed to select backend"),
-            Self::RequestDevice => write!(f, "failed to get device"),
+            Self::RequestDevice(err) => write!(f, "failed to get device: {err}"),
         }
     }
 }

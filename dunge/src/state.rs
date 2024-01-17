@@ -45,10 +45,12 @@ impl State {
             use wgpu::{DeviceDescriptor, Limits};
 
             let desc = DeviceDescriptor {
-                limits: if cfg!(target_arch = "wasm32") {
-                    Limits::downlevel_webgl2_defaults()
-                } else {
-                    Limits::default()
+                required_limits: Limits {
+                    ..if cfg!(target_arch = "wasm32") {
+                        Limits::downlevel_webgl2_defaults()
+                    } else {
+                        Limits::default()
+                    }
                 },
                 ..Default::default()
             };
@@ -56,7 +58,7 @@ impl State {
             adapter
                 .request_device(&desc, None)
                 .await
-                .map_err(|_| Error::RequestDevice)?
+                .map_err(Error::RequestDevice)?
         };
 
         Ok(Self {

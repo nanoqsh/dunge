@@ -18,17 +18,21 @@ bytemuck = { workspace = true }
 glam = { workspace = true }
 instant = { version = "0.1", optional = true }
 log = { workspace = true }
-wgpu = { version = "0.18", default-features = false, features = ["naga"] }
+
+[dependencies.wgpu]
+version = "0.19"
+default-features = false
+features = ["dx12", "naga-ir"]
 
 [dependencies.winit]
 version = "0.29"
 default-features = false
-features = ["rwh_05", "x11"]
+features = ["rwh_06", "x11"]
 optional = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
-wgpu = { version = "0.18", default-features = false, features = ["webgl"] }
+wgpu = { version = "0.19", default-features = false, features = ["webgpu"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3"

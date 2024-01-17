@@ -10,11 +10,12 @@ use {
 use crate::window::WindowBuilder;
 
 pub(crate) async fn make() -> Result<(Context, Instance), context::Error> {
-    use wgpu::{Backends, InstanceDescriptor};
+    use wgpu::{Backends, InstanceDescriptor, InstanceFlags};
 
     let instance = {
         let desc = InstanceDescriptor {
-            backends: Backends::PRIMARY,
+            backends: Backends::all(),
+            flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
             ..Default::default()
         };
 

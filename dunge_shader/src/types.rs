@@ -89,10 +89,12 @@ impl ScalarType {
     }
 
     pub(crate) const fn ty(self) -> Type {
+        use naga::Scalar;
+
         let (kind, width) = self.inner();
         Type {
             name: None,
-            inner: TypeInner::Scalar { kind, width },
+            inner: TypeInner::Scalar(Scalar { kind, width }),
         }
     }
 }
@@ -226,12 +228,13 @@ const VEC3I: Type = vec(VectorSize::Tri, ScalarKind::Sint);
 const VEC4I: Type = vec(VectorSize::Quad, ScalarKind::Sint);
 
 const fn vec(size: VectorSize, kind: ScalarKind) -> Type {
+    use naga::Scalar;
+
     Type {
         name: None,
         inner: TypeInner::Vector {
             size,
-            kind,
-            width: 4,
+            scalar: Scalar { kind, width: 4 },
         },
     }
 }
@@ -298,12 +301,17 @@ const MAT3F: Type = mat(VectorSize::Tri);
 const MAT4F: Type = mat(VectorSize::Quad);
 
 const fn mat(size: VectorSize) -> Type {
+    use naga::Scalar;
+
     Type {
         name: None,
         inner: TypeInner::Matrix {
             columns: size,
             rows: size,
-            width: 4,
+            scalar: Scalar {
+                width: 4,
+                kind: ScalarKind::Float,
+            },
         },
     }
 }

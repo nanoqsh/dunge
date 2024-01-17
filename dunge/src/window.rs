@@ -11,6 +11,7 @@ use {
         error, fmt,
         future::{Future, IntoFuture},
         pin::Pin,
+        sync::Arc,
         task::{self, Poll},
     },
     wgpu::{
@@ -72,7 +73,7 @@ impl WindowBuilder {
                 None => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
             };
 
-            builder.build(el.inner())?
+            Arc::new(builder.build(el.inner())?)
         };
 
         let view = View::new(cx.state(), instance, inner)?;
@@ -138,27 +139,21 @@ impl Window {
     }
 }
 
+type SharedWindow = Arc<window::Window>;
+
 pub(crate) struct View {
     conf: SurfaceConfiguration,
-    surface: Surface,
-
-    // The window must be declared after the surface so
-    // it gets dropped after it as the surface contains
-    // unsafe references to the window's resources.
-    inner: window::Window,
+    surface: Surface<'static>,
+    inner: SharedWindow,
 }
 
 impl View {
-    fn new(state: &State, instance: &Instance, inner: window::Window) -> Result<Self, Error> {
+    fn new(state: &State, instance: &Instance, inner: SharedWindow) -> Result<Self, Error> {
         use wgpu::*;
 
         const SUPPORTED_FORMATS: [Format; 2] = [Format::RgbAlpha, Format::BgrAlpha];
 
-        // # Safety
-        //
-        // The surface needs to live as long as the window that created it.
-        // State owns the window so this should be safe.
-        let surface = unsafe { instance.create_surface(&inner)? };
+        let surface = instance.create_surface(Arc::clone(&inner))?;
         let conf = {
             let caps = surface.get_capabilities(state.adapter());
             let format = SUPPORTED_FORMATS.into_iter().find_map(|format| {
@@ -178,6 +173,7 @@ impl View {
                 width: size.width.max(1),
                 height: size.height.max(1),
                 present_mode: PresentMode::default(),
+                desired_maximum_frame_latency: 2,
                 alpha_mode: CompositeAlphaMode::default(),
                 view_formats: vec![],
             }
