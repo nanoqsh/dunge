@@ -215,7 +215,6 @@ where
         },
         Event::Suspended => {
             log::debug!("suspended");
-            // TODO: Drop the surface
             active = false;
         }
         Event::Resumed => {

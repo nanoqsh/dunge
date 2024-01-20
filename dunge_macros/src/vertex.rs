@@ -68,13 +68,13 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
     let projection = if named {
         quote::quote! {
-            struct #projection_name {
+            pub struct #projection_name {
                 #(#projection_fields),*,
             }
         }
     } else {
         quote::quote! {
-            struct #projection_name(
+            pub struct #projection_name(
                 #(#projection_fields),*,
             );
         }
@@ -137,7 +137,7 @@ mod tests {
                 ]);
             }
 
-            struct VertProjection {
+            pub struct VertProjection {
                 pos: <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
                 col: <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
             }
@@ -173,7 +173,7 @@ mod tests {
                 ]);
             }
 
-            struct VertProjection(
+            pub struct VertProjection(
                 <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
                 <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
             );

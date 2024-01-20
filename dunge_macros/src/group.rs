@@ -97,13 +97,13 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
     let projection = if named {
         quote::quote! {
-            struct #projection_name<#(#lts),*> {
+            pub struct #projection_name<#(#lts),*> {
                 #(#group_fields),*,
             }
         }
     } else {
         quote::quote! {
-            struct #projection_name<#(#lts),*>(
+            pub struct #projection_name<#(#lts),*>(
                 #(#group_fields),*,
             );
         }
@@ -166,7 +166,7 @@ mod tests {
                 }
             }
 
-            struct MapProjection<'a> {
+            pub struct MapProjection<'a> {
                 tex: <BoundTexture<'a> as ::dunge::group::MemberProjection>::Field,
                 sam: <&'a Sampler as ::dunge::group::MemberProjection>::Field,
             }
@@ -208,7 +208,7 @@ mod tests {
                 }
             }
 
-            struct MapProjection<'a>(
+            pub struct MapProjection<'a>(
                 <BoundTexture<'a> as ::dunge::group::MemberProjection>::Field,
                 <&'a Sampler as ::dunge::group::MemberProjection>::Field,
             );

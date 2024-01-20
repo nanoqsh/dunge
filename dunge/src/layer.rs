@@ -21,6 +21,7 @@ pub struct SetLayer<'p, V, I> {
 }
 
 impl<'p, V, I> SetLayer<'p, V, I> {
+    #[inline]
     pub fn bind<B>(&mut self, bind: &'p B) -> SetBinding<'_, 'p, V, I>
     where
         B: Binding,
@@ -38,6 +39,7 @@ impl<'p, V, I> SetLayer<'p, V, I> {
         SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
     }
 
+    #[inline]
     pub fn bind_empty(&mut self) -> SetBinding<'_, 'p, V, I> {
         assert!(self.no_bindings, "ths shader has any bindings");
         SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
@@ -61,6 +63,7 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
         }
     }
 
+    #[inline]
     pub fn instance(&'s mut self, instance: &'p I) -> SetInstance<'s, 'p, V>
     where
         I: Set,
@@ -194,9 +197,6 @@ impl From<Format> for Options {
 pub struct Layer<V, I> {
     shader_id: usize,
     no_bindings: bool,
-
-    // Is indexed mesh used.
-    // This is necessary to draw a mesh with any strip mode.
     only_indexed_mesh: bool,
     slots: Slots,
     format: Format,

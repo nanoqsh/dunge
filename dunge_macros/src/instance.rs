@@ -65,13 +65,13 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
     let projection = if named {
         quote::quote! {
-            struct #projection_name {
+            pub struct #projection_name {
                 #(#instance_fields),*,
             }
         }
     } else {
         quote::quote! {
-            struct #projection_name(
+            pub struct #projection_name(
                 #(#instance_fields),*,
             );
         }
@@ -134,7 +134,7 @@ mod tests {
                 }
             }
 
-            struct TransformProjection {
+            pub struct TransformProjection {
                 pos: <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::Field,
                 col: <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::Field,
             }
@@ -176,7 +176,7 @@ mod tests {
                 }
             }
 
-            struct TransformProjection(
+            pub struct TransformProjection(
                 <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::Field,
                 <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::Field,
             );
