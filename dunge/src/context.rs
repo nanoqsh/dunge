@@ -8,7 +8,7 @@ use {
         sl::IntoModule,
         state::State,
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
-        uniform::{Uniform, Value},
+        uniform::{IntoValue, Uniform, Value},
         Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
@@ -37,10 +37,11 @@ impl Context {
         Binder::new(&self.0, shader)
     }
 
-    pub fn make_uniform<U>(&self, val: U) -> Uniform<U>
+    pub fn make_uniform<U>(&self, val: U) -> Uniform<U::Value>
     where
-        U: Value,
+        U: IntoValue,
     {
+        let val = val.into_value();
         Uniform::new(&self.0, val.value().as_ref())
     }
 

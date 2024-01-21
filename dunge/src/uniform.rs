@@ -36,13 +36,14 @@ impl<U> Uniform<U> {
         }
     }
 
-    pub fn update(&self, cx: &Context, val: U)
+    pub fn update<V>(&self, cx: &Context, val: V)
     where
+        V: IntoValue<Value = U>,
         U: Value,
     {
         let queue = cx.state().queue();
-        let data = val.value();
-        queue.write_buffer(&self.buf, 0, data.as_ref());
+        let val = val.into_value();
+        queue.write_buffer(&self.buf, 0, val.value().as_ref());
     }
 
     pub(crate) fn buffer(&self) -> &Buffer {
@@ -55,6 +56,14 @@ pub trait Value: private::Sealed {
     type Type;
     type Data: AsRef<[u8]>;
     fn value(self) -> Self::Data;
+}
+
+pub struct Data<const N: usize = 4>([f32; N]);
+
+impl<const N: usize> AsRef<[u8]> for Data<N> {
+    fn as_ref(&self) -> &[u8] {
+        bytemuck::cast_slice(&self.0)
+    }
 }
 
 pub(crate) fn values_as_bytes<U>(values: &[U]) -> &[u8]
@@ -152,11 +161,67 @@ impl Value for [[f32; 4]; 4] {
     }
 }
 
-pub struct Data<const N: usize = 4>([f32; N]);
+pub trait IntoValue {
+    type Value: Value;
+    fn into_value(self) -> Self::Value;
+}
 
-impl<const N: usize> AsRef<[u8]> for Data<N> {
-    fn as_ref(&self) -> &[u8] {
-        bytemuck::cast_slice(&self.0)
+impl<U> IntoValue for U
+where
+    U: Value,
+{
+    type Value = Self;
+
+    fn into_value(self) -> Self {
+        self
+    }
+}
+
+impl IntoValue for glam::Vec2 {
+    type Value = [f32; 2];
+
+    fn into_value(self) -> Self::Value {
+        self.to_array()
+    }
+}
+
+impl IntoValue for glam::Vec3 {
+    type Value = [f32; 3];
+
+    fn into_value(self) -> Self::Value {
+        self.to_array()
+    }
+}
+
+impl IntoValue for glam::Vec4 {
+    type Value = [f32; 4];
+
+    fn into_value(self) -> Self::Value {
+        self.to_array()
+    }
+}
+
+impl IntoValue for glam::Mat2 {
+    type Value = [[f32; 2]; 2];
+
+    fn into_value(self) -> Self::Value {
+        self.to_cols_array_2d()
+    }
+}
+
+impl IntoValue for glam::Mat3 {
+    type Value = [[f32; 3]; 3];
+
+    fn into_value(self) -> Self::Value {
+        self.to_cols_array_2d()
+    }
+}
+
+impl IntoValue for glam::Mat4 {
+    type Value = [[f32; 4]; 4];
+
+    fn into_value(self) -> Self::Value {
+        self.to_cols_array_2d()
     }
 }
 
