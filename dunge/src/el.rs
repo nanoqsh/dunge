@@ -3,10 +3,10 @@ use {
         context::Context,
         state::Render,
         time::{Fps, Time},
-        update::Update,
+        update::{Close, Update},
         window::View,
     },
-    std::{cell::Cell, error, fmt, time::Duration},
+    std::{cell::Cell, error, fmt, ops, time::Duration},
     wgpu::SurfaceError,
     winit::{
         error::EventLoopError,
@@ -68,7 +68,7 @@ impl error::Error for LoopError {}
 type Event = event::Event<()>;
 type Target = event_loop::EventLoopWindowTarget<()>;
 
-fn handler<U>(cx: Context, mut view: View, mut update: U) -> impl FnMut(Event, &Target)
+fn handler<U>(cx: Context, view: View, mut update: U) -> impl FnMut(Event, &Target)
 where
     U: Update,
 {
@@ -82,7 +82,7 @@ where
     const WAIT_TIME: Duration = Duration::from_millis(100);
 
     let mut ctrl = Control {
-        close: Cell::default(),
+        view,
         min_delta_time: Cell::new(Duration::from_secs_f32(1. / 60.)),
         delta_time: Duration::ZERO,
         fps: 0,
@@ -99,7 +99,7 @@ where
         Event::NewEvents(cause) => match cause {
             StartCause::ResumeTimeReached { .. } => {
                 log::debug!("resume time reached");
-                view.request_redraw();
+                ctrl.view.request_redraw();
             }
             StartCause::WaitCancelled {
                 requested_resume, ..
@@ -115,10 +115,10 @@ where
             StartCause::Poll => log::debug!("poll"),
             StartCause::Init => log::debug!("init"),
         },
-        Event::WindowEvent { event, window_id } if window_id == view.id() => match event {
+        Event::WindowEvent { event, window_id } if window_id == ctrl.view.id() => match event {
             WindowEvent::Resized(PhysicalSize { width, height }) => {
                 log::debug!("resized: {width}, {height}");
-                view.resize(cx.state());
+                ctrl.view.resize(cx.state());
             }
             WindowEvent::CloseRequested => {
                 log::debug!("close requested");
@@ -126,7 +126,7 @@ where
             }
             WindowEvent::Focused(true) => {
                 log::debug!("focused");
-                view.request_redraw();
+                ctrl.view.request_redraw();
             }
             WindowEvent::KeyboardInput {
                 event:
@@ -185,25 +185,24 @@ where
                     ctrl.fps = fps;
                 }
 
-                update.update(&ctrl);
-                if ctrl.close.get() {
+                if update.update(&ctrl).close() {
                     log::debug!("close");
                     target.exit();
                     return;
                 }
 
                 ctrl.clear_keys();
-                match view.output() {
+                match ctrl.view.output() {
                     Ok(output) => {
-                        let view = output.render_view();
-                        cx.state().draw(&mut render, view, &update);
+                        let rv = output.render_view();
+                        cx.state().draw(&mut render, rv, &update);
                         output.present();
                     }
                     Err(SurfaceError::Timeout) => log::info!("suface error: timeout"),
                     Err(SurfaceError::Outdated) => log::info!("suface error: outdated"),
                     Err(SurfaceError::Lost) => {
                         log::info!("suface error: lost");
-                        view.resize(cx.state());
+                        ctrl.view.resize(cx.state());
                     }
                     Err(SurfaceError::OutOfMemory) => {
                         log::error!("suface error: out of memory");
@@ -220,7 +219,7 @@ where
         Event::Resumed => {
             log::debug!("resumed");
             active = true;
-            view.request_redraw();
+            ctrl.view.request_redraw();
 
             // Reset the timer before start the loop
             time.reset();
@@ -230,7 +229,7 @@ where
 }
 
 pub struct Control {
-    close: Cell<bool>,
+    view: View,
     min_delta_time: Cell<Duration>,
     delta_time: Duration,
     fps: u32,
@@ -239,10 +238,6 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn close(&self) {
-        self.close.set(true);
-    }
-
     pub fn set_min_delta_time(&self, min_delta_time: Duration) {
         self.min_delta_time.set(min_delta_time);
     }
@@ -269,8 +264,28 @@ impl Control {
     }
 }
 
+impl ops::Deref for Control {
+    type Target = View;
+
+    fn deref(&self) -> &Self::Target {
+        &self.view
+    }
+}
+
 #[derive(Clone)]
 pub struct Key {
     pub code: KeyCode,
     pub text: Option<SmolStr>,
+}
+
+#[derive(Clone, Copy)]
+pub enum Then {
+    Run,
+    Close,
+}
+
+impl Close for Then {
+    fn close(self) -> bool {
+        matches!(self, Self::Close)
+    }
 }

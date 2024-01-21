@@ -1,11 +1,12 @@
 [package]
-name = "triangle"
+name = "cube"
 version = "0.1.0"
 edition = { workspace = true }
 
 [dependencies]
 dunge = { workspace = true, features = ["winit"] }
 env_logger = { workspace = true }
+glam = { workspace = true, features = ["debug-glam-assert"] }
 helpers = { path = "../../helpers" }
 
 [lints]

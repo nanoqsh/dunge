@@ -1,12 +1,24 @@
 use crate::{draw::Draw, el::Control, state::Frame};
 
-pub trait Update: Draw {
-    fn update(&mut self, ctrl: &Control);
+pub trait Close {
+    fn close(self) -> bool;
 }
 
-pub fn from_fn<U, D>(update: U, draw: D) -> impl Update
+impl Close for () {
+    fn close(self) -> bool {
+        false
+    }
+}
+
+pub trait Update: Draw {
+    type Close: Close;
+    fn update(&mut self, ctrl: &Control) -> Self::Close;
+}
+
+pub fn from_fn<U, C, D>(update: U, draw: D) -> impl Update
 where
-    U: FnMut(&Control),
+    U: FnMut(&Control) -> C,
+    C: Close,
     D: Fn(Frame),
 {
     struct Func<U, D>(U, D);
@@ -20,13 +32,16 @@ where
         }
     }
 
-    impl<U, D> Update for Func<U, D>
+    impl<U, C, D> Update for Func<U, D>
     where
-        U: FnMut(&Control),
+        U: FnMut(&Control) -> C,
+        C: Close,
         D: Fn(Frame),
     {
-        fn update(&mut self, ctrl: &Control) {
-            (self.0)(ctrl);
+        type Close = C;
+
+        fn update(&mut self, ctrl: &Control) -> Self::Close {
+            (self.0)(ctrl)
         }
     }
 

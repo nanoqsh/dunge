@@ -10,6 +10,7 @@ use {
     std::{
         error, fmt,
         future::{Future, IntoFuture},
+        ops,
         pin::Pin,
         sync::Arc,
         task::{self, Poll},
@@ -118,10 +119,6 @@ impl Window {
         self.cx.clone()
     }
 
-    pub fn format(&self) -> Format {
-        self.view.format()
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run<U>(self, update: U) -> Result<(), LoopError>
     where
@@ -139,9 +136,17 @@ impl Window {
     }
 }
 
+impl ops::Deref for Window {
+    type Target = View;
+
+    fn deref(&self) -> &Self::Target {
+        &self.view
+    }
+}
+
 type SharedWindow = Arc<window::Window>;
 
-pub(crate) struct View {
+pub struct View {
     conf: SurfaceConfiguration,
     surface: Surface<'static>,
     inner: SharedWindow,
@@ -187,19 +192,27 @@ impl View {
         })
     }
 
-    fn format(&self) -> Format {
+    pub fn shared_window(&self) -> SharedWindow {
+        Arc::clone(&self.inner)
+    }
+
+    pub fn format(&self) -> Format {
         Format::from_wgpu(self.conf.format).expect("supported format")
     }
 
-    pub fn id(&self) -> WindowId {
+    pub fn size(&self) -> (u32, u32) {
+        (self.conf.width, self.conf.height)
+    }
+
+    pub(crate) fn id(&self) -> WindowId {
         self.inner.id()
     }
 
-    pub fn request_redraw(&self) {
+    pub(crate) fn request_redraw(&self) {
         self.inner.request_redraw();
     }
 
-    pub fn output(&self) -> Result<Output, SurfaceError> {
+    pub(crate) fn output(&self) -> Result<Output, SurfaceError> {
         use wgpu::TextureViewDescriptor;
 
         let output = self.surface.get_current_texture()?;
@@ -215,7 +228,7 @@ impl View {
         })
     }
 
-    pub fn resize(&mut self, state: &State) {
+    pub(crate) fn resize(&mut self, state: &State) {
         let size = self.inner.inner_size();
         if size.width > 0 && size.height > 0 {
             self.conf.width = size.width;

@@ -5,6 +5,7 @@ members = [
     "dunge_macros",
     "dunge_shader",
     "dunge_tools",
+    "examples/cube",
     "examples/triangle",
     "helpers",
 ]
@@ -27,6 +28,7 @@ dunge_shader = { version = "=0.3.0-alpha", path = "dunge_shader" }
 dunge_tools = { version = "=0.3.0-alpha", path = "dunge_tools" }
 bytemuck = "1.13"
 glam = "0.25"
+env_logger = "0.11"
 log = "0.4"
 
 [workspace.lints.clippy]

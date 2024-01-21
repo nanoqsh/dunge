@@ -11,7 +11,7 @@ async fn run() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
-            el::KeyCode,
+            el::{KeyCode, Then},
             glam::Vec4,
             sl::{self, Groups, Index, Out},
             uniform::Uniform,
@@ -50,16 +50,17 @@ async fn run() -> Result<(), Error> {
     let update = |ctrl: &Control| {
         for key in ctrl.pressed_keys() {
             if key.code == KeyCode::Escape {
-                ctrl.close();
+                return Then::Close;
             }
         }
 
         r += ctrl.delta_time().as_secs_f32();
         uniform.update(&cx, r);
+        Then::Run
     };
 
+    let clear = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = |mut frame: Frame| {
-        let clear = Rgba::from_standard([0., 0., 0., 1.]);
         frame.layer(&layer, clear).bind(&bind).draw_points(3);
     };
 
