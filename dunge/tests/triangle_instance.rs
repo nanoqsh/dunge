@@ -7,7 +7,6 @@ use {
         format::Format,
         instance::Row,
         sl::{self, InInstance, Index, Out},
-        state::Render,
         texture, Instance,
     },
     glam::Vec2,
@@ -31,7 +30,7 @@ fn render() -> Result<(), Error> {
         let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
         let p = sl::vec2(sl::cos(x), sl::sin(y)) * TRIANGLE_SIZE + t.0;
         Out {
-            place: sl::concat(p, Vec2::new(0., 1.)),
+            place: sl::vec4_concat(p, Vec2::new(0., 1.)),
             color: sl::vec4_with(sl::fragment(t.1), 1.),
         }
     };
@@ -65,7 +64,7 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    Render::default().draw_to(&cx, &view, draw);
+    cx.draw_to(&view, draw);
     let mapped = helpers::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)

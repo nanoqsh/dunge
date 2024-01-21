@@ -137,7 +137,7 @@ where
     }
 }
 
-pub const fn concat<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<S>>
+pub const fn vec4_concat<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<S>>
 where
     A: Eval<E, Out = types::Vec2<S>>,
     B: Eval<E, Out = types::Vec2<S>>,

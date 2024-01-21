@@ -1,15 +1,18 @@
 use {
     crate::{
         bind::{self, Binder, GroupHandler, UniqueBinding, Update, Visit},
+        draw::Draw,
         instance::Row,
         layer::{Layer, Options},
         mesh::{self, Mesh},
         shader::Shader,
         sl::IntoModule,
         state::State,
-        texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
+        texture::{
+            self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
+        },
         uniform::{IntoValue, Uniform, Value},
-        Vertex,
+        Group, Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
 };
@@ -91,16 +94,26 @@ impl Context {
         view.map(&self.0, tx, rx).await
     }
 
-    pub fn update_group<G>(
+    pub fn update_group<G, H>(
         &self,
         uni: &mut UniqueBinding,
-        handler: &GroupHandler<G>,
+        handler: &GroupHandler<H>,
         group: &G,
     ) -> Update
     where
-        G: Visit,
+        G: Visit<Projection = H::Projection>,
+        H: Group,
     {
         bind::update(&self.0, uni, handler, group)
+    }
+
+    pub fn draw_to<T, D>(&self, texture: &T, draw: D)
+    where
+        T: DrawTexture,
+        D: Draw,
+    {
+        let view = texture.draw_texture().render_view();
+        self.0.draw(view, draw);
     }
 }
 

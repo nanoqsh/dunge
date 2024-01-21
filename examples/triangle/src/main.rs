@@ -40,8 +40,8 @@ async fn run() -> Result<(), Error> {
     let mut r = 0.;
     let uniform = cx.make_uniform(r);
     let bind = {
-        let mut binder = cx.make_binder(&shader);
         let offset = Offset(&uniform);
+        let mut binder = cx.make_binder(&shader);
         binder.bind(&offset);
         binder.into_binding()
     };

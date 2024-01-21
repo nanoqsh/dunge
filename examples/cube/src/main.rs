@@ -9,13 +9,23 @@ fn main() {
 
 async fn run() -> Result<(), Error> {
     use dunge::{
+        bind::UniqueBinding,
         color::Rgba,
+        context::Context,
+        draw::{self, Draw},
         el::{KeyCode, Then},
-        glam::{Mat4, Quat, Vec3},
+        format::Format,
+        glam::{Mat4, Quat, Vec2, Vec3},
+        group::BoundTexture,
         sl::{self, Groups, InVertex, Out},
+        state::Options,
+        texture::{self, Filter, Sampler, Texture, ZeroSized},
         uniform::Uniform,
-        update, Control, Frame, Group, Vertex,
+        update::Update,
+        Control, Frame, Group, Vertex,
     };
+
+    type RenderTexture = texture::Draw<texture::Bind<Texture>>;
 
     #[repr(C)]
     #[derive(Vertex)]
@@ -34,6 +44,21 @@ async fn run() -> Result<(), Error> {
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
 
+    #[repr(C)]
+    #[derive(Vertex)]
+    struct Screen([f32; 2], [f32; 2]);
+
+    #[derive(Group)]
+    struct Map<'a> {
+        tex: BoundTexture<'a>,
+        sam: &'a Sampler,
+    }
+
+    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Out {
+        place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
+        color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.1)),
+    };
+
     let window = dunge::window().with_title("Cube").await?;
     let transform = |r, size| {
         let pos = Vec3::new(0., 0., -2.);
@@ -49,21 +74,42 @@ async fn run() -> Result<(), Error> {
     };
 
     let cx = window.context();
-    let shader = cx.make_shader(cube);
+    let cube_shader = cx.make_shader(cube);
+    let screen_shader = cx.make_shader(screen);
     let mut r = 0.;
     let uniform = {
         let mat = transform(r, window.size());
         cx.make_uniform(mat)
     };
 
-    let bind = {
-        let mut binder = cx.make_binder(&shader);
+    let bind_transform = {
         let tr = Transform(&uniform);
+        let mut binder = cx.make_binder(&cube_shader);
         binder.bind(&tr);
         binder.into_binding()
     };
 
-    let mech = {
+    let make_screen_tex = |cx: &Context, size| -> Result<_, ZeroSized> {
+        use dunge::texture::Data;
+
+        let data = Data::empty(size, Format::RgbAlpha)?.with_bind().with_draw();
+        Ok(cx.make_texture(data))
+    };
+
+    let mut tex = make_screen_tex(&cx, window.size())?;
+    let sam = cx.make_sampler(Filter::Nearest);
+    let (bind_map, handler) = {
+        let map = Map {
+            tex: BoundTexture::new(&tex),
+            sam: &sam,
+        };
+
+        let mut binder = cx.make_binder(&screen_shader);
+        let handler = binder.bind(&map);
+        (binder.into_binding(), handler)
+    };
+
+    let mesh = {
         use dunge::mesh::Data;
 
         const P: f32 = 0.5;
@@ -117,12 +163,40 @@ async fn run() -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let layer = cx.make_layer(&shader, window.format());
-    let update = |ctrl: &Control| {
+    let screen_mesh = {
+        use dunge::mesh::Data;
+
+        const VERTS: [Screen; 4] = [
+            Screen([-1., -1.], [0., 1.]),
+            Screen([1., -1.], [1., 1.]),
+            Screen([1., 1.], [1., 0.]),
+            Screen([-1., 1.], [0., 0.]),
+        ];
+
+        let data = Data::from_quads(&[VERTS])?;
+        cx.make_mesh(&data)
+    };
+
+    let main_layer = cx.make_layer(&cube_shader, Format::RgbAlpha);
+    let screen_layer = cx.make_layer(&screen_shader, window.format());
+    let mut size = window.size();
+    let update = |state: &mut State, ctrl: &Control| {
         for key in ctrl.pressed_keys() {
             if key.code == KeyCode::Escape {
                 return Then::Close;
             }
+        }
+
+        if size != ctrl.size() {
+            size = ctrl.size();
+            *state.tex = make_screen_tex(&cx, size).expect("TODO: error handling");
+            let map = Map {
+                tex: BoundTexture::new(state.tex),
+                sam: &sam,
+            };
+
+            cx.update_group(&mut state.bind_map, &handler, &map)
+                .expect("TODO: error handling");
         }
 
         r += ctrl.delta_time().as_secs_f32();
@@ -132,10 +206,63 @@ async fn run() -> Result<(), Error> {
     };
 
     let clear = Rgba::from_standard([0., 0., 0., 1.]);
-    let draw = |mut frame: Frame| {
-        frame.layer(&layer, clear).bind(&bind).draw(&mech);
+    let draw = |state: &State, mut frame: Frame| {
+        let main = |mut frame: Frame| {
+            frame
+                .layer(&main_layer, clear)
+                .bind(&bind_transform)
+                .draw(&mesh);
+        };
+
+        cx.draw_to(state.tex, draw::from_fn(main));
+
+        frame
+            .layer(&screen_layer, Options::default())
+            .bind(&state.bind_map)
+            .draw(&screen_mesh);
     };
 
-    window.run(update::from_fn(update, draw))?;
+    struct App<'a, U, D> {
+        state: State<'a>,
+        update: U,
+        draw: D,
+    }
+
+    struct State<'a> {
+        tex: &'a mut RenderTexture,
+        bind_map: UniqueBinding,
+    }
+
+    let app = App {
+        state: State {
+            tex: &mut tex,
+            bind_map,
+        },
+        update,
+        draw,
+    };
+
+    impl<U, D> Draw for App<'_, U, D>
+    where
+        D: FnMut(&State, Frame),
+    {
+        fn draw(&mut self, frame: Frame) {
+            (self.draw)(&mut self.state, frame);
+        }
+    }
+
+    impl<U, D> Update for App<'_, U, D>
+    where
+        U: FnMut(&mut State, &Control) -> Then,
+        D: FnMut(&State, Frame),
+    {
+        type Flow = Then;
+
+        fn update(&mut self, ctrl: &Control) -> Self::Flow {
+            (self.update)(&mut self.state, ctrl)
+        }
+    }
+
+    window.run(app)?;
     Ok(())
 }

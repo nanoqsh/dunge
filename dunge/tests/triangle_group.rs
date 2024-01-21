@@ -8,7 +8,6 @@ use {
         group::BoundTexture,
         mesh,
         sl::{self, Groups, InVertex, Out},
-        state::Render,
         texture::{self, Filter, Sampler},
         Group, Vertex,
     },
@@ -37,7 +36,7 @@ fn render() -> Result<(), Error> {
     }
 
     let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| Out {
-        place: sl::concat(vert.pos, Vec2::new(0., 1.)),
+        place: sl::vec4_concat(vert.pos, Vec2::new(0., 1.)),
         color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
     };
 
@@ -100,7 +99,7 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    Render::default().draw_to(&cx, &view, draw);
+    cx.draw_to(&view, draw);
     let mapped = helpers::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)

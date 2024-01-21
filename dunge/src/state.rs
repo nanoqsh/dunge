@@ -1,11 +1,11 @@
 use {
     crate::{
         color::Rgba,
-        context::{Context, Error},
+        context::Error,
         draw::Draw,
         format::Format,
         layer::{Layer, SetLayer},
-        texture::{CopyBuffer, CopyTexture, DrawTexture},
+        texture::{CopyBuffer, CopyTexture},
     },
     std::sync::atomic::{self, AtomicUsize},
     wgpu::{Color, CommandEncoder, Device, Instance, LoadOp, Queue, TextureView},
@@ -87,28 +87,24 @@ impl State {
         self.shader_ids.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
-    pub fn draw<D>(&self, render: &mut Render, view: RenderView, draw: D)
+    pub fn draw<D>(&self, view: RenderView, mut draw: D)
     where
         D: Draw,
     {
+        use wgpu::CommandEncoderDescriptor;
+
         self.queue.submit([]);
-        draw.draw(render.0.make(&self.device, view));
-        let buffers = render.0.drain().map(CommandEncoder::finish);
-        self.queue.submit(buffers);
-    }
-}
+        let mut encoder = {
+            let desc = CommandEncoderDescriptor::default();
+            self.device.create_command_encoder(&desc)
+        };
 
-#[derive(Default)]
-pub struct Render(Encoders);
+        draw.draw(Frame {
+            view,
+            encoder: &mut encoder,
+        });
 
-impl Render {
-    pub fn draw_to<T, D>(&mut self, cx: &Context, texture: &T, draw: D)
-    where
-        T: DrawTexture,
-        D: Draw,
-    {
-        let view = texture.draw_texture().render_view();
-        cx.state().draw(self, view, draw);
+        self.queue.submit([encoder.finish()]);
     }
 }
 
@@ -139,20 +135,10 @@ impl From<Rgba> for Options {
 
 pub struct Frame<'v, 'e> {
     view: RenderView<'v>,
-    device: &'e Device,
-    encoders: &'e mut Encoders,
-    id: usize,
+    encoder: &'e mut CommandEncoder,
 }
 
 impl Frame<'_, '_> {
-    pub fn subframe<'e, 'v, T>(&'e mut self, texture: &'v T) -> Frame<'v, 'e>
-    where
-        T: DrawTexture,
-    {
-        let view = texture.draw_texture().render_view();
-        self.encoders.make(self.device, view)
-    }
-
     pub fn layer<'p, V, I, O>(&'p mut self, layer: &'p Layer<V, I>, opts: O) -> SetLayer<'p, V, I>
     where
         O: Into<Options>,
@@ -179,8 +165,7 @@ impl Frame<'_, '_> {
             ..Default::default()
         };
 
-        let encoder = self.encoders.get_mut(self.id);
-        let pass = encoder.begin_render_pass(&desc);
+        let pass = self.encoder.begin_render_pass(&desc);
         layer.set(pass)
     }
 
@@ -188,39 +173,7 @@ impl Frame<'_, '_> {
     where
         T: CopyTexture,
     {
-        let encoder = self.encoders.get_mut(self.id);
-        buffer.copy_texture(texture.copy_texture(), encoder);
-    }
-}
-
-#[derive(Default)]
-struct Encoders(Vec<CommandEncoder>);
-
-impl Encoders {
-    fn make<'e, 'v>(&'e mut self, device: &'e Device, view: RenderView<'v>) -> Frame<'v, 'e> {
-        use wgpu::CommandEncoderDescriptor;
-
-        let encoder = {
-            let desc = CommandEncoderDescriptor::default();
-            device.create_command_encoder(&desc)
-        };
-
-        let id = self.0.len();
-        self.0.push(encoder);
-        Frame {
-            view,
-            device,
-            encoders: self,
-            id,
-        }
-    }
-
-    fn get_mut(&mut self, id: usize) -> &mut CommandEncoder {
-        &mut self.0[id]
-    }
-
-    fn drain(&mut self) -> impl Iterator<Item = CommandEncoder> + '_ {
-        self.0.drain(..)
+        buffer.copy_texture(texture.copy_texture(), self.encoder);
     }
 }
 

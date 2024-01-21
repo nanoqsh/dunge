@@ -3,7 +3,7 @@ use {
         group::BoundTexture, shader::Shader, state::State, texture::Sampler, uniform::Uniform,
         Group,
     },
-    std::{any::TypeId, fmt, marker::PhantomData, sync::Arc},
+    std::{any::TypeId, error, fmt, marker::PhantomData, sync::Arc},
     wgpu::{
         BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
     },
@@ -58,9 +58,10 @@ pub struct GroupHandler<G> {
     shader_id: usize,
     id: usize,
     layout: Arc<BindGroupLayout>,
-    ty: PhantomData<G>,
+    ty: PhantomData<fn(G)>,
 }
 
+#[derive(Debug)]
 pub struct ForeignShader;
 
 impl fmt::Display for ForeignShader {
@@ -68,6 +69,8 @@ impl fmt::Display for ForeignShader {
         write!(f, "the handler doesn't belong to this shader")
     }
 }
+
+impl error::Error for ForeignShader {}
 
 pub trait Binding {
     fn binding(&self) -> Bind;
@@ -104,10 +107,10 @@ impl Binding for SharedBinding {
 
 pub type Update = Result<(), ForeignShader>;
 
-pub(crate) fn update<G>(
+pub(crate) fn update<G, H>(
     state: &State,
     uni: &mut UniqueBinding,
-    handler: &GroupHandler<G>,
+    handler: &GroupHandler<H>,
     group: &G,
 ) -> Update
 where

@@ -1,9 +1,8 @@
 use {
     crate::{
         context::Context,
-        state::Render,
         time::{Fps, Time},
-        update::{Close, Update},
+        update::Update,
         window::View,
     },
     std::{cell::Cell, error, fmt, ops, time::Duration},
@@ -92,7 +91,6 @@ where
 
     // Initial state
     let mut active = false;
-    let mut render = Render::default();
     let mut time = Time::now();
     let mut fps = Fps::default();
     move |ev, target| match ev {
@@ -185,7 +183,7 @@ where
                     ctrl.fps = fps;
                 }
 
-                if update.update(&ctrl).close() {
+                if let Then::Close = update.update(&ctrl).flow() {
                     log::debug!("close");
                     target.exit();
                     return;
@@ -195,7 +193,7 @@ where
                 match ctrl.view.output() {
                     Ok(output) => {
                         let rv = output.render_view();
-                        cx.state().draw(&mut render, rv, &update);
+                        cx.state().draw(rv, &mut update);
                         output.present();
                     }
                     Err(SurfaceError::Timeout) => log::info!("suface error: timeout"),
@@ -278,14 +276,24 @@ pub struct Key {
     pub text: Option<SmolStr>,
 }
 
+pub trait Flow {
+    fn flow(self) -> Then;
+}
+
+impl Flow for () {
+    fn flow(self) -> Then {
+        Then::Run
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Then {
     Run,
     Close,
 }
 
-impl Close for Then {
-    fn close(self) -> bool {
-        matches!(self, Self::Close)
+impl Flow for Then {
+    fn flow(self) -> Self {
+        self
     }
 }

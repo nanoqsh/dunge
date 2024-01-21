@@ -7,7 +7,6 @@ use {
         format::Format,
         mesh,
         sl::{self, InVertex, Out},
-        state::Render,
         texture, Vertex,
     },
     glam::Vec2,
@@ -26,7 +25,7 @@ fn render() -> Result<(), Error> {
     struct Vert([f32; 2], [f32; 3]);
 
     let triangle = |vert: InVertex<Vert>| Out {
-        place: sl::concat(vert.0, Vec2::new(0., 1.)),
+        place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: sl::vec4_with(sl::fragment(vert.1), 1.),
     };
 
@@ -60,7 +59,7 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    Render::default().draw_to(&cx, &view, draw);
+    cx.draw_to(&view, draw);
     let mapped = helpers::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)

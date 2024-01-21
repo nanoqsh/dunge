@@ -6,7 +6,6 @@ use {
         draw,
         format::Format,
         sl::{self, Index, Out},
-        state::Render,
         texture,
     },
     glam::Vec4,
@@ -49,7 +48,7 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    Render::default().draw_to(&cx, &view, draw);
+    cx.draw_to(&view, draw);
     let mapped = helpers::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)
