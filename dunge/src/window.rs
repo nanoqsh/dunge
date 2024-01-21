@@ -120,19 +120,19 @@ impl Window {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn run<U>(self, update: U) -> Result<(), LoopError>
+    pub fn run<U>(self, upd: U) -> Result<(), LoopError>
     where
         U: Update,
     {
-        self.el.run(self.cx, self.view, update)
+        self.el.run(self.cx, self.view, upd)
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn spawn<U>(self, update: U)
+    pub fn spawn<U>(self, upd: U)
     where
         U: Update + 'static,
     {
-        self.el.spawn(self.cx, self.view, update)
+        self.el.spawn(self.cx, self.view, upd)
     }
 }
 

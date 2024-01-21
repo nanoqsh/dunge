@@ -12,7 +12,7 @@ async fn run() -> Result<(), Error> {
         bind::UniqueBinding,
         color::Rgba,
         context::Context,
-        draw::{self, Draw},
+        draw,
         el::{KeyCode, Then},
         format::Format,
         glam::{Mat4, Quat, Vec2, Vec3},
@@ -21,8 +21,7 @@ async fn run() -> Result<(), Error> {
         state::Options,
         texture::{self, Filter, Sampler, Texture, ZeroSized},
         uniform::Uniform,
-        update::Update,
-        Control, Frame, Group, Vertex,
+        update, Control, Frame, Group, Vertex,
     };
 
     type RenderTexture = texture::Draw<texture::Bind<Texture>>;
@@ -34,10 +33,8 @@ async fn run() -> Result<(), Error> {
         col: [f32; 3],
     }
 
-    type Mat = [[f32; 4]; 4];
-
     #[derive(Group)]
-    struct Transform<'a>(&'a Uniform<Mat>);
+    struct Transform<'a>(&'a Uniform<[[f32; 4]; 4]>);
 
     let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform>| Out {
         place: tr.0 * sl::vec4_with(vert.pos, 1.),
@@ -180,7 +177,7 @@ async fn run() -> Result<(), Error> {
     let main_layer = cx.make_layer(&cube_shader, Format::RgbAlpha);
     let screen_layer = cx.make_layer(&screen_shader, window.format());
     let mut size = window.size();
-    let update = |state: &mut State, ctrl: &Control| {
+    let upd = |state: &mut State, ctrl: &Control| {
         for key in ctrl.pressed_keys() {
             if key.code == KeyCode::Escape {
                 return Then::Close;
@@ -189,14 +186,15 @@ async fn run() -> Result<(), Error> {
 
         if size != ctrl.size() {
             size = ctrl.size();
-            *state.tex = make_screen_tex(&cx, size).expect("TODO: error handling");
+            *state.tex = dunge::then_try! { make_screen_tex(&cx, size) };
             let map = Map {
                 tex: BoundTexture::new(state.tex),
                 sam: &sam,
             };
 
-            cx.update_group(&mut state.bind_map, &handler, &map)
-                .expect("TODO: error handling");
+            dunge::then_try! {
+                cx.update_group(&mut state.bind_map, &handler, &map);
+            }
         }
 
         r += ctrl.delta_time().as_secs_f32();
@@ -222,47 +220,16 @@ async fn run() -> Result<(), Error> {
             .draw(&screen_mesh);
     };
 
-    struct App<'a, U, D> {
-        state: State<'a>,
-        update: U,
-        draw: D,
-    }
-
     struct State<'a> {
         tex: &'a mut RenderTexture,
         bind_map: UniqueBinding,
     }
 
-    let app = App {
-        state: State {
-            tex: &mut tex,
-            bind_map,
-        },
-        update,
-        draw,
+    let state = State {
+        tex: &mut tex,
+        bind_map,
     };
 
-    impl<U, D> Draw for App<'_, U, D>
-    where
-        D: FnMut(&State, Frame),
-    {
-        fn draw(&mut self, frame: Frame) {
-            (self.draw)(&mut self.state, frame);
-        }
-    }
-
-    impl<U, D> Update for App<'_, U, D>
-    where
-        U: FnMut(&mut State, &Control) -> Then,
-        D: FnMut(&State, Frame),
-    {
-        type Flow = Then;
-
-        fn update(&mut self, ctrl: &Control) -> Self::Flow {
-            (self.update)(&mut self.state, ctrl)
-        }
-    }
-
-    window.run(app)?;
-    Ok(())
+    let handle = update::with_state(state, upd, draw);
+    window.run(handle).map_err(Box::from)
 }

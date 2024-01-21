@@ -47,7 +47,7 @@ async fn run() -> Result<(), Error> {
     };
 
     let layer = cx.make_layer(&shader, window.format());
-    let update = |ctrl: &Control| {
+    let upd = |ctrl: &Control| {
         for key in ctrl.pressed_keys() {
             if key.code == KeyCode::Escape {
                 return Then::Close;
@@ -64,6 +64,6 @@ async fn run() -> Result<(), Error> {
         frame.layer(&layer, clear).bind(&bind).draw_points(3);
     };
 
-    window.run(update::from_fn(update, draw))?;
+    window.run(update::from_fn(upd, draw))?;
     Ok(())
 }

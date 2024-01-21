@@ -9,35 +9,44 @@ pub trait Update: Draw {
     fn update(&mut self, ctrl: &Control) -> Self::Flow;
 }
 
-pub fn from_fn<U, F, D>(update: U, draw: D) -> impl Update
+pub fn from_fn<U, F, D>(mut upd: U, mut draw: D) -> impl Update
 where
     U: FnMut(&Control) -> F,
     F: Flow,
     D: FnMut(Frame),
 {
-    struct Func<U, D>(U, D);
+    with_state((), move |(), ctrl| upd(ctrl), move |(), frame| draw(frame))
+}
 
-    impl<U, D> Draw for Func<U, D>
+pub fn with_state<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update
+where
+    U: FnMut(&mut S, &Control) -> F,
+    F: Flow,
+    D: FnMut(&S, Frame),
+{
+    struct Func<S, U, D>(S, U, D);
+
+    impl<S, U, D> Draw for Func<S, U, D>
     where
-        D: FnMut(Frame),
+        D: FnMut(&S, Frame),
     {
         fn draw(&mut self, frame: Frame) {
-            (self.1)(frame);
+            (self.2)(&self.0, frame);
         }
     }
 
-    impl<U, F, D> Update for Func<U, D>
+    impl<S, U, F, D> Update for Func<S, U, D>
     where
-        U: FnMut(&Control) -> F,
+        U: FnMut(&mut S, &Control) -> F,
         F: Flow,
-        D: FnMut(Frame),
+        D: FnMut(&S, Frame),
     {
         type Flow = F;
 
         fn update(&mut self, ctrl: &Control) -> Self::Flow {
-            (self.0)(ctrl)
+            (self.1)(&mut self.0, ctrl)
         }
     }
 
-    Func(update, draw)
+    Func(state, upd, draw)
 }
