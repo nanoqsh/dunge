@@ -12,7 +12,7 @@ use {
             self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
         },
         uniform::{IntoValue, Uniform, Value},
-        Group, Vertex,
+        Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
 };
@@ -94,15 +94,14 @@ impl Context {
         view.map(&self.0, tx, rx).await
     }
 
-    pub fn update_group<G, H>(
+    pub fn update_group<G>(
         &self,
         uni: &mut UniqueBinding,
-        handler: &GroupHandler<H>,
+        handler: &GroupHandler<G::Projection>,
         group: &G,
     ) -> Update
     where
-        G: Visit<Projection = H::Projection>,
-        H: Group,
+        G: Visit,
     {
         bind::update(&self.0, uni, handler, group)
     }

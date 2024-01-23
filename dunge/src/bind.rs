@@ -54,11 +54,11 @@ where
     visitor.0
 }
 
-pub struct GroupHandler<G> {
+pub struct GroupHandler<P> {
     shader_id: usize,
     id: usize,
     layout: Arc<BindGroupLayout>,
-    ty: PhantomData<fn(G)>,
+    ty: PhantomData<P>,
 }
 
 #[derive(Debug)]
@@ -107,10 +107,10 @@ impl Binding for SharedBinding {
 
 pub type Update = Result<(), ForeignShader>;
 
-pub(crate) fn update<G, H>(
+pub(crate) fn update<G>(
     state: &State,
     uni: &mut UniqueBinding,
-    handler: &GroupHandler<H>,
+    handler: &GroupHandler<G::Projection>,
     group: &G,
 ) -> Update
 where
@@ -187,7 +187,7 @@ impl<'a> Binder<'a> {
         }
     }
 
-    pub fn bind<G>(&mut self, group: &G) -> GroupHandler<G>
+    pub fn bind<G>(&mut self, group: &G) -> GroupHandler<G::Projection>
     where
         G: Visit,
     {
