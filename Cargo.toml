@@ -11,21 +11,21 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.0-alpha"
+version = "0.3.0-alpha.1"
 edition = "2021"
 license = "MIT"
 authors = ["nanoqsh"]
 keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
-readme = "../README.md"
+readme = "README.md"
 repository = "https://github.com/nanoqsh/dunge"
 rust-version = "1.75"
 
 [workspace.dependencies]
-dunge = { version = "=0.3.0-alpha", path = "dunge" }
-dunge_macros = { version = "=0.3.0-alpha", path = "dunge_macros" }
-dunge_shader = { version = "=0.3.0-alpha", path = "dunge_shader" }
-dunge_tools = { version = "=0.3.0-alpha", path = "dunge_tools" }
+dunge = { version = "=0.3.0-alpha.1", path = "dunge" }
+dunge_macros = { version = "=0.3.0-alpha.1", path = "dunge_macros" }
+dunge_shader = { version = "=0.3.0-alpha.1", path = "dunge_shader" }
+dunge_tools = { version = "=0.3.0-alpha.1", path = "dunge_tools" }
 bytemuck = "1.13"
 glam = "0.25"
 env_logger = "0.11"
