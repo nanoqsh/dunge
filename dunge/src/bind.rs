@@ -10,6 +10,7 @@ use {
 };
 
 pub trait Visit: Group {
+    const N_MEMBERS: usize;
     fn visit<'a>(&'a self, visitor: &mut Visitor<'a>);
 }
 
@@ -49,7 +50,7 @@ fn visit<G>(group: &G) -> Vec<BindGroupEntry>
 where
     G: Visit,
 {
-    let mut visitor = Visitor(vec![]);
+    let mut visitor = Visitor(Vec::with_capacity(G::N_MEMBERS));
     group.visit(&mut visitor);
     visitor.0
 }
@@ -105,14 +106,12 @@ impl Binding for SharedBinding {
     }
 }
 
-pub type Update = Result<(), ForeignShader>;
-
 pub(crate) fn update<G>(
     state: &State,
     uni: &mut UniqueBinding,
     handler: &GroupHandler<G::Projection>,
     group: &G,
-) -> Update
+) -> Result<(), ForeignShader>
 where
     G: Visit,
 {

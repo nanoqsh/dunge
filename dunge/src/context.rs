@@ -1,6 +1,6 @@
 use {
     crate::{
-        bind::{self, Binder, GroupHandler, UniqueBinding, Update, Visit},
+        bind::{self, Binder, ForeignShader, GroupHandler, UniqueBinding, Visit},
         draw::Draw,
         instance::Row,
         layer::{Layer, Options},
@@ -99,7 +99,7 @@ impl Context {
         uni: &mut UniqueBinding,
         handler: &GroupHandler<G::Projection>,
         group: &G,
-    ) -> Update
+    ) -> Result<(), ForeignShader>
     where
         G: Visit,
     {

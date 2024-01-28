@@ -74,6 +74,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         quote::quote! { <#ty as ::dunge::group::MemberProjection>::TYPE }
     });
 
+    let n_members = fields.len();
     let group_visit_members = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         quote::quote! { ::dunge::bind::VisitMember::visit_member(self.#ident, visitor) }
@@ -118,6 +119,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         }
 
         impl ::dunge::bind::Visit for #name<#(#anon_lts),*> {
+            const N_MEMBERS: ::core::primitive::usize = #n_members;
             fn visit<'a>(&'a self, visitor: &mut ::dunge::bind::Visitor<'a>) {
                 #(#group_visit_members);*;
             }
@@ -160,6 +162,7 @@ mod tests {
             }
 
             impl ::dunge::bind::Visit for Map<'_> {
+                const N_MEMBERS: ::core::primitive::usize = 2usize;
                 fn visit<'a>(&'a self, visitor: &mut ::dunge::bind::Visitor<'a>) {
                     ::dunge::bind::VisitMember::visit_member(self.tex, visitor);
                     ::dunge::bind::VisitMember::visit_member(self.sam, visitor);
@@ -202,6 +205,7 @@ mod tests {
             }
 
             impl ::dunge::bind::Visit for Map<'_> {
+                const N_MEMBERS: ::core::primitive::usize = 2usize;
                 fn visit<'a>(&'a self, visitor: &mut ::dunge::bind::Visitor<'a>) {
                     ::dunge::bind::VisitMember::visit_member(self.0, visitor);
                     ::dunge::bind::VisitMember::visit_member(self.1, visitor);
