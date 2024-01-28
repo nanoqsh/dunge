@@ -45,10 +45,12 @@ features = ["android-native-activity"]
 optional = true
 
 [dev-dependencies]
+dunge_shader = { workspace = true, features = ["wgsl"] }
 helpers = { path = "../helpers" }
 
 [features]
 winit = ["dep:instant", "dep:winit"]
+wgsl = ["dunge_shader/wgsl"]
 
 [lints]
 workspace = true

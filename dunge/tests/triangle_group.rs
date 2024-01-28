@@ -42,6 +42,8 @@ fn render() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
+    fs::write("tests/triangle_group.wgsl", shader.debug_wgsl())?;
+
     let map = {
         let texture = {
             use texture::Data;

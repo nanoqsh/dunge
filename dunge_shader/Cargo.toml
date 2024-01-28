@@ -16,5 +16,8 @@ glam = { workspace = true }
 log = { workspace = true }
 naga = "0.19"
 
+[features]
+wgsl = ["naga/wgsl-out"]
+
 [lints]
 workspace = true

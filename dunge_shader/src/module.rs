@@ -88,4 +88,47 @@ where
 pub struct Module {
     pub cx: Context,
     pub nm: naga::Module,
+    pub wgsl: String,
+}
+
+impl Module {
+    pub(crate) fn new(cx: Context, nm: naga::Module) -> Self {
+        let wgsl;
+
+        #[cfg(any(debug_assertions, feature = "wgsl"))]
+        {
+            use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+            let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
+            let info = match validator.validate(&nm) {
+                Ok(info) => info,
+                Err(err) => {
+                    log::error!("{nm:#?}");
+                    panic!("shader error: {err}\n{val:#?}", val = err.as_inner());
+                }
+            };
+
+            #[cfg(feature = "wgsl")]
+            {
+                use naga::back::wgsl::{self, WriterFlags};
+
+                wgsl = match wgsl::write_string(&nm, &info, WriterFlags::all()) {
+                    Ok(wgsl) => wgsl,
+                    Err(err) => panic!("wgsl writer error: {err}"),
+                };
+            }
+
+            #[cfg(not(feature = "wgsl"))]
+            {
+                _ = info;
+            }
+        }
+
+        #[cfg(not(feature = "wgsl"))]
+        {
+            wgsl = String::new();
+        }
+
+        Self { cx, nm, wgsl }
+    }
 }

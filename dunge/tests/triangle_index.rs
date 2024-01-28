@@ -33,6 +33,8 @@ fn render() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
+    fs::write("tests/triangle_index.wgsl", shader.debug_wgsl())?;
+
     let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
         use texture::Data;

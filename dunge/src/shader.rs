@@ -5,7 +5,7 @@ use {
         state::State,
         types::{MemberType, ScalarType, ValueType, VectorType},
     },
-    std::{cell::Cell, marker::PhantomData},
+    std::{cell::Cell, marker::PhantomData, mem},
     wgpu::{
         BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout,
         VertexFormat, VertexStepMode,
@@ -14,6 +14,7 @@ use {
 
 pub struct Shader<V, I> {
     inner: Inner,
+    wgsl: String,
     ty: PhantomData<(V, I)>,
 }
 
@@ -22,10 +23,20 @@ impl<V, I> Shader<V, I> {
     where
         M: IntoModule<A, Vertex = V>,
     {
+        let mut module = module.into_module();
+        let wgsl = mem::take(&mut module.wgsl);
         Self {
-            inner: Inner::new(state, module.into_module()),
+            inner: Inner::new(state, module),
+            wgsl,
             ty: PhantomData,
         }
+    }
+
+    /// Debug generated wgsl shader.
+    ///
+    /// Is empty when the `wgsl` feature is disabled.
+    pub fn debug_wgsl(&self) -> &str {
+        &self.wgsl
     }
 
     pub(crate) fn id(&self) -> usize {
@@ -85,7 +96,7 @@ struct Inner {
 }
 
 impl Inner {
-    fn new(state: &State, Module { cx, nm }: Module) -> Self {
+    fn new(state: &State, Module { cx, nm, .. }: Module) -> Self {
         use {
             std::{borrow::Cow, iter},
             wgpu::*,

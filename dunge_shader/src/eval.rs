@@ -78,18 +78,7 @@ where
         ..Default::default()
     };
 
-    #[cfg(debug_assertions)]
-    {
-        use naga::valid::{Capabilities, ValidationFlags, Validator};
-
-        let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
-        if let Err(err) = validator.validate(&nm) {
-            log::error!("{nm:#?}");
-            panic!("shader error: {err}\n{val:#?}", val = err.as_inner());
-        }
-    }
-
-    Module { cx, nm }
+    Module::new(cx, nm)
 }
 
 #[derive(Clone, Copy)]
