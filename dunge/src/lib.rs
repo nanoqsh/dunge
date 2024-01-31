@@ -2,14 +2,14 @@ pub mod bind;
 pub mod color;
 pub mod context;
 pub mod draw;
-pub mod format;
+mod format;
 pub mod group;
 mod init;
 pub mod instance;
 pub mod layer;
 pub mod mesh;
 pub mod shader;
-pub mod state;
+mod state;
 pub mod texture;
 pub mod uniform;
 pub mod vertex;
@@ -23,12 +23,23 @@ pub mod update;
 #[cfg(feature = "winit")]
 pub mod window;
 
+pub mod prelude {
+    pub use crate::{context::Context, draw, sl, types, update, Frame, Group, Instance, Vertex};
+
+    #[cfg(feature = "winit")]
+    pub use crate::el::{Control, KeyCode, Then};
+}
+
 pub use {
-    crate::{init::context, state::Frame},
+    crate::{
+        format::Format,
+        init::context,
+        state::{Frame, Options},
+    },
     dunge_macros::{Group, Instance, Vertex},
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},
     glam,
 };
 
 #[cfg(feature = "winit")]
-pub use {crate::init::window, el::Control};
+pub use crate::init::window;

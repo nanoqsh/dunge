@@ -1,25 +1,24 @@
 #![cfg(not(target_family = "wasm"))]
 
-use {
-    dunge::{
-        color::Rgba,
-        draw,
-        format::Format,
-        group::BoundTexture,
-        mesh,
-        sl::{self, Groups, InVertex, Out},
-        texture::{self, Filter, Sampler},
-        Group, Vertex,
-    },
-    glam::Vec2,
-    helpers::Image,
-    std::{error, fs},
-};
-
-type Error = Box<dyn error::Error>;
+type Error = Box<dyn std::error::Error>;
 
 #[test]
 fn render() -> Result<(), Error> {
+    use {
+        dunge::{
+            color::Rgba,
+            draw,
+            group::BoundTexture,
+            mesh,
+            sl::{self, Groups, InVertex, Out},
+            texture::{self, Filter, Sampler},
+            Format, Group, Vertex,
+        },
+        glam::Vec2,
+        helpers::Image,
+        std::fs,
+    };
+
     const SIZE: (u32, u32) = (300, 300);
 
     #[repr(C)]

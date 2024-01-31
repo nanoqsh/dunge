@@ -11,17 +11,13 @@ async fn run() -> Result<(), Error> {
     use dunge::{
         bind::UniqueBinding,
         color::Rgba,
-        context::Context,
-        draw,
-        el::{KeyCode, Then},
-        format::Format,
         glam::{Mat4, Quat, Vec2, Vec3},
         group::BoundTexture,
-        sl::{self, Groups, InVertex, Out},
-        state::Options,
+        prelude::*,
+        sl::{Groups, InVertex, Out},
         texture::{self, Filter, Sampler, Texture, ZeroSized},
         uniform::Uniform,
-        update, Control, Frame, Group, Vertex,
+        Format, Options,
     };
 
     type RenderTexture = texture::Draw<texture::Bind<Texture>>;

@@ -192,7 +192,7 @@ impl View {
         })
     }
 
-    pub fn shared_window(&self) -> SharedWindow {
+    pub fn window(&self) -> SharedWindow {
         Arc::clone(&self.inner)
     }
 

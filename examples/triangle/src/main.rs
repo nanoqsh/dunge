@@ -11,11 +11,10 @@ async fn run() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
-            el::{KeyCode, Then},
             glam::Vec4,
-            sl::{self, Groups, Index, Out},
+            prelude::*,
+            sl::{Groups, Index, Out},
             uniform::Uniform,
-            update, Control, Frame, Group,
         },
         std::f32::consts,
     };

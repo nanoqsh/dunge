@@ -1,23 +1,22 @@
 #![cfg(not(target_family = "wasm"))]
 
-use {
-    dunge::{
-        color::Rgba,
-        draw,
-        format::Format,
-        instance::Row,
-        sl::{self, InInstance, Index, Out},
-        texture, Instance,
-    },
-    glam::Vec2,
-    helpers::Image,
-    std::{error, f32::consts, fs},
-};
-
-type Error = Box<dyn error::Error>;
+type Error = Box<dyn std::error::Error>;
 
 #[test]
 fn render() -> Result<(), Error> {
+    use {
+        dunge::{
+            color::Rgba,
+            draw,
+            instance::Row,
+            sl::{self, InInstance, Index, Out},
+            texture, Format, Instance,
+        },
+        glam::Vec2,
+        helpers::Image,
+        std::{f32::consts, fs},
+    };
+
     const SIZE: (u32, u32) = (300, 300);
     const TRIANGLE_SIZE: f32 = 0.4;
     const THIRD: f32 = consts::TAU / 3.;
