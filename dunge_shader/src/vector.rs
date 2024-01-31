@@ -3,6 +3,7 @@ use crate::{
     ret::Ret,
     types::{self, Scalar, Vector},
 };
+use std::marker::PhantomData;
 
 macro_rules! impl_eval_vec {
     ($g:ty => $t:ty) => {
@@ -38,33 +39,42 @@ impl_eval_vec!(glam::UVec2 => types::Vec2<u32>);
 impl_eval_vec!(glam::UVec3 => types::Vec3<u32>);
 impl_eval_vec!(glam::UVec4 => types::Vec4<u32>);
 
-pub const fn splat_vec2<A, E>(a: A) -> Ret<Splat<A>, types::Vec2<A::Out>>
+pub const fn splat_vec2<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec2<A::Out>>
 where
     A: Eval<E>,
     A::Out: Scalar,
 {
-    Ret::new(Splat(a))
+    Ret::new(Splat::new(a))
 }
 
-pub const fn splat_vec3<A, E>(a: A) -> Ret<Splat<A>, types::Vec3<A::Out>>
+pub const fn splat_vec3<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec3<A::Out>>
 where
     A: Eval<E>,
     A::Out: Scalar,
 {
-    Ret::new(Splat(a))
+    Ret::new(Splat::new(a))
 }
 
-pub const fn splat_vec4<A, E>(a: A) -> Ret<Splat<A>, types::Vec4<A::Out>>
+pub const fn splat_vec4<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec4<A::Out>>
 where
     A: Eval<E>,
     A::Out: Scalar,
 {
-    Ret::new(Splat(a))
+    Ret::new(Splat::new(a))
 }
 
-pub struct Splat<A>(A);
+pub struct Splat<A, E> {
+    a: A,
+    e: PhantomData<E>,
+}
 
-impl<A, O, E> Eval<E> for Ret<Splat<A>, O>
+impl<A, E> Splat<A, E> {
+    const fn new(a: A) -> Self {
+        Self { a, e: PhantomData }
+    }
+}
+
+impl<A, O, E> Eval<E> for Ret<Splat<A, E>, O>
 where
     A: Eval<E>,
     O: Vector,
@@ -73,7 +83,7 @@ where
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let val = self.get().0.eval(en);
+        let val = self.get().a.eval(en);
         let en = en.get_entry();
         let ty = en.new_type(O::TYPE.ty());
         let components = (0..O::TYPE.dims()).map(|_| val).collect();
@@ -81,32 +91,32 @@ where
     }
 }
 
-type Vector2<X, Y, O> = Ret<NewVec<(X, Y)>, types::Vec2<O>>;
+type Vector2<X, Y, O, E> = Ret<NewVec<(X, Y), E>, types::Vec2<O>>;
 
-pub const fn vec2<X, Y, E>(x: X, y: Y) -> Vector2<X, Y, X::Out>
+pub const fn vec2<X, Y, E>(x: X, y: Y) -> Vector2<X, Y, X::Out, E>
 where
     X: Eval<E>,
     X::Out: Scalar,
     Y: Eval<E, Out = X::Out>,
 {
-    Ret::new(NewVec((x, y)))
+    Ret::new(NewVec::new((x, y)))
 }
 
-type Vector3<X, Y, Z, O> = Ret<NewVec<(X, Y, Z)>, types::Vec3<O>>;
+type Vector3<X, Y, Z, O, E> = Ret<NewVec<(X, Y, Z), E>, types::Vec3<O>>;
 
-pub const fn vec3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Vector3<X, Y, Z, X::Out>
+pub const fn vec3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Vector3<X, Y, Z, X::Out, E>
 where
     X: Eval<E>,
     X::Out: Scalar,
     Y: Eval<E, Out = X::Out>,
     Z: Eval<E, Out = X::Out>,
 {
-    Ret::new(NewVec((x, y, z)))
+    Ret::new(NewVec::new((x, y, z)))
 }
 
-type Vector4<X, Y, Z, W, O> = Ret<NewVec<(X, Y, Z, W)>, types::Vec4<O>>;
+type Vector4<X, Y, Z, W, O, E> = Ret<NewVec<(X, Y, Z, W), E>, types::Vec4<O>>;
 
-pub const fn vec4<X, Y, Z, W, E>(x: X, y: Y, z: Z, w: W) -> Vector4<X, Y, Z, W, X::Out>
+pub const fn vec4<X, Y, Z, W, E>(x: X, y: Y, z: Z, w: W) -> Vector4<X, Y, Z, W, X::Out, E>
 where
     X: Eval<E>,
     X::Out: Scalar,
@@ -114,12 +124,21 @@ where
     Z: Eval<E, Out = X::Out>,
     W: Eval<E, Out = X::Out>,
 {
-    Ret::new(NewVec((x, y, z, w)))
+    Ret::new(NewVec::new((x, y, z, w)))
 }
 
-pub struct NewVec<A>(A);
+pub struct NewVec<A, E> {
+    a: A,
+    e: PhantomData<E>,
+}
 
-impl<A, O, E> Eval<E> for Ret<NewVec<A>, O>
+impl<A, E> NewVec<A, E> {
+    const fn new(a: A) -> Self {
+        Self { a, e: PhantomData }
+    }
+}
+
+impl<A, O, E> Eval<E> for Ret<NewVec<A, E>, O>
 where
     A: EvalTuple<E>,
     O: Vector,
@@ -129,7 +148,7 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
-        self.get().0.eval(en, &mut o);
+        self.get().a.eval(en, &mut o);
         let en = en.get_entry();
         let ty = en.new_type(O::TYPE.ty());
         let components = o.into_iter().collect();

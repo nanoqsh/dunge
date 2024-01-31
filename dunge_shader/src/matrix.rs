@@ -1,7 +1,10 @@
-use crate::{
-    eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
-    ret::Ret,
-    types::{self, Matrix},
+use {
+    crate::{
+        eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
+        ret::Ret,
+        types::{self, Matrix},
+    },
+    std::marker::PhantomData,
 };
 
 macro_rules! impl_eval_mat {
@@ -31,42 +34,51 @@ impl_eval_mat!(glam::Mat2 => types::Mat2);
 impl_eval_mat!(glam::Mat3 => types::Mat3);
 impl_eval_mat!(glam::Mat4 => types::Mat4);
 
-type Matrix2<X, Y> = Ret<NewMat<(X, Y)>, types::Mat2>;
+type Matrix2<X, Y, E> = Ret<NewMat<(X, Y), E>, types::Mat2>;
 
-pub const fn mat2<X, Y, E>(x: X, y: Y) -> Matrix2<X, Y>
+pub const fn mat2<X, Y, E>(x: X, y: Y) -> Matrix2<X, Y, E>
 where
     X: Eval<E, Out = types::Vec2<f32>>,
     Y: Eval<E, Out = types::Vec2<f32>>,
 {
-    Ret::new(NewMat((x, y)))
+    Ret::new(NewMat::new((x, y)))
 }
 
-type Matrix3<X, Y, Z> = Ret<NewMat<(X, Y, Z)>, types::Mat3>;
+type Matrix3<X, Y, Z, E> = Ret<NewMat<(X, Y, Z), E>, types::Mat3>;
 
-pub const fn mat3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Matrix3<X, Y, Z>
+pub const fn mat3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Matrix3<X, Y, Z, E>
 where
     X: Eval<E, Out = types::Vec3<f32>>,
     Y: Eval<E, Out = types::Vec3<f32>>,
     Z: Eval<E, Out = types::Vec3<f32>>,
 {
-    Ret::new(NewMat((x, y, z)))
+    Ret::new(NewMat::new((x, y, z)))
 }
 
-type Matrix4<X, Y, Z, W> = Ret<NewMat<(X, Y, Z, W)>, types::Mat4>;
+type Matrix4<X, Y, Z, W, E> = Ret<NewMat<(X, Y, Z, W), E>, types::Mat4>;
 
-pub const fn mat4<X, Y, Z, W, E>(x: X, y: Y, z: Z, w: W) -> Matrix4<X, Y, Z, W>
+pub const fn mat4<X, Y, Z, W, E>(x: X, y: Y, z: Z, w: W) -> Matrix4<X, Y, Z, W, E>
 where
     X: Eval<E, Out = types::Vec4<f32>>,
     Y: Eval<E, Out = types::Vec4<f32>>,
     Z: Eval<E, Out = types::Vec4<f32>>,
     W: Eval<E, Out = types::Vec4<f32>>,
 {
-    Ret::new(NewMat((x, y, z, w)))
+    Ret::new(NewMat::new((x, y, z, w)))
 }
 
-pub struct NewMat<A>(A);
+pub struct NewMat<A, E> {
+    a: A,
+    e: PhantomData<E>,
+}
 
-impl<A, O, E> Eval<E> for Ret<NewMat<A>, O>
+impl<A, E> NewMat<A, E> {
+    const fn new(a: A) -> Self {
+        Self { a, e: PhantomData }
+    }
+}
+
+impl<A, O, E> Eval<E> for Ret<NewMat<A, E>, O>
 where
     A: EvalTuple<E>,
     O: Matrix,
@@ -76,7 +88,7 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
-        self.get().0.eval(en, &mut o);
+        self.get().a.eval(en, &mut o);
         let en = en.get_entry();
         let ty = en.new_type(O::TYPE.ty());
         let components = o.into_iter().collect();

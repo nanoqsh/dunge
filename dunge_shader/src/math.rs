@@ -1,74 +1,70 @@
-use crate::{
-    eval::{Eval, EvalTuple, Evaluated, Expr, Func, GetEntry},
-    ret::Ret,
+use {
+    crate::{
+        eval::{Eval, EvalTuple, Evaluated, Expr, Func, GetEntry},
+        ret::Ret,
+    },
+    std::marker::PhantomData,
 };
 
-pub fn cos<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+pub const fn cos<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math {
-        args: (x,),
-        func: Func::Cos,
-    })
+    Ret::new(Math::new((x,), Func::Cos))
 }
 
-pub fn cosh<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+pub const fn cosh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math {
-        args: (x,),
-        func: Func::Cosh,
-    })
+    Ret::new(Math::new((x,), Func::Cosh))
 }
 
-pub fn sin<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+pub const fn sin<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math {
-        args: (x,),
-        func: Func::Sin,
-    })
+    Ret::new(Math::new((x,), Func::Sin))
 }
 
-pub fn sinh<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+pub const fn sinh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math {
-        args: (x,),
-        func: Func::Sinh,
-    })
+    Ret::new(Math::new((x,), Func::Sinh))
 }
 
-pub fn tan<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+pub const fn tan<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math {
-        args: (x,),
-        func: Func::Tan,
-    })
+    Ret::new(Math::new((x,), Func::Tan))
 }
 
-pub fn tanh<X, E>(x: X) -> Ret<Math<(X,)>, f32>
+pub const fn tanh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math {
-        args: (x,),
-        func: Func::Tanh,
-    })
+    Ret::new(Math::new((x,), Func::Tanh))
 }
 
-pub struct Math<A> {
+pub struct Math<A, E> {
     args: A,
     func: Func,
+    e: PhantomData<E>,
 }
 
-impl<A, O, E> Eval<E> for Ret<Math<A>, O>
+impl<A, E> Math<A, E> {
+    const fn new(args: A, func: Func) -> Self {
+        Self {
+            args,
+            func,
+            e: PhantomData,
+        }
+    }
+}
+
+impl<A, O, E> Eval<E> for Ret<Math<A, E>, O>
 where
     A: EvalTuple<E>,
     E: GetEntry,
@@ -77,7 +73,7 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
-        let Math { args, func } = self.get();
+        let Math { args, func, .. } = self.get();
         args.eval(en, &mut o);
         en.get_entry().math(func, o)
     }
