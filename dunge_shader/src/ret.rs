@@ -51,14 +51,14 @@ where
     }
 }
 
-type Out<T> = <T as Eval<Vs>>::Out;
+type Operands<A, B> = Ret<A, <B as Eval<Vs>>::Out>;
 
 macro_rules! impl_op {
     ($o:ident :: $f:ident ( $a:ty, $b:ty ) -> $r:ty) => {
-        impl<A> ops::$o<Ret<A, Out<$b>>> for $a {
-            type Output = Ret<Binary<Self, Ret<A, Out<$b>>>, Out<$r>>;
+        impl<A> ops::$o<Operands<A, $b>> for $a {
+            type Output = Operands<Binary<Self, Operands<A, $b>>, $r>;
 
-            fn $f(self, b: Ret<A, Out<$b>>) -> Self::Output {
+            fn $f(self, b: Operands<A, $b>) -> Self::Output {
                 Ret::new(Binary {
                     a: self,
                     b,
@@ -67,8 +67,8 @@ macro_rules! impl_op {
             }
         }
 
-        impl<A> ops::$o<$a> for Ret<A, Out<$b>> {
-            type Output = Ret<Binary<Self, $a>, Out<$r>>;
+        impl<A> ops::$o<$a> for Operands<A, $b> {
+            type Output = Operands<Binary<Self, $a>, $r>;
 
             fn $f(self, b: $a) -> Self::Output {
                 Ret::new(Binary {
@@ -79,10 +79,10 @@ macro_rules! impl_op {
             }
         }
 
-        impl<A, B> ops::$o<Ret<B, Out<$b>>> for Ret<A, Out<$a>> {
-            type Output = Ret<Binary<Self, Ret<B, Out<$b>>>, Out<$r>>;
+        impl<A, B> ops::$o<Operands<B, $b>> for Operands<A, $a> {
+            type Output = Operands<Binary<Self, Operands<B, $b>>, $r>;
 
-            fn $f(self, b: Ret<B, Out<$b>>) -> Self::Output {
+            fn $f(self, b: Operands<B, $b>) -> Self::Output {
                 Ret::new(Binary {
                     a: self,
                     b,
