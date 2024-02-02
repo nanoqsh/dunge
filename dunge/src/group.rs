@@ -8,7 +8,7 @@ use crate::{
 pub use dunge_shader::group::Projection;
 
 #[derive(Clone, Copy)]
-pub struct BoundTexture<'a>(&'a Texture);
+pub struct BoundTexture<'a>(pub(crate) &'a Texture);
 
 impl<'a> BoundTexture<'a> {
     pub fn new<T>(texture: &'a T) -> Self
@@ -16,10 +16,6 @@ impl<'a> BoundTexture<'a> {
         T: BindTexture,
     {
         Self(texture.bind_texture())
-    }
-
-    pub(crate) fn get(self) -> &'a Texture {
-        self.0
     }
 }
 

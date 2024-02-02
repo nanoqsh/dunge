@@ -9,28 +9,28 @@ pub trait Update: Draw {
     fn update(&mut self, ctrl: &Control) -> Self::Flow;
 }
 
-pub fn from_fn<U, F, D>(mut upd: U, mut draw: D) -> impl Update
+pub fn update<U, F, D>(mut upd: U, draw: D) -> impl Update
 where
     U: FnMut(&Control) -> F,
     F: Flow,
-    D: FnMut(Frame),
+    D: Fn(Frame),
 {
-    with_state((), move |(), ctrl| upd(ctrl), move |(), frame| draw(frame))
+    update_with_state((), move |(), ctrl| upd(ctrl), move |(), frame| draw(frame))
 }
 
-pub fn with_state<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update
+pub fn update_with_state<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update
 where
     U: FnMut(&mut S, &Control) -> F,
     F: Flow,
-    D: FnMut(&S, Frame),
+    D: Fn(&S, Frame),
 {
     struct Func<S, U, D>(S, U, D);
 
     impl<S, U, D> Draw for Func<S, U, D>
     where
-        D: FnMut(&S, Frame),
+        D: Fn(&S, Frame),
     {
-        fn draw(&mut self, frame: Frame) {
+        fn draw(&self, frame: Frame) {
             (self.2)(&self.0, frame);
         }
     }
@@ -39,7 +39,7 @@ where
     where
         U: FnMut(&mut S, &Control) -> F,
         F: Flow,
-        D: FnMut(&S, Frame),
+        D: Fn(&S, Frame),
     {
         type Flow = F;
 

@@ -7,10 +7,10 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
-            draw,
             instance::Row,
             sl::{self, InInstance, Index, Out},
-            texture, Format, Instance,
+            texture::TextureData,
+            Format, Instance,
         },
         glam::Vec2,
         helpers::Image,
@@ -40,9 +40,10 @@ fn render() -> Result<(), Error> {
 
     let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
-        use texture::Data;
+        let data = TextureData::empty(SIZE, Format::RgbAlpha)?
+            .with_draw()
+            .with_copy();
 
-        let data = Data::empty(SIZE, Format::RgbAlpha)?.with_draw().with_copy();
         cx.make_texture(data)
     };
 
@@ -55,7 +56,7 @@ fn render() -> Result<(), Error> {
 
     let buffer = cx.make_copy_buffer(SIZE);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
-    let draw = draw::from_fn(|mut frame| {
+    let draw = dunge::draw(|mut frame| {
         frame
             .layer(&layer, opts)
             .bind_empty()

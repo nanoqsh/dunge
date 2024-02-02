@@ -1,30 +1,30 @@
 pub mod bind;
 pub mod color;
-pub mod context;
-pub mod draw;
+mod context;
+mod draw;
 mod format;
 pub mod group;
 mod init;
 pub mod instance;
 pub mod layer;
 pub mod mesh;
-pub mod shader;
+mod shader;
 mod state;
 pub mod texture;
 pub mod uniform;
 pub mod vertex;
 
 #[cfg(feature = "winit")]
-pub mod el;
+mod el;
 #[cfg(feature = "winit")]
 mod time;
 #[cfg(feature = "winit")]
-pub mod update;
+mod update;
 #[cfg(feature = "winit")]
 pub mod window;
 
 pub mod prelude {
-    pub use crate::{context::Context, draw, sl, types, update, Frame, Group, Instance, Vertex};
+    pub use crate::{context::Context, shader::Shader, sl, types, Frame, Group, Instance, Vertex};
 
     #[cfg(feature = "winit")]
     pub use crate::el::{Control, KeyCode, Then};
@@ -32,6 +32,8 @@ pub mod prelude {
 
 pub use {
     crate::{
+        context::{Context, Error},
+        draw::{draw, Draw},
         format::Format,
         init::context,
         state::{Frame, Options},
@@ -42,4 +44,8 @@ pub use {
 };
 
 #[cfg(feature = "winit")]
-pub use crate::init::window;
+pub use crate::{
+    el::{Control, Flow, Key, KeyCode, LoopError, SmolStr, Then},
+    init::window,
+    update::{update, update_with_state, Update},
+};

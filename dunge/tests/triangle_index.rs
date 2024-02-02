@@ -7,9 +7,9 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
-            draw,
             sl::{self, Index, Out},
-            texture, Format,
+            texture::TextureData,
+            Format,
         },
         glam::Vec4,
         helpers::Image,
@@ -36,15 +36,16 @@ fn render() -> Result<(), Error> {
 
     let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
-        use texture::Data;
+        let data = TextureData::empty(SIZE, Format::RgbAlpha)?
+            .with_draw()
+            .with_copy();
 
-        let data = Data::empty(SIZE, Format::RgbAlpha)?.with_draw().with_copy();
         cx.make_texture(data)
     };
 
     let buffer = cx.make_copy_buffer(SIZE);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
-    let draw = draw::from_fn(|mut frame| {
+    let draw = dunge::draw(|mut frame| {
         frame.layer(&layer, opts).bind_empty().draw_points(3);
         frame.copy_texture(&buffer, &view);
     });

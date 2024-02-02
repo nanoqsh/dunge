@@ -13,9 +13,10 @@ async fn run() -> Result<(), Error> {
         color::Rgba,
         glam::{Mat4, Quat, Vec2, Vec3},
         group::BoundTexture,
+        mesh::MeshData,
         prelude::*,
         sl::{Groups, InVertex, Out},
-        texture::{self, Filter, Sampler, Texture, ZeroSized},
+        texture::{self, Filter, Sampler, Texture, TextureData, ZeroSized},
         uniform::Uniform,
         Format, Options,
     };
@@ -83,9 +84,9 @@ async fn run() -> Result<(), Error> {
     };
 
     let make_screen_tex = |cx: &Context, size| -> Result<_, ZeroSized> {
-        use dunge::texture::Data;
-
-        let data = Data::empty(size, Format::RgbAlpha)?.with_bind().with_draw();
+        let data = TextureData::empty(size, Format::RgbAlpha)?
+            .with_bind()
+            .with_draw();
         Ok(cx.make_texture(data))
     };
 
@@ -103,8 +104,6 @@ async fn run() -> Result<(), Error> {
     };
 
     let mesh = {
-        use dunge::mesh::Data;
-
         const P: f32 = 0.5;
         const VERTS: [Vert; 8] = [
             Vert {
@@ -152,13 +151,11 @@ async fn run() -> Result<(), Error> {
             [7, 6, 1], // +z
         ];
 
-        let data = Data::new(&VERTS, &INDXS)?;
+        let data = MeshData::new(&VERTS, &INDXS)?;
         cx.make_mesh(&data)
     };
 
     let screen_mesh = {
-        use dunge::mesh::Data;
-
         const VERTS: [Screen; 4] = [
             Screen([-1., -1.], [0., 1.]),
             Screen([1., -1.], [1., 1.]),
@@ -166,7 +163,7 @@ async fn run() -> Result<(), Error> {
             Screen([-1., 1.], [0., 0.]),
         ];
 
-        let data = Data::from_quads(&[VERTS])?;
+        let data = MeshData::from_quads(&[VERTS])?;
         cx.make_mesh(&data)
     };
 
@@ -208,7 +205,7 @@ async fn run() -> Result<(), Error> {
                 .draw(&mesh);
         };
 
-        cx.draw_to(state.tex, draw::from_fn(main));
+        cx.draw_to(state.tex, dunge::draw(main));
 
         frame
             .layer(&screen_layer, Options::default())
@@ -226,6 +223,6 @@ async fn run() -> Result<(), Error> {
         bind_map,
     };
 
-    let handle = update::with_state(state, upd, draw);
+    let handle = dunge::update_with_state(state, upd, draw);
     window.run(handle).map_err(Box::from)
 }

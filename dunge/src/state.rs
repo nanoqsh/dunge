@@ -87,7 +87,7 @@ impl State {
         self.shader_ids.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
-    pub fn draw<D>(&self, view: RenderView, mut draw: D)
+    pub fn draw<D>(&self, view: RenderView, draw: D)
     where
         D: Draw,
     {

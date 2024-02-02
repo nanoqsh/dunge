@@ -56,7 +56,7 @@ impl Context {
         Layer::new(&self.0, shader, &opts)
     }
 
-    pub fn make_mesh<V>(&self, data: &mesh::Data<V>) -> Mesh<V>
+    pub fn make_mesh<V>(&self, data: &mesh::MeshData<V>) -> Mesh<V>
     where
         V: Vertex,
     {

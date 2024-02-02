@@ -11,13 +11,13 @@ use {
 };
 
 #[derive(Clone, Copy)]
-pub struct Data<'a> {
+pub struct TextureData<'a> {
     data: &'a [u8],
     size: (u32, u32),
     format: Format,
 }
 
-impl<'a> Data<'a> {
+impl<'a> TextureData<'a> {
     pub const fn empty(size: (u32, u32), format: Format) -> Result<Self, ZeroSized> {
         let (width, height) = size;
         if width == 0 || height == 0 {
@@ -64,7 +64,7 @@ impl<'a> Data<'a> {
     }
 }
 
-/// The [texture data](crate::texture::Data) error.
+/// The [texture data](crate::texture::TextureData) error.
 #[derive(Debug)]
 pub enum Error {
     /// The texture data is zero sized.
@@ -85,7 +85,7 @@ impl fmt::Display for Error {
 
 impl error::Error for Error {}
 
-/// The [texture data](crate::texture::Data) is zero sized.
+/// The [texture data](crate::texture::TextureData) is zero sized.
 #[derive(Debug)]
 pub struct ZeroSized;
 
@@ -103,7 +103,7 @@ pub struct Texture {
 }
 
 impl Texture {
-    fn new(state: &State, mut usage: TextureUsages, data: Data) -> Self {
+    fn new(state: &State, mut usage: TextureUsages, data: TextureData) -> Self {
         use wgpu::*;
 
         let (width, height) = data.size;
@@ -446,9 +446,9 @@ pub trait Make: private::Sealed {
     fn make(self, maker: Maker) -> Self::Out;
 }
 
-impl private::Sealed for Data<'_> {}
+impl private::Sealed for TextureData<'_> {}
 
-impl Make for Data<'_> {
+impl Make for TextureData<'_> {
     type Out = Texture;
 
     fn make(self, Maker { state, usage }: Maker) -> Self::Out {

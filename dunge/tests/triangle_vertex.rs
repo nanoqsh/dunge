@@ -7,9 +7,10 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
-            draw, mesh,
+            mesh::MeshData,
             sl::{self, InVertex, Out},
-            texture, Format, Vertex,
+            texture::TextureData,
+            Format, Vertex,
         },
         glam::Vec2,
         helpers::Image,
@@ -33,28 +34,27 @@ fn render() -> Result<(), Error> {
 
     let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
-        use texture::Data;
+        let data = TextureData::empty(SIZE, Format::RgbAlpha)?
+            .with_draw()
+            .with_copy();
 
-        let data = Data::empty(SIZE, Format::RgbAlpha)?.with_draw().with_copy();
         cx.make_texture(data)
     };
 
     let mesh = {
-        use mesh::Data;
-
         const VERTS: [Vert; 3] = [
             Vert([0., -0.75], [1., 0., 0.]),
             Vert([0.866, 0.75], [0., 1., 0.]),
             Vert([-0.866, 0.75], [0., 0., 1.]),
         ];
 
-        let data = Data::from_verts(&VERTS);
+        let data = MeshData::from_verts(&VERTS);
         cx.make_mesh(&data)
     };
 
     let buffer = cx.make_copy_buffer(SIZE);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
-    let draw = draw::from_fn(|mut frame| {
+    let draw = dunge::draw(|mut frame| {
         frame.layer(&layer, opts).bind_empty().draw(&mesh);
         frame.copy_texture(&buffer, &view);
     });

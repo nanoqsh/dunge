@@ -7,11 +7,10 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
-            draw,
             group::BoundTexture,
-            mesh,
+            mesh::MeshData,
             sl::{self, Groups, InVertex, Out},
-            texture::{self, Filter, Sampler},
+            texture::{Filter, Sampler, TextureData},
             Format, Group, Vertex,
         },
         glam::Vec2,
@@ -45,10 +44,9 @@ fn render() -> Result<(), Error> {
 
     let map = {
         let texture = {
-            use texture::Data;
-
             let gradient = Image::decode(include_bytes!("gradient.png"));
-            let data = Data::new(&gradient.data, gradient.size, Format::RgbAlpha)?.with_bind();
+            let data =
+                TextureData::new(&gradient.data, gradient.size, Format::RgbAlpha)?.with_bind();
             cx.make_texture(data)
         };
 
@@ -65,15 +63,13 @@ fn render() -> Result<(), Error> {
 
     let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {
-        use texture::Data;
-
-        let data = Data::empty(SIZE, Format::RgbAlpha)?.with_draw().with_copy();
+        let data = TextureData::empty(SIZE, Format::RgbAlpha)?
+            .with_draw()
+            .with_copy();
         cx.make_texture(data)
     };
 
     let mesh = {
-        use mesh::Data;
-
         const VERTS: [Vert; 3] = [
             Vert {
                 pos: [0., -0.75],
@@ -89,13 +85,13 @@ fn render() -> Result<(), Error> {
             },
         ];
 
-        let data = Data::from_verts(&VERTS);
+        let data = MeshData::from_verts(&VERTS);
         cx.make_mesh(&data)
     };
 
     let buffer = cx.make_copy_buffer(SIZE);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
-    let draw = draw::from_fn(|mut frame| {
+    let draw = dunge::draw(|mut frame| {
         frame.layer(&layer, opts).bind(&map).draw(&mesh);
         frame.copy_texture(&buffer, &view);
     });

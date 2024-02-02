@@ -63,6 +63,6 @@ async fn run() -> Result<(), Error> {
         frame.layer(&layer, clear).bind(&bind).draw_points(3);
     };
 
-    window.run(update::from_fn(upd, draw))?;
+    window.run(dunge::update(upd, draw))?;
     Ok(())
 }

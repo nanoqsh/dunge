@@ -36,7 +36,7 @@ impl<'a, V> VisitMember<'a> for &'a Uniform<V> {
 
 impl<'a> VisitMember<'a> for BoundTexture<'a> {
     fn visit_member(self, visitor: &mut Visitor<'a>) {
-        visitor.push(BindingResource::TextureView(self.get().view()));
+        visitor.push(BindingResource::TextureView(self.0.view()));
     }
 }
 

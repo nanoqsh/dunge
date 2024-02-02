@@ -7,18 +7,18 @@ use {
 type Face = [u16; 3];
 
 #[derive(Clone)]
-pub struct Data<'a, V> {
+pub struct MeshData<'a, V> {
     verts: &'a [V],
     indxs: Option<Cow<'a, [Face]>>,
 }
 
-impl<'a, V> Data<'a, V> {
-    /// Creates a [mesh data](crate::mesh::Data) from given vertices.
+impl<'a, V> MeshData<'a, V> {
+    /// Creates a [mesh data](crate::mesh::MeshData) from given vertices.
     pub fn from_verts(verts: &'a [V]) -> Self {
         Self { verts, indxs: None }
     }
 
-    /// Creates a [mesh data](crate::mesh::Data) from given vertices and indices.
+    /// Creates a [mesh data](crate::mesh::MeshData) from given vertices and indices.
     ///
     /// # Errors
     /// Returns an [error](crate::mesh::Error) if the passed data is incorrect.
@@ -32,7 +32,7 @@ impl<'a, V> Data<'a, V> {
         Ok(Self { verts, indxs })
     }
 
-    /// Creates a [mesh data](crate::mesh::Data) from given quadrilaterals.
+    /// Creates a [mesh data](crate::mesh::MeshData) from given quadrilaterals.
     ///
     /// # Errors
     /// Returns an [error](crate::mesh::TooManyVertices) if too many vertices are passed.
@@ -58,7 +58,7 @@ impl<'a, V> Data<'a, V> {
     }
 }
 
-/// An error returned from the [mesh data](crate::mesh::Data) constructors.
+/// An error returned from the [mesh data](crate::mesh::MeshData) constructors.
 #[derive(Debug)]
 pub enum Error {
     /// Vertices length doesn't fit in [`u16`](std::u16) integer.
@@ -98,7 +98,7 @@ pub struct Mesh<V> {
 }
 
 impl<V> Mesh<V> {
-    pub(crate) fn new(state: &State, data: &Data<V>) -> Self
+    pub(crate) fn new(state: &State, data: &MeshData<V>) -> Self
     where
         V: Vertex,
     {
@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn from_quads() {
         let verts = [[0, 1, 2, 3], [4, 5, 6, 7]];
-        let data = Data::from_quads(&verts).expect("mesh data");
+        let data = MeshData::from_quads(&verts).expect("mesh data");
         let indxs = data.indxs.expect("indices");
         assert_eq!(data.verts.len(), 8);
         assert_eq!(indxs.len(), 4);

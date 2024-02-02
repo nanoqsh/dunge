@@ -224,7 +224,7 @@ where
                     match ctrl.view.output() {
                         Ok(output) => {
                             let rv = output.render_view();
-                            cx.state().draw(rv, &mut upd);
+                            cx.state().draw(rv, &upd);
                             output.present();
                         }
                         Err(SurfaceError::Timeout) => log::info!("suface error: timeout"),
@@ -338,7 +338,7 @@ macro_rules! then_try {
         match $e {
             ::std::result::Result::Ok(v) => _ = v,
             ::std::result::Result::Err(e) => {
-                return $crate::el::Then::Fail(::std::boxed::Box::from(e));
+                return $crate::Then::Fail(::std::boxed::Box::from(e));
             }
         }
     };
@@ -347,7 +347,7 @@ macro_rules! then_try {
         match $e {
             ::std::result::Result::Ok(v) => v,
             ::std::result::Result::Err(e) => {
-                return $crate::el::Then::Fail(::std::boxed::Box::from(e));
+                return $crate::Then::Fail(::std::boxed::Box::from(e));
             }
         }
     };
