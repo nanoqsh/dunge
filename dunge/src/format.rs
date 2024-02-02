@@ -5,12 +5,13 @@ pub enum Format {
     #[default]
     RgbAlpha,
     BgrAlpha,
+    Depth,
 }
 
 impl Format {
     pub(crate) const fn bytes(self) -> u32 {
         match self {
-            Self::RgbAlpha | Self::BgrAlpha => 4,
+            Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
         }
     }
 
@@ -18,14 +19,16 @@ impl Format {
         match self {
             Self::RgbAlpha => TextureFormat::Rgba8UnormSrgb,
             Self::BgrAlpha => TextureFormat::Bgra8UnormSrgb,
+            Self::Depth => TextureFormat::Depth32Float,
         }
     }
 
-    pub(crate) const fn from_wgpu(format: TextureFormat) -> Option<Self> {
+    pub(crate) const fn from_wgpu(format: TextureFormat) -> Self {
         match format {
-            TextureFormat::Rgba8UnormSrgb => Some(Self::RgbAlpha),
-            TextureFormat::Bgra8UnormSrgb => Some(Self::BgrAlpha),
-            _ => None,
+            TextureFormat::Rgba8UnormSrgb => Self::RgbAlpha,
+            TextureFormat::Bgra8UnormSrgb => Self::BgrAlpha,
+            TextureFormat::Depth32Float => Self::Depth,
+            _ => panic!("supported format"),
         }
     }
 }

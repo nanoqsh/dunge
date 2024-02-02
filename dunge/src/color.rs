@@ -35,6 +35,13 @@ impl<const N: usize> Color<N> {
     }
 }
 
+impl Color<4> {
+    pub(crate) fn wgpu(self) -> wgpu::Color {
+        let [r, g, b, a] = self.0.map(f64::from);
+        wgpu::Color { r, g, b, a }
+    }
+}
+
 fn to_f32_color(c: u8) -> f32 {
     f32::from(c) / f32::from(u8::MAX)
 }

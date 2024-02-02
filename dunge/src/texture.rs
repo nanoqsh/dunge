@@ -1,8 +1,5 @@
 use {
-    crate::{
-        format::Format,
-        state::{RenderView, State},
-    },
+    crate::{format::Format, state::State},
     std::{error, fmt, future::IntoFuture, mem},
     wgpu::{
         Buffer, BufferAsyncError, BufferSlice, BufferView, CommandEncoder, FilterMode,
@@ -97,12 +94,12 @@ impl fmt::Display for ZeroSized {
 
 impl error::Error for ZeroSized {}
 
-pub struct Texture {
+pub struct Texture2d {
     inner: wgpu::Texture,
     view: TextureView,
 }
 
-impl Texture {
+impl Texture2d {
     fn new(state: &State, mut usage: TextureUsages, data: TextureData) -> Self {
         use wgpu::*;
 
@@ -161,15 +158,11 @@ impl Texture {
     }
 
     pub fn format(&self) -> Format {
-        Format::from_wgpu(self.inner.format()).expect("supported format")
+        Format::from_wgpu(self.inner.format())
     }
 
     pub(crate) fn view(&self) -> &TextureView {
         &self.view
-    }
-
-    pub(crate) fn render_view(&self) -> RenderView {
-        RenderView::new(&self.view, self.format())
     }
 }
 
@@ -255,7 +248,7 @@ impl CopyBuffer {
         }
     }
 
-    pub(crate) fn copy_texture(&self, texture: &Texture, encoder: &mut CommandEncoder) {
+    pub(crate) fn copy_texture(&self, texture: &Texture2d, encoder: &mut CommandEncoder) {
         use wgpu::*;
 
         let texture = &texture.inner;
@@ -334,24 +327,24 @@ impl Mapped<'_> {
 }
 
 trait Get {
-    fn get(&self) -> &Texture;
+    fn get(&self) -> &Texture2d;
 }
 
-impl Get for Texture {
-    fn get(&self) -> &Texture {
+impl Get for Texture2d {
+    fn get(&self) -> &Texture2d {
         self
     }
 }
 
 pub trait BindTexture: private::Sealed {
-    fn bind_texture(&self) -> &Texture;
+    fn bind_texture(&self) -> &Texture2d;
 }
 
 impl<M> BindTexture for Bind<M>
 where
     M: Get,
 {
-    fn bind_texture(&self) -> &Texture {
+    fn bind_texture(&self) -> &Texture2d {
         self.0.get()
     }
 }
@@ -360,7 +353,7 @@ impl<M> BindTexture for Draw<M>
 where
     M: BindTexture,
 {
-    fn bind_texture(&self) -> &Texture {
+    fn bind_texture(&self) -> &Texture2d {
         self.0.bind_texture()
     }
 }
@@ -369,20 +362,20 @@ impl<M> BindTexture for Copy<M>
 where
     M: BindTexture,
 {
-    fn bind_texture(&self) -> &Texture {
+    fn bind_texture(&self) -> &Texture2d {
         self.0.bind_texture()
     }
 }
 
 pub trait DrawTexture: private::Sealed {
-    fn draw_texture(&self) -> &Texture;
+    fn draw_texture(&self) -> &Texture2d;
 }
 
 impl<M> DrawTexture for Bind<M>
 where
     M: DrawTexture,
 {
-    fn draw_texture(&self) -> &Texture {
+    fn draw_texture(&self) -> &Texture2d {
         self.0.draw_texture()
     }
 }
@@ -391,7 +384,7 @@ impl<M> DrawTexture for Draw<M>
 where
     M: Get,
 {
-    fn draw_texture(&self) -> &Texture {
+    fn draw_texture(&self) -> &Texture2d {
         self.0.get()
     }
 }
@@ -400,20 +393,20 @@ impl<M> DrawTexture for Copy<M>
 where
     M: DrawTexture,
 {
-    fn draw_texture(&self) -> &Texture {
+    fn draw_texture(&self) -> &Texture2d {
         self.0.draw_texture()
     }
 }
 
 pub trait CopyTexture: private::Sealed {
-    fn copy_texture(&self) -> &Texture;
+    fn copy_texture(&self) -> &Texture2d;
 }
 
 impl<M> CopyTexture for Bind<M>
 where
     M: CopyTexture,
 {
-    fn copy_texture(&self) -> &Texture {
+    fn copy_texture(&self) -> &Texture2d {
         self.0.copy_texture()
     }
 }
@@ -422,7 +415,7 @@ impl<M> CopyTexture for Draw<M>
 where
     M: CopyTexture,
 {
-    fn copy_texture(&self) -> &Texture {
+    fn copy_texture(&self) -> &Texture2d {
         self.0.copy_texture()
     }
 }
@@ -431,7 +424,7 @@ impl<M> CopyTexture for Copy<M>
 where
     M: Get,
 {
-    fn copy_texture(&self) -> &Texture {
+    fn copy_texture(&self) -> &Texture2d {
         self.0.get()
     }
 }
@@ -449,10 +442,10 @@ pub trait Make: private::Sealed {
 impl private::Sealed for TextureData<'_> {}
 
 impl Make for TextureData<'_> {
-    type Out = Texture;
+    type Out = Texture2d;
 
     fn make(self, Maker { state, usage }: Maker) -> Self::Out {
-        Texture::new(state, usage, self)
+        Texture2d::new(state, usage, self)
     }
 }
 
@@ -472,7 +465,7 @@ impl<M> Get for Bind<M>
 where
     M: Get,
 {
-    fn get(&self) -> &Texture {
+    fn get(&self) -> &Texture2d {
         self.0.get()
     }
 }
@@ -507,7 +500,7 @@ impl<M> Get for Draw<M>
 where
     M: Get,
 {
-    fn get(&self) -> &Texture {
+    fn get(&self) -> &Texture2d {
         self.0.get()
     }
 }
@@ -542,7 +535,7 @@ impl<M> Get for Copy<M>
 where
     M: Get,
 {
-    fn get(&self) -> &Texture {
+    fn get(&self) -> &Texture2d {
         self.0.get()
     }
 }

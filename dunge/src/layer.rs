@@ -177,7 +177,7 @@ impl Topology {
 }
 
 #[derive(Default)]
-pub struct Options {
+pub struct Config {
     pub format: Format,
     pub blend: Blend,
     pub topology: Topology,
@@ -185,7 +185,7 @@ pub struct Options {
     pub depth: bool,
 }
 
-impl From<Format> for Options {
+impl From<Format> for Config {
     fn from(format: Format) -> Self {
         Self {
             format,
@@ -199,24 +199,23 @@ pub struct Layer<V, I> {
     no_bindings: bool,
     only_indexed_mesh: bool,
     slots: Slots,
+    depth: bool,
     format: Format,
     render: RenderPipeline,
     ty: PhantomData<(V, I)>,
 }
 
 impl<V, I> Layer<V, I> {
-    pub(crate) fn new(state: &State, shader: &Shader<V, I>, opts: &Options) -> Self {
+    pub(crate) fn new(state: &State, shader: &Shader<V, I>, conf: &Config) -> Self {
         use wgpu::*;
 
-        const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth24Plus;
-
-        let Options {
+        let Config {
             format,
             blend,
             topology,
             indexed_mesh,
             depth,
-        } = opts;
+        } = conf;
 
         let targets = [Some(ColorTargetState {
             format: format.wgpu(),
@@ -243,9 +242,9 @@ impl<V, I> Layer<V, I> {
                 ..Default::default()
             },
             depth_stencil: depth.then_some(DepthStencilState {
-                format: DEPTH_FORMAT,
+                format: Format::Depth.wgpu(),
                 depth_write_enabled: true,
-                depth_compare: CompareFunction::Less,
+                depth_compare: CompareFunction::LessEqual,
                 stencil: StencilState::default(),
                 bias: DepthBiasState::default(),
             }),
@@ -264,10 +263,15 @@ impl<V, I> Layer<V, I> {
             no_bindings: shader.groups().is_empty(),
             only_indexed_mesh,
             slots: shader.slots(),
+            depth: *depth,
             format: *format,
             render,
             ty: PhantomData,
         }
+    }
+
+    pub fn depth(&self) -> bool {
+        self.depth
     }
 
     pub fn format(&self) -> Format {

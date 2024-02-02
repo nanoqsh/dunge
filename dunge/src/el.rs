@@ -223,8 +223,8 @@ where
                     ctrl.clear_keys();
                     match ctrl.view.output() {
                         Ok(output) => {
-                            let rv = output.render_view();
-                            cx.state().draw(rv, &upd);
+                            let target = output.target();
+                            cx.state().draw(target, &upd);
                             output.present();
                         }
                         Err(SurfaceError::Timeout) => log::info!("suface error: timeout"),

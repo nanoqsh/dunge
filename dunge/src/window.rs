@@ -4,7 +4,7 @@ use {
         el::Loop,
         format::Format,
         init,
-        state::{RenderView, State},
+        state::{State, Target},
         update::Update,
     },
     std::{
@@ -197,7 +197,7 @@ impl View {
     }
 
     pub fn format(&self) -> Format {
-        Format::from_wgpu(self.conf.format).expect("supported format")
+        Format::from_wgpu(self.conf.format)
     }
 
     pub fn size(&self) -> (u32, u32) {
@@ -245,8 +245,8 @@ pub(crate) struct Output {
 }
 
 impl Output {
-    pub fn render_view(&self) -> RenderView {
-        RenderView::new(&self.view, self.format)
+    pub fn target(&self) -> Target {
+        Target::new(&self.view, self.format)
     }
 
     pub fn present(self) {

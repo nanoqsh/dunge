@@ -15,10 +15,10 @@ where
     F: Flow,
     D: Fn(Frame),
 {
-    update_with_state((), move |(), ctrl| upd(ctrl), move |(), frame| draw(frame))
+    update_with((), move |(), ctrl| upd(ctrl), move |(), frame| draw(frame))
 }
 
-pub fn update_with_state<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update
+pub fn update_with<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update
 where
     U: FnMut(&mut S, &Control) -> F,
     F: Flow,

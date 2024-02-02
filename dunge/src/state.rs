@@ -5,10 +5,10 @@ use {
         draw::Draw,
         format::Format,
         layer::{Layer, SetLayer},
-        texture::{CopyBuffer, CopyTexture},
+        texture::{CopyBuffer, CopyTexture, DrawTexture},
     },
     std::sync::atomic::{self, AtomicUsize},
-    wgpu::{Color, CommandEncoder, Device, Instance, LoadOp, Queue, TextureView},
+    wgpu::{CommandEncoder, Device, Instance, Queue, TextureView},
 };
 
 #[cfg(feature = "winit")]
@@ -87,7 +87,7 @@ impl State {
         self.shader_ids.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
-    pub fn draw<D>(&self, view: RenderView, draw: D)
+    pub fn draw<D>(&self, target: Target, draw: D)
     where
         D: Draw,
     {
@@ -100,7 +100,7 @@ impl State {
         };
 
         draw.draw(Frame {
-            view,
+            target,
             encoder: &mut encoder,
         });
 
@@ -110,31 +110,30 @@ impl State {
 
 #[derive(Clone, Copy, Default)]
 pub struct Options {
-    clear: Option<Rgba>,
+    clear_color: Option<Rgba>,
+    clear_depth: Option<f32>,
 }
 
 impl Options {
-    pub fn with_clear(mut self, clear: Rgba) -> Self {
-        self.clear = Some(clear);
+    pub fn clear_color(mut self, clear: Rgba) -> Self {
+        self.clear_color = Some(clear);
         self
     }
 
-    fn clear(self) -> LoadOp<Color> {
-        self.clear.map_or(LoadOp::Load, |col| {
-            let [r, g, b, a] = col.0.map(f64::from);
-            LoadOp::Clear(Color { r, g, b, a })
-        })
+    pub fn clear_depth(mut self, clear: f32) -> Self {
+        self.clear_depth = Some(clear);
+        self
     }
 }
 
 impl From<Rgba> for Options {
     fn from(v: Rgba) -> Self {
-        Self::default().with_clear(v)
+        Self::default().clear_color(v)
     }
 }
 
 pub struct Frame<'v, 'e> {
-    view: RenderView<'v>,
+    target: Target<'v>,
     encoder: &'e mut CommandEncoder,
 }
 
@@ -145,23 +144,44 @@ impl Frame<'_, '_> {
     {
         use wgpu::*;
 
-        assert!(
-            self.view.format == layer.format(),
+        assert_eq!(
+            self.target.format,
+            layer.format(),
             "layer format doesn't match frame format",
+        );
+
+        assert!(
+            !layer.depth() || self.target.depthview.is_some(),
+            "the target for a layer with depth must contain a depth buffer",
         );
 
         let opts = opts.into();
         let attachment = RenderPassColorAttachment {
-            view: self.view.txview,
+            view: self.target.colorview,
             resolve_target: None,
             ops: Operations {
-                load: opts.clear(),
+                load: opts
+                    .clear_color
+                    .map(Rgba::wgpu)
+                    .map_or(LoadOp::Load, LoadOp::Clear),
                 store: StoreOp::Store,
             },
         };
 
         let desc = RenderPassDescriptor {
             color_attachments: &[Some(attachment)],
+            depth_stencil_attachment: self.target.depthview.map(|view| {
+                let ops = Operations {
+                    load: opts.clear_depth.map_or(LoadOp::Load, LoadOp::Clear),
+                    store: StoreOp::Store,
+                };
+
+                RenderPassDepthStencilAttachment {
+                    view,
+                    depth_ops: Some(ops),
+                    stencil_ops: None,
+                }
+            }),
             ..Default::default()
         };
 
@@ -178,13 +198,78 @@ impl Frame<'_, '_> {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct RenderView<'v> {
-    txview: &'v TextureView,
+pub struct Target<'v> {
+    colorview: &'v TextureView,
+    depthview: Option<&'v TextureView>,
     format: Format,
 }
 
-impl<'v> RenderView<'v> {
-    pub fn new(txview: &'v TextureView, format: Format) -> Self {
-        Self { txview, format }
+impl<'v> Target<'v> {
+    pub(crate) fn new(colorview: &'v TextureView, format: Format) -> Self {
+        Self {
+            colorview,
+            depthview: None,
+            format,
+        }
+    }
+
+    pub(crate) fn with_depth(mut self, depthview: &'v TextureView) -> Self {
+        self.depthview = Some(depthview);
+        self
+    }
+}
+
+pub trait AsTarget {
+    fn as_target(&self) -> Target;
+}
+
+impl<T> AsTarget for T
+where
+    T: DrawTexture,
+{
+    fn as_target(&self) -> Target {
+        let texture = self.draw_texture();
+        Target::new(texture.view(), texture.format())
+    }
+}
+
+impl<'v> AsTarget for RenderBuffer<'v> {
+    fn as_target(&self) -> Target {
+        Target::new(self.color, self.format).with_depth(self.depth)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct RenderBuffer<'v> {
+    color: &'v TextureView,
+    depth: &'v TextureView,
+    format: Format,
+}
+
+impl<'v> RenderBuffer<'v> {
+    pub fn new<T, D>(color: &'v T, depth: &'v D) -> Self
+    where
+        T: DrawTexture,
+        D: DrawTexture,
+    {
+        let color_texture = color.draw_texture();
+        let depth_texture = depth.draw_texture();
+        assert_eq!(
+            depth_texture.format(),
+            Format::Depth,
+            "the depth texture must have the depth format",
+        );
+
+        assert_eq!(
+            color_texture.size(),
+            depth_texture.size(),
+            "color and depth textures must be the same size",
+        );
+
+        Self {
+            color: color_texture.view(),
+            depth: depth_texture.view(),
+            format: color_texture.format(),
+        }
     }
 }

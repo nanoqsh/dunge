@@ -3,14 +3,12 @@ use {
         bind::{self, Binder, ForeignShader, GroupHandler, UniqueBinding, Visit},
         draw::Draw,
         instance::Row,
-        layer::{Layer, Options},
+        layer::{Config, Layer},
         mesh::{self, Mesh},
         shader::Shader,
         sl::IntoModule,
-        state::State,
-        texture::{
-            self, CopyBuffer, CopyBufferView, DrawTexture, Filter, Make, MapResult, Mapped, Sampler,
-        },
+        state::{AsTarget, State},
+        texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
         uniform::{IntoValue, Uniform, Value},
         Vertex,
     },
@@ -50,7 +48,7 @@ impl Context {
 
     pub fn make_layer<V, I, O>(&self, shader: &Shader<V, I>, opts: O) -> Layer<V, I>
     where
-        O: Into<Options>,
+        O: Into<Config>,
     {
         let opts = opts.into();
         Layer::new(&self.0, shader, &opts)
@@ -106,13 +104,12 @@ impl Context {
         bind::update(&self.0, uni, handler, group)
     }
 
-    pub fn draw_to<T, D>(&self, texture: &T, draw: D)
+    pub fn draw_to<T, D>(&self, target: &T, draw: D)
     where
-        T: DrawTexture,
+        T: AsTarget,
         D: Draw,
     {
-        let view = texture.draw_texture().render_view();
-        self.0.draw(view, draw);
+        self.0.draw(target.as_target(), draw);
     }
 }
 

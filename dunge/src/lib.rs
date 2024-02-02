@@ -36,7 +36,7 @@ pub use {
         draw::{draw, Draw},
         format::Format,
         init::context,
-        state::{Frame, Options},
+        state::{AsTarget, Frame, Options, RenderBuffer, Target},
     },
     dunge_macros::{Group, Instance, Vertex},
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},
@@ -47,5 +47,5 @@ pub use {
 pub use crate::{
     el::{Control, Flow, Key, KeyCode, LoopError, SmolStr, Then},
     init::window,
-    update::{update, update_with_state, Update},
+    update::{update, update_with, Update},
 };

@@ -13,15 +13,17 @@ async fn run() -> Result<(), Error> {
         color::Rgba,
         glam::{Mat4, Quat, Vec2, Vec3},
         group::BoundTexture,
+        layer::Config,
         mesh::MeshData,
         prelude::*,
         sl::{Groups, InVertex, Out},
-        texture::{self, Filter, Sampler, Texture, TextureData, ZeroSized},
+        texture::{self, Filter, Sampler, Texture2d, TextureData, ZeroSized},
         uniform::Uniform,
-        Format, Options,
+        Format, Options, RenderBuffer,
     };
 
-    type RenderTexture = texture::Draw<texture::Bind<Texture>>;
+    type RenderTexture = texture::Draw<Texture2d>;
+    type BindTexture = texture::Bind<RenderTexture>;
 
     #[repr(C)]
     #[derive(Vertex)]
@@ -83,18 +85,28 @@ async fn run() -> Result<(), Error> {
         binder.into_binding()
     };
 
-    let make_screen_tex = |cx: &Context, size| -> Result<_, ZeroSized> {
-        let data = TextureData::empty(size, Format::RgbAlpha)?
-            .with_bind()
-            .with_draw();
-        Ok(cx.make_texture(data))
+    let make_screen = |cx: &Context, size| -> Result<_, ZeroSized> {
+        let color = {
+            let data = TextureData::empty(size, Format::RgbAlpha)?
+                .with_draw()
+                .with_bind();
+
+            cx.make_texture(data)
+        };
+
+        let depth = {
+            let data = TextureData::empty(size, Format::Depth)?.with_draw();
+            cx.make_texture(data)
+        };
+
+        Ok((color, depth))
     };
 
-    let mut tex = make_screen_tex(&cx, window.size())?;
+    let (mut color, mut depth) = make_screen(&cx, window.size())?;
     let sam = cx.make_sampler(Filter::Nearest);
     let (bind_map, handler) = {
         let map = Map {
-            tex: BoundTexture::new(&tex),
+            tex: BoundTexture::new(&color),
             sam: &sam,
         };
 
@@ -167,7 +179,16 @@ async fn run() -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let main_layer = cx.make_layer(&cube_shader, Format::RgbAlpha);
+    let main_layer = {
+        let conf = Config {
+            format: Format::RgbAlpha,
+            depth: true,
+            ..Config::default()
+        };
+
+        cx.make_layer(&cube_shader, conf)
+    };
+
     let screen_layer = cx.make_layer(&screen_shader, window.format());
     let mut size = window.size();
     let upd = |state: &mut State, ctrl: &Control| {
@@ -179,9 +200,9 @@ async fn run() -> Result<(), Error> {
 
         if size != ctrl.size() {
             size = ctrl.size();
-            *state.tex = dunge::then_try! { make_screen_tex(&cx, size) };
+            (*state.color, *state.depth) = dunge::then_try! { make_screen(&cx, size) };
             let map = Map {
-                tex: BoundTexture::new(state.tex),
+                tex: BoundTexture::new(state.color),
                 sam: &sam,
             };
 
@@ -196,16 +217,20 @@ async fn run() -> Result<(), Error> {
         Then::Run
     };
 
-    let clear = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = |state: &State, mut frame: Frame| {
         let main = |mut frame: Frame| {
+            let opts = Options::default()
+                .clear_color(Rgba::from_standard([0., 0., 0., 1.]))
+                .clear_depth(1.);
+
             frame
-                .layer(&main_layer, clear)
+                .layer(&main_layer, opts)
                 .bind(&bind_transform)
                 .draw(&mesh);
         };
 
-        cx.draw_to(state.tex, dunge::draw(main));
+        let buf = RenderBuffer::new(state.color, state.depth);
+        cx.draw_to(&buf, dunge::draw(main));
 
         frame
             .layer(&screen_layer, Options::default())
@@ -214,15 +239,17 @@ async fn run() -> Result<(), Error> {
     };
 
     struct State<'a> {
-        tex: &'a mut RenderTexture,
+        color: &'a mut BindTexture,
+        depth: &'a mut RenderTexture,
         bind_map: UniqueBinding,
     }
 
     let state = State {
-        tex: &mut tex,
+        color: &mut color,
+        depth: &mut depth,
         bind_map,
     };
 
-    let handle = dunge::update_with_state(state, upd, draw);
+    let handle = dunge::update_with(state, upd, draw);
     window.run(handle).map_err(Box::from)
 }

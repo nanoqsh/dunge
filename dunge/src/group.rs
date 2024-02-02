@@ -1,6 +1,6 @@
 use crate::{
     sl::{GlobalOut, ReadGlobal, Ret},
-    texture::{BindTexture, Sampler, Texture},
+    texture::{BindTexture, Sampler, Texture2d},
     types::{self, MemberType},
     uniform::{Uniform, Value},
 };
@@ -8,7 +8,7 @@ use crate::{
 pub use dunge_shader::group::Projection;
 
 #[derive(Clone, Copy)]
-pub struct BoundTexture<'a>(pub(crate) &'a Texture);
+pub struct BoundTexture<'a>(pub(crate) &'a Texture2d);
 
 impl<'a> BoundTexture<'a> {
     pub fn new<T>(texture: &'a T) -> Self
