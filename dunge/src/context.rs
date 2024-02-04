@@ -109,7 +109,8 @@ impl Context {
         T: AsTarget,
         D: Draw,
     {
-        self.0.draw(target.as_target(), draw);
+        let target = target.as_target();
+        self.0.draw(target, draw);
     }
 }
 

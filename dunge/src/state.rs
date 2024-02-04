@@ -156,7 +156,7 @@ impl Frame<'_, '_> {
         );
 
         let opts = opts.into();
-        let attachment = RenderPassColorAttachment {
+        let color_attachment = RenderPassColorAttachment {
             view: self.target.colorview,
             resolve_target: None,
             ops: Operations {
@@ -168,20 +168,22 @@ impl Frame<'_, '_> {
             },
         };
 
-        let desc = RenderPassDescriptor {
-            color_attachments: &[Some(attachment)],
-            depth_stencil_attachment: self.target.depthview.map(|view| {
-                let ops = Operations {
-                    load: opts.clear_depth.map_or(LoadOp::Load, LoadOp::Clear),
-                    store: StoreOp::Store,
-                };
+        let depth_attachment = |view| {
+            let ops = Operations {
+                load: opts.clear_depth.map_or(LoadOp::Load, LoadOp::Clear),
+                store: StoreOp::Store,
+            };
 
-                RenderPassDepthStencilAttachment {
-                    view,
-                    depth_ops: Some(ops),
-                    stencil_ops: None,
-                }
-            }),
+            RenderPassDepthStencilAttachment {
+                view,
+                depth_ops: Some(ops),
+                stencil_ops: None,
+            }
+        };
+
+        let desc = RenderPassDescriptor {
+            color_attachments: &[Some(color_attachment)],
+            depth_stencil_attachment: self.target.depthview.map(depth_attachment),
             ..Default::default()
         };
 
@@ -199,21 +201,21 @@ impl Frame<'_, '_> {
 
 #[derive(Clone, Copy)]
 pub struct Target<'v> {
+    format: Format,
     colorview: &'v TextureView,
     depthview: Option<&'v TextureView>,
-    format: Format,
 }
 
 impl<'v> Target<'v> {
-    pub(crate) fn new(colorview: &'v TextureView, format: Format) -> Self {
+    pub(crate) fn new(format: Format, colorview: &'v TextureView) -> Self {
         Self {
+            format,
             colorview,
             depthview: None,
-            format,
         }
     }
 
-    pub(crate) fn with_depth(mut self, depthview: &'v TextureView) -> Self {
+    fn with(mut self, depthview: &'v TextureView) -> Self {
         self.depthview = Some(depthview);
         self
     }
@@ -229,7 +231,7 @@ where
 {
     fn as_target(&self) -> Target {
         let texture = self.draw_texture();
-        Target::new(texture.view(), texture.format())
+        Target::new(texture.format(), texture.view())
     }
 }
 
@@ -240,7 +242,7 @@ where
 {
     fn as_target(&self) -> Target {
         let depth = self.depth.draw_texture().view();
-        self.color.as_target().with_depth(depth)
+        self.color.as_target().with(depth)
     }
 }
 

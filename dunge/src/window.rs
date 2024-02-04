@@ -246,7 +246,7 @@ pub(crate) struct Output {
 
 impl Output {
     pub fn target(&self) -> Target {
-        Target::new(&self.view, self.format)
+        Target::new(self.format, &self.view)
     }
 
     pub fn present(self) {
