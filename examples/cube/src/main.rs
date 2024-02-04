@@ -17,13 +17,10 @@ async fn run() -> Result<(), Error> {
         mesh::MeshData,
         prelude::*,
         sl::{Groups, InVertex, Out},
-        texture::{self, Filter, Sampler, Texture2d, TextureData, ZeroSized},
+        texture::{Filter, Sampler, TextureData},
         uniform::Uniform,
         Format, Options, RenderBuffer,
     };
-
-    type RenderTexture = texture::Draw<Texture2d>;
-    type BindTexture = texture::Bind<RenderTexture>;
 
     #[repr(C)]
     #[derive(Vertex)]
@@ -85,9 +82,10 @@ async fn run() -> Result<(), Error> {
         binder.into_binding()
     };
 
-    let make_screen = |cx: &Context, size| -> Result<_, ZeroSized> {
+    let make_render_buf = |cx: &Context, size| {
         let color = {
-            let data = TextureData::empty(size, Format::RgbAlpha)?
+            let data = TextureData::empty(size, Format::RgbAlpha)
+                .expect("non-zero size")
                 .with_draw()
                 .with_bind();
 
@@ -95,18 +93,21 @@ async fn run() -> Result<(), Error> {
         };
 
         let depth = {
-            let data = TextureData::empty(size, Format::Depth)?.with_draw();
+            let data = TextureData::empty(size, Format::Depth)
+                .expect("non-zero size")
+                .with_draw();
+
             cx.make_texture(data)
         };
 
-        Ok((color, depth))
+        RenderBuffer::new(color, depth)
     };
 
-    let (mut color, mut depth) = make_screen(&cx, window.size())?;
+    let mut render_buf = make_render_buf(&cx, window.size());
     let sam = cx.make_sampler(Filter::Nearest);
     let (bind_map, handler) = {
         let map = Map {
-            tex: BoundTexture::new(&color),
+            tex: BoundTexture::new(render_buf.color()),
             sam: &sam,
         };
 
@@ -190,25 +191,21 @@ async fn run() -> Result<(), Error> {
     };
 
     let screen_layer = cx.make_layer(&screen_shader, window.format());
-    let mut size = window.size();
-    let upd = |state: &mut State, ctrl: &Control| {
+    let upd = |state: &mut State<_>, ctrl: &Control| {
         for key in ctrl.pressed_keys() {
             if key.code == KeyCode::Escape {
                 return Then::Close;
             }
         }
 
-        if size != ctrl.size() {
-            size = ctrl.size();
-            (*state.color, *state.depth) = dunge::then_try! { make_screen(&cx, size) };
+        if let Some(size) = ctrl.resized() {
+            *state.render_buf = make_render_buf(&cx, size);
             let map = Map {
-                tex: BoundTexture::new(state.color),
+                tex: BoundTexture::new(state.render_buf.color()),
                 sam: &sam,
             };
 
-            dunge::then_try! {
-                cx.update_group(&mut state.bind_map, &handler, &map);
-            }
+            dunge::then!(cx.update_group(&mut state.bind_map, &handler, &map));
         }
 
         r += ctrl.delta_time().as_secs_f32();
@@ -217,7 +214,7 @@ async fn run() -> Result<(), Error> {
         Then::Run
     };
 
-    let draw = |state: &State, mut frame: Frame| {
+    let draw = |state: &State<_>, mut frame: Frame| {
         let main = |mut frame: Frame| {
             let opts = Options::default()
                 .clear_color(Rgba::from_standard([0., 0., 0., 1.]))
@@ -229,8 +226,7 @@ async fn run() -> Result<(), Error> {
                 .draw(&mesh);
         };
 
-        let buf = RenderBuffer::new(state.color, state.depth);
-        cx.draw_to(&buf, dunge::draw(main));
+        cx.draw_to(state.render_buf, dunge::draw(main));
 
         frame
             .layer(&screen_layer, Options::default())
@@ -238,15 +234,13 @@ async fn run() -> Result<(), Error> {
             .draw(&screen_mesh);
     };
 
-    struct State<'a> {
-        color: &'a mut BindTexture,
-        depth: &'a mut RenderTexture,
+    struct State<'a, R> {
+        render_buf: &'a mut R,
         bind_map: UniqueBinding,
     }
 
     let state = State {
-        color: &mut color,
-        depth: &mut depth,
+        render_buf: &mut render_buf,
         bind_map,
     };
 

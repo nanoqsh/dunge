@@ -1,6 +1,7 @@
 use {
     crate::{
         context::Context,
+        state::State,
         time::{Fps, Time},
         update::Update,
         window::View,
@@ -104,6 +105,7 @@ where
 
     let mut ctrl = Control {
         view,
+        resized: None,
         min_delta_time: Cell::new(Duration::from_secs_f32(1. / 60.)),
         delta_time: Duration::ZERO,
         fps: 0,
@@ -139,7 +141,7 @@ where
             Event::WindowEvent { event, window_id } if window_id == ctrl.view.id() => match event {
                 WindowEvent::Resized(PhysicalSize { width, height }) => {
                     log::debug!("resized: {width}, {height}");
-                    ctrl.view.resize(cx.state());
+                    ctrl.resize(cx.state());
                 }
                 WindowEvent::CloseRequested => {
                     log::debug!("close requested");
@@ -220,7 +222,7 @@ where
                         }
                     }
 
-                    ctrl.clear_keys();
+                    ctrl.clear_state();
                     match ctrl.view.output() {
                         Ok(output) => {
                             let target = output.target();
@@ -231,7 +233,7 @@ where
                         Err(SurfaceError::Outdated) => log::info!("suface error: outdated"),
                         Err(SurfaceError::Lost) => {
                             log::info!("suface error: lost");
-                            ctrl.view.resize(cx.state());
+                            ctrl.resize(cx.state());
                         }
                         Err(SurfaceError::OutOfMemory) => {
                             log::error!("suface error: out of memory");
@@ -262,6 +264,7 @@ where
 
 pub struct Control {
     view: View,
+    resized: Option<(u32, u32)>,
     min_delta_time: Cell<Duration>,
     delta_time: Duration,
     fps: u32,
@@ -270,6 +273,15 @@ pub struct Control {
 }
 
 impl Control {
+    pub fn resized(&self) -> Option<(u32, u32)> {
+        self.resized
+    }
+
+    fn resize(&mut self, state: &State) {
+        self.view.resize(state);
+        self.resized = Some(self.view.size());
+    }
+
     pub fn set_min_delta_time(&self, min_delta_time: Duration) {
         self.min_delta_time.set(min_delta_time);
     }
@@ -290,9 +302,10 @@ impl Control {
         &self.released_keys
     }
 
-    fn clear_keys(&mut self) {
+    fn clear_state(&mut self) {
         self.pressed_keys.clear();
         self.released_keys.clear();
+        self.resized = None;
     }
 }
 
@@ -333,16 +346,7 @@ impl Flow for Then {
 }
 
 #[macro_export]
-macro_rules! then_try {
-    ($e:expr ;) => {
-        match $e {
-            ::std::result::Result::Ok(v) => _ = v,
-            ::std::result::Result::Err(e) => {
-                return $crate::Then::Fail(::std::boxed::Box::from(e));
-            }
-        }
-    };
-
+macro_rules! then {
     ($e:expr) => {
         match $e {
             ::std::result::Result::Ok(v) => v,

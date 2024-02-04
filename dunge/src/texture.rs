@@ -371,6 +371,17 @@ pub trait DrawTexture: private::Sealed {
     fn draw_texture(&self) -> &Texture2d;
 }
 
+impl<D> private::Sealed for &D {}
+
+impl<D> DrawTexture for &D
+where
+    D: DrawTexture,
+{
+    fn draw_texture(&self) -> &Texture2d {
+        (**self).draw_texture()
+    }
+}
+
 impl<M> DrawTexture for Bind<M>
 where
     M: DrawTexture,

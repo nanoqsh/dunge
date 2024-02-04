@@ -233,21 +233,25 @@ where
     }
 }
 
-impl<'v> AsTarget for RenderBuffer<'v> {
+impl<T, D> AsTarget for RenderBuffer<T, D>
+where
+    T: DrawTexture,
+    D: DrawTexture,
+{
     fn as_target(&self) -> Target {
-        Target::new(self.color, self.format).with_depth(self.depth)
+        let depth = self.depth.draw_texture().view();
+        self.color.as_target().with_depth(depth)
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct RenderBuffer<'v> {
-    color: &'v TextureView,
-    depth: &'v TextureView,
-    format: Format,
+pub struct RenderBuffer<T, D> {
+    color: T,
+    depth: D,
 }
 
-impl<'v> RenderBuffer<'v> {
-    pub fn new<T, D>(color: &'v T, depth: &'v D) -> Self
+impl<T, D> RenderBuffer<T, D> {
+    pub fn new(color: T, depth: D) -> Self
     where
         T: DrawTexture,
         D: DrawTexture,
@@ -266,10 +270,14 @@ impl<'v> RenderBuffer<'v> {
             "color and depth textures must be the same size",
         );
 
-        Self {
-            color: color_texture.view(),
-            depth: depth_texture.view(),
-            format: color_texture.format(),
-        }
+        Self { color, depth }
+    }
+
+    pub fn color(&self) -> &T {
+        &self.color
+    }
+
+    pub fn depth(&self) -> &D {
+        &self.depth
     }
 }
