@@ -333,7 +333,10 @@ where
                 state.set(State::Expr(ex));
                 ex
             }
-            State::Expr(ex) => ex,
+            State::Expr(ex) => {
+                state.set(State::Expr(ex));
+                ex
+            }
         }
     }
 }
@@ -664,7 +667,7 @@ impl Entry {
         Expr(handle)
     }
 
-    fn access_index(&mut self, base: Expr, index: u32) -> Expr {
+    pub(crate) fn access_index(&mut self, base: Expr, index: u32) -> Expr {
         let ex = Expression::AccessIndex {
             base: base.0,
             index,

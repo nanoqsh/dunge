@@ -1,9 +1,12 @@
-use crate::{
-    eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
-    ret::Ret,
-    types::{self, Scalar, Vector},
+use {
+    crate::{
+        access::{Access, Dimension},
+        eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
+        ret::Ret,
+        types::{self, Scalar, Vector},
+    },
+    std::marker::PhantomData,
 };
-use std::marker::PhantomData;
 
 macro_rules! impl_eval_vec {
     ($g:ty => $t:ty) => {
@@ -38,6 +41,30 @@ impl_eval_vec!(glam::IVec4 => types::Vec4<i32>);
 impl_eval_vec!(glam::UVec2 => types::Vec2<u32>);
 impl_eval_vec!(glam::UVec3 => types::Vec3<u32>);
 impl_eval_vec!(glam::UVec4 => types::Vec4<u32>);
+
+impl<S> Access for types::Vec2<S>
+where
+    S: Scalar,
+{
+    type Dimension = Dimension<2>;
+    type Member = S;
+}
+
+impl<S> Access for types::Vec3<S>
+where
+    S: Scalar,
+{
+    type Dimension = Dimension<3>;
+    type Member = S;
+}
+
+impl<S> Access for types::Vec4<S>
+where
+    S: Scalar,
+{
+    type Dimension = Dimension<4>;
+    type Member = S;
+}
 
 pub const fn splat_vec2<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec2<A::Out>>
 where

@@ -1,5 +1,6 @@
 use {
     crate::{
+        access::{Access, Dimension},
         eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
         ret::Ret,
         types::{self, Matrix},
@@ -33,6 +34,21 @@ macro_rules! impl_eval_mat {
 impl_eval_mat!(glam::Mat2 => types::Mat2);
 impl_eval_mat!(glam::Mat3 => types::Mat3);
 impl_eval_mat!(glam::Mat4 => types::Mat4);
+
+impl Access for types::Mat2 {
+    type Dimension = Dimension<2>;
+    type Member = types::Vec2<f32>;
+}
+
+impl Access for types::Mat3 {
+    type Dimension = Dimension<3>;
+    type Member = types::Vec3<f32>;
+}
+
+impl Access for types::Mat4 {
+    type Dimension = Dimension<4>;
+    type Member = types::Vec4<f32>;
+}
 
 type Matrix2<X, Y, E> = Ret<NewMat<(X, Y), E>, types::Mat2>;
 

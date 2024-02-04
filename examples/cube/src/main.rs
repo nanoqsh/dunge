@@ -19,7 +19,7 @@ async fn run() -> Result<(), Error> {
         sl::{Groups, InVertex, Out},
         texture::{Filter, Sampler, TextureData},
         uniform::Uniform,
-        Format, Options, RenderBuffer,
+        Format, RenderBuffer,
     };
 
     #[repr(C)]
@@ -182,9 +182,8 @@ async fn run() -> Result<(), Error> {
 
     let main_layer = {
         let conf = Config {
-            format: Format::RgbAlpha,
             depth: true,
-            ..Config::default()
+            ..Default::default()
         };
 
         cx.make_layer(&cube_shader, conf)

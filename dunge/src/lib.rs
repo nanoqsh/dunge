@@ -24,7 +24,9 @@ mod update;
 pub mod window;
 
 pub mod prelude {
-    pub use crate::{context::Context, shader::Shader, sl, types, Frame, Group, Instance, Vertex};
+    pub use crate::{
+        context::Context, shader::Shader, sl, types, Frame, Group, Instance, Options, Vertex,
+    };
 
     #[cfg(feature = "winit")]
     pub use crate::el::{Control, KeyCode, Then};
