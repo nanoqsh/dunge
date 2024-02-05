@@ -13,9 +13,9 @@ type Error = Box<dyn error::Error>;
 #[test]
 fn render() -> Result<(), Error> {
     let compute = || {
-        let m = sl::mat2(sl::vec2(1., 0.), sl::vec2(0., 1.));
+        let m = -sl::mat2(sl::vec2(1., 0.), sl::vec2(0., 1.));
         let [m0, m1, m3] = sl::thunk(m);
-        let v = m0.x() + m1.y();
+        let v = m0.x() + (-m1.y());
         let z = sl::splat_vec3(1.).z();
 
         Out {

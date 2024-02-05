@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use {
     crate::{
         context::{Context, InputInfo, InstInfo, Stages, VertInfo},
@@ -11,9 +10,9 @@ use {
         AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
         Function, FunctionArgument, FunctionResult, GlobalVariable, Handle, Literal, Range,
         ResourceBinding, SampleLevel, ShaderStage, Span, Statement, StructMember, Type, TypeInner,
-        UniqueArena,
+        UnaryOperator, UniqueArena,
     },
-    std::{array, cell::Cell, collections::HashMap, iter, mem, rc::Rc},
+    std::{array, cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, rc::Rc},
 };
 
 pub(crate) fn make<O>(cx: Context, output: O) -> Module
@@ -564,7 +563,19 @@ impl Argument {
     }
 }
 
-pub(crate) enum Op {
+pub(crate) enum Un {
+    Neg,
+}
+
+impl Un {
+    fn operator(self) -> UnaryOperator {
+        match self {
+            Self::Neg => UnaryOperator::Negate,
+        }
+    }
+}
+
+pub(crate) enum Bi {
     Add,
     Sub,
     Mul,
@@ -572,7 +583,7 @@ pub(crate) enum Op {
     Rem,
 }
 
-impl Op {
+impl Bi {
     fn operator(self) -> BinaryOperator {
         match self {
             Self::Add => BinaryOperator::Add,
@@ -714,7 +725,19 @@ impl Entry {
         Expr(handle)
     }
 
-    pub(crate) fn binary(&mut self, op: Op, a: Expr, b: Expr) -> Expr {
+    pub(crate) fn unary(&mut self, op: Un, a: Expr) -> Expr {
+        let ex = Expression::Unary {
+            op: op.operator(),
+            expr: a.0,
+        };
+
+        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+        self.stats.push(st, &self.exprs);
+        Expr(handle)
+    }
+
+    pub(crate) fn binary(&mut self, op: Bi, a: Expr, b: Expr) -> Expr {
         let ex = Expression::Binary {
             op: op.operator(),
             left: a.0,

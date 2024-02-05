@@ -45,21 +45,24 @@ async fn run() -> Result<(), Error> {
     struct Map<'a> {
         tex: BoundTexture<'a>,
         sam: &'a Sampler,
-        step: &'a Uniform<[f32; 2]>,
-        // TODO: fix frame size alignment
+        stp: &'a Uniform<[f32; 2]>,
     }
 
     let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Out {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: {
-            let [st] = sl::thunk(sl::fragment(vert.1));
-            let d1 = sl::vec2(0., map.step.clone().y());
-            let d2 = sl::vec2(map.step.clone().x(), 0.);
-            let d3 = sl::vec2(map.step.clone().x(), map.step.y());
-            (sl::texture_sample(map.tex.clone(), map.sam.clone(), st.clone())
-                + sl::texture_sample(map.tex.clone(), map.sam.clone(), st.clone() + d1)
-                + sl::texture_sample(map.tex.clone(), map.sam.clone(), st.clone() + d2)
-                + sl::texture_sample(map.tex, map.sam, st + d3))
+            let [s0, s1, s2, s3] = sl::thunk(sl::fragment(vert.1));
+            let tex = || map.tex.clone();
+            let sam = || map.sam.clone();
+            let stp = || map.stp.clone();
+            let d0 = sl::vec2(stp().x(), stp().y());
+            let d1 = sl::vec2(stp().x(), -stp().y());
+            let d2 = sl::vec2(-stp().x(), stp().y());
+            let d3 = sl::vec2(-stp().x(), -stp().y());
+            (sl::texture_sample(tex(), sam(), s0 + d0)
+                + sl::texture_sample(tex(), sam(), s1 + d1)
+                + sl::texture_sample(tex(), sam(), s2 + d2)
+                + sl::texture_sample(tex(), sam(), s3 + d3))
                 * 0.25
         },
     };
@@ -94,8 +97,14 @@ async fn run() -> Result<(), Error> {
         binder.into_binding()
     };
 
+    const SCREEN_FACTOR: u32 = 2;
+
     let make_render_buf = |cx: &Context, (width, height)| {
-        let size = (u32::max(width * 2, 1), u32::max(height * 2, 1));
+        let size = (
+            u32::max(width, 1) * SCREEN_FACTOR,
+            u32::max(height, 1) * SCREEN_FACTOR,
+        );
+
         let color = {
             let data = TextureData::empty(size, Format::RgbAlpha)
                 .expect("non-zero size")
@@ -119,14 +128,19 @@ async fn run() -> Result<(), Error> {
     let mut render_buf = make_render_buf(&cx, window.size());
     let sam = cx.make_sampler(Filter::Nearest);
 
-    let step_value = |size| <[u32; 2]>::from(size).map(|v| 0.5 / v as f32);
-    let step = cx.make_uniform(step_value(render_buf.size()));
+    let make_stp = |size| {
+        const SCREEN_INV: f32 = 1. / SCREEN_FACTOR as f32;
+
+        <[u32; 2]>::from(size).map(|v| SCREEN_INV / v as f32)
+    };
+
+    let stp = cx.make_uniform(make_stp(render_buf.size()));
 
     let (bind_map, handler) = {
         let map = Map {
             tex: BoundTexture::new(render_buf.color()),
             sam: &sam,
-            step: &step,
+            stp: &stp,
         };
 
         let mut binder = cx.make_binder(&screen_shader);
@@ -217,13 +231,12 @@ async fn run() -> Result<(), Error> {
 
         if let Some(size) = ctrl.resized() {
             *state.render_buf = make_render_buf(&cx, size);
-            let v = step_value(state.render_buf.size());
-            step.update(&cx, v);
+            stp.update(&cx, make_stp(state.render_buf.size()));
 
             let map = Map {
                 tex: BoundTexture::new(state.render_buf.color()),
                 sam: &sam,
-                step: &step,
+                stp: &stp,
             };
 
             dunge::then!(cx.update_group(&mut state.bind_map, &handler, &map));
