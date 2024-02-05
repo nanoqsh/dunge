@@ -18,6 +18,7 @@ use {
 
 pub type KeyCode = keyboard::KeyCode;
 pub type SmolStr = keyboard::SmolStr;
+pub type MouseButton = event::MouseButton;
 
 pub(crate) struct Loop(EventLoop<()>);
 
@@ -95,10 +96,10 @@ where
     U: Update,
 {
     use {
-        event::{ElementState, KeyEvent, StartCause, WindowEvent},
+        event::{ElementState, KeyEvent, MouseScrollDelta, StartCause, WindowEvent},
         event_loop::ControlFlow,
         keyboard::PhysicalKey,
-        winit::dpi::PhysicalSize,
+        winit::dpi::{PhysicalPosition, PhysicalSize},
     };
 
     const WAIT_TIME: Duration = Duration::from_millis(100);
@@ -111,6 +112,12 @@ where
         fps: 0,
         pressed_keys: vec![],
         released_keys: vec![],
+        cursor_position: None,
+        mouse: Mouse {
+            wheel_delta: (0., 0.),
+            pressed_buttons: Buttons(vec![]),
+            released_buttons: Buttons(vec![]),
+        },
     };
 
     // Initial state
@@ -183,6 +190,22 @@ where
                         ElementState::Released => ctrl.released_keys.push(key),
                     }
                 }
+                WindowEvent::CursorMoved {
+                    position: PhysicalPosition { x, y },
+                    ..
+                } => ctrl.cursor_position = Some((x as f32, y as f32)),
+                WindowEvent::CursorLeft { .. } => ctrl.cursor_position = None,
+                WindowEvent::MouseWheel {
+                    delta: MouseScrollDelta::LineDelta(x, y),
+                    ..
+                } => {
+                    ctrl.mouse.wheel_delta.0 += x;
+                    ctrl.mouse.wheel_delta.1 += y;
+                }
+                WindowEvent::MouseInput { state, button, .. } => match state {
+                    ElementState::Pressed => ctrl.mouse.pressed_buttons.push(button),
+                    ElementState::Released => ctrl.mouse.released_buttons.push(button),
+                },
                 WindowEvent::RedrawRequested => {
                     if active {
                         log::debug!("redraw requested");
@@ -270,6 +293,8 @@ pub struct Control {
     fps: u32,
     pressed_keys: Vec<Key>,
     released_keys: Vec<Key>,
+    cursor_position: Option<(f32, f32)>,
+    mouse: Mouse,
 }
 
 impl Control {
@@ -302,10 +327,30 @@ impl Control {
         &self.released_keys
     }
 
+    pub fn cursor_position(&self) -> Option<(f32, f32)> {
+        self.cursor_position
+    }
+
+    pub fn cursor_position_normalized(&self) -> Option<(f32, f32)> {
+        let (width, height) = self.view.size();
+        let norm = |(x, y)| {
+            let nx = 1. - x * 2. / width as f32;
+            let ny = 1. - y * 2. / height as f32;
+            (nx, ny)
+        };
+
+        self.cursor_position.map(norm)
+    }
+
+    pub fn mouse(&self) -> &Mouse {
+        &self.mouse
+    }
+
     fn clear_state(&mut self) {
         self.pressed_keys.clear();
         self.released_keys.clear();
         self.resized = None;
+        self.mouse.clear();
     }
 }
 
@@ -317,10 +362,43 @@ impl ops::Deref for Control {
     }
 }
 
+/// Keyboard input.
 #[derive(Clone)]
 pub struct Key {
     pub code: KeyCode,
     pub text: Option<SmolStr>,
+}
+
+/// Mouse input.
+pub struct Mouse {
+    pub wheel_delta: (f32, f32),
+    pub pressed_buttons: Buttons,
+    pub released_buttons: Buttons,
+}
+
+impl Mouse {
+    fn clear(&mut self) {
+        self.wheel_delta = (0., 0.);
+        self.pressed_buttons.0.clear();
+        self.released_buttons.0.clear();
+    }
+}
+
+/// Mouse buttons.
+pub struct Buttons(Vec<MouseButton>);
+
+impl Buttons {
+    fn push(&mut self, button: MouseButton) {
+        self.0.push(button);
+    }
+}
+
+impl ops::Deref for Buttons {
+    type Target = [MouseButton];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 /// The control flow trait for the [`Update`] event.
