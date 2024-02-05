@@ -1,3 +1,5 @@
+//! Shader instance types and traits.
+
 use {
     crate::{
         context::Context,

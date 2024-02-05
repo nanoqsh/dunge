@@ -24,6 +24,8 @@ mod update;
 pub mod window;
 
 pub mod prelude {
+    //! The dunge prelude.
+
     pub use crate::{
         context::Context, shader::Shader, sl, types, Frame, Group, Instance, Options, Vertex,
     };

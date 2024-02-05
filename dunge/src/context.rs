@@ -15,6 +15,11 @@ use {
     std::{error, fmt, future::IntoFuture, sync::Arc},
 };
 
+/// The main dunge context.
+///
+/// It can be created via the [`context`](fn@crate::context) function
+/// or the [`window`](fn@crate::window) function if you need a window
+/// and the `winit` feature is enabled.
 #[derive(Clone)]
 pub struct Context(Arc<State>);
 
@@ -114,7 +119,7 @@ impl Context {
     }
 }
 
-/// An error returned from the [`Context`] constructor.
+/// An error returned from the [context](Context) constructor.
 #[derive(Debug)]
 pub enum Error {
     BackendSelection,

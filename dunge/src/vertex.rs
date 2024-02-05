@@ -1,3 +1,5 @@
+//! The vertex module.
+
 use crate::{
     sl::{ReadVertex, Ret},
     types::{self, VectorType},

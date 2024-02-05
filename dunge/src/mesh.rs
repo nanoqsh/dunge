@@ -1,3 +1,5 @@
+//! The mesh and mesh data types.
+
 use {
     crate::{state::State, vertex, Vertex},
     std::{borrow::Cow, error, fmt, marker::PhantomData, mem, slice},

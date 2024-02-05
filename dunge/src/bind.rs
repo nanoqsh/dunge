@@ -1,3 +1,5 @@
+//! Shader binding types.
+
 use {
     crate::{
         group::BoundTexture, shader::Shader, state::State, texture::Sampler, uniform::Uniform,

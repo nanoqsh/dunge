@@ -1,3 +1,5 @@
+//! Window types.
+
 use {
     crate::{
         context::{self, Context},
@@ -28,6 +30,20 @@ use {
 #[cfg(not(target_arch = "wasm32"))]
 use crate::el::LoopError;
 
+/// The [window](Window) builder.
+///
+/// This builder completes asynchronously, so to create
+/// the window object, call `.await` at the end of configuration.
+///
+/// # Example
+/// ```rust
+/// # fn t() -> impl std::future::Future<Output = Result<dunge::window::Window, dunge::window::Error>> {
+/// async {
+///     let window = dunge::window().with_title("Hello").await?;
+///     Ok(window)
+/// }
+/// # }
+/// ```
 pub struct WindowBuilder {
     title: String,
     size: Option<(u32, u32)>,
@@ -41,6 +57,7 @@ impl WindowBuilder {
         }
     }
 
+    /// Set the title to the window.
     pub fn with_title<S>(mut self, title: S) -> Self
     where
         S: Into<String>,
@@ -49,11 +66,13 @@ impl WindowBuilder {
         self
     }
 
+    /// Set the window size.
     pub fn with_size(mut self, size: (u32, u32)) -> Self {
         self.size = Some(size);
         self
     }
 
+    /// Enables fullscreen for the window.
     pub fn with_fullscreen(mut self) -> Self {
         self.size = None;
         self

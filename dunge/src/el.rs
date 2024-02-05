@@ -323,6 +323,7 @@ pub struct Key {
     pub text: Option<SmolStr>,
 }
 
+/// The control flow trait for the [`Update`] event.
 pub trait Flow {
     fn flow(self) -> Then;
 }
@@ -333,9 +334,15 @@ impl Flow for () {
     }
 }
 
+/// The control flow object.
 pub enum Then {
+    /// Keep running the application.
     Run,
+
+    /// Close the application.
     Close,
+
+    /// Exit with an error.
     Fail(Box<dyn error::Error>),
 }
 
@@ -345,6 +352,8 @@ impl Flow for Then {
     }
 }
 
+/// The shortcut for creation [`Then`] value
+/// with an error from a [result](Result).
 #[macro_export]
 macro_rules! then {
     ($e:expr) => {

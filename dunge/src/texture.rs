@@ -1,3 +1,5 @@
+//! The texture module.
+
 use {
     crate::{format::Format, state::State},
     std::{error, fmt, future::IntoFuture, mem},

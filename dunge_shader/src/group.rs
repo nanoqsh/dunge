@@ -6,6 +6,7 @@ pub trait Group {
     const DEF: Define<MemberType>;
 }
 
+/// Group type projection in a shader.
 pub trait Projection {
     fn projection(id: u32, out: GlobalOut) -> Self;
 }

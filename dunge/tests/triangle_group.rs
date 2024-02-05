@@ -66,6 +66,7 @@ fn render() -> Result<(), Error> {
         let data = TextureData::empty(SIZE, Format::RgbAlpha)?
             .with_draw()
             .with_copy();
+
         cx.make_texture(data)
     };
 

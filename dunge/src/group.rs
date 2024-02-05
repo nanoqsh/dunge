@@ -1,3 +1,5 @@
+//! Shader group types and traits.
+
 use crate::{
     sl::{GlobalOut, ReadGlobal, Ret},
     texture::{BindTexture, Sampler, Texture2d},

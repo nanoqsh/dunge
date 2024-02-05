@@ -1,3 +1,5 @@
+//! Layer types.
+
 use {
     crate::{
         bind::Binding,

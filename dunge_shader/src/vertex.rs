@@ -35,6 +35,7 @@ pub unsafe trait Vertex {
     const DEF: Define<VectorType>;
 }
 
+/// Maps the slice of vertices to the slice of bytes.
 pub fn verts_as_bytes<V>(verts: &[V]) -> &[u8]
 where
     V: Vertex,
@@ -44,6 +45,7 @@ where
     unsafe { slice::from_raw_parts(verts.as_ptr().cast(), mem::size_of_val(verts)) }
 }
 
+/// Vertex type projection in a shader.
 pub trait Projection {
     fn projection(id: u32) -> Self;
 }

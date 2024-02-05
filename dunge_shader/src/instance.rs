@@ -6,6 +6,7 @@ pub trait Instance {
     const DEF: Define<ValueType>;
 }
 
+/// Instance type projection in a shader.
 pub trait Projection {
     fn projection(id: u32) -> Self;
 }

@@ -1,3 +1,5 @@
+//! Uniform and value traits.
+
 use {
     crate::{
         context::Context,

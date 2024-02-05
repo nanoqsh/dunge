@@ -1,3 +1,5 @@
+//! Shader types.
+
 use {
     naga::{AddressSpace, ImageClass, ImageDimension, ScalarKind, Type, TypeInner, VectorSize},
     std::marker::PhantomData,
