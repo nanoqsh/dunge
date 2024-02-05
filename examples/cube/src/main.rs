@@ -45,11 +45,23 @@ async fn run() -> Result<(), Error> {
     struct Map<'a> {
         tex: BoundTexture<'a>,
         sam: &'a Sampler,
+        step: &'a Uniform<[f32; 2]>,
+        // TODO: fix frame size alignment
     }
 
     let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Out {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
-        color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.1)),
+        color: {
+            let [st] = sl::thunk(sl::fragment(vert.1));
+            let d1 = sl::vec2(0., map.step.clone().y());
+            let d2 = sl::vec2(map.step.clone().x(), 0.);
+            let d3 = sl::vec2(map.step.clone().x(), map.step.y());
+            (sl::texture_sample(map.tex.clone(), map.sam.clone(), st.clone())
+                + sl::texture_sample(map.tex.clone(), map.sam.clone(), st.clone() + d1)
+                + sl::texture_sample(map.tex.clone(), map.sam.clone(), st.clone() + d2)
+                + sl::texture_sample(map.tex, map.sam, st + d3))
+                * 0.25
+        },
     };
 
     let window = dunge::window().with_title("Cube").await?;
@@ -82,7 +94,8 @@ async fn run() -> Result<(), Error> {
         binder.into_binding()
     };
 
-    let make_render_buf = |cx: &Context, size| {
+    let make_render_buf = |cx: &Context, (width, height)| {
+        let size = (u32::max(width * 2, 1), u32::max(height * 2, 1));
         let color = {
             let data = TextureData::empty(size, Format::RgbAlpha)
                 .expect("non-zero size")
@@ -105,10 +118,15 @@ async fn run() -> Result<(), Error> {
 
     let mut render_buf = make_render_buf(&cx, window.size());
     let sam = cx.make_sampler(Filter::Nearest);
+
+    let step_value = |size| <[u32; 2]>::from(size).map(|v| 0.5 / v as f32);
+    let step = cx.make_uniform(step_value(render_buf.size()));
+
     let (bind_map, handler) = {
         let map = Map {
             tex: BoundTexture::new(render_buf.color()),
             sam: &sam,
+            step: &step,
         };
 
         let mut binder = cx.make_binder(&screen_shader);
@@ -199,15 +217,19 @@ async fn run() -> Result<(), Error> {
 
         if let Some(size) = ctrl.resized() {
             *state.render_buf = make_render_buf(&cx, size);
+            let v = step_value(state.render_buf.size());
+            step.update(&cx, v);
+
             let map = Map {
                 tex: BoundTexture::new(state.render_buf.color()),
                 sam: &sam,
+                step: &step,
             };
 
             dunge::then!(cx.update_group(&mut state.bind_map, &handler, &map));
         }
 
-        r += ctrl.delta_time().as_secs_f32();
+        r += ctrl.delta_time().as_secs_f32() * 0.5;
         let mat = transform(r, ctrl.size());
         uniform.update(&cx, mat);
         Then::Run
@@ -216,7 +238,7 @@ async fn run() -> Result<(), Error> {
     let draw = |state: &State<_>, mut frame: Frame| {
         let main = |mut frame: Frame| {
             let opts = Options::default()
-                .clear_color(Rgba::from_standard([0., 0., 0., 1.]))
+                .clear_color(Rgba::from_standard([0.1, 0.05, 0.15, 1.]))
                 .clear_depth(1.);
 
             frame

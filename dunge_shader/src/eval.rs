@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use {
     crate::{
         context::{Context, InputInfo, InstInfo, Stages, VertInfo},
@@ -236,6 +237,7 @@ impl GlobalOut {
     }
 }
 
+#[derive(Clone)]
 pub struct ReadGlobal {
     id: u32,
     binding: u32,
@@ -307,37 +309,52 @@ where
     }
 }
 
-pub fn thunk<A, E, const N: usize>(a: A) -> [Ret<Thunk<A>, A::Out>; N]
+pub fn thunk<A, E, const N: usize>(a: A) -> [Ret<Thunk<A, E>, A::Out>; N]
 where
     A: Eval<E>,
 {
     let state = State::Eval(a);
     let inner = Rc::new(Cell::new(state));
-    array::from_fn(|_| Ret::new(Thunk(Rc::clone(&inner))))
+    let thunk = Thunk::new(Rc::clone(&inner));
+    array::from_fn(|_| Ret::new(thunk.clone()))
 }
 
-pub struct Thunk<A>(Rc<Cell<State<A>>>);
+pub struct Thunk<A, E> {
+    s: Rc<Cell<State<A>>>,
+    e: PhantomData<E>,
+}
 
-impl<A, O, E> Eval<E> for Ret<Thunk<A>, O>
+impl<A, E> Thunk<A, E> {
+    fn new(a: Rc<Cell<State<A>>>) -> Self {
+        Self {
+            s: a,
+            e: PhantomData,
+        }
+    }
+}
+
+impl<A, E> Clone for Thunk<A, E> {
+    fn clone(&self) -> Self {
+        Self::new(self.s.clone())
+    }
+}
+
+impl<A, O, E> Eval<E> for Ret<Thunk<A, E>, O>
 where
     A: Eval<E>,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let Thunk(state) = self.get();
-        match state.replace(State::None) {
+        let Thunk { s, .. } = self.get();
+        let ex = match s.replace(State::None) {
             State::None => unreachable!(),
-            State::Eval(a) => {
-                let ex = a.eval(en);
-                state.set(State::Expr(ex));
-                ex
-            }
-            State::Expr(ex) => {
-                state.set(State::Expr(ex));
-                ex
-            }
-        }
+            State::Eval(a) => a.eval(en),
+            State::Expr(ex) => ex,
+        };
+
+        s.set(State::Expr(ex));
+        ex
     }
 }
 
@@ -625,6 +642,7 @@ pub struct Entry {
     compl: Compiler,
     exprs: Arena<Expression>,
     stats: Statements,
+    cached_glob: HashMap<Handle<GlobalVariable>, Expr>,
     cached_args: HashMap<u32, Expr>,
 }
 
@@ -634,6 +652,7 @@ impl Entry {
             compl,
             exprs: Arena::default(),
             stats: Statements::default(),
+            cached_glob: HashMap::default(),
             cached_args: HashMap::default(),
         }
     }
@@ -654,9 +673,11 @@ impl Entry {
         })
     }
 
-    fn global(&mut self, var: Handle<GlobalVariable>) -> Expr {
-        let ex = Expression::GlobalVariable(var);
-        Expr(self.exprs.append(ex, Span::UNDEFINED))
+    fn global(&mut self, v: Handle<GlobalVariable>) -> Expr {
+        *self.cached_glob.entry(v).or_insert_with(|| {
+            let ex = Expression::GlobalVariable(v);
+            Expr(self.exprs.append(ex, Span::UNDEFINED))
+        })
     }
 
     fn load(&mut self, ptr: Expr) -> Expr {

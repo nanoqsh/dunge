@@ -275,6 +275,13 @@ impl<T, D> RenderBuffer<T, D> {
         Self { color, depth }
     }
 
+    pub fn size(&self) -> (u32, u32)
+    where
+        T: DrawTexture,
+    {
+        self.color.draw_texture().size()
+    }
+
     pub fn color(&self) -> &T {
         &self.color
     }

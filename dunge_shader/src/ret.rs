@@ -20,10 +20,10 @@ impl<A, T> Ret<A, T> {
 
 impl<A, T> Clone for Ret<A, T>
 where
-    A: Copy,
+    A: Clone,
 {
     fn clone(&self) -> Self {
-        *self
+        Self::new(self.a.clone())
     }
 }
 
