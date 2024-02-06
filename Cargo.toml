@@ -4,7 +4,7 @@ members = [
     "dunge",
     "dunge_macros",
     "dunge_shader",
-    "examples/cube",
+    "examples/cube", "examples/file_server",
     "examples/ssaa",
     "examples/triangle",
     "helpers",
