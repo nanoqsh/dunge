@@ -5,6 +5,7 @@ members = [
     "dunge_macros",
     "dunge_shader",
     "examples/cube",
+    "examples/ssaa",
     "examples/triangle",
     "helpers",
 ]

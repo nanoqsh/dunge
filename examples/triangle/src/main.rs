@@ -19,7 +19,7 @@ async fn run() -> Result<(), Error> {
         std::f32::consts,
     };
 
-    const COLOR: Vec4 = Vec4::new(1., 0., 0., 1.);
+    const COLOR: Vec4 = Vec4::new(1., 0.4, 0.8, 1.);
     const THIRD: f32 = consts::TAU / 3.;
 
     #[derive(Group)]
@@ -53,14 +53,14 @@ async fn run() -> Result<(), Error> {
             }
         }
 
-        r += ctrl.delta_time().as_secs_f32();
+        r += ctrl.delta_time().as_secs_f32() * 0.5;
         uniform.update(&cx, r);
         Then::Run
     };
 
-    let clear = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = |mut frame: Frame| {
-        frame.layer(&layer, clear).bind(&bind).draw_points(3);
+        let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+        frame.layer(&layer, opts).bind(&bind).draw_points(3);
     };
 
     window.run(dunge::update(upd, draw))?;
