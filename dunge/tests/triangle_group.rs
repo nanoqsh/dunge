@@ -14,7 +14,7 @@ fn render() -> Result<(), Error> {
             Format, Group, Vertex,
         },
         glam::Vec2,
-        helpers::Image,
+        helpers::image::Image,
         std::fs,
     };
 

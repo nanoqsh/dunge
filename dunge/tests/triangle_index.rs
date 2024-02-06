@@ -12,7 +12,7 @@ fn render() -> Result<(), Error> {
             Format,
         },
         glam::Vec4,
-        helpers::Image,
+        helpers::image::Image,
         std::{f32::consts, fs},
     };
 

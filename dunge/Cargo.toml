@@ -31,12 +31,9 @@ features = ["rwh_06", "x11"]
 optional = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
 wgpu = { version = "0.19", default-features = false, features = ["webgpu"] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3"
-features = ["Document", "Window", "Element", "Performance"]
+web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
 
 [target.'cfg(target_os = "android")'.dependencies.winit]
 version = "0.29"
@@ -46,7 +43,7 @@ optional = true
 
 [dev-dependencies]
 dunge_shader = { workspace = true, features = ["wgsl"] }
-helpers = { path = "../helpers" }
+helpers = { path = "../helpers", features = ["png"] }
 
 [features]
 winit = ["dep:instant", "dep:winit"]

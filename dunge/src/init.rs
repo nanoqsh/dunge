@@ -1,6 +1,7 @@
 use {
     crate::{
         context::{self, Context},
+        element::Element,
         state::State,
     },
     wgpu::Instance,
@@ -49,7 +50,27 @@ pub async fn context() -> Result<Context, context::Error> {
 /// }
 /// # }
 /// ```
-#[cfg(feature = "winit")]
+#[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
 pub fn window() -> WindowBuilder {
-    WindowBuilder::new()
+    WindowBuilder::new(Element(()))
+}
+
+/// Creates the [window builder](WindowBuilder) to
+/// construct the [window](crate::window::Window)
+/// in the given html element.
+#[cfg(all(feature = "winit", target_arch = "wasm32"))]
+pub fn from_element(id: &str) -> WindowBuilder {
+    use web_sys::Window;
+
+    let document = web_sys::window()
+        .as_ref()
+        .and_then(Window::document)
+        .expect("get document");
+
+    let Some(inner) = document.get_element_by_id(id) else {
+        panic!("an element with id {id:?} not found");
+    };
+
+    let element = Element(inner);
+    WindowBuilder::new(element)
 }

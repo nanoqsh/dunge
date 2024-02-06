@@ -58,8 +58,9 @@ impl Loop {
     {
         use winit::platform::web::EventLoopExtWebSys;
 
-        let handle = handle(cx, view, upd);
-        self.0.spawn(handle);
+        let mut handle = handle(cx, view, upd);
+        let wrap = move |ev, target: &_| _ = handle(ev, target);
+        self.0.spawn(wrap);
     }
 }
 
@@ -129,6 +130,7 @@ where
             Event::NewEvents(cause) => match cause {
                 StartCause::ResumeTimeReached { .. } => {
                     log::debug!("resume time reached");
+                    ctrl.view.set_window_size();
                     ctrl.view.request_redraw();
                 }
                 StartCause::WaitCancelled {

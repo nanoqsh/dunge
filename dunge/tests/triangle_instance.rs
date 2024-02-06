@@ -13,7 +13,7 @@ fn render() -> Result<(), Error> {
             Format, Instance,
         },
         glam::Vec2,
-        helpers::Image,
+        helpers::image::Image,
         std::{f32::consts, fs},
     };
 

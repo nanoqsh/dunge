@@ -17,6 +17,8 @@ pub mod vertex;
 #[cfg(feature = "winit")]
 mod el;
 #[cfg(feature = "winit")]
+mod element;
+#[cfg(feature = "winit")]
 mod time;
 #[cfg(feature = "winit")]
 mod update;
@@ -47,9 +49,14 @@ pub use {
     glam,
 };
 
+#[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
+pub use crate::init::window;
+
+#[cfg(all(feature = "winit", target_arch = "wasm32"))]
+pub use crate::init::from_element;
+
 #[cfg(feature = "winit")]
 pub use crate::{
     el::{Control, Flow, Key, KeyCode, LoopError, SmolStr, Then},
-    init::window,
     update::{update, update_with, Update},
 };

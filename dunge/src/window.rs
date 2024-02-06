@@ -4,6 +4,7 @@ use {
     crate::{
         context::{self, Context},
         el::Loop,
+        element::Element,
         format::Format,
         init,
         state::{State, Target},
@@ -45,13 +46,15 @@ use crate::el::LoopError;
 /// # }
 /// ```
 pub struct WindowBuilder {
+    element: Option<Element>,
     title: String,
     size: Option<(u32, u32)>,
 }
 
 impl WindowBuilder {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(element: Element) -> Self {
         Self {
+            element: Some(element),
             title: String::default(),
             size: Some((600, 600)),
         }
@@ -84,7 +87,7 @@ impl WindowBuilder {
             winit::{dpi::PhysicalSize, window::Fullscreen},
         };
 
-        let el = Loop::new()?;
+        let lu = Loop::new()?;
         let inner = {
             let title = mem::take(&mut self.title);
             let builder = window::WindowBuilder::new().with_title(title);
@@ -93,11 +96,17 @@ impl WindowBuilder {
                 None => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
             };
 
-            Arc::new(builder.build(el.inner())?)
+            Arc::new(builder.build(lu.inner())?)
         };
 
-        let view = View::new(cx.state(), instance, inner)?;
-        Ok(Window { cx, el, view })
+        let view = {
+            let el = self.element.take().expect("take the element once");
+            el.set_canvas(&inner);
+            el.set_window_size(&inner);
+            View::new(cx.state(), instance, inner, el)?
+        };
+
+        Ok(Window { cx, lu, view })
     }
 }
 
@@ -129,7 +138,7 @@ impl Future for Build {
 
 pub struct Window {
     cx: Context,
-    el: Loop,
+    lu: Loop,
     view: View,
 }
 
@@ -143,7 +152,7 @@ impl Window {
     where
         U: Update,
     {
-        self.el.run(self.cx, self.view, upd)
+        self.lu.run(self.cx, self.view, upd)
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -151,7 +160,7 @@ impl Window {
     where
         U: Update + 'static,
     {
-        self.el.spawn(self.cx, self.view, upd)
+        self.lu.spawn(self.cx, self.view, upd)
     }
 }
 
@@ -163,19 +172,25 @@ impl ops::Deref for Window {
     }
 }
 
-type SharedWindow = Arc<window::Window>;
+type Inner = Arc<window::Window>;
 
 pub struct View {
     conf: SurfaceConfiguration,
     surface: Surface<'static>,
-    inner: SharedWindow,
+    inner: Inner,
+    el: Element,
 }
 
 impl View {
-    fn new(state: &State, instance: &Instance, inner: SharedWindow) -> Result<Self, Error> {
+    fn new(state: &State, instance: &Instance, inner: Inner, el: Element) -> Result<Self, Error> {
         use wgpu::*;
 
-        const SUPPORTED_FORMATS: [Format; 2] = [Format::RgbAlpha, Format::BgrAlpha];
+        const SUPPORTED_FORMATS: [Format; 4] = [
+            Format::RgbAlpha,
+            Format::BgrAlpha,
+            Format::RgbAlphaLin,
+            Format::BgrAlphaLin,
+        ];
 
         let surface = instance.create_surface(Arc::clone(&inner))?;
         let conf = {
@@ -208,10 +223,11 @@ impl View {
             conf,
             surface,
             inner,
+            el,
         })
     }
 
-    pub fn window(&self) -> SharedWindow {
+    pub fn window(&self) -> Inner {
         Arc::clone(&self.inner)
     }
 
@@ -243,8 +259,12 @@ impl View {
         Ok(Output {
             view,
             format: self.format(),
-            surface: output,
+            output,
         })
+    }
+
+    pub(crate) fn set_window_size(&self) {
+        self.el.set_window_size(&self.inner);
     }
 
     pub(crate) fn resize(&mut self, state: &State) {
@@ -260,7 +280,7 @@ impl View {
 pub(crate) struct Output {
     view: TextureView,
     format: Format,
-    surface: SurfaceTexture,
+    output: SurfaceTexture,
 }
 
 impl Output {
@@ -269,7 +289,7 @@ impl Output {
     }
 
     pub fn present(self) {
-        self.surface.present();
+        self.output.present();
     }
 }
 
