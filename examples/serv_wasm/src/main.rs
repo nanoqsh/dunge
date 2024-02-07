@@ -25,10 +25,10 @@ fn run() -> Result<(), Error> {
     };
 
     let html = index(&module).render()?.leak();
-    let prefix = "examples/run_wasm/static";
+    let prefix = "examples/run_wasm/web";
     let strip = |s: &'static str| -> &'static str { s.strip_prefix(prefix).expect("strip") };
-    let js_path = format!("{prefix}/{module}.js").leak();
-    let wasm_path = format!("{prefix}/{module}_bg.wasm").leak();
+    let js_path = format!("{prefix}/{module}/wasm.js").leak();
+    let wasm_path = format!("{prefix}/{module}/wasm_bg.wasm").leak();
     let js = fs::read_to_string(&js_path)?.leak();
     let wasm = fs::read(&wasm_path)?.leak();
     let routes = &[

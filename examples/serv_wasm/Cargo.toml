@@ -1,5 +1,5 @@
 [package]
-name = "run_wasm"
+name = "serv_wasm"
 version = "0.1.0"
 edition = { workspace = true }
 publish = false

@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = { workspace = true }
 publish = false
 
+[[bin]]
+name = "cube_bin"
+path = "src/main.rs"
+
 [dependencies]
 dunge = { workspace = true, features = ["winit"] }
 env_logger = { workspace = true }

@@ -63,18 +63,3 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
 
     Ok(())
 }
-
-#[cfg(target_family = "wasm")]
-use wasm_bindgen::prelude::*;
-
-#[cfg(target_family = "wasm")]
-#[wasm_bindgen(start)]
-pub async fn start() {
-    use std::panic;
-
-    panic::set_hook(Box::new(console_error_panic_hook::hook));
-    let window = dunge::from_element("root").await;
-    if let Err(err) = window.map_err(Box::from).and_then(run) {
-        panic!("error: {err}");
-    }
-}
