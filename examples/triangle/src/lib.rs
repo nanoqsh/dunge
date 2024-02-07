@@ -1,6 +1,6 @@
 type Error = Box<dyn std::error::Error>;
 
-pub async fn run() -> Result<(), Error> {
+pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
@@ -25,12 +25,6 @@ pub async fn run() -> Result<(), Error> {
             color: COLOR,
         }
     };
-
-    #[cfg(target_family = "wasm")]
-    let window = dunge::from_element("root").await?;
-
-    #[cfg(not(target_family = "wasm"))]
-    let window = dunge::window().with_title("Triangle").await?;
 
     let cx = window.context();
     let shader = cx.make_shader(triangle);
@@ -62,14 +56,10 @@ pub async fn run() -> Result<(), Error> {
     };
 
     #[cfg(target_family = "wasm")]
-    {
-        window.spawn(dunge::update(upd, draw));
-    }
+    window.spawn(dunge::update(upd, draw));
 
     #[cfg(not(target_family = "wasm"))]
-    {
-        window.run(dunge::update(upd, draw))?;
-    }
+    window.run(dunge::update(upd, draw))?;
 
     Ok(())
 }
@@ -83,7 +73,8 @@ pub async fn start() {
     use std::panic;
 
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    if let Err(err) = run().await {
+    let window = dunge::from_element("root").await;
+    if let Err(err) = window.map_err(Box::from).and_then(run) {
         panic!("error: {err}");
     }
 }
