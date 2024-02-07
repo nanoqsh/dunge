@@ -1,17 +1,14 @@
 #![cfg(not(target_family = "wasm"))]
 
-use {
-    dunge::{
-        glam::Vec4,
-        sl::{self, Out},
-    },
-    std::{error, fs},
-};
-
-type Error = Box<dyn error::Error>;
+type Error = Box<dyn std::error::Error>;
 
 #[test]
 fn render() -> Result<(), Error> {
+    use dunge::{
+        glam::Vec4,
+        sl::{self, Out},
+    };
+
     let compute = || {
         let m = -sl::mat2(sl::vec2(1., 0.), sl::vec2(0., 1.));
         let [m0, m1, m3] = sl::thunk(m);
@@ -26,6 +23,6 @@ fn render() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(compute);
-    fs::write("tests/shader.wgsl", shader.debug_wgsl())?;
+    assert_eq!(shader.debug_wgsl(), include_str!("shader.wgsl"));
     Ok(())
 }
