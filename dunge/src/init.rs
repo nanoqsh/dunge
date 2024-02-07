@@ -13,9 +13,21 @@ use crate::window::WindowBuilder;
 pub(crate) async fn make() -> Result<(Context, Instance), context::Error> {
     use wgpu::{Backends, InstanceDescriptor, InstanceFlags};
 
+    let backends;
+
+    #[cfg(any(target_family = "unix", target_family = "windows"))]
+    {
+        backends = Backends::VULKAN;
+    }
+
+    #[cfg(target_family = "wasm")]
+    {
+        backends = Backends::BROWSER_WEBGPU;
+    }
+
     let instance = {
         let desc = InstanceDescriptor {
-            backends: Backends::all(),
+            backends,
             flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
             ..Default::default()
         };

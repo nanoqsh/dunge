@@ -18,11 +18,7 @@ bytemuck = { workspace = true }
 glam = { workspace = true }
 instant = { version = "0.1", optional = true }
 log = { workspace = true }
-
-[dependencies.wgpu]
-version = "0.19"
-default-features = false
-features = ["dx12", "naga-ir"]
+wgpu = { version = "0.19", default-features = false, features = ["naga-ir"] }
 
 [dependencies.winit]
 version = "0.29"
