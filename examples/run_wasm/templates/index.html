@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Triangle</title>
+    <title>{{ module }}</title>
 </head>
 <body>
     <style>
@@ -24,7 +24,7 @@
         }
     </style>
     <script type="module">
-        import init from './triangle.js';
+        import init from './{{ module }}.js';
         await init();
     </script>
     <div id="root"></div>

@@ -5,6 +5,7 @@ edition = { workspace = true }
 publish = false
 
 [dependencies]
+askama = { version = "0.12", default-features = false }
 helpers = { path = "../../helpers", features = ["serv"] }
 
 [lints]
