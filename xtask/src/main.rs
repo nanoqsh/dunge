@@ -7,14 +7,43 @@ fn main() {
 }
 
 fn run() -> Result<(), Error> {
+    use std::{env, path::Path, process::Command};
+
+    let module = env::args().nth(1).ok_or("no module specified")?;
+    let root = Path::new(&env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("root dir");
+
+    let status = Command::new("wasm-pack")
+        .current_dir(root)
+        .args([
+            "build",
+            "examples/wasm",
+            "--no-pack",
+            "--no-typescript",
+            "--target",
+            "web",
+        ])
+        .arg("--out-dir")
+        .arg(root.join("xtask/web").join(&module))
+        .args(["-F", &module])
+        .status()?;
+
+    if !status.success() {
+        return Err(Error::from("wasm-pack build failed"));
+    }
+
+    serv(&module)
+}
+
+fn serv(module: &str) -> Result<(), Error> {
     use {
         askama::Template,
         helpers::serv::{self, Page},
-        std::{env, fs},
+        std::fs,
     };
 
-    let module = env::args().nth(1).ok_or("no module specified")?;
-    let index = |module| {
+    let index = {
         #[derive(Template)]
         #[template(path = "index.html")]
         struct Index<'a> {
@@ -24,8 +53,8 @@ fn run() -> Result<(), Error> {
         Index { module }
     };
 
-    let html = index(&module).render()?.leak();
-    let prefix = "examples/run_wasm/web";
+    let html = index.render()?.leak();
+    let prefix = "xtask/web";
     let strip = |s: &'static str| -> &'static str { s.strip_prefix(prefix).expect("strip") };
     let js_path = format!("{prefix}/{module}/wasm.js").leak();
     let wasm_path = format!("{prefix}/{module}/wasm_bg.wasm").leak();

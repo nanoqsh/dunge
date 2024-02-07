@@ -5,11 +5,11 @@ members = [
     "dunge_macros",
     "dunge_shader",
     "examples/cube",
-    "examples/serv_wasm",
     "examples/ssaa",
     "examples/triangle",
     "examples/wasm",
     "helpers",
+    "xtask",
 ]
 
 [workspace.package]
