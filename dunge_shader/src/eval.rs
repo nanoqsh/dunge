@@ -7,8 +7,8 @@ use {
         types::{self, MemberType, ScalarType, ValueType, VectorType},
     },
     naga::{
-        AddressSpace, Arena, BinaryOperator, Binding, Block, BuiltIn, EntryPoint, Expression,
-        Function, FunctionArgument, FunctionResult, GlobalVariable, Handle, Literal, Range,
+        AddressSpace, Arena, BinaryOperator, Binding, BuiltIn, EntryPoint, Expression, Function,
+        FunctionArgument, FunctionResult, GlobalVariable, Handle, Literal, LocalVariable, Range,
         ResourceBinding, SampleLevel, ShaderStage, Span, Statement, StructMember, Type, TypeInner,
         UnaryOperator, UniqueArena,
     },
@@ -338,11 +338,11 @@ impl<A, E> Clone for Thunk<A, E> {
     }
 }
 
-impl<A, O, E> Eval<E> for Ret<Thunk<A, E>, O>
+impl<A, E> Eval<E> for Ret<Thunk<A, E>, A::Out>
 where
     A: Eval<E>,
 {
-    type Out = O;
+    type Out = A::Out;
 
     fn eval(self, en: &mut E) -> Expr {
         let Thunk { s, .. } = self.get();
@@ -361,6 +361,50 @@ enum State<A> {
     None,
     Eval(A),
     Expr(Expr),
+}
+
+pub fn if_then_else<C, A, B, E>(c: C, a: A, b: B) -> Ret<IfThenElse<C, A, B, E>, A::Out>
+where
+    C: Eval<E, Out = bool>,
+    A: Eval<E>,
+    A::Out: types::Value,
+    B: Eval<E, Out = A::Out>,
+{
+    Ret::new(IfThenElse {
+        c,
+        a,
+        b,
+        e: PhantomData,
+    })
+}
+
+pub struct IfThenElse<C, A, B, E> {
+    c: C,
+    a: A,
+    b: B,
+    e: PhantomData<E>,
+}
+
+impl<C, A, B, E> Eval<E> for Ret<IfThenElse<C, A, B, E>, A::Out>
+where
+    C: Eval<E>,
+    A: Eval<E>,
+    A::Out: types::Value,
+    B: Eval<E>,
+    E: GetEntry,
+{
+    type Out = A::Out;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let IfThenElse { c, a, b, .. } = self.get();
+        let c = c.eval(en);
+        let a = a.eval(en);
+        let b = b.eval(en);
+        let en = en.get_entry();
+        let valty = <A::Out as types::Value>::VALUE_TYPE;
+        let ty = en.new_type(valty.ty());
+        en.if_then_else(c, a, b, ty)
+    }
 }
 
 #[derive(Default)]
@@ -651,9 +695,11 @@ impl Sampled {
 
 pub struct Entry {
     compl: Compiler,
+    locls: Arena<LocalVariable>,
     exprs: Arena<Expression>,
     stats: Statements,
     cached_glob: HashMap<Handle<GlobalVariable>, Expr>,
+    cached_locl: HashMap<Handle<LocalVariable>, Expr>,
     cached_args: HashMap<u32, Expr>,
 }
 
@@ -661,15 +707,27 @@ impl Entry {
     fn new(compl: Compiler) -> Self {
         Self {
             compl,
+            locls: Arena::default(),
             exprs: Arena::default(),
             stats: Statements::default(),
             cached_glob: HashMap::default(),
+            cached_locl: HashMap::default(),
             cached_args: HashMap::default(),
         }
     }
 
     pub(crate) fn new_type(&mut self, ty: Type) -> Handle<Type> {
         self.compl.types.insert(ty, Span::UNDEFINED)
+    }
+
+    fn add_local(&mut self, ty: Handle<Type>) -> Handle<LocalVariable> {
+        let local = LocalVariable {
+            name: None,
+            ty,
+            init: None,
+        };
+
+        self.locls.append(local, Span::UNDEFINED)
     }
 
     fn literal(&mut self, literal: Literal) -> Expr {
@@ -687,6 +745,13 @@ impl Entry {
     fn global(&mut self, v: Handle<GlobalVariable>) -> Expr {
         *self.cached_glob.entry(v).or_insert_with(|| {
             let ex = Expression::GlobalVariable(v);
+            Expr(self.exprs.append(ex, Span::UNDEFINED))
+        })
+    }
+
+    fn local(&mut self, v: Handle<LocalVariable>) -> Expr {
+        *self.cached_locl.entry(v).or_insert_with(|| {
+            let ex = Expression::LocalVariable(v);
             Expr(self.exprs.append(ex, Span::UNDEFINED))
         })
     }
@@ -777,6 +842,30 @@ impl Entry {
         Expr(handle)
     }
 
+    // TODO: Lazy evaluation
+    fn if_then_else(&mut self, cond: Expr, a: Expr, b: Expr, ty: Handle<Type>) -> Expr {
+        let v = self.add_local(ty);
+        let pointer = self.local(v);
+        let a = Statements(vec![Statement::Store {
+            pointer: pointer.0,
+            value: a.0,
+        }]);
+
+        let b = Statements(vec![Statement::Store {
+            pointer: pointer.0,
+            value: b.0,
+        }]);
+
+        let st = Statement::If {
+            condition: cond.0,
+            accept: a.0.into(),
+            reject: b.0.into(),
+        };
+
+        self.stats.push(st, &self.exprs);
+        self.load(pointer)
+    }
+
     fn ret(&mut self, value: Expr) {
         let st = Statement::Return {
             value: Some(value.0),
@@ -807,8 +896,9 @@ impl Entry {
             function: Function {
                 arguments: args.map(Argument::into_function).collect(),
                 result: Some(res),
+                local_variables: self.locls,
                 expressions: self.exprs,
-                body: Block::from_vec(self.stats.0),
+                body: self.stats.0.into(),
                 ..Default::default()
             },
         };
