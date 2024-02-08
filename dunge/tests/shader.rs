@@ -34,15 +34,9 @@ fn shader_if() -> Result<(), Error> {
         sl::{self, Out},
     };
 
-    let compute = || {
-        let a = Vec4::splat(3.);
-        let b = sl::splat_vec4(2.) * 2.;
-        let x = sl::if_then_else(true, a, b);
-
-        Out {
-            place: x,
-            color: sl::splat_vec4(1.),
-        }
+    let compute = || Out {
+        place: sl::if_then_else(true, || Vec4::splat(3.), || sl::splat_vec4(2.) * 2.),
+        color: sl::splat_vec4(1.),
     };
 
     let cx = helpers::block_on(dunge::context())?;

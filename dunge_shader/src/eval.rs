@@ -13,14 +13,23 @@ use {
         FunctionResult, GlobalVariable, Handle, Literal, LocalVariable, Range, ResourceBinding,
         ShaderStage, Span, Statement, StructMember, Type, TypeInner, UniqueArena,
     },
-    std::{cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, rc::Rc},
+    std::{
+        cell::{Cell, RefCell},
+        collections::HashMap,
+        iter,
+        marker::PhantomData,
+        mem,
+        rc::Rc,
+    },
 };
 
-pub(crate) fn make<O>(cx: Context, output: O) -> Module
+pub(crate) fn make<F, O>(cx: Context, f: F) -> Module
 where
+    F: FnOnce() -> O,
     O: Output,
 {
-    let Out { place, color } = output.output();
+    push();
+    let Out { place, color } = f().output();
     let mut compl = Compiler::default();
     let mut binds = Bindings::default();
     let make_input = |info: &_| match info {
@@ -79,6 +88,7 @@ where
         ..Default::default()
     };
 
+    pop();
     Module::new(cx, nm)
 }
 
@@ -309,21 +319,64 @@ where
     }
 }
 
+#[derive(Default)]
+struct Frames {
+    stack: Vec<u32>,
+    count: u32,
+}
+
+thread_local! {
+    static STACK: RefCell<Frames> = RefCell::default();
+}
+
+fn push() {
+    STACK.with(|s| {
+        let mut s = s.borrow_mut();
+        let id = s.count;
+        s.count += 1;
+        s.stack.push(id);
+    });
+}
+
+fn pop() {
+    STACK.with(|s| s.borrow_mut().stack.pop());
+}
+
+fn top() -> Option<u32> {
+    STACK.with(|s| s.borrow().stack.last().copied())
+}
+
+fn in_stack(frame_id: u32) -> bool {
+    STACK.with(|s| {
+        s.borrow()
+            .stack
+            .iter()
+            .rev()
+            .any(|&frame| frame == frame_id)
+    })
+}
+
 pub fn thunk<A, E>(a: A) -> Ret<Thunk<A, E>, A::Out>
 where
     A: Eval<E>,
 {
-    Ret::new(Thunk::new(a))
+    let Some(frame_id) = top() else {
+        panic!("thunk cannot be created outside of a shader function");
+    };
+
+    Ret::new(Thunk::new(frame_id, a))
 }
 
 pub struct Thunk<A, E> {
+    frame_id: u32,
     s: Rc<Cell<State<A>>>,
     e: PhantomData<E>,
 }
 
 impl<A, E> Thunk<A, E> {
-    fn new(a: A) -> Self {
+    fn new(frame_id: u32, a: A) -> Self {
         Self {
+            frame_id,
             s: Rc::new(Cell::new(State::Eval(a))),
             e: PhantomData,
         }
@@ -333,6 +386,7 @@ impl<A, E> Thunk<A, E> {
 impl<A, E> Clone for Thunk<A, E> {
     fn clone(&self) -> Self {
         Self {
+            frame_id: self.frame_id,
             s: Rc::clone(&self.s),
             e: PhantomData,
         }
@@ -346,7 +400,12 @@ where
     type Out = A::Out;
 
     fn eval(self, en: &mut E) -> Expr {
-        let Thunk { s, .. } = self.get();
+        let Thunk { frame_id, s, .. } = self.get();
+        assert!(
+            in_stack(frame_id),
+            "it's impossible to eval the thunk in this scope",
+        );
+
         let ex = match s.replace(State::None) {
             State::None => unreachable!(),
             State::Eval(a) => a.eval(en),
@@ -364,12 +423,14 @@ enum State<A> {
     Expr(Expr),
 }
 
-pub fn if_then_else<C, A, B, E>(c: C, a: A, b: B) -> Ret<IfThenElse<C, A, B, E>, A::Out>
+pub fn if_then_else<C, A, B, X, Y, E>(c: C, a: A, b: B) -> Ret<IfThenElse<C, A, B, E>, X::Out>
 where
     C: Eval<E, Out = bool>,
-    A: Eval<E>,
-    A::Out: types::Value,
-    B: Eval<E, Out = A::Out>,
+    A: FnOnce() -> X,
+    B: FnOnce() -> Y,
+    X: Eval<E>,
+    X::Out: types::Value,
+    Y: Eval<E, Out = X::Out>,
 {
     Ret::new(IfThenElse {
         c,
@@ -386,26 +447,78 @@ pub struct IfThenElse<C, A, B, E> {
     e: PhantomData<E>,
 }
 
-impl<C, A, B, E> Eval<E> for Ret<IfThenElse<C, A, B, E>, A::Out>
+impl<C, A, B, X, Y, E> Eval<E> for Ret<IfThenElse<C, A, B, E>, X::Out>
 where
     C: Eval<E>,
-    A: Eval<E>,
-    A::Out: types::Value,
-    B: Eval<E>,
+    A: FnOnce() -> X,
+    B: FnOnce() -> Y,
+    X: Eval<E>,
+    X::Out: types::Value,
+    Y: Eval<E>,
     E: GetEntry,
 {
-    type Out = A::Out;
+    type Out = X::Out;
 
     fn eval(self, en: &mut E) -> Expr {
         let IfThenElse { c, a, b, .. } = self.get();
         let c = c.eval(en);
-        let a = a.eval(en);
-        let b = b.eval(en);
-        let en = en.get_entry();
-        let valty = <A::Out as types::Value>::VALUE_TYPE;
-        let ty = en.new_type(valty.ty());
-        en.if_then_else(c, a, b, ty)
+        let a = |en: &mut E| a().eval(en);
+        let b = |en: &mut E| b().eval(en);
+        let valty = <X::Out as types::Value>::VALUE_TYPE;
+        let ty = en.get_entry().new_type(valty.ty());
+        eval_if_then_else(en, ty, c, a, b)
     }
+}
+
+fn eval_if_then_else<E, A, B>(en: &mut E, ty: Handle<Type>, cond: Expr, a: A, b: B) -> Expr
+where
+    E: GetEntry,
+    A: FnOnce(&mut E) -> Expr,
+    B: FnOnce(&mut E) -> Expr,
+{
+    let pointer = {
+        let en = en.get_entry();
+        let v = en.add_local(ty);
+        en.local(v)
+    };
+
+    let a_branch = {
+        en.get_entry().push();
+        let a = a(en);
+        let en = en.get_entry();
+        let mut s = en.pop();
+        let st = Statement::Store {
+            pointer: pointer.0,
+            value: a.0,
+        };
+
+        s.insert(st, &en.exprs);
+        s
+    };
+
+    let b_branch = {
+        en.get_entry().push();
+        let b = b(en);
+        let en = en.get_entry();
+        let mut s = en.pop();
+        let st = Statement::Store {
+            pointer: pointer.0,
+            value: b.0,
+        };
+
+        s.insert(st, &en.exprs);
+        s
+    };
+
+    let st = Statement::If {
+        condition: cond.0,
+        accept: a_branch.0.into(),
+        reject: b_branch.0.into(),
+    };
+
+    let en = en.get_entry();
+    en.stack.insert(st, &en.exprs);
+    en.load(pointer)
 }
 
 #[derive(Default)]
@@ -610,9 +723,9 @@ impl Argument {
 
 pub struct Entry {
     compl: Compiler,
+    stack: Stack,
     locls: Arena<LocalVariable>,
     exprs: Arena<Expression>,
-    stats: Statements,
     cached_glob: HashMap<Handle<GlobalVariable>, Expr>,
     cached_locl: HashMap<Handle<LocalVariable>, Expr>,
     cached_args: HashMap<u32, Expr>,
@@ -622,13 +735,23 @@ impl Entry {
     fn new(compl: Compiler) -> Self {
         Self {
             compl,
+            stack: Stack(vec![Statements::default()]),
             locls: Arena::default(),
             exprs: Arena::default(),
-            stats: Statements::default(),
             cached_glob: HashMap::default(),
             cached_locl: HashMap::default(),
             cached_args: HashMap::default(),
         }
+    }
+
+    fn push(&mut self) {
+        self.stack.push();
+        push();
+    }
+
+    fn pop(&mut self) -> Statements {
+        pop();
+        self.stack.pop()
     }
 
     pub(crate) fn new_type(&mut self, ty: Type) -> Handle<Type> {
@@ -675,7 +798,7 @@ impl Entry {
         let ex = Expression::Load { pointer: ptr.0 };
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
@@ -687,7 +810,7 @@ impl Entry {
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
@@ -701,7 +824,7 @@ impl Entry {
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
@@ -713,7 +836,7 @@ impl Entry {
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
@@ -726,7 +849,7 @@ impl Entry {
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
@@ -734,7 +857,7 @@ impl Entry {
         let ex = f.expr(exprs);
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
@@ -746,39 +869,15 @@ impl Entry {
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
     pub(crate) fn sample(&mut self, ex: Sampled) -> Expr {
         let handle = self.exprs.append(ex.expr(), Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
         Expr(handle)
-    }
-
-    // TODO: Lazy evaluation
-    fn if_then_else(&mut self, cond: Expr, a: Expr, b: Expr, ty: Handle<Type>) -> Expr {
-        let v = self.add_local(ty);
-        let pointer = self.local(v);
-        let a = Statements(vec![Statement::Store {
-            pointer: pointer.0,
-            value: a.0,
-        }]);
-
-        let b = Statements(vec![Statement::Store {
-            pointer: pointer.0,
-            value: b.0,
-        }]);
-
-        let st = Statement::If {
-            condition: cond.0,
-            accept: a.0.into(),
-            reject: b.0.into(),
-        };
-
-        self.stats.push(st, &self.exprs);
-        self.load(pointer)
     }
 
     fn ret(&mut self, value: Expr) {
@@ -786,7 +885,7 @@ impl Entry {
             value: Some(value.0),
         };
 
-        self.stats.push(st, &self.exprs);
+        self.stack.insert(st, &self.exprs);
     }
 
     fn build(mut self, stage: Stage, args: &mut Args, ret: Return) -> Built {
@@ -813,7 +912,7 @@ impl Entry {
                 result: Some(res),
                 local_variables: self.locls,
                 expressions: self.exprs,
-                body: self.stats.0.into(),
+                body: self.stack.pop().0.into(),
                 ..Default::default()
             },
         };
@@ -825,11 +924,30 @@ impl Entry {
     }
 }
 
+struct Stack(Vec<Statements>);
+
+impl Stack {
+    fn insert(&mut self, st: Statement, exprs: &Arena<Expression>) {
+        self.0
+            .last_mut()
+            .expect("shouldn't be empty")
+            .insert(st, exprs);
+    }
+
+    fn push(&mut self) {
+        self.0.push(Statements::default());
+    }
+
+    fn pop(&mut self) -> Statements {
+        self.0.pop().expect("shouldn't be empty")
+    }
+}
+
 #[derive(Default)]
 struct Statements(Vec<Statement>);
 
 impl Statements {
-    fn push(&mut self, st: Statement, exprs: &Arena<Expression>) {
+    fn insert(&mut self, st: Statement, exprs: &Arena<Expression>) {
         if let Statement::Emit(new) = &st {
             if let Some(Statement::Emit(top)) = self.0.last_mut() {
                 let top_range = top.zero_based_index_range();

@@ -20,7 +20,7 @@ where
 
     fn into_module(self) -> Module {
         let cx = Context::new();
-        eval::make(cx, self())
+        eval::make(cx, self)
     }
 }
 
@@ -45,7 +45,7 @@ macro_rules! impl_into_module {
                 $(
                     let $t = $t::from_context(&mut cx);
                 )*
-                eval::make(cx, self(a, $($t),*))
+                eval::make(cx, || self(a, $($t),*))
             }
         }
     };

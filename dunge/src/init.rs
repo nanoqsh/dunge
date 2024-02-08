@@ -1,14 +1,13 @@
 use {
     crate::{
         context::{self, Context},
-        element::Element,
         state::State,
     },
     wgpu::Instance,
 };
 
 #[cfg(feature = "winit")]
-use crate::window::WindowBuilder;
+use crate::{element::Element, window::WindowBuilder};
 
 pub(crate) async fn make() -> Result<(Context, Instance), context::Error> {
     use wgpu::{Backends, InstanceDescriptor, InstanceFlags};
