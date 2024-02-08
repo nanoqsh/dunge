@@ -2,17 +2,18 @@ use {
     crate::{
         context::{Context, InputInfo, InstInfo, Stages, VertInfo},
         define::Define,
+        math::Func,
         module::{Module, Out, Output},
-        ret::Ret,
+        ret::{Bi, Ret, Un},
+        texture::Sampled,
         types::{self, MemberType, ScalarType, ValueType, VectorType},
     },
     naga::{
-        AddressSpace, Arena, BinaryOperator, Binding, BuiltIn, EntryPoint, Expression, Function,
-        FunctionArgument, FunctionResult, GlobalVariable, Handle, Literal, LocalVariable, Range,
-        ResourceBinding, SampleLevel, ShaderStage, Span, Statement, StructMember, Type, TypeInner,
-        UnaryOperator, UniqueArena,
+        AddressSpace, Arena, Binding, BuiltIn, EntryPoint, Expression, Function, FunctionArgument,
+        FunctionResult, GlobalVariable, Handle, Literal, LocalVariable, Range, ResourceBinding,
+        ShaderStage, Span, Statement, StructMember, Type, TypeInner, UniqueArena,
     },
-    std::{array, cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, rc::Rc},
+    std::{cell::Cell, collections::HashMap, iter, marker::PhantomData, mem, rc::Rc},
 };
 
 pub(crate) fn make<O>(cx: Context, output: O) -> Module
@@ -173,13 +174,13 @@ pub struct ReadVertex {
 }
 
 impl ReadVertex {
-    pub const fn new<T>(id: u32, index: u32) -> Ret<Self, T> {
+    pub const fn new<O>(id: u32, index: u32) -> Ret<Self, O> {
         Ret::new(Self { id, index })
     }
 }
 
-impl<T> Eval<Vs> for Ret<ReadVertex, T> {
-    type Out = T;
+impl<O> Eval<Vs> for Ret<ReadVertex, O> {
+    type Out = O;
 
     fn eval(self, en: &mut Vs) -> Expr {
         let en = &mut en.inner;
@@ -194,24 +195,24 @@ pub struct ReadInstance {
 }
 
 impl ReadInstance {
-    pub const fn new<T>(id: u32) -> Ret<Self, T> {
+    pub const fn new<O>(id: u32) -> Ret<Self, O> {
         Ret::new(Self { id })
     }
 }
 
-impl<T> Eval<Vs> for Ret<ReadInstance, T>
+impl<O> Eval<Vs> for Ret<ReadInstance, O>
 where
-    T: types::Value,
+    O: types::Value,
 {
-    type Out = T;
+    type Out = O;
 
     fn eval(self, en: &mut Vs) -> Expr {
         let en = &mut en.inner;
         let id = self.get().id;
-        match T::VALUE_TYPE {
+        match O::VALUE_TYPE {
             ValueType::Scalar(_) | ValueType::Vector(_) => en.argument(id),
             ValueType::Matrix(mat) => {
-                let ty = en.new_type(T::VALUE_TYPE.ty());
+                let ty = en.new_type(O::VALUE_TYPE.ty());
                 let arg = en.argument(id);
                 let exprs = (0..mat.dims())
                     .map(|index| en.access_index(arg, index))
@@ -255,11 +256,11 @@ impl ReadGlobal {
     }
 }
 
-impl<T, E> Eval<E> for Ret<ReadGlobal, T>
+impl<O, E> Eval<E> for Ret<ReadGlobal, O>
 where
     E: GetEntry,
 {
-    type Out = T;
+    type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
         let ReadGlobal {
@@ -308,14 +309,11 @@ where
     }
 }
 
-pub fn thunk<A, E, const N: usize>(a: A) -> [Ret<Thunk<A, E>, A::Out>; N]
+pub fn thunk<A, E>(a: A) -> Ret<Thunk<A, E>, A::Out>
 where
     A: Eval<E>,
 {
-    let state = State::Eval(a);
-    let inner = Rc::new(Cell::new(state));
-    let thunk = Thunk::new(Rc::clone(&inner));
-    array::from_fn(|_| Ret::new(thunk.clone()))
+    Ret::new(Thunk::new(a))
 }
 
 pub struct Thunk<A, E> {
@@ -324,9 +322,9 @@ pub struct Thunk<A, E> {
 }
 
 impl<A, E> Thunk<A, E> {
-    fn new(a: Rc<Cell<State<A>>>) -> Self {
+    fn new(a: A) -> Self {
         Self {
-            s: a,
+            s: Rc::new(Cell::new(State::Eval(a))),
             e: PhantomData,
         }
     }
@@ -334,7 +332,10 @@ impl<A, E> Thunk<A, E> {
 
 impl<A, E> Clone for Thunk<A, E> {
     fn clone(&self) -> Self {
-        Self::new(self.s.clone())
+        Self {
+            s: Rc::clone(&self.s),
+            e: PhantomData,
+        }
     }
 }
 
@@ -603,92 +604,6 @@ impl Argument {
             name: None,
             ty: self.ty,
             binding: self.binding,
-        }
-    }
-}
-
-pub(crate) enum Un {
-    Neg,
-}
-
-impl Un {
-    fn operator(self) -> UnaryOperator {
-        match self {
-            Self::Neg => UnaryOperator::Negate,
-        }
-    }
-}
-
-pub(crate) enum Bi {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Rem,
-}
-
-impl Bi {
-    fn operator(self) -> BinaryOperator {
-        match self {
-            Self::Add => BinaryOperator::Add,
-            Self::Sub => BinaryOperator::Subtract,
-            Self::Mul => BinaryOperator::Multiply,
-            Self::Div => BinaryOperator::Divide,
-            Self::Rem => BinaryOperator::Modulo,
-        }
-    }
-}
-
-pub(crate) enum Func {
-    Cos,
-    Cosh,
-    Sin,
-    Sinh,
-    Tan,
-    Tanh,
-}
-
-impl Func {
-    fn expr(self, ev: Evaluated) -> Expression {
-        use naga::MathFunction;
-
-        let fun = match self {
-            Self::Cos => MathFunction::Cos,
-            Self::Cosh => MathFunction::Cosh,
-            Self::Sin => MathFunction::Sin,
-            Self::Sinh => MathFunction::Sinh,
-            Self::Tan => MathFunction::Tan,
-            Self::Tanh => MathFunction::Tanh,
-        };
-
-        let mut exprs = ev.into_iter().map(Expr::get);
-        Expression::Math {
-            fun,
-            arg: exprs.next().expect("first argument"),
-            arg1: exprs.next(),
-            arg2: exprs.next(),
-            arg3: exprs.next(),
-        }
-    }
-}
-
-pub(crate) struct Sampled {
-    pub tex: Expr,
-    pub sam: Expr,
-    pub crd: Expr,
-}
-
-impl Sampled {
-    fn expr(self) -> Expression {
-        Expression::ImageSample {
-            image: self.tex.0,
-            sampler: self.sam.0,
-            gather: None,
-            coordinate: self.crd.0,
-            array_index: None,
-            offset: None,
-            level: SampleLevel::Auto,
-            depth_ref: None,
         }
     }
 }

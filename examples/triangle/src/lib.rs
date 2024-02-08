@@ -19,9 +19,9 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     struct Offset<'a>(&'a Uniform<f32>);
 
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
-        let [x, y] = sl::thunk(sl::f32(idx) * THIRD + offset.0);
+        let i = sl::thunk(sl::f32(idx) * THIRD + offset.0);
         Out {
-            place: sl::vec4(sl::cos(x), sl::sin(y), 0., 1.),
+            place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
             color: COLOR,
         }
     };

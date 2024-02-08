@@ -1,11 +1,12 @@
 use {
-    crate::eval::{Bi, Eval, Expr, GetEntry, Un, Vs},
+    crate::eval::{Eval, Expr, GetEntry, Vs},
+    naga::{BinaryOperator, UnaryOperator},
     std::{marker::PhantomData, ops},
 };
 
-pub struct Ret<A, T> {
+pub struct Ret<A, O> {
     a: A,
-    t: PhantomData<T>,
+    t: PhantomData<O>,
 }
 
 impl<A, T> Ret<A, T> {
@@ -18,7 +19,7 @@ impl<A, T> Ret<A, T> {
     }
 }
 
-impl<A, T> Clone for Ret<A, T>
+impl<A, O> Clone for Ret<A, O>
 where
     A: Clone,
 {
@@ -27,7 +28,7 @@ where
     }
 }
 
-impl<A, T> Copy for Ret<A, T> where A: Copy {}
+impl<A, O> Copy for Ret<A, O> where A: Copy {}
 
 type Operand<A, B> = Ret<A, <B as Eval<Vs>>::Out>;
 
@@ -179,3 +180,35 @@ impl_binary!(Mul::mul(f32, glam::Mat4) -> glam::Mat4);
 impl_binary!(Mul::mul(glam::Mat2, glam::Vec2) -> glam::Vec2);
 impl_binary!(Mul::mul(glam::Mat3, glam::Vec3) -> glam::Vec3);
 impl_binary!(Mul::mul(glam::Mat4, glam::Vec4) -> glam::Vec4);
+
+pub(crate) enum Un {
+    Neg,
+}
+
+impl Un {
+    pub fn operator(self) -> UnaryOperator {
+        match self {
+            Self::Neg => UnaryOperator::Negate,
+        }
+    }
+}
+
+pub(crate) enum Bi {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+}
+
+impl Bi {
+    pub fn operator(self) -> BinaryOperator {
+        match self {
+            Self::Add => BinaryOperator::Add,
+            Self::Sub => BinaryOperator::Subtract,
+            Self::Mul => BinaryOperator::Multiply,
+            Self::Div => BinaryOperator::Divide,
+            Self::Rem => BinaryOperator::Modulo,
+        }
+    }
+}

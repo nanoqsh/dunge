@@ -23,9 +23,9 @@ fn render() -> Result<(), Error> {
     const Y_OFFSET: f32 = 0.25;
 
     let triangle = |Index(index): Index| {
-        let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
+        let i = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
         Out {
-            place: sl::vec4(sl::cos(x), sl::sin(y) + Y_OFFSET, 0., 1.),
+            place: sl::vec4(sl::cos(i.clone()), sl::sin(i) + Y_OFFSET, 0., 1.),
             color: COLOR,
         }
     };

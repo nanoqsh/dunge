@@ -25,9 +25,9 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     struct Offset<'a>(&'a Uniform<f32>);
 
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
-        let [x, y] = sl::thunk(sl::f32(idx) * THIRD + offset.0);
+        let i = sl::thunk(sl::f32(idx) * THIRD + offset.0);
         Out {
-            place: sl::vec4(sl::cos(x), sl::sin(y), 0., 1.),
+            place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
             color: COLOR,
         }
     };
@@ -46,7 +46,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Out {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: {
-            let [s0, s1, s2, s3] = sl::thunk(sl::fragment(vert.1));
+            let s = sl::thunk(sl::fragment(vert.1));
             let tex = || map.tex.clone();
             let sam = || map.sam.clone();
             let stp = || map.stp.clone();
@@ -54,10 +54,10 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
             let d1 = sl::vec2(stp().x(), -stp().y());
             let d2 = sl::vec2(-stp().x(), stp().y());
             let d3 = sl::vec2(-stp().x(), -stp().y());
-            (sl::texture_sample(tex(), sam(), s0 + d0)
-                + sl::texture_sample(tex(), sam(), s1 + d1)
-                + sl::texture_sample(tex(), sam(), s2 + d2)
-                + sl::texture_sample(tex(), sam(), s3 + d3))
+            (sl::texture_sample(tex(), sam(), s.clone() + d0)
+                + sl::texture_sample(tex(), sam(), s.clone() + d1)
+                + sl::texture_sample(tex(), sam(), s.clone() + d2)
+                + sl::texture_sample(tex(), sam(), s + d3))
                 * 0.25
         },
     };

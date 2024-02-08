@@ -1,8 +1,9 @@
 use {
     crate::{
-        eval::{Eval, EvalTuple, Evaluated, Expr, Func, GetEntry},
+        eval::{Eval, EvalTuple, Evaluated, Expr, GetEntry},
         ret::Ret,
     },
+    naga::{Expression, MathFunction},
     std::marker::PhantomData,
 };
 
@@ -76,5 +77,36 @@ where
         let Math { args, func, .. } = self.get();
         args.eval(en, &mut o);
         en.get_entry().math(func, o)
+    }
+}
+
+pub(crate) enum Func {
+    Cos,
+    Cosh,
+    Sin,
+    Sinh,
+    Tan,
+    Tanh,
+}
+
+impl Func {
+    pub fn expr(self, ev: Evaluated) -> Expression {
+        let fun = match self {
+            Self::Cos => MathFunction::Cos,
+            Self::Cosh => MathFunction::Cosh,
+            Self::Sin => MathFunction::Sin,
+            Self::Sinh => MathFunction::Sinh,
+            Self::Tan => MathFunction::Tan,
+            Self::Tanh => MathFunction::Tanh,
+        };
+
+        let mut exprs = ev.into_iter().map(Expr::get);
+        Expression::Math {
+            fun,
+            arg: exprs.next().expect("first argument"),
+            arg1: exprs.next(),
+            arg2: exprs.next(),
+            arg3: exprs.next(),
+        }
     }
 }

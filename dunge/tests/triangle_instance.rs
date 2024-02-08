@@ -26,8 +26,8 @@ fn render() -> Result<(), Error> {
     struct Transform(Row<[f32; 2]>, Row<[f32; 3]>);
 
     let triangle = |t: InInstance<Transform>, Index(index): Index| {
-        let [x, y] = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
-        let p = sl::vec2(sl::cos(x), sl::sin(y)) * TRIANGLE_SIZE + t.0;
+        let i = sl::thunk(sl::f32(index) * THIRD + R_OFFSET);
+        let p = sl::vec2(sl::cos(i.clone()), sl::sin(i)) * TRIANGLE_SIZE + t.0;
         Out {
             place: sl::vec4_concat(p, Vec2::new(0., 1.)),
             color: sl::vec4_with(sl::fragment(t.1), 1.),
