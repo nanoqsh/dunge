@@ -28,6 +28,11 @@ where
     F: FnOnce() -> O,
     O: Output,
 {
+    assert!(
+        top().is_none(),
+        "reentrant in a shader function isn't allowed",
+    );
+
     push();
     let Out { place, color } = f().output();
     let mut compl = Compiler::default();

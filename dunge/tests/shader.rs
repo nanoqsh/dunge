@@ -44,3 +44,40 @@ fn shader_if() -> Result<(), Error> {
     assert_eq!(shader.debug_wgsl(), include_str!("shader_if.wgsl"));
     Ok(())
 }
+
+#[test]
+#[should_panic(expected = "thunk cannot be created outside of a shader function")]
+fn shader_thunk_outside() {
+    use dunge::sl::{self, Eval, Vs};
+
+    fn make() -> impl Eval<Vs> {
+        sl::thunk(1.)
+    }
+
+    _ = make();
+}
+
+#[test]
+#[should_panic(expected = "reentrant in a shader function isn't allowed")]
+fn shader_reentrant() {
+    use dunge::sl::{self, Out};
+
+    let cx = helpers::block_on(dunge::context()).expect("create context");
+    let compute = {
+        let cx = cx.clone();
+        let inner = || Out {
+            place: sl::splat_vec4(1.),
+            color: sl::splat_vec4(1.),
+        };
+
+        move || {
+            _ = cx.make_shader(inner);
+            Out {
+                place: sl::splat_vec4(1.),
+                color: sl::splat_vec4(1.),
+            }
+        }
+    };
+
+    _ = cx.make_shader(compute);
+}
