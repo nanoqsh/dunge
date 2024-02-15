@@ -1,6 +1,5 @@
-# Dunge
-
 <div align="center">
+    <h1>Dunge</h1>
     <p>
         Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">WGPU</a>.
     </p>

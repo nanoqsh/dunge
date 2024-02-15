@@ -12,7 +12,7 @@ fn run() -> Result<(), Error> {
     let module = env::args().nth(1).ok_or("no module specified")?;
     let root = Path::new(&env!("CARGO_MANIFEST_DIR"))
         .parent()
-        .expect("root dir");
+        .ok_or("root dir not found")?;
 
     let status = Command::new("wasm-pack")
         .current_dir(root)

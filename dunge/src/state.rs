@@ -1,7 +1,7 @@
 use {
     crate::{
         color::Rgba,
-        context::Error,
+        context::MakeContextError,
         draw::Draw,
         format::Format,
         layer::{Layer, SetLayer},
@@ -23,7 +23,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new(instance: &Instance) -> Result<Self, Error> {
+    pub async fn new(instance: &Instance) -> Result<Self, MakeContextError> {
         let adapter = {
             use wgpu::{PowerPreference, RequestAdapterOptions};
 
@@ -35,7 +35,7 @@ impl State {
             instance
                 .request_adapter(&options)
                 .await
-                .ok_or(Error::BackendSelection)?
+                .ok_or(MakeContextError::BackendSelection)?
         };
 
         let backend = adapter.get_info().backend;
@@ -58,7 +58,7 @@ impl State {
             adapter
                 .request_device(&desc, None)
                 .await
-                .map_err(Error::RequestDevice)?
+                .map_err(MakeContextError::RequestDevice)?
         };
 
         Ok(Self {

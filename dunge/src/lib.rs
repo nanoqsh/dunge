@@ -38,7 +38,7 @@ pub mod prelude {
 
 pub use {
     crate::{
-        context::{Context, Error},
+        context::{Context, MakeContextError},
         draw::{draw, Draw},
         format::Format,
         init::context,
