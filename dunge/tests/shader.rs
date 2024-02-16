@@ -23,7 +23,7 @@ fn shader_calc() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(compute);
-    assert_eq!(shader.debug_wgsl(), include_str!("shader_calc.wgsl"));
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_calc.wgsl"));
     Ok(())
 }
 
@@ -41,7 +41,25 @@ fn shader_if() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(compute);
-    assert_eq!(shader.debug_wgsl(), include_str!("shader_if.wgsl"));
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_if.wgsl"));
+    Ok(())
+}
+
+#[test]
+fn shader_branch() -> Result<(), Error> {
+    use dunge::sl::{self, Out};
+
+    let compute = || Out {
+        place: sl::default(|| sl::splat_vec4(3.))
+            .when(true, || sl::splat_vec4(1.))
+            .when(false, || sl::splat_vec4(2.)),
+        color: sl::splat_vec4(1.),
+    };
+
+    let cx = helpers::block_on(dunge::context())?;
+    let shader = cx.make_shader(compute);
+    // helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_branch.wgsl"));
+    _ = std::fs::write("tests/shader_branch.wgsl", shader.debug_wgsl());
     Ok(())
 }
 

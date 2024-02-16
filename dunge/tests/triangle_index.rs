@@ -32,7 +32,7 @@ fn render() -> Result<(), Error> {
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
-    assert_eq!(shader.debug_wgsl(), include_str!("triangle_index.wgsl"));
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_index.wgsl"));
 
     let layer = cx.make_layer(&shader, Format::RgbAlpha);
     let view = {

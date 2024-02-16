@@ -428,104 +428,6 @@ enum State<A> {
     Expr(Expr),
 }
 
-pub fn if_then_else<C, A, B, X, Y, E>(c: C, a: A, b: B) -> Ret<IfThenElse<C, A, B, E>, X::Out>
-where
-    C: Eval<E, Out = bool>,
-    A: FnOnce() -> X,
-    B: FnOnce() -> Y,
-    X: Eval<E>,
-    X::Out: types::Value,
-    Y: Eval<E, Out = X::Out>,
-{
-    Ret::new(IfThenElse {
-        c,
-        a,
-        b,
-        e: PhantomData,
-    })
-}
-
-pub struct IfThenElse<C, A, B, E> {
-    c: C,
-    a: A,
-    b: B,
-    e: PhantomData<E>,
-}
-
-impl<C, A, B, X, Y, E> Eval<E> for Ret<IfThenElse<C, A, B, E>, X::Out>
-where
-    C: Eval<E>,
-    A: FnOnce() -> X,
-    B: FnOnce() -> Y,
-    X: Eval<E>,
-    X::Out: types::Value,
-    Y: Eval<E>,
-    E: GetEntry,
-{
-    type Out = X::Out;
-
-    fn eval(self, en: &mut E) -> Expr {
-        let IfThenElse { c, a, b, .. } = self.get();
-        let c = c.eval(en);
-        let a = |en: &mut E| a().eval(en);
-        let b = |en: &mut E| b().eval(en);
-        let valty = <X::Out as types::Value>::VALUE_TYPE;
-        let ty = en.get_entry().new_type(valty.ty());
-        eval_if_then_else(en, ty, c, a, b)
-    }
-}
-
-fn eval_if_then_else<E, A, B>(en: &mut E, ty: Handle<Type>, cond: Expr, a: A, b: B) -> Expr
-where
-    E: GetEntry,
-    A: FnOnce(&mut E) -> Expr,
-    B: FnOnce(&mut E) -> Expr,
-{
-    let pointer = {
-        let en = en.get_entry();
-        let v = en.add_local(ty);
-        en.local(v)
-    };
-
-    let a_branch = {
-        en.get_entry().push();
-        let a = a(en);
-        let en = en.get_entry();
-        let mut s = en.pop();
-        let st = Statement::Store {
-            pointer: pointer.0,
-            value: a.0,
-        };
-
-        s.insert(st, &en.exprs);
-        s
-    };
-
-    let b_branch = {
-        en.get_entry().push();
-        let b = b(en);
-        let en = en.get_entry();
-        let mut s = en.pop();
-        let st = Statement::Store {
-            pointer: pointer.0,
-            value: b.0,
-        };
-
-        s.insert(st, &en.exprs);
-        s
-    };
-
-    let st = Statement::If {
-        condition: cond.0,
-        accept: a_branch.0.into(),
-        reject: b_branch.0.into(),
-    };
-
-    let en = en.get_entry();
-    en.stack.insert(st, &en.exprs);
-    en.load(pointer)
-}
-
 #[derive(Default)]
 pub(crate) struct Evaluated([Option<Expr>; 4]);
 
@@ -928,6 +830,120 @@ impl Entry {
         }
     }
 }
+
+pub struct Branch {
+    expr: Expr,
+}
+
+impl Branch {
+    pub(crate) fn new(en: &mut Entry, ty: Handle<Type>) -> Self {
+        let v = en.add_local(ty);
+        let expr = en.local(v);
+        Self { expr }
+    }
+
+    pub(crate) fn load(&self, en: &mut Entry) -> Expr {
+        en.load(self.expr)
+    }
+
+    pub(crate) fn add<E, A, B>(&self, en: &mut E, c: Expr, a: A, b: B)
+    where
+        E: GetEntry,
+        A: FnOnce(&mut E) -> Expr,
+        B: FnOnce(&mut E) -> Option<Expr>,
+    {
+        let a_branch = {
+            en.get_entry().push();
+            let a = a(en);
+            let en = en.get_entry();
+            let mut s = en.pop();
+            let st = Statement::Store {
+                pointer: self.expr.0,
+                value: a.0,
+            };
+
+            s.insert(st, &en.exprs);
+            s
+        };
+
+        let b_branch = {
+            en.get_entry().push();
+            let b = b(en);
+            let en = en.get_entry();
+            let mut s = en.pop();
+            if let Some(b) = b {
+                let st = Statement::Store {
+                    pointer: self.expr.0,
+                    value: b.0,
+                };
+
+                s.insert(st, &en.exprs);
+            }
+
+            s
+        };
+
+        let st = Statement::If {
+            condition: c.0,
+            accept: a_branch.0.into(),
+            reject: b_branch.0.into(),
+        };
+
+        let en = en.get_entry();
+        en.stack.insert(st, &en.exprs);
+    }
+}
+
+// pub(crate) fn branch<E, A, B>(en: &mut E, ty: Handle<Type>, c: Expr, a: A, b: B) -> Expr
+// where
+//     E: GetEntry,
+//     A: FnOnce(&mut E) -> Expr,
+//     B: FnOnce(&mut E) -> Expr,
+// {
+//     let pointer = {
+//         let en = en.get_entry();
+//         let v = en.add_local(ty);
+//         en.local(v)
+//     };
+
+//     let a_branch = {
+//         en.get_entry().push();
+//         let a = a(en);
+//         let en = en.get_entry();
+//         let mut s = en.pop();
+//         let st = Statement::Store {
+//             pointer: pointer.0,
+//             value: a.0,
+//         };
+
+//         s.insert(st, &en.exprs);
+//         s
+//     };
+
+//     let b_branch = {
+//         en.get_entry().push();
+//         let b = b(en);
+//         let en = en.get_entry();
+//         let mut s = en.pop();
+//         let st = Statement::Store {
+//             pointer: pointer.0,
+//             value: b.0,
+//         };
+
+//         s.insert(st, &en.exprs);
+//         s
+//     };
+
+//     let st = Statement::If {
+//         condition: c.0,
+//         accept: a_branch.0.into(),
+//         reject: b_branch.0.into(),
+//     };
+
+//     let en = en.get_entry();
+//     en.stack.insert(st, &en.exprs);
+//     en.load(pointer)
+// }
 
 struct Stack(Vec<Statements>);
 
