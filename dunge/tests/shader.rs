@@ -49,17 +49,46 @@ fn shader_if() -> Result<(), Error> {
 fn shader_branch() -> Result<(), Error> {
     use dunge::sl::{self, Out};
 
-    let compute = || Out {
-        place: sl::default(|| sl::splat_vec4(3.))
-            .when(true, || sl::splat_vec4(1.))
-            .when(false, || sl::splat_vec4(2.)),
-        color: sl::splat_vec4(1.),
+    let cx = helpers::block_on(dunge::context())?;
+    let shader0 = {
+        let compute = || Out {
+            place: sl::default(|| sl::splat_vec4(1.)).when(false, || sl::splat_vec4(2.)),
+            color: sl::splat_vec4(1.),
+        };
+
+        cx.make_shader(compute)
     };
 
-    let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(compute);
-    // helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_branch.wgsl"));
-    _ = std::fs::write("tests/shader_branch.wgsl", shader.debug_wgsl());
+    let shader1 = {
+        let compute = || Out {
+            place: sl::default(|| sl::splat_vec4(1.))
+                .when(true, || sl::splat_vec4(2.))
+                .when(false, || sl::splat_vec4(3.)),
+            color: sl::splat_vec4(1.),
+        };
+
+        cx.make_shader(compute)
+    };
+
+    let shader2 = {
+        let compute = || {
+            let p = sl::default(|| sl::splat_vec4(1.))
+                .when(true, || sl::splat_vec4(2.))
+                .when(true, || sl::splat_vec4(3.))
+                .when(false, || sl::splat_vec4(4.));
+
+            Out {
+                place: p,
+                color: sl::splat_vec4(1.),
+            }
+        };
+
+        cx.make_shader(compute)
+    };
+
+    helpers::eq_lines(shader0.debug_wgsl(), include_str!("shader_branch0.wgsl"));
+    helpers::eq_lines(shader1.debug_wgsl(), include_str!("shader_branch1.wgsl"));
+    helpers::eq_lines(shader2.debug_wgsl(), include_str!("shader_branch2.wgsl"));
     Ok(())
 }
 

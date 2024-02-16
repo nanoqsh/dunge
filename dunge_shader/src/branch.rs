@@ -47,12 +47,12 @@ where
         let IfThenElse { c, a, b, .. } = self.get();
         let c = c.eval(en);
         let a = |en: &mut E| a().eval(en);
-        let b = |en: &mut E| Some(b().eval(en));
+        let b = |branch: &mut Branch<_>| Some(b().eval(branch.entry()));
         let valty = <X::Out as types::Value>::VALUE_TYPE;
         let ty = en.get_entry().new_type(valty.ty());
-        let branch = Branch::new(en.get_entry(), ty);
-        branch.add(en, c, a, b);
-        branch.load(en.get_entry())
+        let mut branch = Branch::new(en, ty);
+        branch.add(c, a, b);
+        branch.load()
     }
 }
 
@@ -94,22 +94,16 @@ pub struct When<C, A, B, E> {
 
 impl<C, A, B, E, O> Ret<When<C, A, B, E>, O> {
     #[allow(clippy::type_complexity)]
-    pub fn when<D, F, Z>(self, cond: D, expr: F) -> Ret<When<C, A, When<D, F, B, E>, E>, O>
+    pub fn when<D, F, Z>(self, cond: D, expr: F) -> Ret<When<D, F, When<C, A, B, E>, E>, O>
     where
         D: Eval<E, Out = bool>,
         F: FnOnce() -> Z,
         Z: Eval<E, Out = O>,
     {
-        let when = self.get();
         Ret::new(When {
-            c: when.c,
-            a: when.a,
-            b: When {
-                c: cond,
-                a: expr,
-                b: when.b,
-                e: PhantomData,
-            },
+            c: cond,
+            a: expr,
+            b: self.get(),
             e: PhantomData,
         })
     }
@@ -130,14 +124,14 @@ where
         let when = self.get();
         let valty = <X::Out as types::Value>::VALUE_TYPE;
         let ty = en.get_entry().new_type(valty.ty());
-        let branch = Branch::new(en.get_entry(), ty);
-        when.eval_else(en, &branch);
-        branch.load(en.get_entry())
+        let mut branch = Branch::new(en, ty);
+        when.eval_branch(&mut branch);
+        branch.load()
     }
 }
 
 pub trait EvalBranch<E> {
-    fn eval_else(self, en: &mut E, branch: &Branch) -> Option<Expr>;
+    fn eval_branch(self, branch: &mut Branch<E>) -> Option<Expr>;
 }
 
 impl<F, R, E> EvalBranch<E> for F
@@ -145,8 +139,8 @@ where
     F: FnOnce() -> R,
     R: Eval<E>,
 {
-    fn eval_else(self, en: &mut E, _: &Branch) -> Option<Expr> {
-        Some(self().eval(en))
+    fn eval_branch(self, branch: &mut Branch<E>) -> Option<Expr> {
+        Some(self().eval(branch.entry()))
     }
 }
 
@@ -158,12 +152,12 @@ where
     B: EvalBranch<E>,
     E: GetEntry,
 {
-    fn eval_else(self, en: &mut E, branch: &Branch) -> Option<Expr> {
+    fn eval_branch(self, branch: &mut Branch<E>) -> Option<Expr> {
         let Self { c, a, b, .. } = self;
-        let c = c.eval(en);
+        let c = c.eval(branch.entry());
         let a = |en: &mut E| a().eval(en);
-        let b = |en: &mut E| b.eval_else(en, branch);
-        branch.add(en, c, a, b);
+        let b = |branch: &mut Branch<_>| b.eval_branch(branch);
+        branch.add(c, a, b);
         None
     }
 }

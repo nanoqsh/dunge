@@ -6,13 +6,13 @@ struct VertexOutput {
 fn vs() -> VertexOutput {
     var local: vec4<f32>;
 
-    if true {
-        local = vec4<f32>(1f, 1f, 1f, 1f);
+    if false {
+        local = vec4<f32>(3f, 3f, 3f, 3f);
     } else {
-        if false {
+        if true {
             local = vec4<f32>(2f, 2f, 2f, 2f);
         } else {
-            local = vec4<f32>(3f, 3f, 3f, 3f);
+            local = vec4<f32>(1f, 1f, 1f, 1f);
         }
     }
     let _e9: vec4<f32> = local;

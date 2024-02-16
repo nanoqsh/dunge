@@ -831,31 +831,46 @@ impl Entry {
     }
 }
 
-pub struct Branch {
+pub struct Branch<'a, E> {
+    en: &'a mut E,
     expr: Expr,
 }
 
-impl Branch {
-    pub(crate) fn new(en: &mut Entry, ty: Handle<Type>) -> Self {
-        let v = en.add_local(ty);
-        let expr = en.local(v);
-        Self { expr }
+impl<'a, E> Branch<'a, E> {
+    pub(crate) fn new(en: &'a mut E, ty: Handle<Type>) -> Self
+    where
+        E: GetEntry,
+    {
+        let expr = {
+            let en = en.get_entry();
+            let v = en.add_local(ty);
+            en.local(v)
+        };
+
+        Self { en, expr }
     }
 
-    pub(crate) fn load(&self, en: &mut Entry) -> Expr {
-        en.load(self.expr)
+    pub(crate) fn entry(&mut self) -> &mut E {
+        self.en
     }
 
-    pub(crate) fn add<E, A, B>(&self, en: &mut E, c: Expr, a: A, b: B)
+    pub(crate) fn load(&mut self) -> Expr
+    where
+        E: GetEntry,
+    {
+        self.en.get_entry().load(self.expr)
+    }
+
+    pub(crate) fn add<A, B>(&mut self, c: Expr, a: A, b: B)
     where
         E: GetEntry,
         A: FnOnce(&mut E) -> Expr,
-        B: FnOnce(&mut E) -> Option<Expr>,
+        B: FnOnce(&mut Self) -> Option<Expr>,
     {
         let a_branch = {
-            en.get_entry().push();
-            let a = a(en);
-            let en = en.get_entry();
+            self.en.get_entry().push();
+            let a = a(self.entry());
+            let en = self.en.get_entry();
             let mut s = en.pop();
             let st = Statement::Store {
                 pointer: self.expr.0,
@@ -867,9 +882,9 @@ impl Branch {
         };
 
         let b_branch = {
-            en.get_entry().push();
-            let b = b(en);
-            let en = en.get_entry();
+            self.en.get_entry().push();
+            let b = b(self);
+            let en = self.en.get_entry();
             let mut s = en.pop();
             if let Some(b) = b {
                 let st = Statement::Store {
@@ -889,61 +904,10 @@ impl Branch {
             reject: b_branch.0.into(),
         };
 
-        let en = en.get_entry();
+        let en = self.en.get_entry();
         en.stack.insert(st, &en.exprs);
     }
 }
-
-// pub(crate) fn branch<E, A, B>(en: &mut E, ty: Handle<Type>, c: Expr, a: A, b: B) -> Expr
-// where
-//     E: GetEntry,
-//     A: FnOnce(&mut E) -> Expr,
-//     B: FnOnce(&mut E) -> Expr,
-// {
-//     let pointer = {
-//         let en = en.get_entry();
-//         let v = en.add_local(ty);
-//         en.local(v)
-//     };
-
-//     let a_branch = {
-//         en.get_entry().push();
-//         let a = a(en);
-//         let en = en.get_entry();
-//         let mut s = en.pop();
-//         let st = Statement::Store {
-//             pointer: pointer.0,
-//             value: a.0,
-//         };
-
-//         s.insert(st, &en.exprs);
-//         s
-//     };
-
-//     let b_branch = {
-//         en.get_entry().push();
-//         let b = b(en);
-//         let en = en.get_entry();
-//         let mut s = en.pop();
-//         let st = Statement::Store {
-//             pointer: pointer.0,
-//             value: b.0,
-//         };
-
-//         s.insert(st, &en.exprs);
-//         s
-//     };
-
-//     let st = Statement::If {
-//         condition: c.0,
-//         accept: a_branch.0.into(),
-//         reject: b_branch.0.into(),
-//     };
-
-//     let en = en.get_entry();
-//     en.stack.insert(st, &en.exprs);
-//     en.load(pointer)
-// }
 
 struct Stack(Vec<Statements>);
 
