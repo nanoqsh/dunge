@@ -33,7 +33,7 @@ where
         "reentrant in a shader function isn't allowed",
     );
 
-    push();
+    let pop = push();
     let Out { place, color } = f().output();
     let mut compl = Compiler::default();
     let mut binds = Bindings::default();
@@ -79,10 +79,10 @@ where
         };
 
         let out = required.into_iter().map(eval).collect();
-        let res = vs.inner.compose(fsty, out);
-        vs.inner.ret(res);
+        let res = vs.0.compose(fsty, out);
+        vs.0.ret(res);
         let mut args = inputs.into_iter();
-        vs.inner.build(Stage::Vertex, &mut args, Return::Ty(fsty))
+        vs.0.build(Stage::Vertex, &mut args, Return::Ty(fsty))
     };
 
     let compl = vs.compl;
@@ -93,7 +93,7 @@ where
         ..Default::default()
     };
 
-    pop();
+    _ = pop;
     Module::new(cx, nm)
 }
 
@@ -178,7 +178,7 @@ impl Eval<Vs> for Ret<ReadIndex, u32> {
     type Out = u32;
 
     fn eval(self, en: &mut Vs) -> Expr {
-        en.inner.argument(self.get().id)
+        en.get_entry().argument(self.get().id)
     }
 }
 
@@ -198,7 +198,7 @@ impl<O> Eval<Vs> for Ret<ReadVertex, O> {
     type Out = O;
 
     fn eval(self, en: &mut Vs) -> Expr {
-        let en = &mut en.inner;
+        let en = en.get_entry();
         let arg = en.argument(self.get().id);
         en.access_index(arg, self.get().index)
     }
@@ -222,7 +222,7 @@ where
     type Out = O;
 
     fn eval(self, en: &mut Vs) -> Expr {
-        let en = &mut en.inner;
+        let en = en.get_entry();
         let id = self.get().id;
         match O::VALUE_TYPE {
             ValueType::Scalar(_) | ValueType::Vector(_) => en.argument(id),
@@ -334,17 +334,23 @@ thread_local! {
     static STACK: RefCell<Frames> = RefCell::default();
 }
 
-fn push() {
+fn push() -> PopGuard {
     STACK.with(|s| {
         let mut s = s.borrow_mut();
         let id = s.count;
         s.count += 1;
         s.stack.push(id);
     });
+
+    PopGuard
 }
 
-fn pop() {
-    STACK.with(|s| s.borrow_mut().stack.pop());
+struct PopGuard;
+
+impl Drop for PopGuard {
+    fn drop(&mut self) {
+        STACK.with(|s| s.borrow_mut().stack.pop());
+    }
 }
 
 fn top() -> Option<u32> {
@@ -502,15 +508,11 @@ pub(crate) trait GetEntry {
     fn get_entry(&mut self) -> &mut Entry;
 }
 
-pub struct Vs {
-    inner: Entry,
-}
+pub struct Vs(Entry);
 
 impl Vs {
     fn new(compl: Compiler) -> Self {
-        Self {
-            inner: Entry::new(compl),
-        }
+        Self(Entry::new(compl))
     }
 }
 
@@ -518,7 +520,7 @@ impl GetEntry for Vs {
     const STAGE: Stage = Stage::Vertex;
 
     fn get_entry(&mut self) -> &mut Entry {
-        &mut self.inner
+        &mut self.0
     }
 }
 
@@ -651,13 +653,13 @@ impl Entry {
         }
     }
 
-    fn push(&mut self) {
+    fn push(&mut self) -> PopGuard {
         self.stack.push();
-        push();
+        push()
     }
 
-    fn pop(&mut self) -> Statements {
-        pop();
+    fn pop(&mut self, pop: PopGuard) -> Statements {
+        _ = pop;
         self.stack.pop()
     }
 
@@ -868,10 +870,10 @@ impl<'a, E> Branch<'a, E> {
         B: FnOnce(&mut Self) -> Option<Expr>,
     {
         let a_branch = {
-            self.en.get_entry().push();
+            let pop = self.en.get_entry().push();
             let a = a(self.entry());
             let en = self.en.get_entry();
-            let mut s = en.pop();
+            let mut s = en.pop(pop);
             let st = Statement::Store {
                 pointer: self.expr.0,
                 value: a.0,
@@ -882,10 +884,10 @@ impl<'a, E> Branch<'a, E> {
         };
 
         let b_branch = {
-            self.en.get_entry().push();
+            let pop = self.en.get_entry().push();
             let b = b(self);
             let en = self.en.get_entry();
-            let mut s = en.pop();
+            let mut s = en.pop(pop);
             if let Some(b) = b {
                 let st = Statement::Store {
                     pointer: self.expr.0,
