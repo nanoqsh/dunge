@@ -16,7 +16,7 @@ pub struct MeshData<'a, V> {
 
 impl<'a, V> MeshData<'a, V> {
     /// Creates a [mesh data](crate::mesh::MeshData) from given vertices.
-    pub fn from_verts(verts: &'a [V]) -> Self {
+    pub const fn from_verts(verts: &'a [V]) -> Self {
         Self { verts, indxs: None }
     }
 

@@ -8,6 +8,7 @@ members = [
     "examples/ssaa",
     "examples/triangle",
     "examples/wasm",
+    "examples/window",
     "helpers",
     "xtask",
 ]

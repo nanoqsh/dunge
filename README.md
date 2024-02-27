@@ -12,23 +12,152 @@
 
 ## Features
 * Simple and flexible API
-* Customizable vertices and groups
+* Customizable vertices, groups and instances
 * Shader code described as a single rust function
 * High degree of typesafety with minimal runtime checks
-* Desktop, WASM and Android support
+* Desktop, WASM and (later) Android support
 * Optional built-in window and event loop
 
 ## Application area
 Currently the library is for personal use only. Although, over time I plan to stabilize API so that someone could use it for their tasks.
 
 ## Getting Started
-🚧 This section has not yet been written 🚧
+To start using the library add it to your project:
+```sh
+cargo add dunge -F winit
+```
+Specify the `winit` feature if you need to create a windowed application. Although this is not necessary, for example, you can simply draw a scene directly to the image in RAM.
+
+So what if you want to draw something on the screen? Let's say you want to draw a simple colored triangle. Then start by creating a vertex type. To do this, derive the `Vertex` trait for your struct:
+```rust
+use dunge::prelude::*;
+
+// Create a vertex type
+#[repr(C)]
+#[derive(Vertex)]
+struct Vert {
+    pos: [f32; 2],
+    col: [f32; 3],
+}
+```
+
+To render something on GPU you need to program a shader. In dunge you can do this via a normal (almost) rust function:
+```rust
+// Create a shader program
+let triangle = |vert: sl::InVertex<Vert>| {
+    // Describe the vertex position:
+    // Take the vertex data as vec2 and expand it to vec4
+    let place = sl::vec4_concat(vert.pos, sl::vec2(0., 1.));
+
+    // Then describe the vertex color:
+    // First you need to pass the color from
+    // vertex shader stage to fragment shader stage
+    let fragment_col = sl::fragment(vert.col);
+
+    // Now create the final color by adding an alpha value
+    let color = sl::vec4_with(fragment_col, 1.);
+
+    // As a result, return a program that describes how to
+    // compute the vertex position and the fragment color
+    sl::Out { place, color }
+};
+```
+
+As you can see from the snippet, the shader requires you to provide two things: the position of the vertex on the screen and the color of each fragment/pixel. The result is a `triangle` function, but if you ask for its type in the IDE you may notice that it is more complex than usual:
+```rust
+impl Fn(InVertex<Vert>) -> Out<Ret<Compose<Ret<ReadVertex, Vec2<f32>>, Ret<NewVec<(f32, f32), Vs>, Vec2<f32>>>, Vec4<f32>>, Ret<Compose<Ret<Fragment<Ret<ReadVertex, Vec3<f32>>>, Vec3<f32>>, f32>, Vec4<f32>>>
+```
+
+That's because this function doesn't actually compute anything. It is needed only to describe the method for computing what we need on GPU. During shader instantiation, this function is used to compile an actual shader. However, this saves us from having to write the shader in wgsl and allows to typecheck at compile time. For example, dunge checks that a vertex type in a shader matches with a mesh used during rendering. It also checks types inside the shader itself.
+
+Now let's create the dunge context, window and other necessary things:
+```rust
+// Create the dunge context with a window
+let window = dunge::window().await?;
+let cx = window.context();
+
+// You can use the context to manage dunge objects.
+// Create a shader instance
+let shader = cx.make_shader(triangle);
+// And a layer for drawing a mesh on it
+let layer = cx.make_layer(&shader, window.format());
+```
+
+Also create a triangle mesh that we're going to draw:
+```rust
+// Create a mesh from vertices
+let mesh = {
+    use dunge::mesh::MeshData;
+
+    const VERTS: MeshData<'static, Vert> = MeshData::from_verts(&[
+        Vert { pos: [-0.5, -0.5], col: [1., 0., 0.] },
+        Vert { pos: [ 0.5, -0.5], col: [0., 1., 0.] },
+        Vert { pos: [ 0. ,  0.5], col: [0., 0., 1.] },
+    ]);
+
+    cx.make_mesh(&VERTS)
+};
+```
+
+Now to run the application we need two last things: handlers. One `Update` that is called every time before rendering and is used to control the render objects and manage the main [event loop](https://en.wikipedia.org/wiki/Event_loop):
+```rust
+// Describe the `Update` handler
+let upd = |ctrl: &Control| {
+    for key in ctrl.pressed_keys() {
+        // Exit by pressing escape key
+        if key.code == KeyCode::Escape {
+            return Then::Close;
+        }
+    }
+
+    // Otherwise continue running
+    Then::Run
+};
+```
+We don't do anything special here, we just check is <kbd>Esc</kbd> pressed and end the main loop if necessary. Note that this handler is only needed to use a window with the `winit` feature.
+
+Second `Draw` is used directly to draw something in the final frame:
+```rust
+// Describe the `Draw` handler
+let draw = |mut frame: Frame| {
+    use dunge::color::Rgba;
+
+    // Create a black RGBA background
+    let bg = Rgba::from_bytes([0, 0, 0, !0]);
+
+    frame
+        // Select a layer to draw on it
+        .layer(&layer, bg)
+        // The shader has no bindings, so call empty bind
+        .bind_empty()
+        // And finally draw the mesh
+        .draw(&mesh);
+};
+```
+
+Now you can run our application and see the window:
+```rust
+// Run the window with handlers
+window.run(dunge::update(upd, draw))?;
+```
+
+<img align="center" src="https://github.com/nanoqsh/dunge/tree/main/examples/window/s.png">
+
+You can see full code from this example [here](https://github.com/nanoqsh/dunge/tree/main/examples/window) and run it using:
+```sh
+cargo run -p window
+```
 
 ## Examples
-For more examples using the window, see the [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory.
-To build and run an example do:
+For more examples using the window, see the [examples](https://github.com/nanoqsh/dunge/tree/main/examples) directory. To build and run an example do:
 ```sh
 cargo run -p <example_name>
 ```
+
+To build and run a wasm example, make sure [`wasm-pack`](https://github.com/rustwasm/wasm-pack) is installed and then run:
+```sh
+cargo xtask <example_name>
+```
+It will start a local server and you can open http://localhost:3000 in your browser to see the application running. For the web, only [WebGPU](https://gpuweb.github.io/gpuweb/) backend is supported, so make sure your browser supports it.
 
 Also see the [test](https://github.com/nanoqsh/dunge/tree/main/dunge/tests) directory for small examples of creation a single image.
