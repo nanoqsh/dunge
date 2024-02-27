@@ -1,6 +1,6 @@
 use {
     crate::{
-        context::{Context, MakeContextError},
+        context::{Context, FailedMakeContext},
         state::State,
     },
     wgpu::Instance,
@@ -9,7 +9,7 @@ use {
 #[cfg(feature = "winit")]
 use crate::{element::Element, window::WindowBuilder};
 
-pub(crate) async fn make() -> Result<(Context, Instance), MakeContextError> {
+pub(crate) async fn make() -> Result<(Context, Instance), FailedMakeContext> {
     use wgpu::{Backends, InstanceDescriptor, InstanceFlags};
 
     let backends;
@@ -44,8 +44,8 @@ pub(crate) async fn make() -> Result<(Context, Instance), MakeContextError> {
 ///
 /// # Errors
 /// Returns an error when the context could not be created.
-/// See [`MakeContextError`] for details.
-pub async fn context() -> Result<Context, MakeContextError> {
+/// See [`FailedMakeContext`] for details.
+pub async fn context() -> Result<Context, FailedMakeContext> {
     make().await.map(|(cx, _)| cx)
 }
 

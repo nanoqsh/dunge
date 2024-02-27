@@ -4,6 +4,7 @@ use {
     std::{marker::PhantomData, ops},
 };
 
+#[must_use]
 pub struct Ret<A, O> {
     a: A,
     t: PhantomData<O>,

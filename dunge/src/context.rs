@@ -121,12 +121,12 @@ impl Context {
 
 /// An error returned from the [context](Context) constructor.
 #[derive(Debug)]
-pub enum MakeContextError {
+pub enum FailedMakeContext {
     BackendSelection,
     RequestDevice(wgpu::RequestDeviceError),
 }
 
-impl fmt::Display for MakeContextError {
+impl fmt::Display for FailedMakeContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::BackendSelection => write!(f, "failed to select backend"),
@@ -135,7 +135,7 @@ impl fmt::Display for MakeContextError {
     }
 }
 
-impl error::Error for MakeContextError {
+impl error::Error for FailedMakeContext {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Self::BackendSelection => None,

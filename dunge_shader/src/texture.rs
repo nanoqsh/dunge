@@ -1,46 +1,39 @@
 use {
     crate::{
-        eval::{Eval, Expr, GetEntry},
+        eval::{Eval, Expr, Fs, GetEntry},
         ret::Ret,
         types,
     },
     naga::{Expression, SampleLevel},
-    std::marker::PhantomData,
 };
 
-type Tex<T, S, C, O, E> = Ret<Samp<T, S, C, E>, types::Vec4<O>>;
+type Tex<T, S, C, O> = Ret<Samp<T, S, C>, types::Vec4<O>>;
 
-pub const fn texture_sample<T, S, C, E>(tex: T, sam: S, crd: C) -> Tex<T, S, C, f32, E>
+/// Performs the [`textureSample`](https://www.w3.org/TR/WGSL/#texturesample) function.
+pub const fn texture_sample<T, S, C>(tex: T, sam: S, crd: C) -> Tex<T, S, C, f32>
 where
-    T: Eval<E, Out = types::Texture2d<f32>>,
-    S: Eval<E, Out = types::Sampler>,
-    C: Eval<E, Out = types::Vec2<f32>>,
+    T: Eval<Fs, Out = types::Texture2d<f32>>,
+    S: Eval<Fs, Out = types::Sampler>,
+    C: Eval<Fs, Out = types::Vec2<f32>>,
 {
-    Ret::new(Samp {
-        tex,
-        sam,
-        crd,
-        e: PhantomData,
-    })
+    Ret::new(Samp { tex, sam, crd })
 }
 
-pub struct Samp<T, S, C, E> {
+pub struct Samp<T, S, C> {
     tex: T,
     sam: S,
     crd: C,
-    e: PhantomData<E>,
 }
 
-impl<T, S, C, F, E> Eval<E> for Ret<Samp<T, S, C, E>, types::Vec4<F>>
+impl<T, S, C, F> Eval<Fs> for Ret<Samp<T, S, C>, types::Vec4<F>>
 where
-    T: Eval<E, Out = types::Texture2d<F>>,
-    S: Eval<E, Out = types::Sampler>,
-    C: Eval<E, Out = types::Vec2<f32>>,
-    E: GetEntry,
+    T: Eval<Fs, Out = types::Texture2d<F>>,
+    S: Eval<Fs, Out = types::Sampler>,
+    C: Eval<Fs, Out = types::Vec2<f32>>,
 {
     type Out = types::Vec4<F>;
 
-    fn eval(self, en: &mut E) -> Expr {
+    fn eval(self, en: &mut Fs) -> Expr {
         let Samp { tex, sam, crd, .. } = self.get();
         let ex = Sampled {
             tex: tex.eval(en),

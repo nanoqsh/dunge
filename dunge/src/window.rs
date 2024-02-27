@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        context::{Context, MakeContextError},
+        context::{Context, FailedMakeContext},
         el::Loop,
         element::Element,
         format::Format,
@@ -320,8 +320,8 @@ impl From<CreateSurfaceError> for Error {
     }
 }
 
-impl From<MakeContextError> for Error {
-    fn from(v: MakeContextError) -> Self {
+impl From<FailedMakeContext> for Error {
+    fn from(v: FailedMakeContext) -> Self {
         Self(ErrorKind::Context(v))
     }
 }
@@ -356,5 +356,5 @@ enum ErrorKind {
     EventLoop(EventLoopError),
     Os(OsError),
     Surface(CreateSurfaceError),
-    Context(MakeContextError),
+    Context(FailedMakeContext),
 }
