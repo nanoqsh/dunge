@@ -27,7 +27,8 @@ fn run() -> Result<(), Error> {
         .arg("--out-dir")
         .arg(root.join("xtask/web").join(&module))
         .args(["-F", &module])
-        .status()?;
+        .status()
+        .map_err(|err| format!("failed to run wasm-pack: {err}"))?;
 
     if !status.success() {
         return Err(Error::from("wasm-pack build failed"));
