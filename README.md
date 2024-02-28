@@ -141,7 +141,7 @@ window.run(dunge::update(upd, draw))?;
 ```
 
 <div align="center">
-    <img src="./examples/window/s.png">
+    <img src="examples/window/s.png">
 </div>
 
 You can see full code from this example [here](https://github.com/nanoqsh/dunge/tree/main/examples/window) and run it using:

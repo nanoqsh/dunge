@@ -1,23 +1,23 @@
 [package]
 name = "dunge"
 description = "Simple and portable 3d render library"
-version = { workspace = true }
-edition = { workspace = true }
-license = { workspace = true }
-authors = { workspace = true }
-keywords = { workspace = true }
-documentation = { workspace = true }
-readme = { workspace = true }
-repository = { workspace = true }
-rust-version = { workspace = true }
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-dunge_macros = { workspace = true }
-dunge_shader = { workspace = true }
-bytemuck = { workspace = true }
-glam = { workspace = true }
+dunge_macros.workspace = true
+dunge_shader.workspace = true
+bytemuck.workspace = true
+glam.workspace = true
 instant = { version = "0.1", optional = true }
-log = { workspace = true }
+log.workspace = true
 wgpu = { version = "0.19", default-features = false, features = ["naga-ir"] }
 
 [dependencies.winit]

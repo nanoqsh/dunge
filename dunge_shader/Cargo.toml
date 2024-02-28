@@ -1,19 +1,19 @@
 [package]
 name = "dunge_shader"
 description = "Shader generator for the dunge library"
-version = { workspace = true }
-edition = { workspace = true }
-license = { workspace = true }
-authors = { workspace = true }
-keywords = { workspace = true }
-documentation = { workspace = true }
-readme = { workspace = true }
-repository = { workspace = true }
-rust-version = { workspace = true }
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-glam = { workspace = true }
-log = { workspace = true }
+glam.workspace = true
+log.workspace = true
 naga = "0.19"
 
 [features]
