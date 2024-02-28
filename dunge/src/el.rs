@@ -16,8 +16,13 @@ use {
     },
 };
 
+/// Code representing the location of a physical key.
 pub type KeyCode = keyboard::KeyCode;
+
+/// String type from `winit` crate.
 pub type SmolStr = keyboard::SmolStr;
+
+/// Describes a button of a mouse controller.
 pub type MouseButton = event::MouseButton;
 
 pub(crate) struct Loop(EventLoop<()>);
@@ -64,6 +69,7 @@ impl Loop {
     }
 }
 
+/// The event loop error.
 #[derive(Debug)]
 pub enum LoopError {
     EventLoop(EventLoopError),
@@ -90,9 +96,9 @@ impl error::Error for LoopError {
 
 type Event = event::Event<()>;
 type Target = event_loop::EventLoopWindowTarget<()>;
-type Maybe = Option<Box<dyn error::Error>>;
+type Failure = Option<Box<dyn error::Error>>;
 
-fn handle<U>(cx: Context, view: View, mut upd: U) -> impl FnMut(Event, &Target) -> Maybe
+fn handle<U>(cx: Context, view: View, mut upd: U) -> impl FnMut(Event, &Target) -> Failure
 where
     U: Update,
 {
@@ -287,6 +293,7 @@ where
     }
 }
 
+/// The main event loop control type.
 pub struct Control {
     view: View,
     resized: Option<(u32, u32)>,
@@ -414,7 +421,7 @@ impl Flow for () {
     }
 }
 
-/// The control flow object.
+/// The control flow type.
 pub enum Then {
     /// Keep running the application.
     Run,

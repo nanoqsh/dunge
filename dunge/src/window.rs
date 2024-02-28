@@ -186,10 +186,10 @@ impl View {
         use wgpu::*;
 
         const SUPPORTED_FORMATS: [Format; 4] = [
+            Format::SrgbAlpha,
+            Format::SbgrAlpha,
             Format::RgbAlpha,
             Format::BgrAlpha,
-            Format::RgbAlphaLin,
-            Format::BgrAlphaLin,
         ];
 
         let surface = instance.create_surface(Arc::clone(&inner))?;

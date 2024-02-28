@@ -4,11 +4,14 @@ use crate::{
     state::Frame,
 };
 
+/// The update stage.
 pub trait Update: Draw {
     type Flow: Flow;
     fn update(&mut self, ctrl: &Control) -> Self::Flow;
 }
 
+/// Helper function to create a [`Update`]
+/// implementer from functions.
 pub fn update<U, F, D>(mut upd: U, draw: D) -> impl Update
 where
     U: FnMut(&Control) -> F,
@@ -18,6 +21,8 @@ where
     update_with((), move |(), ctrl| upd(ctrl), move |(), frame| draw(frame))
 }
 
+/// Same as [`undate`](fn@crate::update) but with
+/// a state shared between two handlers.
 pub fn update_with<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update
 where
     U: FnMut(&mut S, &Control) -> F,

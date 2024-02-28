@@ -32,9 +32,9 @@ fn render() -> Result<(), Error> {
     let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_vertex.wgsl"));
 
-    let layer = cx.make_layer(&shader, Format::RgbAlpha);
+    let layer = cx.make_layer(&shader, Format::SrgbAlpha);
     let view = {
-        let data = TextureData::empty(SIZE, Format::RgbAlpha)?
+        let data = TextureData::empty(SIZE, Format::SrgbAlpha)?
             .with_draw()
             .with_copy();
 

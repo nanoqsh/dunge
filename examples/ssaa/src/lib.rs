@@ -80,7 +80,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
             u32::max(height, 1) * SCREEN_FACTOR,
         );
 
-        let data = TextureData::empty(size, Format::RgbAlpha)
+        let data = TextureData::empty(size, Format::SrgbAlpha)
             .expect("non-zero size")
             .with_draw()
             .with_bind();
@@ -123,7 +123,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let triangle_layer = cx.make_layer(&triangle_shader, Format::RgbAlpha);
+    let triangle_layer = cx.make_layer(&triangle_shader, Format::SrgbAlpha);
     let screen_layer = cx.make_layer(&screen_shader, window.format());
 
     let upd = move |state: &mut State<_>, ctrl: &Control| {

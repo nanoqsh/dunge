@@ -108,6 +108,7 @@ impl State {
     }
 }
 
+/// Current layer options.
 #[derive(Clone, Copy, Default)]
 pub struct Options {
     clear_color: Option<Rgba>,
@@ -115,11 +116,13 @@ pub struct Options {
 }
 
 impl Options {
+    /// Sets clear color for the layer.
     pub fn clear_color(mut self, clear: Rgba) -> Self {
         self.clear_color = Some(clear);
         self
     }
 
+    /// Sets clear depth for the layer.
     pub fn clear_depth(mut self, clear: f32) -> Self {
         self.clear_depth = Some(clear);
         self
@@ -132,6 +135,7 @@ impl From<Rgba> for Options {
     }
 }
 
+/// The frame type for drawing and copying operations.
 pub struct Frame<'v, 'e> {
     target: Target<'v>,
     encoder: &'e mut CommandEncoder,
@@ -151,13 +155,13 @@ impl Frame<'_, '_> {
         );
 
         assert!(
-            !layer.depth() || self.target.depthview.is_some(),
+            !layer.depth() || self.target.depthv.is_some(),
             "the target for a layer with depth must contain a depth buffer",
         );
 
         let opts = opts.into();
         let color_attachment = RenderPassColorAttachment {
-            view: self.target.colorview,
+            view: self.target.colorv,
             resolve_target: None,
             ops: Operations {
                 load: opts
@@ -183,7 +187,7 @@ impl Frame<'_, '_> {
 
         let desc = RenderPassDescriptor {
             color_attachments: &[Some(color_attachment)],
-            depth_stencil_attachment: self.target.depthview.map(depth_attachment),
+            depth_stencil_attachment: self.target.depthv.map(depth_attachment),
             ..Default::default()
         };
 
@@ -199,28 +203,30 @@ impl Frame<'_, '_> {
     }
 }
 
+/// A target for current frame.
 #[derive(Clone, Copy)]
 pub struct Target<'v> {
     format: Format,
-    colorview: &'v TextureView,
-    depthview: Option<&'v TextureView>,
+    colorv: &'v TextureView,
+    depthv: Option<&'v TextureView>,
 }
 
 impl<'v> Target<'v> {
-    pub(crate) fn new(format: Format, colorview: &'v TextureView) -> Self {
+    pub(crate) fn new(format: Format, colorv: &'v TextureView) -> Self {
         Self {
             format,
-            colorview,
-            depthview: None,
+            colorv,
+            depthv: None,
         }
     }
 
-    fn with(mut self, depthview: &'v TextureView) -> Self {
-        self.depthview = Some(depthview);
+    fn with(mut self, depthv: &'v TextureView) -> Self {
+        self.depthv = Some(depthv);
         self
     }
 }
 
+/// Something that contains a [target](Target).
 pub trait AsTarget {
     fn as_target(&self) -> Target;
 }
@@ -246,6 +252,7 @@ where
     }
 }
 
+/// Pair of color and depth buffer.
 #[derive(Clone, Copy)]
 pub struct RenderBuffer<T, D> {
     color: T,

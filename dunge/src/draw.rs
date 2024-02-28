@@ -1,5 +1,6 @@
 use crate::state::Frame;
 
+/// The draw stage.
 pub trait Draw {
     fn draw(&self, frame: Frame);
 }
@@ -13,6 +14,8 @@ where
     }
 }
 
+/// Helper function to create a [`Draw`]
+/// implementer from a function.
 pub fn draw<D>(draw: D) -> impl Draw
 where
     D: Fn(Frame),
