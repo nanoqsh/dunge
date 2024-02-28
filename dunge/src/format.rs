@@ -9,12 +9,14 @@ pub enum Format {
     RgbAlpha,
     BgrAlpha,
     Depth,
+    Byte,
 }
 
 impl Format {
     pub(crate) const fn bytes(self) -> u32 {
         match self {
             Self::SrgbAlpha | Self::SbgrAlpha | Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
+            Self::Byte => 1,
         }
     }
 
@@ -25,6 +27,7 @@ impl Format {
             Self::RgbAlpha => TextureFormat::Rgba8Unorm,
             Self::BgrAlpha => TextureFormat::Bgra8Unorm,
             Self::Depth => TextureFormat::Depth32Float,
+            Self::Byte => TextureFormat::R8Uint,
         }
     }
 
@@ -35,6 +38,7 @@ impl Format {
             TextureFormat::Rgba8Unorm => Self::RgbAlpha,
             TextureFormat::Bgra8Unorm => Self::BgrAlpha,
             TextureFormat::Depth32Float => Self::Depth,
+            TextureFormat::R8Uint => Self::Byte,
             _ => panic!("unsupported format"),
         }
     }
