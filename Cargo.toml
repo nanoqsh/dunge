@@ -14,7 +14,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.0-rc.1"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 authors = ["nanoqsh"]
@@ -25,9 +25,9 @@ repository = "https://github.com/nanoqsh/dunge"
 rust-version = "1.76"
 
 [workspace.dependencies]
-dunge = { version = "=0.3.0-rc.1", path = "dunge" }
-dunge_macros = { version = "=0.3.0-rc.1", path = "dunge_macros" }
-dunge_shader = { version = "=0.3.0-rc.1", path = "dunge_shader" }
+dunge = { version = "=0.3.0", path = "dunge" }
+dunge_macros = { version = "=0.3.0", path = "dunge_macros" }
+dunge_shader = { version = "=0.3.0", path = "dunge_shader" }
 bytemuck = "1.13"
 glam = "0.25"
 env_logger = "0.11"
