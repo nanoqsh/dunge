@@ -82,6 +82,8 @@ let shader = cx.make_shader(triangle);
 let layer = cx.make_layer(&shader, window.format());
 ```
 
+You may notice the context creation requires async. This is WGPU specific, so you will have to add your favorite async runtime in the project.
+
 Also create a triangle mesh that we're going to draw:
 ```rust
 // Create a mesh from vertices
