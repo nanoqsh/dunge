@@ -235,7 +235,7 @@ impl CopyBuffer {
         let buf = {
             let desc = BufferDescriptor {
                 label: None,
-                size: (actual_width * height * PIXEL_SIZE) as BufferAddress,
+                size: BufferAddress::from(actual_width * height * PIXEL_SIZE),
                 usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             };

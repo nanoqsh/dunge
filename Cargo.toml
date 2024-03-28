@@ -34,14 +34,15 @@ env_logger = "0.11"
 log = "0.4"
 
 [workspace.lints.clippy]
+cast-lossless = "deny"
+flat-map-option = "deny"
+manual-assert = "deny"
+match-wildcard-for-single-variants = "deny"
+missing-assert-message = "deny"
+semicolon-if-nothing-returned = "deny"
+trivially-copy-pass-by-ref = "deny"
 use-self = "deny"
 unwrap-used = "deny"
-missing-assert-message = "deny"
-match-wildcard-for-single-variants = "deny"
-flat-map-option = "deny"
-semicolon-if-nothing-returned = "deny"
-manual-assert = "deny"
-trivially-copy-pass-by-ref = "deny"
 
 [profile.dev]
 opt-level = 1
