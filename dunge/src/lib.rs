@@ -57,6 +57,6 @@ pub use crate::init::from_element;
 
 #[cfg(feature = "winit")]
 pub use crate::{
-    el::{Control, Flow, Key, KeyCode, LoopError, MouseButton, SmolStr, Then},
+    el::{Control, Flow, Key, KeyCode, LoopError, Mouse, MouseButton, SmolStr, Then},
     update::{update, update_with, Update},
 };
