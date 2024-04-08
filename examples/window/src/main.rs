@@ -99,6 +99,6 @@ async fn run() -> Result<(), Error> {
     };
 
     // Run the window with handlers
-    window.run(dunge::update(upd, draw))?;
+    window.run_local(dunge::update(upd, draw))?;
     Ok(())
 }

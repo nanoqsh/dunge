@@ -180,11 +180,6 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         bind_map,
     };
 
-    #[cfg(target_family = "wasm")]
-    window.spawn(dunge::update_with(state, upd, draw));
-
-    #[cfg(not(target_family = "wasm"))]
     window.run(dunge::update_with(state, upd, draw))?;
-
     Ok(())
 }

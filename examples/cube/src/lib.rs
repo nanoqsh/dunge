@@ -124,11 +124,6 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
     };
 
-    #[cfg(target_family = "wasm")]
-    window.spawn(dunge::update(upd, draw));
-
-    #[cfg(not(target_family = "wasm"))]
     window.run(dunge::update(upd, draw))?;
-
     Ok(())
 }

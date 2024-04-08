@@ -55,11 +55,6 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         frame.layer(&layer, opts).bind(&bind).draw_points(3);
     };
 
-    #[cfg(target_family = "wasm")]
-    window.spawn(dunge::update(upd, draw));
-
-    #[cfg(not(target_family = "wasm"))]
     window.run(dunge::update(upd, draw))?;
-
     Ok(())
 }

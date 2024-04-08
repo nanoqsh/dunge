@@ -3,7 +3,7 @@
 use {
     crate::{
         context::{Context, FailedMakeContext},
-        el::Loop,
+        el::{Loop, LoopError},
         element::Element,
         format::Format,
         init,
@@ -27,9 +27,6 @@ use {
         window::{self, WindowId},
     },
 };
-
-#[cfg(not(target_arch = "wasm32"))]
-use crate::el::LoopError;
 
 /// The [window](Window) builder.
 ///
@@ -147,20 +144,39 @@ impl Window {
         self.cx.clone()
     }
 
+    /// Runs the main event loop locally.
+    ///
+    /// # Errors
+    /// Returns [`LoopError`] if the main loop is stopped due to an error.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn run<U>(self, upd: U) -> Result<(), LoopError>
+    pub fn run_local<U>(self, upd: U) -> Result<(), LoopError>
     where
         U: Update,
     {
         self.lu.run(self.cx, self.view, upd)
     }
 
-    #[cfg(target_arch = "wasm32")]
-    pub fn spawn<U>(self, upd: U)
+    /// Runs the main event loop.
+    ///
+    /// # Errors
+    /// Returns [`LoopError`] if the main loop is stopped due to an error.
+    /// Note, on wasm platform this method will return `Ok(())` immediately
+    /// without blocking and will never return an error from here.
+    pub fn run<U>(self, upd: U) -> Result<(), LoopError>
     where
         U: Update + 'static,
     {
-        self.lu.spawn(self.cx, self.view, upd)
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.lu.run(self.cx, self.view, upd)?;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.lu.spawn(self.cx, self.view, upd);
+        }
+
+        Ok(())
     }
 }
 
