@@ -139,7 +139,7 @@ let draw = |mut frame: Frame| {
 Now you can run our application and see the window:
 ```rust
 // Run the window with handlers
-window.run(dunge::update(upd, draw))?;
+window.run_local(dunge::update(upd, draw))?;
 ```
 
 <div align="center">
