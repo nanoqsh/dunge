@@ -19,8 +19,6 @@ jobs:
           - uses: actions/checkout@v3
           - name: Build
             run: cargo build --all-features --profile ci --verbose
-          - name: Build wasm
-            run: cargo build --all-features --profile ci --verbose --package dunge --target=wasm32-unknown-unknown
           - name: Clippy
             run: cargo clippy --all-features --profile ci
           - name: Install vulkan
