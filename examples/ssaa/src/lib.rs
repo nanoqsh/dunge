@@ -180,6 +180,6 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         bind_map,
     };
 
-    window.run(dunge::update_with(state, upd, draw))?;
+    window.run(dunge::update_with_state(state, upd, draw))?;
     Ok(())
 }

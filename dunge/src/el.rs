@@ -25,9 +25,11 @@ pub type SmolStr = keyboard::SmolStr;
 /// Describes a button of a mouse controller.
 pub type MouseButton = event::MouseButton;
 
-pub(crate) struct Loop(EventLoop<()>);
+pub(crate) struct Loop<V>(EventLoop<V>)
+where
+    V: 'static;
 
-impl Loop {
+impl<V> Loop<V> {
     pub fn new() -> Result<Self, EventLoopError> {
         use winit::event_loop::EventLoopBuilder;
 
@@ -35,14 +37,14 @@ impl Loop {
         Ok(Self(inner))
     }
 
-    pub fn inner(&self) -> &EventLoop<()> {
+    pub fn inner(&self) -> &EventLoop<V> {
         &self.0
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run<U>(self, cx: Context, view: View, upd: U) -> Result<(), LoopError>
     where
-        U: Update,
+        U: Update<Event = V>,
     {
         let mut fail = Ok(());
         let mut handle = handle(cx, view, upd);
@@ -59,7 +61,7 @@ impl Loop {
     #[cfg(target_arch = "wasm32")]
     pub fn spawn<U>(self, cx: Context, view: View, upd: U)
     where
-        U: Update + 'static,
+        U: Update<Event = V> + 'static,
     {
         use winit::platform::web::EventLoopExtWebSys;
 
@@ -94,11 +96,15 @@ impl error::Error for LoopError {
     }
 }
 
-type Event = event::Event<()>;
-type Target = event_loop::EventLoopWindowTarget<()>;
+type Event<V> = event::Event<V>;
+type Target<V> = event_loop::EventLoopWindowTarget<V>;
 type Failure = Option<Box<dyn error::Error>>;
 
-fn handle<U>(cx: Context, view: View, mut upd: U) -> impl FnMut(Event, &Target) -> Failure
+fn handle<U>(
+    cx: Context,
+    view: View,
+    mut upd: U,
+) -> impl FnMut(Event<U::Event>, &Target<U::Event>) -> Failure
 where
     U: Update,
 {
@@ -274,6 +280,7 @@ where
                 }
                 _ => {}
             },
+            Event::UserEvent(ev) => upd.event(ev),
             Event::Suspended => {
                 log::debug!("suspended");
                 active = false;

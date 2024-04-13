@@ -62,7 +62,7 @@ pub async fn context() -> Result<Context, FailedMakeContext> {
 /// # }
 /// ```
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-pub fn window() -> WindowBuilder {
+pub fn window<V>() -> WindowBuilder<V> {
     WindowBuilder::new(Element(()))
 }
 
@@ -70,7 +70,7 @@ pub fn window() -> WindowBuilder {
 /// construct the [window](crate::window::Window)
 /// in the given html element.
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
-pub fn from_element(id: &str) -> WindowBuilder {
+pub fn from_element<V>(id: &str) -> WindowBuilder<V> {
     use web_sys::Window;
 
     let document = web_sys::window()

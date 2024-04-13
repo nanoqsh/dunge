@@ -13,6 +13,7 @@ use {
     std::{
         error, fmt,
         future::{Future, IntoFuture},
+        marker::PhantomData,
         ops,
         pin::Pin,
         sync::Arc,
@@ -24,6 +25,7 @@ use {
     },
     winit::{
         error::{EventLoopError, OsError},
+        event_loop::{EventLoopClosed, EventLoopProxy},
         window::{self, WindowId},
     },
 };
@@ -42,18 +44,20 @@ use {
 /// }
 /// # }
 /// ```
-pub struct WindowBuilder {
+pub struct WindowBuilder<V> {
     element: Option<Element>,
     title: String,
     size: Option<(u32, u32)>,
+    evty: PhantomData<V>,
 }
 
-impl WindowBuilder {
+impl<V> WindowBuilder<V> {
     pub(crate) fn new(element: Element) -> Self {
         Self {
             element: Some(element),
             title: String::default(),
             size: Some((600, 600)),
+            evty: PhantomData,
         }
     }
 
@@ -78,7 +82,7 @@ impl WindowBuilder {
         self
     }
 
-    fn build(&mut self, cx: Context, instance: &Instance) -> Result<Window, Error> {
+    fn build(&mut self, cx: Context, instance: &Instance) -> Result<Window<V>, Error> {
         use {
             std::mem,
             winit::{dpi::PhysicalSize, window::Fullscreen},
@@ -107,9 +111,12 @@ impl WindowBuilder {
     }
 }
 
-impl IntoFuture for WindowBuilder {
-    type Output = Result<Window, Error>;
-    type IntoFuture = Build;
+impl<V> IntoFuture for WindowBuilder<V>
+where
+    V: 'static,
+{
+    type Output = Result<Window<V>, Error>;
+    type IntoFuture = Build<V>;
 
     fn into_future(mut self) -> Self::IntoFuture {
         let fut = async move {
@@ -123,25 +130,40 @@ impl IntoFuture for WindowBuilder {
 
 type BoxFuture<T> = Pin<Box<dyn Future<Output = T>>>;
 
-pub struct Build(BoxFuture<Result<Window, Error>>);
+pub struct Build<V>(BoxFuture<Result<Window<V>, Error>>)
+where
+    V: 'static;
 
-impl Future for Build {
-    type Output = Result<Window, Error>;
+impl<V> Future for Build<V>
+where
+    V: 'static,
+{
+    type Output = Result<Window<V>, Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
         self.get_mut().0.as_mut().poll(cx)
     }
 }
 
-pub struct Window {
+pub struct Window<V = ()>
+where
+    V: 'static,
+{
     cx: Context,
-    lu: Loop,
+    lu: Loop<V>,
     view: View,
 }
 
-impl Window {
+impl<V> Window<V>
+where
+    V: 'static,
+{
     pub fn context(&self) -> Context {
         self.cx.clone()
+    }
+
+    pub fn notifier(&self) -> Notifier<V> {
+        Notifier(self.lu.inner().create_proxy())
     }
 
     /// Runs the main event loop locally.
@@ -151,7 +173,7 @@ impl Window {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_local<U>(self, upd: U) -> Result<(), LoopError>
     where
-        U: Update,
+        U: Update<Event = V>,
     {
         self.lu.run(self.cx, self.view, upd)
     }
@@ -164,7 +186,7 @@ impl Window {
     /// without blocking and will never return an error from here.
     pub fn run<U>(self, upd: U) -> Result<(), LoopError>
     where
-        U: Update + 'static,
+        U: Update<Event = V> + 'static,
     {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -180,7 +202,7 @@ impl Window {
     }
 }
 
-impl ops::Deref for Window {
+impl<V> ops::Deref for Window<V> {
     type Target = View;
 
     fn deref(&self) -> &Self::Target {
@@ -189,6 +211,19 @@ impl ops::Deref for Window {
 }
 
 type Inner = Arc<window::Window>;
+
+pub struct Notifier<V>(EventLoopProxy<V>)
+where
+    V: 'static;
+
+impl<V> Notifier<V>
+where
+    V: 'static,
+{
+    pub fn notify(&self, ev: V) -> Result<(), V> {
+        self.0.send_event(ev).map_err(|EventLoopClosed(ev)| ev)
+    }
+}
 
 pub struct View {
     conf: SurfaceConfiguration,
