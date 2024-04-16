@@ -1,5 +1,8 @@
 use {
-    crate::eval::{Eval, Expr, GetEntry, Vs},
+    crate::{
+        eval::{Eval, Expr, GetEntry, Vs},
+        types::{Number, Scalar},
+    },
     naga::{BinaryOperator, UnaryOperator},
     std::{marker::PhantomData, ops},
 };
@@ -205,6 +208,60 @@ where
     Ret::new(Binary { a, b, op: Bi::Or })
 }
 
+pub const fn eq<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+    B: Eval<E, Out = A::Out>,
+{
+    Ret::new(Binary { a, b, op: Bi::Eq })
+}
+
+pub const fn ne<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E>,
+    A::Out: Scalar,
+    B: Eval<E, Out = A::Out>,
+{
+    Ret::new(Binary { a, b, op: Bi::Ne })
+}
+
+pub const fn lt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E>,
+    A::Out: Number,
+    B: Eval<E, Out = A::Out>,
+{
+    Ret::new(Binary { a, b, op: Bi::Lt })
+}
+
+pub const fn le<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E>,
+    A::Out: Number,
+    B: Eval<E, Out = A::Out>,
+{
+    Ret::new(Binary { a, b, op: Bi::Le })
+}
+
+pub const fn gt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E>,
+    A::Out: Number,
+    B: Eval<E, Out = A::Out>,
+{
+    Ret::new(Binary { a, b, op: Bi::Gt })
+}
+
+pub const fn ge<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E>,
+    A::Out: Number,
+    B: Eval<E, Out = A::Out>,
+{
+    Ret::new(Binary { a, b, op: Bi::Ge })
+}
+
 pub(crate) enum Un {
     Neg,
     Not,
@@ -227,6 +284,12 @@ pub(crate) enum Bi {
     Rem,
     And,
     Or,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
 }
 
 impl Bi {
@@ -239,6 +302,12 @@ impl Bi {
             Self::Rem => BinaryOperator::Modulo,
             Self::And => BinaryOperator::LogicalAnd,
             Self::Or => BinaryOperator::LogicalOr,
+            Self::Eq => BinaryOperator::Equal,
+            Self::Ne => BinaryOperator::NotEqual,
+            Self::Lt => BinaryOperator::Less,
+            Self::Le => BinaryOperator::LessEqual,
+            Self::Gt => BinaryOperator::Greater,
+            Self::Ge => BinaryOperator::GreaterEqual,
         }
     }
 }
