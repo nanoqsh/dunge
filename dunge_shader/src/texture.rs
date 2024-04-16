@@ -1,7 +1,7 @@
 use {
     crate::{
         eval::{Eval, Expr, Fs, GetEntry},
-        ret::Ret,
+        op::Ret,
         types,
     },
     naga::{Expression, SampleLevel},

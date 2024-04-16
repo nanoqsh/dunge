@@ -9,7 +9,7 @@ pub mod instance;
 mod math;
 mod matrix;
 mod module;
-mod ret;
+mod op;
 mod texture;
 pub mod types;
 mod vector;
@@ -20,6 +20,6 @@ pub mod sl {
 
     pub use crate::{
         branch::*, context::*, convert::*, define::*, eval::*, math::*, matrix::*, module::*,
-        ret::*, texture::*, vector::*,
+        op::*, texture::*, vector::*,
     };
 }

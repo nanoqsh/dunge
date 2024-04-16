@@ -1,7 +1,7 @@
 use {
     crate::{
         eval::{Eval, Expr, GetEntry},
-        ret::Ret,
+        op::Ret,
         types::Scalar,
     },
     std::marker::PhantomData,

@@ -4,7 +4,7 @@ use {
         eval::{GlobalOut, ReadIndex, Stage},
         group::{self, Group},
         instance::{self, Instance},
-        ret::Ret,
+        op::Ret,
         types::{MemberType, ValueType, VectorType},
         vertex::{self, Vertex},
     },

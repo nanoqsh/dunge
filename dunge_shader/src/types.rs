@@ -72,6 +72,12 @@ impl Scalar for i32 {}
 impl Scalar for u32 {}
 impl Scalar for bool {}
 
+pub trait Number: Scalar {}
+
+impl Number for f32 {}
+impl Number for i32 {}
+impl Number for u32 {}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ScalarType {
     Float,

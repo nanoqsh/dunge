@@ -4,7 +4,7 @@ use {
         define::Define,
         math::Func,
         module::{Module, Out, Output},
-        ret::{Bi, Ret, Un},
+        op::{Bi, Ret, Un},
         texture::Sampled,
         types::{self, MemberType, ScalarType, ValueType, VectorType},
     },

@@ -2,7 +2,7 @@ use {
     crate::{
         access::{Access, Dimension},
         eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
-        ret::Ret,
+        op::Ret,
         types::{self, Scalar, Vector},
     },
     std::marker::PhantomData,
