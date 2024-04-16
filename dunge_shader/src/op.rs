@@ -182,14 +182,39 @@ impl_binary!(Mul::mul(glam::Mat2, glam::Vec2) -> glam::Vec2);
 impl_binary!(Mul::mul(glam::Mat3, glam::Vec3) -> glam::Vec3);
 impl_binary!(Mul::mul(glam::Mat4, glam::Vec4) -> glam::Vec4);
 
+pub const fn not<A, B, E>(a: A) -> Ret<Unary<A>, bool>
+where
+    A: Eval<E, Out = bool>,
+{
+    Ret::new(Unary { a, op: Un::Not })
+}
+
+pub const fn and<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E, Out = bool>,
+    B: Eval<E, Out = bool>,
+{
+    Ret::new(Binary { a, b, op: Bi::And })
+}
+
+pub const fn or<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
+where
+    A: Eval<E, Out = bool>,
+    B: Eval<E, Out = bool>,
+{
+    Ret::new(Binary { a, b, op: Bi::Or })
+}
+
 pub(crate) enum Un {
     Neg,
+    Not,
 }
 
 impl Un {
     pub fn operator(self) -> UnaryOperator {
         match self {
             Self::Neg => UnaryOperator::Negate,
+            Self::Not => UnaryOperator::LogicalNot,
         }
     }
 }
@@ -200,6 +225,8 @@ pub(crate) enum Bi {
     Mul,
     Div,
     Rem,
+    And,
+    Or,
 }
 
 impl Bi {
@@ -210,6 +237,8 @@ impl Bi {
             Self::Mul => BinaryOperator::Multiply,
             Self::Div => BinaryOperator::Divide,
             Self::Rem => BinaryOperator::Modulo,
+            Self::And => BinaryOperator::LogicalAnd,
+            Self::Or => BinaryOperator::LogicalOr,
         }
     }
 }
