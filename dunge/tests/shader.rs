@@ -123,6 +123,21 @@ fn shader_discard_if() -> Result<(), Error> {
 }
 
 #[test]
+fn shader_zero() -> Result<(), Error> {
+    use dunge::sl::{self, Out};
+
+    let cx = helpers::block_on(dunge::context())?;
+    let compute = || Out {
+        place: sl::zero_value(),
+        color: sl::zero_value(),
+    };
+
+    let shader = cx.make_shader(compute);
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_zero.wgsl"));
+    Ok(())
+}
+
+#[test]
 #[should_panic(expected = "thunk cannot be created outside of a shader function")]
 fn shader_thunk_outside() {
     use dunge::sl::{self, Eval, Vs};

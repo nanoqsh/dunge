@@ -15,12 +15,13 @@ mod texture;
 pub mod types;
 mod vector;
 pub mod vertex;
+mod zero;
 
 pub mod sl {
     //! Shader generator functions.
 
     pub use crate::{
         branch::*, context::*, convert::*, define::*, discard::*, eval::*, math::*, matrix::*,
-        module::*, op::*, texture::*, vector::*,
+        module::*, op::*, texture::*, vector::*, zero::*,
     };
 }
