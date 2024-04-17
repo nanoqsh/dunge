@@ -2,7 +2,7 @@ use {
     crate::{
         eval::{Eval, EvalTuple, Evaluated, Expr, GetEntry},
         op::Ret,
-        types::Number,
+        types::{Number, Vec3, Vector},
     },
     naga::{Expression, MathFunction},
     std::marker::PhantomData,
@@ -13,105 +13,142 @@ where
     X: Eval<E>,
     X::Out: Number,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Abs)))
+    Ret::new(Math::new((x,), MathFunction::Abs))
 }
 
 pub const fn acos<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Acos)))
+    Ret::new(Math::new((x,), MathFunction::Acos))
 }
 
 pub const fn acosh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Acosh)))
+    Ret::new(Math::new((x,), MathFunction::Acosh))
 }
 
 pub const fn asin<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Asin)))
+    Ret::new(Math::new((x,), MathFunction::Asin))
 }
 
 pub const fn asinh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Asinh)))
+    Ret::new(Math::new((x,), MathFunction::Asinh))
 }
 
 pub const fn atan<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Atan)))
+    Ret::new(Math::new((x,), MathFunction::Atan))
 }
 
 pub const fn atanh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Atanh)))
+    Ret::new(Math::new((x,), MathFunction::Atanh))
+}
+
+pub const fn atan2<Y, X, E>(y: Y, x: X) -> Ret<Math<(Y, X), E>, f32>
+where
+    Y: Eval<E, Out = f32>,
+    X: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((y, x), MathFunction::Atan2))
 }
 
 pub const fn ceil<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Ceil)))
+    Ret::new(Math::new((x,), MathFunction::Ceil))
+}
+
+pub const fn clamp<X, L, H, E>(x: X, lo: L, hi: H) -> Ret<Math<(X, L, H), E>, f32>
+where
+    X: Eval<E>,
+    X::Out: Number,
+    L: Eval<E, Out = X::Out>,
+    H: Eval<E, Out = X::Out>,
+{
+    Ret::new(Math::new((x, lo, hi), MathFunction::Clamp))
 }
 
 pub const fn cos<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Cos)))
+    Ret::new(Math::new((x,), MathFunction::Cos))
 }
 
 pub const fn cosh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Cosh)))
+    Ret::new(Math::new((x,), MathFunction::Cosh))
+}
+
+pub const fn cross<X, Y, E>(x: X, y: Y) -> Ret<Math<(X, Y), E>, Vec3<f32>>
+where
+    X: Eval<E, Out = Vec3<f32>>,
+    Y: Eval<E, Out = Vec3<f32>>,
+{
+    Ret::new(Math::new((x, y), MathFunction::Cross))
+}
+
+#[allow(clippy::type_complexity)]
+pub const fn dot<X, Y, E>(x: X, y: Y) -> Ret<Math<(X, Y), E>, <X::Out as Vector>::Scalar>
+where
+    X: Eval<E>,
+    X::Out: Vector,
+    <X::Out as Vector>::Scalar: Number,
+    Y: Eval<E, Out = X::Out>,
+{
+    Ret::new(Math::new((x, y), MathFunction::Dot))
 }
 
 pub const fn floor<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Floor)))
+    Ret::new(Math::new((x,), MathFunction::Floor))
 }
 
 pub const fn sin<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Sin)))
+    Ret::new(Math::new((x,), MathFunction::Sin))
 }
 
 pub const fn sinh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Sinh)))
+    Ret::new(Math::new((x,), MathFunction::Sinh))
 }
 
 pub const fn tan<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Tan)))
+    Ret::new(Math::new((x,), MathFunction::Tan))
 }
 
 pub const fn tanh<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
-    Ret::new(Math::new((x,), Func(MathFunction::Tanh)))
+    Ret::new(Math::new((x,), MathFunction::Tanh))
 }
 
 pub struct Math<A, E> {
@@ -121,10 +158,10 @@ pub struct Math<A, E> {
 }
 
 impl<A, E> Math<A, E> {
-    const fn new(args: A, func: Func) -> Self {
+    const fn new(args: A, func: MathFunction) -> Self {
         Self {
             args,
-            func,
+            func: Func(func),
             e: PhantomData,
         }
     }
