@@ -33,21 +33,25 @@ fn render() -> Result<(), Error> {
         sam: &'a Sampler,
     }
 
-    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| Out {
-        place: sl::vec4_concat(vert.pos, Vec2::new(0., 1.)),
-        color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
+    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| {
+        let place = sl::vec4_concat(vert.pos, Vec2::new(0., 1.));
+        let color = {
+            let samp = sl::thunk(sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)));
+            let alpha = samp.clone().z();
+            sl::if_then_else(sl::lt(alpha, 0.5), sl::discard, || samp)
+        };
+
+        Out { place, color }
     };
 
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
-    helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_group.wgsl"));
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_discard.wgsl"));
 
     let map = {
         let texture = {
-            let gradient = Image::decode(include_bytes!("gradient.png"));
-            let data =
-                TextureData::new(&gradient.data, gradient.size, Format::SrgbAlpha)?.with_bind();
-
+            let alpha = Image::decode(include_bytes!("alpha.png"));
+            let data = TextureData::new(&alpha.data, alpha.size, Format::SrgbAlpha)?.with_bind();
             cx.make_texture(data)
         };
 
@@ -92,7 +96,7 @@ fn render() -> Result<(), Error> {
     };
 
     let buffer = cx.make_copy_buffer(SIZE);
-    let opts = Rgba::from_standard([0., 0., 0., 1.]);
+    let opts = Rgba::from_standard([1., 0., 0., 1.]);
     let draw = dunge::draw(|mut frame| {
         frame.layer(&layer, opts).bind(&map).draw(&mesh);
         frame.copy_texture(&buffer, &view);
@@ -111,6 +115,6 @@ fn render() -> Result<(), Error> {
         data[idx as usize]
     });
 
-    fs::write("tests/triangle_group.png", image.encode())?;
+    fs::write("tests/triangle_discard.png", image.encode())?;
     Ok(())
 }

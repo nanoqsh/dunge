@@ -3,6 +3,7 @@ mod branch;
 mod context;
 mod convert;
 mod define;
+mod discard;
 mod eval;
 pub mod group;
 pub mod instance;
@@ -19,7 +20,7 @@ pub mod sl {
     //! Shader generator functions.
 
     pub use crate::{
-        branch::*, context::*, convert::*, define::*, eval::*, math::*, matrix::*, module::*,
-        op::*, texture::*, vector::*,
+        branch::*, context::*, convert::*, define::*, discard::*, eval::*, math::*, matrix::*,
+        module::*, op::*, texture::*, vector::*,
     };
 }

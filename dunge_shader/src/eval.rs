@@ -682,6 +682,11 @@ impl Entry {
         Expr(self.exprs.append(ex, Span::UNDEFINED))
     }
 
+    pub(crate) fn zero_value(&mut self, ty: Handle<Type>) -> Expr {
+        let ex = Expression::ZeroValue(ty);
+        Expr(self.exprs.append(ex, Span::UNDEFINED))
+    }
+
     fn argument(&mut self, n: u32) -> Expr {
         *self.cached_args.entry(n).or_insert_with(|| {
             let ex = Expression::FunctionArgument(n);
@@ -787,6 +792,11 @@ impl Entry {
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stack.insert(st, &self.exprs);
         Expr(handle)
+    }
+
+    pub(crate) fn kill(&mut self) {
+        let st = Statement::Kill;
+        self.stack.insert(st, &self.exprs);
     }
 
     fn ret(&mut self, value: Expr) {
@@ -935,16 +945,20 @@ struct Statements(Vec<Statement>);
 
 impl Statements {
     fn insert(&mut self, st: Statement, exprs: &Arena<Expression>) {
-        if let Statement::Emit(new) = &st {
-            if let Some(Statement::Emit(top)) = self.0.last_mut() {
-                let top_range = top.zero_based_index_range();
-                let new_range = new.zero_based_index_range();
-                if top_range.end == new_range.start {
-                    let merged = top_range.start..new_range.end;
-                    *top = Range::from_zero_based_index_range(merged, exprs);
-                    return;
+        match self.0.last_mut() {
+            Some(Statement::Emit(top)) => {
+                if let Statement::Emit(new) = &st {
+                    let top_range = top.zero_based_index_range();
+                    let new_range = new.zero_based_index_range();
+                    if top_range.end == new_range.start {
+                        let merged = top_range.start..new_range.end;
+                        *top = Range::from_zero_based_index_range(merged, exprs);
+                        return;
+                    }
                 }
             }
+            Some(st) if st.is_terminator() => return,
+            _ => {}
         }
 
         self.0.push(st);

@@ -93,6 +93,36 @@ fn shader_branch() -> Result<(), Error> {
 }
 
 #[test]
+fn shader_discard() -> Result<(), Error> {
+    use dunge::sl::{self, Out};
+
+    let cx = helpers::block_on(dunge::context())?;
+    let compute = || Out {
+        place: sl::splat_vec4(1.),
+        color: sl::discard(),
+    };
+
+    let shader = cx.make_shader(compute);
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_discard.wgsl"));
+    Ok(())
+}
+
+#[test]
+fn shader_discard_if() -> Result<(), Error> {
+    use dunge::sl::{self, Out};
+
+    let cx = helpers::block_on(dunge::context())?;
+    let compute = || Out {
+        place: sl::splat_vec4(1.),
+        color: sl::if_then_else(true, sl::discard, || sl::splat_vec4(1.)),
+    };
+
+    let shader = cx.make_shader(compute);
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_discard_if.wgsl"));
+    Ok(())
+}
+
+#[test]
 #[should_panic(expected = "thunk cannot be created outside of a shader function")]
 fn shader_thunk_outside() {
     use dunge::sl::{self, Eval, Vs};
