@@ -58,6 +58,32 @@ use crate::{
 ///     dunge::update(upd, draw)
 /// }
 /// ```
+///
+/// # Shared state
+/// Draw and update stages may share some state.
+/// This is not a problem to implement traits manually for some type.
+/// However, to be able to use helpers, dunge has the [`update_with_state`] function.
+/// ```rust
+/// use dunge::{Control, Frame, Update};
+///
+/// struct State { counter: usize }
+///
+/// fn make_update() -> impl Update {
+///     let draw = |state: &State, frame: Frame| {
+///         dbg!(state.counter);
+///     };
+///
+///     let upd = |state: &mut State, ctrl: &Control| {
+///         state.counter += 1;
+///     };
+///
+///     let state = State { counter: 0 };
+///     dunge::update_with_state(state, upd, draw)
+/// }
+/// ```
+///
+/// Also see the [`update_with_event`] function to set a custom event handler.
+///
 pub trait Update: Draw {
     type Flow: Flow;
     type Event;

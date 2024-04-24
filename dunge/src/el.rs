@@ -300,7 +300,7 @@ where
     }
 }
 
-/// The main event loop control type.
+/// The control type of the main event loop.
 pub struct Control {
     view: View,
     resized: Option<(u32, u32)>,
