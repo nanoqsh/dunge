@@ -157,10 +157,17 @@ For more examples using the window, see the [examples](https://github.com/nanoqs
 cargo run -p <example_name>
 ```
 
-To build and run a wasm example, make sure [`wasm-pack`](https://github.com/rustwasm/wasm-pack) is installed and then run:
+To build and run a wasm example:
 ```sh
-cargo xtask <example_name>
+cargo xtask build <example_name>
+cargo xtask serve <example_name>
 ```
-It will start a local server and you can open http://localhost:3000 in your browser to see the application running. For the web, only [WebGPU](https://gpuweb.github.io/gpuweb/) backend is supported, so make sure your browser supports it.
+
+If [`wasm-pack`](https://github.com/rustwasm/wasm-pack) is already installed on the system, the build script will find it and use it to compile a wasm artifact. Otherwise, `wasm-pack` will be installed locally. To prevent this behavior add the `no-install` flag:
+```sh
+cargo xtask --no-install build <example_name>
+```
+
+Eventually it will start a local server and you can open http://localhost:3000 in your browser to see the application running. For the web, only [WebGPU](https://gpuweb.github.io/gpuweb/) backend is supported, so make sure your browser supports it.
 
 Also see the [test](https://github.com/nanoqsh/dunge/tree/main/dunge/tests) directory for small examples of creation a single image.
