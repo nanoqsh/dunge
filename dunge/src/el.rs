@@ -417,7 +417,7 @@ impl ops::Deref for Buttons {
     }
 }
 
-/// The control flow trait for the [`Update`] event.
+/// The control flow trait for the [`Update`] stage.
 pub trait Flow {
     fn flow(self) -> Then;
 }

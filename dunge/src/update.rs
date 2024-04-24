@@ -5,6 +5,59 @@ use crate::{
 };
 
 /// The update stage.
+///
+/// This trait handles the application's state updation by taking a [control](Control)
+/// object and returns a variant of the execution [control flow](Flow).
+/// It also allows you to handle arbitrary custom [events](Update::event).
+///
+/// # Example
+/// ```rust
+/// use dunge::{Draw, Control, Frame, KeyCode, Then, Update};
+///
+/// struct App {/***/}
+///
+/// impl Draw for App {
+///     fn draw(&self, mut frame: Frame) {/***/}
+/// }
+///
+/// impl Update for App {
+///     type Flow = Then;
+///     type Event = ();
+///
+///     fn update(&mut self, ctrl: &Control) -> Then {
+///         for key in ctrl.pressed_keys() {
+///             // Exit by pressing escape key
+///             if key.code == KeyCode::Escape {
+///                 return Then::Close;
+///             }
+///         }
+///
+///         // Otherwise continue running
+///         Then::Run
+///     }
+/// }
+/// ```
+///
+/// Instead of manually implementing the trait, you can use an [helper](update)
+/// function that will make an implementation from a closure:
+/// ```rust
+/// use dunge::{Control, Frame, KeyCode, Then, Update};
+///
+/// fn make_update() -> impl Update {
+///     let draw = |frame: Frame| {/***/};
+///     let upd = |ctrl: &Control| -> Then {
+///         for key in ctrl.pressed_keys() {
+///             if key.code == KeyCode::Escape {
+///                 return Then::Close;
+///             }
+///         }
+///
+///         Then::Run
+///     };
+///
+///     dunge::update(upd, draw)
+/// }
+/// ```
 pub trait Update: Draw {
     type Flow: Flow;
     type Event;
@@ -20,7 +73,7 @@ where
     F: Flow,
     D: Fn(Frame),
 {
-    update_event(
+    update_with_event(
         (),
         move |(), ctrl| upd(ctrl),
         |(), ()| {},
@@ -30,18 +83,23 @@ where
 
 /// Same as [`update`](fn@crate::update) but with
 /// a state shared between two handlers.
-pub fn update_with_state<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update<Event = ()>
+pub fn update_with_state<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update<Flow = F, Event = ()>
 where
     U: FnMut(&mut S, &Control) -> F,
     F: Flow,
     D: Fn(&S, Frame),
 {
-    update_event(state, upd, |_, ()| {}, draw)
+    update_with_event(state, upd, |_, ()| {}, draw)
 }
 
 /// Same as [`update`](fn@crate::update) but with
 /// a state shared between two handlers and an event handler.
-pub fn update_event<S, U, E, V, F, D>(state: S, upd: U, ev: E, draw: D) -> impl Update<Event = V>
+pub fn update_with_event<S, U, E, V, F, D>(
+    state: S,
+    upd: U,
+    ev: E,
+    draw: D,
+) -> impl Update<Flow = F, Event = V>
 where
     U: FnMut(&mut S, &Control) -> F,
     E: FnMut(&mut S, V),
