@@ -128,9 +128,9 @@ where
     }
 }
 
-type BoxFuture<T> = Pin<Box<dyn Future<Output = T>>>;
+type BoxedFuture<T> = Pin<Box<dyn Future<Output = T>>>;
 
-pub struct Build<V>(BoxFuture<Result<Window<V>, Error>>)
+pub struct Build<V>(BoxedFuture<Result<Window<V>, Error>>)
 where
     V: 'static;
 
@@ -145,6 +145,7 @@ where
     }
 }
 
+/// The application window type.
 pub struct Window<V = ()>
 where
     V: 'static,
@@ -158,10 +159,12 @@ impl<V> Window<V>
 where
     V: 'static,
 {
+    /// Returns the main dunge context.
     pub fn context(&self) -> Context {
         self.cx.clone()
     }
 
+    /// Creates an event notifier.
     pub fn notifier(&self) -> Notifier<V> {
         Notifier(self.lu.inner().create_proxy())
     }
@@ -190,15 +193,14 @@ where
     {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            self.lu.run(self.cx, self.view, upd)?;
+            self.lu.run(self.cx, self.view, upd)
         }
 
         #[cfg(target_arch = "wasm32")]
         {
             self.lu.spawn(self.cx, self.view, upd);
+            Ok(())
         }
-
-        Ok(())
     }
 }
 
@@ -220,6 +222,10 @@ impl<V> Notifier<V>
 where
     V: 'static,
 {
+    /// Sends a new event to the main loop.
+    ///
+    /// # Errors
+    /// If the main loop was stopped, the event will return back.
     pub fn notify(&self, ev: V) -> Result<(), V> {
         self.0.send_event(ev).map_err(|EventLoopClosed(ev)| ev)
     }

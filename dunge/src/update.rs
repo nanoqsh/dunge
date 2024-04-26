@@ -93,7 +93,7 @@ pub trait Update: Draw {
 
 /// Helper function to create a [`Update`]
 /// implementer from functions.
-pub fn update<U, F, D>(mut upd: U, draw: D) -> impl Update<Event = ()>
+pub fn update<U, F, D>(mut upd: U, draw: D) -> impl Update<Flow = F, Event = ()>
 where
     U: FnMut(&Control) -> F,
     F: Flow,
