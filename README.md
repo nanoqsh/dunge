@@ -88,8 +88,6 @@ Also create a triangle mesh that we're going to draw:
 ```rust
 // Create a mesh from vertices
 let mesh = {
-    use dunge::mesh::MeshData;
-
     const VERTS: MeshData<'static, Vert> = MeshData::from_verts(&[
         Vert { pos: [-0.5, -0.5], col: [1., 0., 0.] },
         Vert { pos: [ 0.5, -0.5], col: [0., 1., 0.] },

@@ -7,10 +7,9 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
-            mesh::MeshData,
+            prelude::*,
             sl::{self, InVertex, Out},
-            texture::TextureData,
-            Format, Vertex,
+            Format,
         },
         glam::Vec2,
         helpers::image::Image,

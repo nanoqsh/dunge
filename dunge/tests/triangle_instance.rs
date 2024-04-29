@@ -8,9 +8,9 @@ fn render() -> Result<(), Error> {
         dunge::{
             color::Rgba,
             instance::Row,
+            prelude::*,
             sl::{self, InInstance, Index, Out},
-            texture::TextureData,
-            Format, Instance,
+            Format,
         },
         glam::Vec2,
         helpers::image::Image,

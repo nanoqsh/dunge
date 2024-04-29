@@ -29,7 +29,8 @@ pub mod prelude {
     //! The dunge prelude.
 
     pub use crate::{
-        context::Context, shader::Shader, sl, types, Frame, Group, Instance, Options, Vertex,
+        context::Context, mesh::MeshData, sl, texture::TextureData, types, Frame, Group, Instance,
+        Options, Vertex,
     };
 
     #[cfg(feature = "winit")]

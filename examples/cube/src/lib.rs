@@ -4,7 +4,6 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     use dunge::{
         color::Rgba,
         glam::{Mat4, Quat, Vec3},
-        mesh::MeshData,
         prelude::*,
         sl::{Groups, InVertex, Out},
         uniform::Uniform,

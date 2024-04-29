@@ -7,8 +7,8 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
+            prelude::*,
             sl::{self, Index, Out},
-            texture::TextureData,
             Format,
         },
         glam::Vec4,

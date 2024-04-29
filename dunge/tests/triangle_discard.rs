@@ -8,10 +8,10 @@ fn render() -> Result<(), Error> {
         dunge::{
             color::Rgba,
             group::BoundTexture,
-            mesh::MeshData,
+            prelude::*,
             sl::{self, Groups, InVertex, Out},
-            texture::{Filter, Sampler, TextureData},
-            Format, Group, Vertex,
+            texture::{Filter, Sampler},
+            Format,
         },
         glam::Vec2,
         helpers::image::Image,
