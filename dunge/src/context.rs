@@ -24,8 +24,33 @@ use {
 pub struct Context(Arc<State>);
 
 impl Context {
-    pub(crate) fn new(state: State) -> Self {
-        Self(Arc::new(state))
+    pub(crate) async fn new() -> Result<Self, FailedMakeContext> {
+        use wgpu::{Backends, Instance, InstanceDescriptor, InstanceFlags};
+
+        let backends;
+
+        #[cfg(any(target_family = "unix", target_family = "windows"))]
+        {
+            backends = Backends::VULKAN;
+        }
+
+        #[cfg(target_family = "wasm")]
+        {
+            backends = Backends::BROWSER_WEBGPU;
+        }
+
+        let instance = {
+            let desc = InstanceDescriptor {
+                backends,
+                flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
+                ..Default::default()
+            };
+
+            Instance::new(desc)
+        };
+
+        let state = State::new(instance).await?;
+        Ok(Self(Arc::new(state)))
     }
 
     pub(crate) fn state(&self) -> &State {

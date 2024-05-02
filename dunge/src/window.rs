@@ -6,7 +6,6 @@ use {
         el::{Loop, LoopError},
         element::Element,
         format::Format,
-        init,
         state::{State, Target},
         update::Update,
     },
@@ -20,7 +19,7 @@ use {
         task::{self, Poll},
     },
     wgpu::{
-        CreateSurfaceError, Instance, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture,
+        CreateSurfaceError, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture,
         TextureView,
     },
     winit::{
@@ -82,7 +81,7 @@ impl<V> WindowBuilder<V> {
         self
     }
 
-    fn build(&mut self, cx: Context, instance: &Instance) -> Result<Window<V>, Error> {
+    fn build(&mut self, cx: Context) -> Result<Window<V>, Error> {
         use {
             std::mem,
             winit::{dpi::PhysicalSize, window::Fullscreen},
@@ -104,7 +103,7 @@ impl<V> WindowBuilder<V> {
             let el = self.element.take().expect("take the element once");
             el.set_canvas(&inner);
             el.set_window_size(&inner);
-            View::new(cx.state(), instance, inner, el)?
+            View::new(cx.state(), Inner(Some(inner)), el)?
         };
 
         Ok(Window { cx, lu, view })
@@ -120,8 +119,8 @@ where
 
     fn into_future(mut self) -> Self::IntoFuture {
         let fut = async move {
-            let (cx, instance) = init::make().await?;
-            self.build(cx, &instance)
+            let cx = Context::new().await?;
+            self.build(cx)
         };
 
         Build(Box::pin(fut))
@@ -212,7 +211,13 @@ impl<V> ops::Deref for Window<V> {
     }
 }
 
-type Inner = Arc<window::Window>;
+struct Inner(Option<Arc<window::Window>>);
+
+impl Inner {
+    fn get(&self) -> &Arc<window::Window> {
+        self.0.as_ref().expect("the window should be initialized")
+    }
+}
 
 pub struct Notifier<V>(EventLoopProxy<V>)
 where
@@ -239,7 +244,7 @@ pub struct View {
 }
 
 impl View {
-    fn new(state: &State, instance: &Instance, inner: Inner, el: Element) -> Result<Self, Error> {
+    fn new(state: &State, inner: Inner, el: Element) -> Result<Self, Error> {
         use wgpu::*;
 
         const SUPPORTED_FORMATS: [Format; 4] = [
@@ -249,7 +254,7 @@ impl View {
             Format::BgrAlpha,
         ];
 
-        let surface = instance.create_surface(Arc::clone(&inner))?;
+        let surface = state.instance().create_surface(Arc::clone(inner.get()))?;
         let conf = {
             let caps = surface.get_capabilities(state.adapter());
             let format = SUPPORTED_FORMATS.into_iter().find_map(|format| {
@@ -262,7 +267,7 @@ impl View {
                 return Err(ErrorKind::UnsupportedSurface.into());
             };
 
-            let size = inner.inner_size();
+            let size = inner.get().inner_size();
             SurfaceConfiguration {
                 usage: TextureUsages::RENDER_ATTACHMENT,
                 format,
@@ -284,8 +289,8 @@ impl View {
         })
     }
 
-    pub fn window(&self) -> Inner {
-        Arc::clone(&self.inner)
+    pub fn window(&self) -> &Arc<window::Window> {
+        self.inner.get()
     }
 
     pub fn format(&self) -> Format {
@@ -297,11 +302,11 @@ impl View {
     }
 
     pub(crate) fn id(&self) -> WindowId {
-        self.inner.id()
+        self.inner.get().id()
     }
 
     pub(crate) fn request_redraw(&self) {
-        self.inner.request_redraw();
+        self.inner.get().request_redraw();
     }
 
     pub(crate) fn output(&self) -> Result<Output, SurfaceError> {
@@ -321,11 +326,11 @@ impl View {
     }
 
     pub(crate) fn set_window_size(&self) {
-        self.el.set_window_size(&self.inner);
+        self.el.set_window_size(self.inner.get());
     }
 
     pub(crate) fn resize(&mut self, state: &State) {
-        let size = self.inner.inner_size();
+        let size = self.inner.get().inner_size();
         if size.width > 0 && size.height > 0 {
             self.conf.width = size.width;
             self.conf.height = size.height;

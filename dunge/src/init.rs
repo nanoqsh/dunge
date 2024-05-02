@@ -1,42 +1,7 @@
-use {
-    crate::{
-        context::{Context, FailedMakeContext},
-        state::State,
-    },
-    wgpu::Instance,
-};
+use crate::context::{Context, FailedMakeContext};
 
 #[cfg(feature = "winit")]
 use crate::{element::Element, window::WindowBuilder};
-
-pub(crate) async fn make() -> Result<(Context, Instance), FailedMakeContext> {
-    use wgpu::{Backends, InstanceDescriptor, InstanceFlags};
-
-    let backends;
-
-    #[cfg(any(target_family = "unix", target_family = "windows"))]
-    {
-        backends = Backends::VULKAN;
-    }
-
-    #[cfg(target_family = "wasm")]
-    {
-        backends = Backends::BROWSER_WEBGPU;
-    }
-
-    let instance = {
-        let desc = InstanceDescriptor {
-            backends,
-            flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
-            ..Default::default()
-        };
-
-        Instance::new(desc)
-    };
-
-    let state = State::new(&instance).await?;
-    Ok((Context::new(state), instance))
-}
 
 /// Creates the context instance.
 ///
@@ -46,7 +11,7 @@ pub(crate) async fn make() -> Result<(Context, Instance), FailedMakeContext> {
 /// Returns an error when the context could not be created.
 /// See [`FailedMakeContext`] for details.
 pub async fn context() -> Result<Context, FailedMakeContext> {
-    make().await.map(|(cx, _)| cx)
+    Context::new().await
 }
 
 /// Creates the [window builder](WindowBuilder) to

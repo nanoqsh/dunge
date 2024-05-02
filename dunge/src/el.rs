@@ -151,7 +151,10 @@ where
                     target.set_control_flow(flow);
                 }
                 StartCause::Poll => log::debug!("poll"),
-                StartCause::Init => log::debug!("init"),
+                StartCause::Init => {
+                    // TODO: create the window here
+                    log::debug!("init");
+                }
             },
             Event::WindowEvent { event, window_id } if window_id == ctrl.view.id() => match event {
                 WindowEvent::Resized(PhysicalSize { width, height }) => {

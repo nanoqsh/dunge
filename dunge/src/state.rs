@@ -15,6 +15,7 @@ use {
 use wgpu::Adapter;
 
 pub(crate) struct State {
+    instance: Instance,
     #[cfg(feature = "winit")]
     adapter: Adapter,
     device: Device,
@@ -23,7 +24,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new(instance: &Instance) -> Result<Self, FailedMakeContext> {
+    pub async fn new(instance: Instance) -> Result<Self, FailedMakeContext> {
         let adapter = {
             use wgpu::{PowerPreference, RequestAdapterOptions};
 
@@ -62,12 +63,17 @@ impl State {
         };
 
         Ok(Self {
+            instance,
             #[cfg(feature = "winit")]
             adapter,
             device,
             queue,
             shader_ids: AtomicUsize::default(),
         })
+    }
+
+    pub fn instance(&self) -> &Instance {
+        &self.instance
     }
 
     #[cfg(feature = "winit")]
