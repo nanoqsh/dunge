@@ -31,9 +31,7 @@ where
 
 impl<V> Loop<V> {
     pub fn new() -> Result<Self, EventLoopError> {
-        use winit::event_loop::EventLoopBuilder;
-
-        let inner = EventLoopBuilder::with_user_event().build()?;
+        let inner = EventLoop::with_user_event().build()?;
         Ok(Self(inner))
     }
 
@@ -97,14 +95,10 @@ impl error::Error for LoopError {
 }
 
 type Event<V> = event::Event<V>;
-type Target<V> = event_loop::EventLoopWindowTarget<V>;
+type Target = event_loop::ActiveEventLoop;
 type Failure = Option<Box<dyn error::Error>>;
 
-fn handle<U>(
-    cx: Context,
-    view: View,
-    mut upd: U,
-) -> impl FnMut(Event<U::Event>, &Target<U::Event>) -> Failure
+fn handle<U>(cx: Context, view: View, mut upd: U) -> impl FnMut(Event<U::Event>, &Target) -> Failure
 where
     U: Update,
 {

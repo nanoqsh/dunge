@@ -91,13 +91,13 @@ impl<V> WindowBuilder<V> {
         let lu = Loop::new()?;
         let inner = {
             let title = mem::take(&mut self.title);
-            let builder = window::WindowBuilder::new().with_title(title);
-            let builder = match self.size {
-                Some((width, height)) => builder.with_inner_size(PhysicalSize::new(width, height)),
-                None => builder.with_fullscreen(Some(Fullscreen::Borderless(None))),
+            let attrs = window::Window::default_attributes().with_title(title);
+            let attrs = match self.size {
+                Some((width, height)) => attrs.with_inner_size(PhysicalSize::new(width, height)),
+                None => attrs.with_fullscreen(Some(Fullscreen::Borderless(None))),
             };
 
-            Arc::new(builder.build(lu.inner())?)
+            Arc::new(lu.inner().create_window(attrs)?)
         };
 
         let view = {

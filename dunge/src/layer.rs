@@ -235,6 +235,7 @@ impl<V, I> Layer<V, I> {
             vertex: VertexState {
                 module,
                 entry_point: "vs",
+                compilation_options: PipelineCompilationOptions::default(),
                 buffers: &buffers,
             },
             primitive: PrimitiveState {
@@ -254,6 +255,7 @@ impl<V, I> Layer<V, I> {
             fragment: Some(FragmentState {
                 module,
                 entry_point: "fs",
+                compilation_options: PipelineCompilationOptions::default(),
                 targets: &targets,
             }),
             multiview: None,
