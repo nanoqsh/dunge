@@ -15,6 +15,17 @@ use {
     std::{error, fmt, future::IntoFuture, sync::Arc},
 };
 
+/// Creates the context instance.
+///
+/// If you need a window call the [`window`] function.
+///
+/// # Errors
+/// Returns an error when the context could not be created.
+/// See [`FailedMakeContext`] for details.
+pub async fn context() -> Result<Context, FailedMakeContext> {
+    Context::new().await
+}
+
 /// The main dunge context.
 ///
 /// It can be created via the [`context`](fn@crate::context) function

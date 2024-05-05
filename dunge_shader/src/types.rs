@@ -43,6 +43,7 @@ impl ValueType {
     }
 }
 
+/// The trait for types used inside a shader.
 pub trait Value {
     const VALUE_TYPE: ValueType;
 }
@@ -63,6 +64,7 @@ impl Value for bool {
     const VALUE_TYPE: ValueType = ValueType::Scalar(ScalarType::Bool);
 }
 
+/// The trait for types used inside a shader as scalars.
 pub trait Scalar: Value {
     const TYPE: ScalarType = Self::VALUE_TYPE.into_scalar();
 }
@@ -72,6 +74,7 @@ impl Scalar for i32 {}
 impl Scalar for u32 {}
 impl Scalar for bool {}
 
+/// The trait for types used inside a shader as numbers.
 pub trait Number: Scalar {}
 
 impl Number for f32 {}
@@ -148,6 +151,7 @@ impl VectorType {
     }
 }
 
+/// The trait for types used inside a shader as vectors.
 pub trait Vector: Value {
     type Scalar;
     const TYPE: VectorType = Self::VALUE_TYPE.into_vector();
@@ -284,6 +288,7 @@ impl MatrixType {
     }
 }
 
+/// The trait for types used inside a shader as matrices.
 pub trait Matrix: Value {
     const TYPE: MatrixType = Self::VALUE_TYPE.into_matrix();
 }

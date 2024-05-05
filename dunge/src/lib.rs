@@ -4,7 +4,6 @@ mod context;
 mod draw;
 mod format;
 pub mod group;
-mod init;
 pub mod instance;
 pub mod layer;
 pub mod mesh;
@@ -39,10 +38,9 @@ pub mod prelude {
 
 pub use {
     crate::{
-        context::{Context, FailedMakeContext},
+        context::{context, Context, FailedMakeContext},
         draw::{draw, Draw},
         format::Format,
-        init::context,
         state::{AsTarget, Frame, Options, RenderBuffer, Target},
     },
     dunge_macros::{Group, Instance, Vertex},
@@ -51,10 +49,10 @@ pub use {
 };
 
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-pub use crate::init::window;
+pub use crate::window::window;
 
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
-pub use crate::init::from_element;
+pub use crate::window::from_element;
 
 #[cfg(feature = "winit")]
 pub use crate::{
