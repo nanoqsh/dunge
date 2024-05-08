@@ -9,7 +9,7 @@ env:
     CARGO_TERM_COLOR: always
     RUSTFLAGS: -Dwarnings
     RUST_BACKTRACE: full
-    MSRV: 1.77
+    MSRV: 1.78
     RUSTDOCFLAGS: -Dwarnings
     CACHE_SUFFIX: c
 jobs:

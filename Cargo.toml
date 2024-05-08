@@ -22,7 +22,7 @@ keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
 readme = "README.md"
 repository = "https://github.com/nanoqsh/dunge"
-rust-version = "1.77"
+rust-version = "1.78"
 
 [workspace.dependencies]
 dunge = { version = "=0.3.1", path = "dunge" }
