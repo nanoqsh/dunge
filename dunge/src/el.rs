@@ -4,17 +4,29 @@ use {
         state::State,
         time::{Fps, Time},
         update::Update,
-        window::View,
+        window::{self, View},
     },
     std::{cell::Cell, error, fmt, ops, time::Duration},
     wgpu::SurfaceError,
     winit::{
+        application::ApplicationHandler,
         error::EventLoopError,
         event,
-        event_loop::{self, EventLoop},
+        event_loop::{self, ActiveEventLoop, EventLoop},
         keyboard,
+        window::WindowId,
     },
 };
+
+pub fn run_local<U>(view: View, upd: U) -> Result<(), window::Error>
+where
+    U: Update,
+{
+    let lu = EventLoop::with_user_event().build()?;
+    let mut handler = Handler::new(view, upd);
+    lu.run_app(&mut handler)?;
+    Ok(())
+}
 
 /// Code representing the location of a physical key.
 pub type KeyCode = keyboard::KeyCode;
@@ -25,6 +37,7 @@ pub type SmolStr = keyboard::SmolStr;
 /// Describes a button of a mouse controller.
 pub type MouseButton = event::MouseButton;
 
+#[deprecated]
 pub(crate) struct Loop<V>(EventLoop<V>)
 where
     V: 'static;
@@ -94,10 +107,51 @@ impl error::Error for LoopError {
     }
 }
 
+struct Handler<U> {
+    ctrl: Control,
+    upd: U,
+}
+
+impl<U> Handler<U> {
+    fn new(view: View, upd: U) -> Self {
+        let ctrl = Control {
+            view,
+            resized: None,
+            min_delta_time: Cell::new(Duration::from_secs_f32(1. / 60.)),
+            delta_time: Duration::ZERO,
+            fps: 0,
+            pressed_keys: vec![],
+            released_keys: vec![],
+            cursor_position: None,
+            mouse: Mouse {
+                wheel_delta: (0., 0.),
+                pressed_buttons: Buttons(vec![]),
+                released_buttons: Buttons(vec![]),
+            },
+        };
+
+        Self { ctrl, upd }
+    }
+}
+
+impl<U> ApplicationHandler<U::Event> for Handler<U>
+where
+    U: Update,
+{
+    fn resumed(&mut self, el: &ActiveEventLoop) {
+        todo!()
+    }
+
+    fn window_event(&mut self, el: &ActiveEventLoop, id: WindowId, ev: event::WindowEvent) {
+        todo!()
+    }
+}
+
 type Event<V> = event::Event<V>;
 type Target = event_loop::ActiveEventLoop;
 type Failure = Option<Box<dyn error::Error>>;
 
+#[deprecated]
 fn handle<U>(cx: Context, view: View, mut upd: U) -> impl FnMut(Event<U::Event>, &Target) -> Failure
 where
     U: Update,
@@ -112,7 +166,7 @@ where
     const WAIT_TIME: Duration = Duration::from_millis(100);
 
     let mut ctrl = Control {
-        view,
+        view: View::new(unimplemented!()),
         resized: None,
         min_delta_time: Cell::new(Duration::from_secs_f32(1. / 60.)),
         delta_time: Duration::ZERO,

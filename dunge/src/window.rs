@@ -24,8 +24,8 @@ use {
     },
     winit::{
         error::{EventLoopError, OsError},
-        event_loop::{EventLoopClosed, EventLoopProxy},
-        window::{self, WindowId},
+        event_loop::{ActiveEventLoop, EventLoopClosed, EventLoopProxy},
+        window::{self, WindowAttributes, WindowId},
     },
 };
 
@@ -80,6 +80,7 @@ pub fn from_element<V>(id: &str) -> WindowBuilder<V> {
 /// }
 /// # }
 /// ```
+#[deprecated]
 pub struct WindowBuilder<V> {
     element: Option<Element>,
     title: String,
@@ -125,22 +126,18 @@ impl<V> WindowBuilder<V> {
         };
 
         let lu = Loop::new()?;
-        let inner = {
-            let title = mem::take(&mut self.title);
-            let attrs = window::Window::default_attributes().with_title(title);
-            let attrs = match self.size {
-                Some((width, height)) => attrs.with_inner_size(PhysicalSize::new(width, height)),
-                None => attrs.with_fullscreen(Some(Fullscreen::Borderless(None))),
-            };
-
-            Arc::new(lu.inner().create_window(attrs)?)
+        let title = mem::take(&mut self.title);
+        let attrs = window::Window::default_attributes().with_title(title);
+        let attrs = match self.size {
+            Some((width, height)) => attrs.with_inner_size(PhysicalSize::new(width, height)),
+            None => attrs.with_fullscreen(Some(Fullscreen::Borderless(None))),
         };
 
         let view = {
             let el = self.element.take().expect("take the element once");
-            el.set_canvas(&inner);
-            el.set_window_size(&inner);
-            View::new(cx.state(), Inner(Some(inner)), el)?
+            // el.set_canvas(&inner);
+            // el.set_window_size(&inner);
+            View::new(WindowState { attrs, el })
         };
 
         Ok(Window { cx, lu, view })
@@ -182,6 +179,7 @@ where
 }
 
 /// The application window type.
+#[deprecated]
 pub struct Window<V = ()>
 where
     V: 'static,
@@ -248,14 +246,6 @@ impl<V> ops::Deref for Window<V> {
     }
 }
 
-struct Inner(Option<Arc<window::Window>>);
-
-impl Inner {
-    fn get(&self) -> &Arc<window::Window> {
-        self.0.as_ref().expect("the window should be initialized")
-    }
-}
-
 pub struct Notifier<V>(EventLoopProxy<V>)
 where
     V: 'static;
@@ -273,15 +263,135 @@ where
     }
 }
 
-pub struct View {
-    conf: SurfaceConfiguration,
-    surface: Surface<'static>,
-    inner: Inner,
+pub struct WindowState {
+    attrs: WindowAttributes,
     el: Element,
 }
 
+enum Init {
+    Empty(Box<WindowAttributes>),
+    Active(Inner),
+}
+
+impl Init {
+    fn get(&self) -> &Inner {
+        match self {
+            Self::Empty(_) => panic!("the window should be initialized"),
+            Self::Active(inner) => inner,
+        }
+    }
+
+    fn get_mut(&mut self) -> &mut Inner {
+        match self {
+            Self::Empty(_) => panic!("the window should be initialized"),
+            Self::Active(inner) => inner,
+        }
+    }
+}
+
+pub struct View {
+    init: Init,
+    id: WindowId,
+    el: Element,
+    format: Format,
+    size: (u32, u32),
+}
+
 impl View {
-    fn new(state: &State, inner: Inner, el: Element) -> Result<Self, Error> {
+    pub fn new(state: WindowState) -> Self {
+        Self {
+            init: Init::Empty(Box::new(state.attrs)),
+            id: WindowId::from(u64::MAX),
+            el: state.el,
+            format: Format::default(),
+            size: (0, 0),
+        }
+    }
+
+    fn init(&mut self, state: &State, active: &ActiveEventLoop) -> Result<&mut Inner, Error> {
+        match &mut self.init {
+            Init::Empty(attrs) => {
+                let attrs = (**attrs).clone();
+                let window = active.create_window(attrs)?;
+                self.id = window.id();
+
+                let inner = Inner::new(state, window)?;
+                self.format = inner.format();
+                self.size = inner.size();
+                self.init = Init::Active(inner);
+            }
+            Init::Active(_) => {}
+        }
+
+        match &mut self.init {
+            Init::Empty(_) => unreachable!(),
+            Init::Active(inner) => Ok(inner),
+        }
+    }
+
+    pub fn window(&self) -> &Arc<window::Window> {
+        &self.init.get().window
+    }
+
+    pub fn format(&self) -> Format {
+        self.format
+    }
+
+    pub fn size(&self) -> (u32, u32) {
+        self.size
+    }
+
+    pub(crate) fn id(&self) -> WindowId {
+        self.id
+    }
+
+    pub(crate) fn request_redraw(&self) {
+        self.init.get().window.request_redraw();
+    }
+
+    pub(crate) fn output(&self) -> Result<Output, SurfaceError> {
+        use wgpu::TextureViewDescriptor;
+
+        let inner = self.init.get();
+        let format = Format::from_wgpu(inner.conf.format);
+        let output = inner.surface.get_current_texture()?;
+        let view = {
+            let desc = TextureViewDescriptor::default();
+            output.texture.create_view(&desc)
+        };
+
+        Ok(Output {
+            view,
+            format,
+            output,
+        })
+    }
+
+    pub(crate) fn set_window_size(&self) {
+        let inner = self.init.get();
+        self.el.set_window_size(&inner.window);
+    }
+
+    pub(crate) fn resize(&mut self, state: &State) {
+        let inner = self.init.get_mut();
+        let size = inner.window.inner_size();
+        if size.width > 0 && size.height > 0 {
+            inner.conf.width = size.width;
+            inner.conf.height = size.height;
+            inner.surface.configure(state.device(), &inner.conf);
+            self.size = inner.size();
+        }
+    }
+}
+
+struct Inner {
+    conf: SurfaceConfiguration,
+    surface: Surface<'static>,
+    window: Arc<window::Window>,
+}
+
+impl Inner {
+    fn new(state: &State, window: window::Window) -> Result<Self, Error> {
         use wgpu::*;
 
         const SUPPORTED_FORMATS: [Format; 4] = [
@@ -291,7 +401,8 @@ impl View {
             Format::BgrAlpha,
         ];
 
-        let surface = state.instance().create_surface(Arc::clone(inner.get()))?;
+        let window = Arc::new(window);
+        let surface = state.instance().create_surface(Arc::clone(&window))?;
         let conf = {
             let caps = surface.get_capabilities(state.adapter());
             let format = SUPPORTED_FORMATS.into_iter().find_map(|format| {
@@ -304,7 +415,7 @@ impl View {
                 return Err(ErrorKind::UnsupportedSurface.into());
             };
 
-            let size = inner.get().inner_size();
+            let size = window.inner_size();
             SurfaceConfiguration {
                 usage: TextureUsages::RENDER_ATTACHMENT,
                 format,
@@ -321,58 +432,16 @@ impl View {
         Ok(Self {
             conf,
             surface,
-            inner,
-            el,
+            window,
         })
     }
 
-    pub fn window(&self) -> &Arc<window::Window> {
-        self.inner.get()
-    }
-
-    pub fn format(&self) -> Format {
+    fn format(&self) -> Format {
         Format::from_wgpu(self.conf.format)
     }
 
-    pub fn size(&self) -> (u32, u32) {
+    fn size(&self) -> (u32, u32) {
         (self.conf.width, self.conf.height)
-    }
-
-    pub(crate) fn id(&self) -> WindowId {
-        self.inner.get().id()
-    }
-
-    pub(crate) fn request_redraw(&self) {
-        self.inner.get().request_redraw();
-    }
-
-    pub(crate) fn output(&self) -> Result<Output, SurfaceError> {
-        use wgpu::TextureViewDescriptor;
-
-        let output = self.surface.get_current_texture()?;
-        let view = {
-            let desc = TextureViewDescriptor::default();
-            output.texture.create_view(&desc)
-        };
-
-        Ok(Output {
-            view,
-            format: self.format(),
-            output,
-        })
-    }
-
-    pub(crate) fn set_window_size(&self) {
-        self.el.set_window_size(self.inner.get());
-    }
-
-    pub(crate) fn resize(&mut self, state: &State) {
-        let size = self.inner.get().inner_size();
-        if size.width > 0 && size.height > 0 {
-            self.conf.width = size.width;
-            self.conf.height = size.height;
-            self.surface.configure(state.device(), &self.conf);
-        }
     }
 }
 

@@ -86,7 +86,7 @@ use crate::{
 ///
 pub trait Update: Draw {
     type Flow: Flow;
-    type Event;
+    type Event: 'static;
     fn update(&mut self, ctrl: &Control) -> Self::Flow;
     fn event(&mut self, _: Self::Event) {}
 }
@@ -129,6 +129,7 @@ pub fn update_with_event<S, U, E, V, F, D>(
 where
     U: FnMut(&mut S, &Control) -> F,
     E: FnMut(&mut S, V),
+    V: 'static,
     F: Flow,
     D: Fn(&S, Frame),
 {
@@ -155,6 +156,7 @@ where
     where
         U: FnMut(&mut S, &Control) -> F,
         E: FnMut(&mut S, V),
+        V: 'static,
         F: Flow,
         D: Fn(&S, Frame),
     {
