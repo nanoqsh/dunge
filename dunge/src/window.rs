@@ -41,6 +41,7 @@ use {
 /// }
 /// # }
 /// ```
+#[deprecated]
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
 pub fn window<V>() -> WindowBuilder<V> {
     WindowBuilder::new(Element(()))
@@ -49,6 +50,7 @@ pub fn window<V>() -> WindowBuilder<V> {
 /// Creates the [window builder](WindowBuilder) to
 /// construct the [window](Window)
 /// in the given html element.
+#[deprecated]
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
 pub fn from_element<V>(id: &str) -> WindowBuilder<V> {
     use web_sys::Window;
@@ -80,7 +82,6 @@ pub fn from_element<V>(id: &str) -> WindowBuilder<V> {
 /// }
 /// # }
 /// ```
-#[deprecated]
 pub struct WindowBuilder<V> {
     element: Option<Element>,
     title: String,
@@ -268,6 +269,68 @@ pub struct WindowState {
     el: Element,
 }
 
+impl WindowState {
+    /// Set the title to the window.
+    pub fn with_title<S>(self, title: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self {
+            attrs: self.attrs.with_title(title),
+            ..self
+        }
+    }
+
+    /// Set the window size.
+    pub fn with_size(self, (width, height): (u32, u32)) -> Self {
+        use winit::dpi::PhysicalSize;
+
+        let size = PhysicalSize::new(width, height);
+        Self {
+            attrs: self.attrs.with_inner_size(size),
+            ..self
+        }
+    }
+
+    /// Enables fullscreen for the window.
+    pub fn with_fullscreen(self) -> Self {
+        use winit::window::Fullscreen;
+
+        let fullscreen = Fullscreen::Borderless(None);
+        Self {
+            attrs: self.attrs.with_fullscreen(Some(fullscreen)),
+            ..self
+        }
+    }
+}
+
+#[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
+pub fn window_state() -> WindowState {
+    WindowState {
+        attrs: WindowAttributes::default(),
+        el: Element(()),
+    }
+}
+
+#[cfg(all(feature = "winit", target_arch = "wasm32"))]
+pub fn window_state_from_element(id: &str) -> WindowState {
+    use web_sys::Window;
+
+    let document = web_sys::window()
+        .as_ref()
+        .and_then(Window::document)
+        .expect("get document");
+
+    let Some(inner) = document.get_element_by_id(id) else {
+        panic!("an element with id {id:?} not found");
+    };
+
+    WindowState {
+        attrs: WindowAttributes::default(),
+        el: Element(inner),
+    }
+}
+
 enum Init {
     Empty(Box<WindowAttributes>),
     Active(Inner),
@@ -304,28 +367,26 @@ impl View {
             id: WindowId::from(u64::MAX),
             el: state.el,
             format: Format::default(),
-            size: (0, 0),
+            size: (1, 1),
         }
     }
 
-    fn init(&mut self, state: &State, active: &ActiveEventLoop) -> Result<&mut Inner, Error> {
+    pub(crate) fn init(&mut self, state: &State, el: &ActiveEventLoop) -> Result<(), Error> {
         match &mut self.init {
             Init::Empty(attrs) => {
                 let attrs = (**attrs).clone();
-                let window = active.create_window(attrs)?;
+                let window = el.create_window(attrs)?;
                 self.id = window.id();
+                self.el.set_canvas(&window);
+                self.el.set_window_size(&window);
 
                 let inner = Inner::new(state, window)?;
                 self.format = inner.format();
                 self.size = inner.size();
                 self.init = Init::Active(inner);
+                Ok(())
             }
-            Init::Active(_) => {}
-        }
-
-        match &mut self.init {
-            Init::Empty(_) => unreachable!(),
-            Init::Active(inner) => Ok(inner),
+            Init::Active(_) => Ok(()),
         }
     }
 

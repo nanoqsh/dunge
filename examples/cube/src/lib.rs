@@ -41,7 +41,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     let cube_shader = cx.make_shader(cube);
     let mut r = 0.;
     let uniform = {
-        let mat = transform(r, window.size());
+        let mat = transform(r, (1, 1));
         cx.make_uniform(mat)
     };
 
@@ -104,7 +104,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let layer = cx.make_layer(&cube_shader, window.format());
+    let layer = cx.make_layer(&cube_shader, Format::window());
     let upd = move |ctrl: &Control| {
         for key in ctrl.pressed_keys() {
             if key.code == KeyCode::Escape {

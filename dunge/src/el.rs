@@ -11,22 +11,12 @@ use {
     winit::{
         application::ApplicationHandler,
         error::EventLoopError,
-        event,
-        event_loop::{self, ActiveEventLoop, EventLoop},
+        event::{self, StartCause, WindowEvent},
+        event_loop::{self, ActiveEventLoop, ControlFlow, EventLoop},
         keyboard,
         window::WindowId,
     },
 };
-
-pub fn run_local<U>(view: View, upd: U) -> Result<(), window::Error>
-where
-    U: Update,
-{
-    let lu = EventLoop::with_user_event().build()?;
-    let mut handler = Handler::new(view, upd);
-    lu.run_app(&mut handler)?;
-    Ok(())
-}
 
 /// Code representing the location of a physical key.
 pub type KeyCode = keyboard::KeyCode;
@@ -36,6 +26,19 @@ pub type SmolStr = keyboard::SmolStr;
 
 /// Describes a button of a mouse controller.
 pub type MouseButton = event::MouseButton;
+
+pub fn run_local<U>(cx: Context, view: View, upd: U) -> Result<(), LoopError>
+where
+    U: Update,
+{
+    let lu = EventLoop::with_user_event()
+        .build()
+        .map_err(LoopError::EventLoop)?;
+
+    let mut handler = Handler::new(cx, view, upd);
+    let out = lu.run_app(&mut handler).map_err(LoopError::EventLoop);
+    out.or(handler.out)
+}
 
 #[deprecated]
 pub(crate) struct Loop<V>(EventLoop<V>)
@@ -85,6 +88,7 @@ impl<V> Loop<V> {
 /// The event loop error.
 #[derive(Debug)]
 pub enum LoopError {
+    Window(window::Error),
     EventLoop(EventLoopError),
     Failed(Box<dyn error::Error>),
 }
@@ -92,6 +96,7 @@ pub enum LoopError {
 impl fmt::Display for LoopError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::Window(err) => err.fmt(f),
             Self::EventLoop(err) => err.fmt(f),
             Self::Failed(err) => err.fmt(f),
         }
@@ -101,6 +106,7 @@ impl fmt::Display for LoopError {
 impl error::Error for LoopError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
+            Self::Window(err) => Some(err),
             Self::EventLoop(err) => Some(err),
             Self::Failed(err) => Some(err.as_ref()),
         }
@@ -108,12 +114,19 @@ impl error::Error for LoopError {
 }
 
 struct Handler<U> {
+    cx: Context,
     ctrl: Control,
     upd: U,
+    active: bool,
+    time: Time,
+    fps: Fps,
+    out: Result<(), LoopError>,
 }
 
 impl<U> Handler<U> {
-    fn new(view: View, upd: U) -> Self {
+    const WAIT_TIME: Duration = Duration::from_millis(100);
+
+    fn new(cx: Context, view: View, upd: U) -> Self {
         let ctrl = Control {
             view,
             resized: None,
@@ -130,7 +143,15 @@ impl<U> Handler<U> {
             },
         };
 
-        Self { ctrl, upd }
+        Self {
+            cx,
+            ctrl,
+            upd,
+            active: false,
+            time: Time::now(),
+            fps: Fps::default(),
+            out: Ok(()),
+        }
     }
 }
 
@@ -138,12 +159,191 @@ impl<U> ApplicationHandler<U::Event> for Handler<U>
 where
     U: Update,
 {
-    fn resumed(&mut self, el: &ActiveEventLoop) {
-        todo!()
+    fn resumed(&mut self, _: &ActiveEventLoop) {
+        log::debug!("resumed");
+        self.active = true;
+        self.ctrl.view.request_redraw();
+
+        // Reset the timer before start the loop
+        self.time.reset();
     }
 
-    fn window_event(&mut self, el: &ActiveEventLoop, id: WindowId, ev: event::WindowEvent) {
-        todo!()
+    fn suspended(&mut self, _: &ActiveEventLoop) {
+        log::debug!("suspended");
+        self.active = false;
+    }
+
+    fn window_event(&mut self, el: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        use {
+            event::{ElementState, KeyEvent, MouseScrollDelta, WindowEvent},
+            event_loop::ControlFlow,
+            keyboard::PhysicalKey,
+            winit::dpi::{PhysicalPosition, PhysicalSize},
+        };
+
+        if id == self.ctrl.view.id() {
+            return;
+        }
+
+        match event {
+            WindowEvent::Resized(PhysicalSize { width, height }) => {
+                log::debug!("resized: {width}, {height}");
+                self.ctrl.resize(self.cx.state());
+            }
+            WindowEvent::CloseRequested => {
+                log::debug!("close requested");
+                el.exit();
+            }
+            WindowEvent::Focused(true) => {
+                log::debug!("focused");
+                self.ctrl.view.request_redraw();
+            }
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        physical_key,
+                        text,
+                        location,
+                        state,
+                        ..
+                    },
+                is_synthetic: false,
+                ..
+            } => {
+                let code = match physical_key {
+                    PhysicalKey::Code(code) => {
+                        log::debug!("keyboard input: {code:?}");
+                        code
+                    }
+                    PhysicalKey::Unidentified(code) => {
+                        log::debug!("keyboard input: (unidentified) {code:?}");
+                        return;
+                    }
+                };
+
+                // TODO: Support key location
+                _ = location;
+
+                let key = Key { code, text };
+                match state {
+                    ElementState::Pressed => self.ctrl.pressed_keys.push(key),
+                    ElementState::Released => self.ctrl.released_keys.push(key),
+                }
+            }
+            WindowEvent::CursorMoved {
+                position: PhysicalPosition { x, y },
+                ..
+            } => self.ctrl.cursor_position = Some((x as f32, y as f32)),
+            WindowEvent::CursorLeft { .. } => self.ctrl.cursor_position = None,
+            WindowEvent::MouseWheel {
+                delta: MouseScrollDelta::LineDelta(x, y),
+                ..
+            } => {
+                self.ctrl.mouse.wheel_delta.0 += x;
+                self.ctrl.mouse.wheel_delta.1 += y;
+            }
+            WindowEvent::MouseInput { state, button, .. } => match state {
+                ElementState::Pressed => self.ctrl.mouse.pressed_buttons.push(button),
+                ElementState::Released => self.ctrl.mouse.released_buttons.push(button),
+            },
+            WindowEvent::RedrawRequested => {
+                if self.active {
+                    log::debug!("redraw requested");
+                } else {
+                    log::debug!("redraw requested (non-active)");
+
+                    // Wait a while to become active
+                    el.set_control_flow(ControlFlow::wait_duration(Self::WAIT_TIME));
+                    return;
+                }
+
+                let delta_time = self.time.delta();
+                let min_delta_time = self.ctrl.min_delta_time.get();
+                if delta_time < min_delta_time {
+                    let wait = min_delta_time - delta_time;
+                    el.set_control_flow(ControlFlow::wait_duration(wait));
+                    return;
+                }
+
+                self.time.reset();
+                self.ctrl.delta_time = delta_time;
+                if let Some(fps) = self.fps.count(delta_time) {
+                    self.ctrl.fps = fps;
+                }
+
+                match self.upd.update(&self.ctrl).flow() {
+                    Then::Run => {}
+                    Then::Close => {
+                        log::debug!("close");
+                        el.exit();
+                        return;
+                    }
+                    Then::Fail(err) => {
+                        log::error!("failed: {err:?}");
+                        self.out = Err(LoopError::Failed(err));
+                        el.exit();
+                    }
+                }
+
+                self.ctrl.clear_state();
+                match self.ctrl.view.output() {
+                    Ok(output) => {
+                        let target = output.target();
+                        self.cx.state().draw(target, &self.upd);
+                        output.present();
+                    }
+                    Err(SurfaceError::Timeout) => log::info!("suface error: timeout"),
+                    Err(SurfaceError::Outdated) => log::info!("suface error: outdated"),
+                    Err(SurfaceError::Lost) => {
+                        log::info!("suface error: lost");
+                        self.ctrl.resize(self.cx.state());
+                    }
+                    Err(SurfaceError::OutOfMemory) => {
+                        log::error!("suface error: out of memory");
+                        el.exit();
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn new_events(&mut self, el: &ActiveEventLoop, cause: StartCause) {
+        match cause {
+            StartCause::ResumeTimeReached { .. } => {
+                log::debug!("resume time reached");
+                self.ctrl.view.set_window_size();
+                self.ctrl.view.request_redraw();
+            }
+            StartCause::WaitCancelled {
+                requested_resume, ..
+            } => {
+                log::debug!("wait cancelled");
+                let flow = match requested_resume {
+                    Some(resume) => ControlFlow::WaitUntil(resume),
+                    None => ControlFlow::wait_duration(Self::WAIT_TIME),
+                };
+
+                el.set_control_flow(flow);
+            }
+            StartCause::Poll => log::debug!("poll"),
+            StartCause::Init => {
+                log::debug!("init");
+                self.out = self
+                    .ctrl
+                    .view
+                    .init(self.cx.state(), el)
+                    .map_err(LoopError::Window);
+
+                if self.out.is_err() {
+                    el.exit();
+                }
+            }
+        }
+    }
+
+    fn user_event(&mut self, _: &ActiveEventLoop, ev: U::Event) {
+        self.upd.event(ev);
     }
 }
 

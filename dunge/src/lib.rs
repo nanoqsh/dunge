@@ -28,8 +28,8 @@ pub mod prelude {
     //! The dunge prelude.
 
     pub use crate::{
-        context::Context, mesh::MeshData, sl, texture::TextureData, types, Frame, Group, Instance,
-        Options, Vertex,
+        context::Context, mesh::MeshData, sl, texture::TextureData, types, Format, Frame, Group,
+        Instance, Options, Vertex,
     };
 
     #[cfg(feature = "winit")]
@@ -49,10 +49,10 @@ pub use {
 };
 
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-pub use crate::window::window;
+pub use crate::window::{window, window_state};
 
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
-pub use crate::window::from_element;
+pub use crate::window::{from_element, window_state_from_element};
 
 #[cfg(feature = "winit")]
 pub use crate::{
