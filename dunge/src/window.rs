@@ -361,11 +361,11 @@ pub struct View {
 }
 
 impl View {
-    pub fn new(state: WindowState) -> Self {
+    pub(crate) fn new(ws: WindowState) -> Self {
         Self {
-            init: Init::Empty(Box::new(state.attrs)),
+            init: Init::Empty(Box::new(ws.attrs)),
             id: WindowId::from(u64::MAX),
-            el: state.el,
+            el: ws.el,
             format: Format::default(),
             size: (1, 1),
         }

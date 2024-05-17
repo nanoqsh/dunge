@@ -56,6 +56,9 @@ pub use crate::window::{from_element, window_state_from_element};
 
 #[cfg(feature = "winit")]
 pub use crate::{
-    el::{Buttons, Control, Flow, Key, KeyCode, LoopError, Mouse, MouseButton, SmolStr, Then},
+    el::{
+        run_local, Buttons, Control, Flow, Key, KeyCode, LoopError, Mouse, MouseButton, SmolStr,
+        Then,
+    },
     update::{update, update_with_event, update_with_state, Update},
 };

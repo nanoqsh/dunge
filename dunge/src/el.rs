@@ -4,7 +4,7 @@ use {
         state::State,
         time::{Fps, Time},
         update::Update,
-        window::{self, View},
+        window::{self, View, WindowState},
     },
     std::{cell::Cell, error, fmt, ops, time::Duration},
     wgpu::SurfaceError,
@@ -27,7 +27,7 @@ pub type SmolStr = keyboard::SmolStr;
 /// Describes a button of a mouse controller.
 pub type MouseButton = event::MouseButton;
 
-pub fn run_local<U>(cx: Context, view: View, upd: U) -> Result<(), LoopError>
+pub fn run_local<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
 where
     U: Update,
 {
@@ -35,6 +35,7 @@ where
         .build()
         .map_err(LoopError::EventLoop)?;
 
+    let view = View::new(ws);
     let mut handler = Handler::new(cx, view, upd);
     let out = lu.run_app(&mut handler).map_err(LoopError::EventLoop);
     out.or(handler.out)
@@ -352,6 +353,7 @@ type Target = event_loop::ActiveEventLoop;
 type Failure = Option<Box<dyn error::Error>>;
 
 #[deprecated]
+#[allow(dead_code)]
 fn handle<U>(cx: Context, view: View, mut upd: U) -> impl FnMut(Event<U::Event>, &Target) -> Failure
 where
     U: Update,
@@ -366,7 +368,7 @@ where
     const WAIT_TIME: Duration = Duration::from_millis(100);
 
     let mut ctrl = Control {
-        view: View::new(unimplemented!()),
+        view: unimplemented!(),
         resized: None,
         min_delta_time: Cell::new(Duration::from_secs_f32(1. / 60.)),
         delta_time: Duration::ZERO,

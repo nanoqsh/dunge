@@ -1,6 +1,6 @@
 type Error = Box<dyn std::error::Error>;
 
-pub fn run(window: dunge::window::Window) -> Result<(), Error> {
+pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     use dunge::{
         color::Rgba,
         glam::{Mat4, Quat, Vec3},
@@ -37,7 +37,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         p * m
     };
 
-    let cx = window.context();
+    let cx = dunge::context().await?;
     let cube_shader = cx.make_shader(cube);
     let mut r = 0.;
     let uniform = {
@@ -105,17 +105,20 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     };
 
     let layer = cx.make_layer(&cube_shader, Format::window());
-    let upd = move |ctrl: &Control| {
-        for key in ctrl.pressed_keys() {
-            if key.code == KeyCode::Escape {
-                return Then::Close;
+    let upd = {
+        let cx = cx.clone();
+        move |ctrl: &Control| {
+            for key in ctrl.pressed_keys() {
+                if key.code == KeyCode::Escape {
+                    return Then::Close;
+                }
             }
-        }
 
-        r += ctrl.delta_time().as_secs_f32() * 0.5;
-        let mat = transform(r, ctrl.size());
-        uniform.update(&cx, mat);
-        Then::Run
+            r += ctrl.delta_time().as_secs_f32() * 0.5;
+            let mat = transform(r, ctrl.size());
+            uniform.update(&cx, mat);
+            Then::Run
+        }
     };
 
     let draw = move |mut frame: Frame| {
@@ -123,6 +126,6 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
     };
 
-    window.run(dunge::update(upd, draw))?;
+    dunge::run_local(cx, ws, dunge::update(upd, draw))?;
     Ok(())
 }
