@@ -1,12 +1,15 @@
 type Error = Box<dyn std::error::Error>;
 
 pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
-    use dunge::{
-        color::Rgba,
-        glam::{Mat4, Quat, Vec3},
-        prelude::*,
-        sl::{Groups, InVertex, Out},
-        uniform::Uniform,
+    use {
+        dunge::{
+            color::Rgba,
+            glam::{Mat4, Quat, Vec3},
+            prelude::*,
+            sl::{Groups, InVertex, Out},
+            uniform::Uniform,
+        },
+        std::cell::OnceCell,
     };
 
     #[repr(C)]
@@ -104,7 +107,6 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let layer = cx.make_layer(&cube_shader, Format::window());
     let upd = {
         let cx = cx.clone();
         move |ctrl: &Control| {
@@ -121,11 +123,16 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         }
     };
 
-    let draw = move |mut frame: Frame| {
-        let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-        frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
+    let draw = {
+        let cx = cx.clone();
+        let layer = OnceCell::default();
+        move |mut frame: Frame| {
+            let layer = layer.get_or_init(|| cx.make_layer(&cube_shader, frame.format()));
+            let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+            frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
+        }
     };
 
-    dunge::run_local(cx, ws, dunge::update(upd, draw))?;
+    dunge::run(cx, ws, dunge::update(upd, draw))?;
     Ok(())
 }

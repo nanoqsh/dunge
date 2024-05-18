@@ -350,6 +350,10 @@ impl Init {
             Self::Active(inner) => inner,
         }
     }
+
+    fn is_initialized(&self) -> bool {
+        matches!(self, Self::Active(_))
+    }
 }
 
 pub struct View {
@@ -391,30 +395,37 @@ impl View {
     }
 
     pub fn window(&self) -> &Arc<window::Window> {
+        debug_assert!(self.init.is_initialized());
         &self.init.get().window
     }
 
     pub fn format(&self) -> Format {
+        debug_assert!(self.init.is_initialized());
         self.format
     }
 
     pub fn size(&self) -> (u32, u32) {
+        debug_assert!(self.init.is_initialized());
         self.size
     }
 
     pub(crate) fn id(&self) -> WindowId {
+        debug_assert!(self.init.is_initialized());
         self.id
     }
 
     pub(crate) fn request_redraw(&self) {
+        debug_assert!(self.init.is_initialized());
         self.init.get().window.request_redraw();
     }
 
     pub(crate) fn output(&self) -> Result<Output, SurfaceError> {
         use wgpu::TextureViewDescriptor;
 
+        debug_assert!(self.init.is_initialized());
+
         let inner = self.init.get();
-        let format = Format::from_wgpu(inner.conf.format);
+        let format = inner.format();
         let output = inner.surface.get_current_texture()?;
         let view = {
             let desc = TextureViewDescriptor::default();
@@ -429,11 +440,13 @@ impl View {
     }
 
     pub(crate) fn set_window_size(&self) {
+        debug_assert!(self.init.is_initialized());
         let inner = self.init.get();
         self.el.set_window_size(&inner.window);
     }
 
     pub(crate) fn resize(&mut self, state: &State) {
+        debug_assert!(self.init.is_initialized());
         let inner = self.init.get_mut();
         let size = inner.window.inner_size();
         if size.width > 0 && size.height > 0 {

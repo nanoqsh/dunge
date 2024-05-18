@@ -148,6 +148,10 @@ pub struct Frame<'v, 'e> {
 }
 
 impl Frame<'_, '_> {
+    pub fn format(&self) -> Format {
+        self.target.format
+    }
+
     pub fn layer<'p, V, I, O>(&'p mut self, layer: &'p Layer<V, I>, opts: O) -> SetLayer<'p, V, I>
     where
         O: Into<Options>,

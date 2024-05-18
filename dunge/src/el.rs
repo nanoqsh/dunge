@@ -27,7 +27,7 @@ pub type SmolStr = keyboard::SmolStr;
 /// Describes a button of a mouse controller.
 pub type MouseButton = event::MouseButton;
 
-pub fn run_local<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
+pub fn run<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
 where
     U: Update,
 {
@@ -39,6 +39,13 @@ where
     let mut handler = Handler::new(cx, view, upd);
     let out = lu.run_app(&mut handler).map_err(LoopError::EventLoop);
     out.or(handler.out)
+}
+
+pub(crate) fn spawn<U>(cx: Context, ws: WindowState, upd: U)
+where
+    U: Update + 'static,
+{
+    todo!()
 }
 
 #[deprecated]
@@ -160,10 +167,11 @@ impl<U> ApplicationHandler<U::Event> for Handler<U>
 where
     U: Update,
 {
-    fn resumed(&mut self, _: &ActiveEventLoop) {
+    fn resumed(&mut self, el: &ActiveEventLoop) {
         log::debug!("resumed");
         self.active = true;
         self.ctrl.view.request_redraw();
+        el.set_control_flow(ControlFlow::wait_duration(Self::WAIT_TIME));
 
         // Reset the timer before start the loop
         self.time.reset();
@@ -182,7 +190,7 @@ where
             winit::dpi::{PhysicalPosition, PhysicalSize},
         };
 
-        if id == self.ctrl.view.id() {
+        if id != self.ctrl.view.id() {
             return;
         }
 
@@ -283,6 +291,7 @@ where
                         log::error!("failed: {err:?}");
                         self.out = Err(LoopError::Failed(err));
                         el.exit();
+                        return;
                     }
                 }
 

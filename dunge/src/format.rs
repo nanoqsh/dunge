@@ -13,11 +13,6 @@ pub enum Format {
 }
 
 impl Format {
-    pub fn window() -> Self {
-        // TODO: variants
-        Self::SrgbAlpha
-    }
-
     pub(crate) const fn bytes(self) -> u32 {
         match self {
             Self::SrgbAlpha | Self::SbgrAlpha | Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
