@@ -29,6 +29,22 @@ pub type MouseButton = event::MouseButton;
 
 pub fn run<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
 where
+    U: Update + 'static,
+{
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        run_local(cx, ws, upd)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        spawn(cx, ws, upd)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_local<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
+where
     U: Update,
 {
     let lu = EventLoop::with_user_event()
@@ -41,11 +57,21 @@ where
     out.or(handler.out)
 }
 
-pub(crate) fn spawn<U>(cx: Context, ws: WindowState, upd: U)
+#[cfg(target_arch = "wasm32")]
+fn spawn<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
 where
     U: Update + 'static,
 {
-    todo!()
+    use winit::platform::web::EventLoopExtWebSys;
+
+    let lu = EventLoop::with_user_event()
+        .build()
+        .map_err(LoopError::EventLoop)?;
+
+    let view = View::new(ws);
+    let handler = Handler::new(cx, view, upd);
+    lu.spawn_app(handler);
+    Ok(())
 }
 
 #[deprecated]

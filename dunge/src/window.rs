@@ -41,8 +41,8 @@ use {
 /// }
 /// # }
 /// ```
-#[deprecated]
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
+#[deprecated]
 pub fn window<V>() -> WindowBuilder<V> {
     WindowBuilder::new(Element(()))
 }
@@ -50,8 +50,8 @@ pub fn window<V>() -> WindowBuilder<V> {
 /// Creates the [window builder](WindowBuilder) to
 /// construct the [window](Window)
 /// in the given html element.
-#[deprecated]
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
+#[deprecated]
 pub fn from_element<V>(id: &str) -> WindowBuilder<V> {
     use web_sys::Window;
 
