@@ -1,6 +1,6 @@
 type Error = Box<dyn std::error::Error>;
 
-pub fn run(window: dunge::window::Window) -> Result<(), Error> {
+pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     use {
         dunge::{
             bind::UniqueBinding,
@@ -13,7 +13,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
             uniform::Uniform,
             Format,
         },
-        std::f32::consts,
+        std::{cell::OnceCell, f32::consts},
     };
 
     const COLOR: Vec4 = Vec4::new(1., 0.4, 0.8, 1.);
@@ -61,7 +61,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         },
     };
 
-    let cx = window.context();
+    let cx = dunge::context().await?;
     let triangle_shader = cx.make_shader(triangle);
     let screen_shader = cx.make_shader(screen);
     let mut r = 0.;
@@ -87,7 +87,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         cx.make_texture(data)
     };
 
-    let render_buf = make_render_buf(&cx, window.size());
+    let render_buf = make_render_buf(&cx, (1, 1));
     let sam = cx.make_sampler(Filter::Nearest);
 
     let make_stp = |size| {
@@ -109,21 +109,6 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         let handler = binder.bind(&map);
         (binder.into_binding(), handler)
     };
-
-    let screen_mesh = {
-        const VERTS: [Screen; 4] = [
-            Screen([-1., -1.], [0., 1.]),
-            Screen([1., -1.], [1., 1.]),
-            Screen([1., 1.], [1., 0.]),
-            Screen([-1., 1.], [0., 0.]),
-        ];
-
-        let data = MeshData::from_quads(&[VERTS])?;
-        cx.make_mesh(&data)
-    };
-
-    let triangle_layer = cx.make_layer(&triangle_shader, Format::SrgbAlpha);
-    let screen_layer = cx.make_layer(&screen_shader, window.format());
 
     let upd = move |state: &mut State<_>, ctrl: &Control| {
         for key in ctrl.pressed_keys() {
@@ -150,21 +135,41 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         Then::Run
     };
 
-    let draw = move |state: &State<_>, mut frame: Frame| {
-        let main = |mut frame: Frame| {
-            let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+    let screen_mesh = {
+        const VERTS: [Screen; 4] = [
+            Screen([-1., -1.], [0., 1.]),
+            Screen([1., -1.], [1., 1.]),
+            Screen([1., 1.], [1., 0.]),
+            Screen([-1., 1.], [0., 0.]),
+        ];
+
+        let data = MeshData::from_quads(&[VERTS])?;
+        cx.make_mesh(&data)
+    };
+
+    let triangle_layer = cx.make_layer(&triangle_shader, Format::SrgbAlpha);
+    let screen_layer = OnceCell::default();
+    let draw = {
+        let cx = cx.clone();
+        move |state: &State<_>, mut frame: Frame| {
+            let main = |mut frame: Frame| {
+                let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+                frame
+                    .layer(&triangle_layer, opts)
+                    .bind(&bind)
+                    .draw_points(3);
+            };
+
+            state.cx.draw_to(&state.render_buf, dunge::draw(main));
+
+            let screen_layer =
+                screen_layer.get_or_init(|| cx.make_layer(&screen_shader, frame.format()));
+
             frame
-                .layer(&triangle_layer, opts)
-                .bind(&bind)
-                .draw_points(3);
-        };
-
-        state.cx.draw_to(&state.render_buf, dunge::draw(main));
-
-        frame
-            .layer(&screen_layer, Options::default())
-            .bind(&state.bind_map)
-            .draw(&screen_mesh);
+                .layer(&screen_layer, Options::default())
+                .bind(&state.bind_map)
+                .draw(&screen_mesh);
+        }
     };
 
     struct State<R> {
@@ -174,11 +179,11 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
     }
 
     let state = State {
-        cx,
+        cx: cx.clone(),
         render_buf,
         bind_map,
     };
 
-    window.run(dunge::update_with_state(state, upd, draw))?;
+    ws.run(cx, dunge::update_with_state(state, upd, draw))?;
     Ok(())
 }

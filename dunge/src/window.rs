@@ -3,7 +3,7 @@
 use {
     crate::{
         context::{Context, FailedMakeContext},
-        el::{Loop, LoopError},
+        el::{self, Loop, LoopError},
         element::Element,
         format::Format,
         state::{State, Target},
@@ -24,7 +24,7 @@ use {
     },
     winit::{
         error::{EventLoopError, OsError},
-        event_loop::{ActiveEventLoop, EventLoopClosed, EventLoopProxy},
+        event_loop::{ActiveEventLoop, EventLoop, EventLoopClosed, EventLoopProxy},
         window::{self, WindowAttributes, WindowId},
     },
 };
@@ -134,13 +134,7 @@ impl<V> WindowBuilder<V> {
             None => attrs.with_fullscreen(Some(Fullscreen::Borderless(None))),
         };
 
-        let view = {
-            let el = self.element.take().expect("take the element once");
-            // el.set_canvas(&inner);
-            // el.set_window_size(&inner);
-            View::new(WindowState { attrs, el })
-        };
-
+        let view = todo!();
         Ok(Window { cx, lu, view })
     }
 }
@@ -264,12 +258,16 @@ where
     }
 }
 
-pub struct WindowState {
+pub struct WindowState<V = ()>
+where
+    V: 'static,
+{
     attrs: WindowAttributes,
     el: Element,
+    lu: EventLoop<V>,
 }
 
-impl WindowState {
+impl<V> WindowState<V> {
     /// Set the title to the window.
     pub fn with_title<S>(self, title: S) -> Self
     where
@@ -302,14 +300,38 @@ impl WindowState {
             ..self
         }
     }
+
+    pub fn run<U>(self, cx: Context, upd: U) -> Result<(), LoopError>
+    where
+        U: Update<Event = V> + 'static,
+    {
+        el::run(self, cx, upd)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn run_local<U>(self, cx: Context, upd: U) -> Result<(), LoopError>
+    where
+        U: Update<Event = V>,
+    {
+        el::run_local(self, cx, upd)
+    }
+
+    pub(crate) fn into_view_and_loop(self) -> (View, EventLoop<V>) {
+        let view = View {
+            init: Init::Empty(Box::new(self.attrs)),
+            id: WindowId::from(u64::MAX),
+            el: self.el,
+            format: Format::default(),
+            size: (1, 1),
+        };
+
+        (view, self.lu)
+    }
 }
 
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-pub fn window_state() -> WindowState {
-    WindowState {
-        attrs: WindowAttributes::default(),
-        el: Element(()),
-    }
+pub fn window_state<V>() -> WindowState<V> {
+    state(Element(()))
 }
 
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
@@ -325,10 +347,16 @@ pub fn window_state_from_element(id: &str) -> WindowState {
         panic!("an element with id {id:?} not found");
     };
 
-    WindowState {
-        attrs: WindowAttributes::default(),
-        el: Element(inner),
-    }
+    state(Element(inner))
+}
+
+fn state<V>(el: Element) -> WindowState<V> {
+    let attrs = WindowAttributes::default();
+    let Ok(lu) = EventLoop::with_user_event().build() else {
+        panic!("attempt to recreate the event loop");
+    };
+
+    WindowState { attrs, el, lu }
 }
 
 enum Init {
@@ -365,16 +393,6 @@ pub struct View {
 }
 
 impl View {
-    pub(crate) fn new(ws: WindowState) -> Self {
-        Self {
-            init: Init::Empty(Box::new(ws.attrs)),
-            id: WindowId::from(u64::MAX),
-            el: ws.el,
-            format: Format::default(),
-            size: (1, 1),
-        }
-    }
-
     pub(crate) fn init(&mut self, state: &State, el: &ActiveEventLoop) -> Result<(), Error> {
         match &mut self.init {
             Init::Empty(attrs) => {

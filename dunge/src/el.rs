@@ -27,48 +27,40 @@ pub type SmolStr = keyboard::SmolStr;
 /// Describes a button of a mouse controller.
 pub type MouseButton = event::MouseButton;
 
-pub fn run<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
+pub(crate) fn run<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
     U: Update + 'static,
 {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        run_local(cx, ws, upd)
+        run_local(ws, cx, upd)
     }
 
     #[cfg(target_arch = "wasm32")]
     {
-        spawn(cx, ws, upd)
+        spawn(ws, cx, upd)
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn run_local<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
+pub(crate) fn run_local<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
     U: Update,
 {
-    let lu = EventLoop::with_user_event()
-        .build()
-        .map_err(LoopError::EventLoop)?;
-
-    let view = View::new(ws);
+    let (view, lu) = ws.into_view_and_loop();
     let mut handler = Handler::new(cx, view, upd);
     let out = lu.run_app(&mut handler).map_err(LoopError::EventLoop);
     out.or(handler.out)
 }
 
 #[cfg(target_arch = "wasm32")]
-fn spawn<U>(cx: Context, ws: WindowState, upd: U) -> Result<(), LoopError>
+fn spawn<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
     U: Update + 'static,
 {
     use winit::platform::web::EventLoopExtWebSys;
 
-    let lu = EventLoop::with_user_event()
-        .build()
-        .map_err(LoopError::EventLoop)?;
-
-    let view = View::new(ws);
+    let (view, lu) = ws.into_view_and_loop();
     let handler = Handler::new(cx, view, upd);
     lu.spawn_app(handler);
     Ok(())

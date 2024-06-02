@@ -69,17 +69,14 @@ As you can see from the snippet, the shader requires you to provide two things: 
 
 That's because this function doesn't actually compute anything. It is needed only to describe the method for computing what we need on GPU. During shader instantiation, this function is used to compile an actual shader. However, this saves us from having to write the shader in wgsl and allows to typecheck at compile time. For example, dunge checks that a vertex type in a shader matches with a mesh used during rendering. It also checks types inside the shader itself.
 
-Now let's create the dunge context, window and other necessary things:
+Now let's create the dunge context and other necessary things:
 ```rust
-// Create the dunge context with a window
-let window = dunge::window().await?;
-let cx = window.context();
+// Create the dunge context
+let cx = dunge::context().await?;
 
 // You can use the context to manage dunge objects.
 // Create a shader instance
 let shader = cx.make_shader(triangle);
-// And a layer for drawing a mesh on it
-let layer = cx.make_layer(&shader, window.format());
 ```
 
 You may notice the context creation requires async. This is WGPU specific, so you will have to add your favorite async runtime in the project.
@@ -118,26 +115,37 @@ We don't do anything special here, we just check is <kbd>Esc</kbd> pressed and e
 Second `Draw` is used directly to draw something in the final frame:
 ```rust
 // Describe the `Draw` handler
-let draw = |mut frame: Frame| {
-    use dunge::color::Rgba;
+let draw = {
+    // Clone the context to closure
+    let cx = cx.clone();
 
-    // Create a black RGBA background
-    let bg = Rgba::from_bytes([0, 0, 0, !0]);
+    // Create a layer for drawing a mesh on it
+    let layer = OnceCell::default();
 
-    frame
-        // Select a layer to draw on it
-        .layer(&layer, bg)
-        // The shader has no bindings, so call empty bind
-        .bind_empty()
-        // And finally draw the mesh
-        .draw(&mesh);
+    move |mut frame: Frame| {
+        use dunge::color::Rgba;
+
+        // Create a black RGBA background
+        let bg = Rgba::from_bytes([0, 0, 0, !0]);
+
+        // Lazily create a layer
+        let layer = layer.get_or_init(|| cx.make_layer(&shader, frame.format()));
+
+        frame
+            // Select a layer to draw on it
+            .layer(&layer, bg)
+            // The shader has no bindings, so call empty bind
+            .bind_empty()
+            // And finally draw the mesh
+            .draw(&mesh);
+    }
 };
 ```
 
 Now you can run our application and see the window:
 ```rust
 // Run the window with handlers
-window.run_local(dunge::update(upd, draw))?;
+dunge::window_state().run_local(cx, dunge::update(upd, draw))?;
 ```
 
 <div align="center">
@@ -157,13 +165,13 @@ cargo run -p <example_name>
 
 To build and run a wasm example:
 ```sh
-cargo xtask build <example_name>
-cargo xtask serve <example_name>
+cargo x build <example_name>
+cargo x serve <example_name>
 ```
 
 If [`wasm-pack`](https://github.com/rustwasm/wasm-pack) is already installed on the system, the build script will find it and use it to compile a wasm artifact. Otherwise, `wasm-pack` will be installed locally. To prevent this behavior add the `no-install` flag:
 ```sh
-cargo xtask --no-install build <example_name>
+cargo x --no-install build <example_name>
 ```
 
 Eventually it will start a local server and you can open http://localhost:3000 in your browser to see the application running. Only [WebGPU](https://gpuweb.github.io/gpuweb/) backend is supported for the web platform, so make sure your browser supports it.

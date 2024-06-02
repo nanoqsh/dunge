@@ -1,6 +1,6 @@
 type Error = Box<dyn std::error::Error>;
 
-pub fn run(window: dunge::window::Window) -> Result<(), Error> {
+pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     use {
         dunge::{
             color::Rgba,
@@ -9,7 +9,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
             sl::{Groups, Index, Out},
             uniform::Uniform,
         },
-        std::f32::consts,
+        std::{cell::OnceCell, f32::consts},
     };
 
     const COLOR: Vec4 = Vec4::new(1., 0.4, 0.8, 1.);
@@ -26,7 +26,7 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         }
     };
 
-    let cx = window.context();
+    let cx = dunge::context().await?;
     let shader = cx.make_shader(triangle);
     let mut r = 0.;
     let uniform = cx.make_uniform(r);
@@ -37,24 +37,31 @@ pub fn run(window: dunge::window::Window) -> Result<(), Error> {
         binder.into_binding()
     };
 
-    let layer = cx.make_layer(&shader, window.format());
-    let upd = move |ctrl: &Control| {
-        for key in ctrl.pressed_keys() {
-            if key.code == KeyCode::Escape {
-                return Then::Close;
+    let upd = {
+        let cx = cx.clone();
+        move |ctrl: &Control| {
+            for key in ctrl.pressed_keys() {
+                if key.code == KeyCode::Escape {
+                    return Then::Close;
+                }
             }
+
+            r += ctrl.delta_time().as_secs_f32() * 0.5;
+            uniform.update(&cx, r);
+            Then::Run
         }
-
-        r += ctrl.delta_time().as_secs_f32() * 0.5;
-        uniform.update(&cx, r);
-        Then::Run
     };
 
-    let draw = move |mut frame: Frame| {
-        let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-        frame.layer(&layer, opts).bind(&bind).draw_points(3);
+    let draw = {
+        let cx = cx.clone();
+        let layer = OnceCell::default();
+        move |mut frame: Frame| {
+            let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+            let layer = layer.get_or_init(|| cx.make_layer(&shader, frame.format()));
+            frame.layer(&layer, opts).bind(&bind).draw_points(3);
+        }
     };
 
-    window.run(dunge::update(upd, draw))?;
+    ws.run(cx, dunge::update(upd, draw))?;
     Ok(())
 }

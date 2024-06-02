@@ -49,16 +49,13 @@ pub use {
 };
 
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-pub use crate::{
-    el::run_local,
-    window::{window, window_state},
-};
+pub use crate::window::{window, window_state};
 
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
 pub use crate::window::{from_element, window_state_from_element};
 
 #[cfg(feature = "winit")]
 pub use crate::{
-    el::{run, Buttons, Control, Flow, Key, KeyCode, LoopError, Mouse, MouseButton, SmolStr, Then},
+    el::{Buttons, Control, Flow, Key, KeyCode, LoopError, Mouse, MouseButton, SmolStr, Then},
     update::{update, update_with_event, update_with_state, Update},
 };

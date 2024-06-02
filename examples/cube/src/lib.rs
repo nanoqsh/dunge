@@ -133,6 +133,6 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         }
     };
 
-    dunge::run(cx, ws, dunge::update(upd, draw))?;
+    ws.run(cx, dunge::update(upd, draw))?;
     Ok(())
 }
