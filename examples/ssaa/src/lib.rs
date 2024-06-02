@@ -166,7 +166,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
                 screen_layer.get_or_init(|| cx.make_layer(&screen_shader, frame.format()));
 
             frame
-                .layer(&screen_layer, Options::default())
+                .layer(screen_layer, Options::default())
                 .bind(&state.bind_map)
                 .draw(&screen_mesh);
         }

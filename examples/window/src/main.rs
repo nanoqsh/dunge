@@ -96,7 +96,7 @@ async fn run() -> Result<(), Error> {
 
             frame
                 // Select a layer to draw on it
-                .layer(&layer, bg)
+                .layer(layer, bg)
                 // The shader has no bindings, so call empty bind
                 .bind_empty()
                 // And finally draw the mesh

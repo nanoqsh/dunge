@@ -129,7 +129,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         move |mut frame: Frame| {
             let layer = layer.get_or_init(|| cx.make_layer(&cube_shader, frame.format()));
             let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-            frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
+            frame.layer(layer, opts).bind(&bind_transform).draw(&mesh);
         }
     };
 
