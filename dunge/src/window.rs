@@ -3,21 +3,13 @@
 use {
     crate::{
         context::{Context, FailedMakeContext},
-        el::{self, Loop, LoopError},
+        el::{self, LoopError},
         element::Element,
         format::Format,
         state::{State, Target},
         update::Update,
     },
-    std::{
-        error, fmt,
-        future::{Future, IntoFuture},
-        marker::PhantomData,
-        ops,
-        pin::Pin,
-        sync::Arc,
-        task::{self, Poll},
-    },
+    std::{error, fmt, sync::Arc},
     wgpu::{
         CreateSurfaceError, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture,
         TextureView,
@@ -29,226 +21,11 @@ use {
     },
 };
 
-/// Creates the [window builder](WindowBuilder) to
-/// construct the [window](Window).
-///
-/// # Example
-/// ```rust
-/// # fn t() -> impl std::future::Future<Output = Result<dunge::window::Window, dunge::window::Error>> {
-/// async {
-///     let window = dunge::window().with_title("Hello").await?;
-///     Ok(window)
-/// }
-/// # }
-/// ```
-#[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-#[deprecated]
-pub fn window<V>() -> WindowBuilder<V> {
-    WindowBuilder::new(Element(()))
-}
-
-/// Creates the [window builder](WindowBuilder) to
-/// construct the [window](Window)
-/// in the given html element.
-#[cfg(all(feature = "winit", target_arch = "wasm32"))]
-#[deprecated]
-pub fn from_element<V>(id: &str) -> WindowBuilder<V> {
-    use web_sys::Window;
-
-    let document = web_sys::window()
-        .as_ref()
-        .and_then(Window::document)
-        .expect("get document");
-
-    let Some(inner) = document.get_element_by_id(id) else {
-        panic!("an element with id {id:?} not found");
-    };
-
-    let element = Element(inner);
-    WindowBuilder::new(element)
-}
-
-/// The [window](Window) builder.
-///
-/// This builder completes asynchronously, so to create
-/// the window object, call `.await` at the end of configuration.
-///
-/// # Example
-/// ```rust
-/// # fn t() -> impl std::future::Future<Output = Result<dunge::window::Window, dunge::window::Error>> {
-/// async {
-///     let window = dunge::window().with_title("Hello").await?;
-///     Ok(window)
-/// }
-/// # }
-/// ```
-pub struct WindowBuilder<V> {
-    element: Option<Element>,
-    title: String,
-    size: Option<(u32, u32)>,
-    evty: PhantomData<V>,
-}
-
-impl<V> WindowBuilder<V> {
-    pub(crate) fn new(element: Element) -> Self {
-        Self {
-            element: Some(element),
-            title: String::default(),
-            size: Some((600, 600)),
-            evty: PhantomData,
-        }
-    }
-
-    /// Set the title to the window.
-    pub fn with_title<S>(mut self, title: S) -> Self
-    where
-        S: Into<String>,
-    {
-        self.title = title.into();
-        self
-    }
-
-    /// Set the window size.
-    pub fn with_size(mut self, size: (u32, u32)) -> Self {
-        self.size = Some(size);
-        self
-    }
-
-    /// Enables fullscreen for the window.
-    pub fn with_fullscreen(mut self) -> Self {
-        self.size = None;
-        self
-    }
-
-    fn build(&mut self, cx: Context) -> Result<Window<V>, Error> {
-        use {
-            std::mem,
-            winit::{dpi::PhysicalSize, window::Fullscreen},
-        };
-
-        let lu = Loop::new()?;
-        let title = mem::take(&mut self.title);
-        let attrs = window::Window::default_attributes().with_title(title);
-        let attrs = match self.size {
-            Some((width, height)) => attrs.with_inner_size(PhysicalSize::new(width, height)),
-            None => attrs.with_fullscreen(Some(Fullscreen::Borderless(None))),
-        };
-
-        let view = todo!();
-        Ok(Window { cx, lu, view })
-    }
-}
-
-impl<V> IntoFuture for WindowBuilder<V>
-where
-    V: 'static,
-{
-    type Output = Result<Window<V>, Error>;
-    type IntoFuture = Build<V>;
-
-    fn into_future(mut self) -> Self::IntoFuture {
-        let fut = async move {
-            let cx = Context::new().await?;
-            self.build(cx)
-        };
-
-        Build(Box::pin(fut))
-    }
-}
-
-type BoxedFuture<T> = Pin<Box<dyn Future<Output = T>>>;
-
-pub struct Build<V>(BoxedFuture<Result<Window<V>, Error>>)
-where
-    V: 'static;
-
-impl<V> Future for Build<V>
-where
-    V: 'static,
-{
-    type Output = Result<Window<V>, Error>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
-        self.get_mut().0.as_mut().poll(cx)
-    }
-}
-
-/// The application window type.
-#[deprecated]
-pub struct Window<V = ()>
-where
-    V: 'static,
-{
-    cx: Context,
-    lu: Loop<V>,
-    view: View,
-}
-
-impl<V> Window<V>
-where
-    V: 'static,
-{
-    /// Returns the main dunge context.
-    pub fn context(&self) -> Context {
-        self.cx.clone()
-    }
-
-    /// Creates an event notifier.
-    pub fn notifier(&self) -> Notifier<V> {
-        Notifier(self.lu.inner().create_proxy())
-    }
-
-    /// Runs the main event loop locally.
-    ///
-    /// # Errors
-    /// Returns [`LoopError`] if the main loop is stopped due to an error.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn run_local<U>(self, upd: U) -> Result<(), LoopError>
-    where
-        U: Update<Event = V>,
-    {
-        self.lu.run(self.cx, self.view, upd)
-    }
-
-    /// Runs the main event loop.
-    ///
-    /// # Errors
-    /// Returns [`LoopError`] if the main loop is stopped due to an error.
-    /// Note, on wasm platform this method will return `Ok(())` immediately
-    /// without blocking and will never return an error from here.
-    pub fn run<U>(self, upd: U) -> Result<(), LoopError>
-    where
-        U: Update<Event = V> + 'static,
-    {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.lu.run(self.cx, self.view, upd)
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.lu.spawn(self.cx, self.view, upd);
-            Ok(())
-        }
-    }
-}
-
-impl<V> ops::Deref for Window<V> {
-    type Target = View;
-
-    fn deref(&self) -> &Self::Target {
-        &self.view
-    }
-}
-
 pub struct Notifier<V>(EventLoopProxy<V>)
 where
     V: 'static;
 
-impl<V> Notifier<V>
-where
-    V: 'static,
-{
+impl<V> Notifier<V> {
     /// Sends a new event to the main loop.
     ///
     /// # Errors
@@ -330,12 +107,12 @@ impl<V> WindowState<V> {
 }
 
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-pub fn window_state<V>() -> WindowState<V> {
+pub fn window<V>() -> WindowState<V> {
     state(Element(()))
 }
 
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
-pub fn window_state_from_element(id: &str) -> WindowState {
+pub fn from_element(id: &str) -> WindowState {
     use web_sys::Window;
 
     let document = web_sys::window()

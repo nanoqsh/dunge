@@ -49,10 +49,10 @@ pub use {
 };
 
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
-pub use crate::window::{window, window_state};
+pub use crate::window::window;
 
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
-pub use crate::window::{from_element, window_state_from_element};
+pub use crate::window::from_element;
 
 #[cfg(feature = "winit")]
 pub use crate::{

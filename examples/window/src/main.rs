@@ -105,6 +105,6 @@ async fn run() -> Result<(), Error> {
     };
 
     // Run the window with handlers
-    dunge::window_state().run_local(cx, dunge::update(upd, draw))?;
+    dunge::window().run_local(cx, dunge::update(upd, draw))?;
     Ok(())
 }

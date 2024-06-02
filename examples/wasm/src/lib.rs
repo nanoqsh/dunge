@@ -24,7 +24,7 @@ pub async fn start() {
         run = triangle::run;
     }
 
-    let ws = dunge::window_state_from_element("root");
+    let ws = dunge::from_element("root");
     if let Err(err) = run(ws).await {
         panic!("error: {err}");
     }
