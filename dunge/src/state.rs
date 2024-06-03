@@ -15,6 +15,7 @@ use {
 use wgpu::Adapter;
 
 pub(crate) struct State {
+    #[cfg(feature = "winit")]
     instance: Instance,
     #[cfg(feature = "winit")]
     adapter: Adapter,
@@ -63,6 +64,7 @@ impl State {
         };
 
         Ok(Self {
+            #[cfg(feature = "winit")]
             instance,
             #[cfg(feature = "winit")]
             adapter,
@@ -72,6 +74,7 @@ impl State {
         })
     }
 
+    #[cfg(feature = "winit")]
     pub fn instance(&self) -> &Instance {
         &self.instance
     }
