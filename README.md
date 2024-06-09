@@ -128,7 +128,7 @@ let draw = {
         // Create a black RGBA background
         let bg = Rgba::from_bytes([0, 0, 0, !0]);
 
-        // Lazily create a layer
+        // Lazily initialize a layer
         let layer = layer.get_or_init(|| cx.make_layer(&shader, frame.format()));
 
         frame

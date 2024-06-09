@@ -78,6 +78,7 @@ impl<V> WindowState<V> {
         }
     }
 
+    /// Runs an event loop.
     pub fn run<U>(self, cx: Context, upd: U) -> Result<(), LoopError>
     where
         U: Update<Event = V> + 'static,
@@ -85,6 +86,7 @@ impl<V> WindowState<V> {
         el::run(self, cx, upd)
     }
 
+    /// Locally runs an event loop.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_local<U>(self, cx: Context, upd: U) -> Result<(), LoopError>
     where
@@ -106,11 +108,13 @@ impl<V> WindowState<V> {
     }
 }
 
+/// Creates a new [`WindowState`].
 #[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
 pub fn window<V>() -> WindowState<V> {
     state(Element(()))
 }
 
+/// Creates a [`WindowState`] from an HTML element.
 #[cfg(all(feature = "winit", target_arch = "wasm32"))]
 pub fn from_element(id: &str) -> WindowState {
     use web_sys::Window;
