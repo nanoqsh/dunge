@@ -94,20 +94,90 @@ impl error::Error for LoopError {
     }
 }
 
-struct Handler<U> {
+trait IntoUpdate: Sized {
+    type Update: Update;
+
+    fn into_update(self, view: &View) -> Self::Update;
+}
+
+struct FromFn<F>(F);
+
+impl<F, U> IntoUpdate for FromFn<F>
+where
+    F: FnOnce(&View) -> U,
+    U: Update,
+{
+    type Update = U;
+
+    fn into_update(self, view: &View) -> Self::Update {
+        self.0(view)
+    }
+}
+
+impl<U> IntoUpdate for U
+where
+    U: Update,
+{
+    type Update = Self;
+
+    fn into_update(self, _: &View) -> Self::Update {
+        self
+    }
+}
+
+enum Deferred<U>
+where
+    U: IntoUpdate,
+{
+    Empty,
+    Uninit(U),
+    Init(U::Update),
+}
+
+impl<U> Deferred<U>
+where
+    U: IntoUpdate,
+{
+    fn init(&mut self, view: &View) {
+        use std::mem;
+
+        let upd = match mem::replace(self, Self::Empty) {
+            Self::Empty => unreachable!(),
+            Self::Uninit(into_upd) => into_upd.into_update(view),
+            Self::Init(upd) => upd,
+        };
+
+        *self = Self::Init(upd);
+    }
+
+    fn get(&mut self) -> &mut U::Update {
+        match self {
+            Self::Init(upd) => upd,
+            _ => panic!("the handler must be initialized"),
+        }
+    }
+}
+
+struct Handler<U>
+where
+    U: IntoUpdate,
+{
     cx: Context,
     ctrl: Control,
-    upd: U,
+    upd: Deferred<U>,
     active: bool,
     time: Time,
     fps: Fps,
     out: Result<(), LoopError>,
 }
 
-impl<U> Handler<U> {
+impl<U> Handler<U>
+where
+    U: IntoUpdate,
+{
     const WAIT_TIME: Duration = Duration::from_millis(100);
 
-    fn new(cx: Context, view: View, upd: U) -> Self {
+    fn new(cx: Context, view: View, into_upd: U) -> Self {
         let ctrl = Control {
             view,
             resized: None,
@@ -127,7 +197,7 @@ impl<U> Handler<U> {
         Self {
             cx,
             ctrl,
-            upd,
+            upd: Deferred::Uninit(into_upd),
             active: false,
             time: Time::now(),
             fps: Fps::default(),
@@ -253,7 +323,8 @@ where
                     self.ctrl.fps = fps;
                 }
 
-                match self.upd.update(&self.ctrl).flow() {
+                let upd = self.upd.get();
+                match upd.update(&self.ctrl).flow() {
                     Then::Run => {}
                     Then::Close => {
                         log::debug!("close");
@@ -272,7 +343,7 @@ where
                 match self.ctrl.view.output() {
                     Ok(output) => {
                         let target = output.target();
-                        self.cx.state().draw(target, &self.upd);
+                        self.cx.state().draw(target, &*upd);
                         output.present();
                     }
                     Err(SurfaceError::Timeout) => log::info!("suface error: timeout"),
@@ -321,12 +392,14 @@ where
                 if self.out.is_err() {
                     el.exit();
                 }
+
+                self.upd.init(&self.ctrl.view);
             }
         }
     }
 
     fn user_event(&mut self, _: &ActiveEventLoop, ev: U::Event) {
-        self.upd.event(ev);
+        self.upd.get().event(ev);
     }
 }
 
