@@ -24,8 +24,7 @@ impl<A, E> Take<A, E> {
 
 impl<A, E> Eval<E> for Ret<Take<A, E>, <A::Out as Access>::Member>
 where
-    A: Eval<E>,
-    A::Out: Access,
+    A: Eval<E, Out: Access>,
     E: GetEntry,
 {
     type Out = <A::Out as Access>::Member;

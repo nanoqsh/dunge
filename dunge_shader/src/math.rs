@@ -10,8 +10,7 @@ use {
 
 pub const fn abs<X, E>(x: X) -> Ret<Math<(X,), E>, X::Out>
 where
-    X: Eval<E>,
-    X::Out: types::Number,
+    X: Eval<E, Out: types::Number>,
 {
     Ret::new(Math::new((x,), MathFunction::Abs))
 }
@@ -75,8 +74,7 @@ where
 
 pub const fn clamp<X, L, H, E>(x: X, lo: L, hi: H) -> Ret<Math<(X, L, H), E>, f32>
 where
-    X: Eval<E>,
-    X::Out: types::Number,
+    X: Eval<E, Out: types::Number>,
     L: Eval<E, Out = X::Out>,
     H: Eval<E, Out = X::Out>,
 {
@@ -108,9 +106,7 @@ where
 #[allow(clippy::type_complexity)]
 pub const fn dot<X, Y, E>(x: X, y: Y) -> Ret<Math<(X, Y), E>, <X::Out as types::Vector>::Scalar>
 where
-    X: Eval<E>,
-    X::Out: types::Vector,
-    <X::Out as types::Vector>::Scalar: types::Number,
+    X: Eval<E, Out: types::Vector<Scalar: types::Number>>,
     Y: Eval<E, Out = X::Out>,
 {
     Ret::new(Math::new((x, y), MathFunction::Dot))

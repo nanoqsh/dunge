@@ -9,32 +9,28 @@ use {
 
 pub const fn f32<A, E>(a: A) -> Ret<As<A, E>, f32>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
 {
     Ret::new(As::new(a))
 }
 
 pub const fn i32<A, E>(a: A) -> Ret<As<A, E>, i32>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
 {
     Ret::new(As::new(a))
 }
 
 pub const fn u32<A, E>(a: A) -> Ret<As<A, E>, u32>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
 {
     Ret::new(As::new(a))
 }
 
 pub const fn bool<A, E>(a: A) -> Ret<As<A, E>, bool>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
 {
     Ret::new(As::new(a))
 }

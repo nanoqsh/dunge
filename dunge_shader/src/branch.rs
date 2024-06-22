@@ -12,8 +12,7 @@ where
     C: Eval<E, Out = bool>,
     A: FnOnce() -> X,
     B: FnOnce() -> Y,
-    X: Eval<E>,
-    X::Out: types::Value,
+    X: Eval<E, Out: types::Value>,
     Y: Eval<E, Out = X::Out>,
 {
     Ret::new(IfThenElse {
@@ -36,8 +35,7 @@ where
     C: Eval<E>,
     A: FnOnce() -> X,
     B: FnOnce() -> Y,
-    X: Eval<E>,
-    X::Out: types::Value,
+    X: Eval<E, Out: types::Value>,
     Y: Eval<E>,
     E: GetEntry,
 {
@@ -72,8 +70,7 @@ impl<B> Else<B> {
         C: Eval<E, Out = bool>,
         A: FnOnce() -> X,
         B: FnOnce() -> Y,
-        X: Eval<E>,
-        X::Out: types::Value,
+        X: Eval<E, Out: types::Value>,
         Y: Eval<E, Out = X::Out>,
     {
         Ret::new(When {
@@ -114,8 +111,7 @@ where
     C: Eval<E>,
     A: FnOnce() -> X,
     B: EvalBranch<E>,
-    X: Eval<E>,
-    X::Out: types::Value,
+    X: Eval<E, Out: types::Value>,
     E: GetEntry,
 {
     type Out = X::Out;

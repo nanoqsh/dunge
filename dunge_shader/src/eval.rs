@@ -300,8 +300,7 @@ where
 
 pub const fn fragment<A>(a: A) -> Ret<Fragment<A>, A::Out>
 where
-    A: Eval<Vs>,
-    A::Out: types::Vector,
+    A: Eval<Vs, Out: types::Vector>,
 {
     Ret::new(Fragment(a))
 }
@@ -310,8 +309,7 @@ pub struct Fragment<A>(A);
 
 impl<A> Eval<Fs> for Ret<Fragment<A>, A::Out>
 where
-    A: Eval<Vs> + 'static,
-    A::Out: types::Vector,
+    A: Eval<Vs, Out: types::Vector> + 'static,
 {
     type Out = A::Out;
 

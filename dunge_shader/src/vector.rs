@@ -68,24 +68,21 @@ where
 
 pub const fn splat_vec2<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec2<A::Out>>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
 {
     Ret::new(Splat::new(a))
 }
 
 pub const fn splat_vec3<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec3<A::Out>>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
 {
     Ret::new(Splat::new(a))
 }
 
 pub const fn splat_vec4<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec4<A::Out>>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
 {
     Ret::new(Splat::new(a))
 }
@@ -122,8 +119,7 @@ type Vector2<X, Y, O, E> = Ret<NewVec<(X, Y), E>, types::Vec2<O>>;
 
 pub const fn vec2<X, Y, E>(x: X, y: Y) -> Vector2<X, Y, X::Out, E>
 where
-    X: Eval<E>,
-    X::Out: Scalar,
+    X: Eval<E, Out: Scalar>,
     Y: Eval<E, Out = X::Out>,
 {
     Ret::new(NewVec::new((x, y)))
@@ -133,8 +129,7 @@ type Vector3<X, Y, Z, O, E> = Ret<NewVec<(X, Y, Z), E>, types::Vec3<O>>;
 
 pub const fn vec3<X, Y, Z, E>(x: X, y: Y, z: Z) -> Vector3<X, Y, Z, X::Out, E>
 where
-    X: Eval<E>,
-    X::Out: Scalar,
+    X: Eval<E, Out: Scalar>,
     Y: Eval<E, Out = X::Out>,
     Z: Eval<E, Out = X::Out>,
 {
@@ -145,8 +140,7 @@ type Vector4<X, Y, Z, W, O, E> = Ret<NewVec<(X, Y, Z, W), E>, types::Vec4<O>>;
 
 pub const fn vec4<X, Y, Z, W, E>(x: X, y: Y, z: Z, w: W) -> Vector4<X, Y, Z, W, X::Out, E>
 where
-    X: Eval<E>,
-    X::Out: Scalar,
+    X: Eval<E, Out: Scalar>,
     Y: Eval<E, Out = X::Out>,
     Z: Eval<E, Out = X::Out>,
     W: Eval<E, Out = X::Out>,
@@ -195,8 +189,7 @@ where
 pub const fn vec3_with<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<B::Out>>
 where
     A: Eval<E, Out = types::Vec2<B::Out>>,
-    B: Eval<E>,
-    B::Out: Scalar,
+    B: Eval<E, Out: Scalar>,
 {
     Ret::new(Compose { a, b })
 }
@@ -204,8 +197,7 @@ where
 pub const fn vec4_with<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<B::Out>>
 where
     A: Eval<E, Out = types::Vec3<B::Out>>,
-    B: Eval<E>,
-    B::Out: Scalar,
+    B: Eval<E, Out: Scalar>,
 {
     Ret::new(Compose { a, b })
 }

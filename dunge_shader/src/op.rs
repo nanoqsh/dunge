@@ -210,8 +210,7 @@ where
 
 pub const fn eq<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
     B: Eval<E, Out = A::Out>,
 {
     Ret::new(Binary { a, b, op: Bi::Eq })
@@ -219,8 +218,7 @@ where
 
 pub const fn ne<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
-    A: Eval<E>,
-    A::Out: Scalar,
+    A: Eval<E, Out: Scalar>,
     B: Eval<E, Out = A::Out>,
 {
     Ret::new(Binary { a, b, op: Bi::Ne })
@@ -228,8 +226,7 @@ where
 
 pub const fn lt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
-    A: Eval<E>,
-    A::Out: Number,
+    A: Eval<E, Out: Number>,
     B: Eval<E, Out = A::Out>,
 {
     Ret::new(Binary { a, b, op: Bi::Lt })
@@ -237,8 +234,7 @@ where
 
 pub const fn le<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
-    A: Eval<E>,
-    A::Out: Number,
+    A: Eval<E, Out: Number>,
     B: Eval<E, Out = A::Out>,
 {
     Ret::new(Binary { a, b, op: Bi::Le })
@@ -246,8 +242,7 @@ where
 
 pub const fn gt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
-    A: Eval<E>,
-    A::Out: Number,
+    A: Eval<E, Out: Number>,
     B: Eval<E, Out = A::Out>,
 {
     Ret::new(Binary { a, b, op: Bi::Gt })
@@ -255,8 +250,7 @@ where
 
 pub const fn ge<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
-    A: Eval<E>,
-    A::Out: Number,
+    A: Eval<E, Out: Number>,
     B: Eval<E, Out = A::Out>,
 {
     Ret::new(Binary { a, b, op: Bi::Ge })
