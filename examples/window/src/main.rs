@@ -46,22 +46,24 @@ async fn run() -> Result<(), Error> {
 
     // Create a mesh from vertices
     let mesh = {
-        const VERTS: MeshData<'static, Vert> = MeshData::from_verts(&[
-            Vert {
-                pos: [-0.5, -0.5],
-                col: [1., 0., 0.],
-            },
-            Vert {
-                pos: [0.5, -0.5],
-                col: [0., 1., 0.],
-            },
-            Vert {
-                pos: [0., 0.5],
-                col: [0., 0., 1.],
-            },
-        ]);
+        let verts = const {
+            MeshData::from_verts(&[
+                Vert {
+                    pos: [-0.5, -0.5],
+                    col: [1., 0., 0.],
+                },
+                Vert {
+                    pos: [0.5, -0.5],
+                    col: [0., 1., 0.],
+                },
+                Vert {
+                    pos: [0., 0.5],
+                    col: [0., 0., 1.],
+                },
+            ])
+        };
 
-        cx.make_mesh(&VERTS)
+        cx.make_mesh(&verts)
     };
 
     // Describe the `Update` handler

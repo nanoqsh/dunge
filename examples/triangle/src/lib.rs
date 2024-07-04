@@ -12,17 +12,17 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         std::{cell::OnceCell, f32::consts},
     };
 
-    const COLOR: Vec4 = Vec4::new(1., 0.4, 0.8, 1.);
-    const THIRD: f32 = consts::TAU / 3.;
-
     #[derive(Group)]
     struct Offset<'a>(&'a Uniform<f32>);
 
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
-        let i = sl::thunk(sl::f32(idx) * THIRD + offset.0);
+        let color = const { Vec4::new(1., 0.4, 0.8, 1.) };
+        let third = const { consts::TAU / 3. };
+
+        let i = sl::thunk(sl::f32(idx) * third + offset.0);
         Out {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
-            color: COLOR,
+            color,
         }
     };
 

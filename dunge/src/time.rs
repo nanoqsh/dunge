@@ -34,11 +34,9 @@ pub(crate) struct Fps {
 
 impl Fps {
     pub fn count(&mut self, delta_time: Duration) -> Option<u32> {
-        const SECOND: Duration = Duration::from_secs(1);
-
         self.timer += delta_time;
         self.counter += 1;
-        if self.timer > SECOND {
+        if self.timer > const { Duration::from_secs(1) } {
             self.timer = Duration::ZERO;
             let n = self.counter;
             self.counter = 0;

@@ -228,14 +228,17 @@ impl CopyBuffer {
     pub(crate) fn new(state: &State, (width, height): (u32, u32)) -> Self {
         use wgpu::*;
 
-        const PIXEL_SIZE: u32 = mem::size_of::<u32>() as u32;
-        const ALIGNMENT: u32 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT / PIXEL_SIZE;
+        let (pixel_size, alignment) = const {
+            let pixel_size = mem::size_of::<u32>() as u32;
+            let alignment = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT / pixel_size;
+            (pixel_size, alignment)
+        };
 
-        let actual_width = util::align_to(width, ALIGNMENT);
+        let actual_width = util::align_to(width, alignment);
         let buf = {
             let desc = BufferDescriptor {
                 label: None,
-                size: BufferAddress::from(actual_width * height * PIXEL_SIZE),
+                size: BufferAddress::from(actual_width * height * pixel_size),
                 usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             };
@@ -246,7 +249,7 @@ impl CopyBuffer {
         Self {
             buf,
             size: (actual_width, height),
-            pixel_size: PIXEL_SIZE,
+            pixel_size,
         }
     }
 

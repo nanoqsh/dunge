@@ -26,24 +26,24 @@ fn main() -> ExitCode {
 }
 
 fn parse() -> Result<(Opts, Mode), &'static str> {
-    const MODEERR: &str = "undefined mode";
-    const MODLERR: &str = "undefined module";
+    let modeerr = "undefined mode";
+    let modlerr = "undefined module";
 
     let mut args = env::args().skip(1);
     let mut no_install = false;
     let mode = loop {
-        match args.next().ok_or(MODEERR)?.as_str() {
+        match args.next().ok_or(modeerr)?.as_str() {
             "build" => break Mode::Build,
             "serve" => break Mode::Serve,
             opt => match opt.strip_prefix("--") {
                 Some("no-install") => no_install = true,
-                _ => return Err(MODEERR),
+                _ => return Err(modeerr),
             },
         }
     };
 
     let opts = Opts {
-        module: args.next().ok_or(MODLERR)?,
+        module: args.next().ok_or(modlerr)?,
         no_install,
     };
 

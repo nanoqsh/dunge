@@ -16,18 +16,19 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         std::{cell::OnceCell, f32::consts},
     };
 
-    const COLOR: Vec4 = Vec4::new(1., 0.4, 0.8, 1.);
-    const THIRD: f32 = consts::TAU / 3.;
     const SCREEN_FACTOR: u32 = 2;
 
     #[derive(Group)]
     struct Offset<'a>(&'a Uniform<f32>);
 
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
-        let i = sl::thunk(sl::f32(idx) * THIRD + offset.0);
+        let color = const { Vec4::new(1., 0.4, 0.8, 1.) };
+        let third = const { consts::TAU / 3. };
+
+        let i = sl::thunk(sl::f32(idx) * third + offset.0);
         Out {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
-            color: COLOR,
+            color,
         }
     };
 
@@ -91,9 +92,10 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let sam = cx.make_sampler(Filter::Nearest);
 
     let make_stp = |size| {
-        const SCREEN_INV: f32 = 1. / SCREEN_FACTOR as f32;
-
-        <[u32; 2]>::from(size).map(|v| SCREEN_INV / v as f32)
+        <[u32; 2]>::from(size).map(|v| {
+            let screen_inv = const { 1. / SCREEN_FACTOR as f32 };
+            screen_inv / v as f32
+        })
     };
 
     let buf_size = render_buf.draw_texture().size();
@@ -136,14 +138,16 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let screen_mesh = {
-        const VERTS: [Screen; 4] = [
-            Screen([-1., -1.], [0., 1.]),
-            Screen([1., -1.], [1., 1.]),
-            Screen([1., 1.], [1., 0.]),
-            Screen([-1., 1.], [0., 0.]),
-        ];
+        let verts = const {
+            [[
+                Screen([-1., -1.], [0., 1.]),
+                Screen([1., -1.], [1., 1.]),
+                Screen([1., 1.], [1., 0.]),
+                Screen([-1., 1.], [0., 0.]),
+            ]]
+        };
 
-        let data = MeshData::from_quads(&[VERTS])?;
+        let data = MeshData::from_quads(&verts)?;
         cx.make_mesh(&data)
     };
 

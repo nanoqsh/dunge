@@ -56,54 +56,59 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let mesh = {
-        const P: f32 = 0.5;
-        const VERTS: [Vert; 8] = [
-            Vert {
-                pos: [-P, -P, -P],
-                col: [0., 0., 0.],
-            },
-            Vert {
-                pos: [-P, -P, P],
-                col: [0., 0., 1.],
-            },
-            Vert {
-                pos: [-P, P, P],
-                col: [0., 1., 1.],
-            },
-            Vert {
-                pos: [-P, P, -P],
-                col: [0., 1., 0.],
-            },
-            Vert {
-                pos: [P, -P, -P],
-                col: [1., 0., 0.],
-            },
-            Vert {
-                pos: [P, P, -P],
-                col: [1., 1., 0.],
-            },
-            Vert {
-                pos: [P, P, P],
-                col: [1., 1., 1.],
-            },
-            Vert {
-                pos: [P, -P, P],
-                col: [1., 0., 1.],
-            },
-        ];
+        let verts = const {
+            let p = 0.5;
 
-        const INDXS: [[u16; 3]; 8] = [
-            [0, 1, 2],
-            [0, 2, 3], // -x
-            [4, 5, 6],
-            [4, 6, 7], // +x
-            [0, 3, 5],
-            [0, 5, 4], // -z
-            [6, 2, 1],
-            [7, 6, 1], // +z
-        ];
+            [
+                Vert {
+                    pos: [-p, -p, -p],
+                    col: [0., 0., 0.],
+                },
+                Vert {
+                    pos: [-p, -p, p],
+                    col: [0., 0., 1.],
+                },
+                Vert {
+                    pos: [-p, p, p],
+                    col: [0., 1., 1.],
+                },
+                Vert {
+                    pos: [-p, p, -p],
+                    col: [0., 1., 0.],
+                },
+                Vert {
+                    pos: [p, -p, -p],
+                    col: [1., 0., 0.],
+                },
+                Vert {
+                    pos: [p, p, -p],
+                    col: [1., 1., 0.],
+                },
+                Vert {
+                    pos: [p, p, p],
+                    col: [1., 1., 1.],
+                },
+                Vert {
+                    pos: [p, -p, p],
+                    col: [1., 0., 1.],
+                },
+            ]
+        };
 
-        let data = MeshData::new(&VERTS, &INDXS)?;
+        let indxs = const {
+            [
+                [0, 1, 2],
+                [0, 2, 3], // -x
+                [4, 5, 6],
+                [4, 6, 7], // +x
+                [0, 3, 5],
+                [0, 5, 4], // -z
+                [6, 2, 1],
+                [7, 6, 1], // +z
+            ]
+        };
+
+        let data = MeshData::new(&verts, &indxs)?;
         cx.make_mesh(&data)
     };
 
