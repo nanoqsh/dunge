@@ -78,6 +78,11 @@ impl<V> WindowState<V> {
         }
     }
 
+    /// Creates a new [notifier](Notifier).
+    pub fn notifier(&self) -> Notifier<V> {
+        Notifier(self.lu.create_proxy())
+    }
+
     /// Runs an event loop.
     pub fn run<U>(self, cx: Context, upd: U) -> Result<(), LoopError>
     where
