@@ -305,17 +305,16 @@ pub type MapResult = Result<(), BufferAsyncError>;
 pub struct CopyBufferView<'a>(BufferSlice<'a>);
 
 impl<'a> CopyBufferView<'a> {
-    pub(crate) async fn map<S, R, F>(self, state: &State, tx: S, rx: R) -> Mapped<'a>
+    pub(crate) async fn map<S, R>(self, state: &State, tx: S, rx: R) -> Mapped<'a>
     where
         S: FnOnce(MapResult) + WasmNotSend + 'static,
-        R: FnOnce() -> F,
-        F: IntoFuture<Output = MapResult>,
+        R: IntoFuture<Output = MapResult>,
     {
         use wgpu::*;
 
         self.0.map_async(MapMode::Read, tx);
         state.device().poll(Maintain::Wait);
-        if let Err(err) = rx().await {
+        if let Err(err) = rx.await {
             panic!("failed to copy texture: {err}");
         }
 

@@ -124,11 +124,10 @@ impl Context {
         CopyBuffer::new(&self.0, size)
     }
 
-    pub async fn map_view<'a, S, R, F>(&self, view: CopyBufferView<'a>, tx: S, rx: R) -> Mapped<'a>
+    pub async fn map_view<'a, S, R>(&self, view: CopyBufferView<'a>, tx: S, rx: R) -> Mapped<'a>
     where
         S: FnOnce(MapResult) + wgpu::WasmNotSend + 'static,
-        R: FnOnce() -> F,
-        F: IntoFuture<Output = MapResult>,
+        R: IntoFuture<Output = MapResult>,
     {
         view.map(&self.0, tx, rx).await
     }
