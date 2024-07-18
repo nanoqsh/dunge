@@ -2,6 +2,7 @@ use crate::{
     draw::Draw,
     el::{Control, Flow},
     state::Frame,
+    window::View,
 };
 
 /// The update stage.
@@ -179,4 +180,56 @@ where
         draw,
         evty: PhantomData,
     }
+}
+
+/// Lazy instantiation of the value that implements the [`Update`] trait.
+///
+/// It is usually more convenient to create the update value after the [view](View)
+/// has been initialized. This will let you know the current properties of the window
+/// like [size](View::size) and [format](View::format).
+pub trait IntoUpdate: Sized {
+    type Flow: Flow;
+    type Event: 'static;
+    type Update: Update<Flow = Self::Flow, Event = Self::Event>;
+
+    /// Creating a value from the [view](View).
+    fn into_update(self, view: &View) -> Self::Update;
+}
+
+impl<U> IntoUpdate for U
+where
+    U: Update,
+{
+    type Flow = U::Flow;
+    type Event = U::Event;
+    type Update = Self;
+
+    fn into_update(self, _: &View) -> Self::Update {
+        self
+    }
+}
+
+/// Creates an [update](Update) value using a function from the received [view](View).
+pub fn from_view<F, U>(f: F) -> impl IntoUpdate<Flow = U::Flow, Event = U::Event>
+where
+    F: FnOnce(&View) -> U,
+    U: Update,
+{
+    struct FromFn<F>(F);
+
+    impl<F, U> IntoUpdate for FromFn<F>
+    where
+        F: FnOnce(&View) -> U,
+        U: Update,
+    {
+        type Flow = U::Flow;
+        type Event = U::Event;
+        type Update = U;
+
+        fn into_update(self, view: &View) -> Self::Update {
+            self.0(view)
+        }
+    }
+
+    FromFn(f)
 }

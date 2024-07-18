@@ -3,7 +3,7 @@ use {
         context::Context,
         state::State,
         time::{Fps, Time},
-        update::Update,
+        update::{IntoUpdate, Update},
         window::{self, View, WindowState},
     },
     std::{cell::Cell, error, fmt, ops, time::Duration},
@@ -29,7 +29,7 @@ pub type MouseButton = event::MouseButton;
 
 pub(crate) fn run<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
-    U: Update + 'static,
+    U: IntoUpdate + 'static,
 {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -45,7 +45,7 @@ where
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn run_local<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
-    U: Update,
+    U: IntoUpdate,
 {
     let (view, lu) = ws.into_view_and_loop();
     let mut handler = Handler::new(cx, view, upd);
@@ -56,7 +56,7 @@ where
 #[cfg(target_arch = "wasm32")]
 fn spawn<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
-    U: Update + 'static,
+    U: IntoUpdate + 'static,
 {
     use winit::platform::web::EventLoopExtWebSys;
 
@@ -91,37 +91,6 @@ impl error::Error for LoopError {
             Self::EventLoop(err) => Some(err),
             Self::Failed(err) => Some(err.as_ref()),
         }
-    }
-}
-
-trait IntoUpdate: Sized {
-    type Update: Update;
-
-    fn into_update(self, view: &View) -> Self::Update;
-}
-
-struct FromFn<F>(F);
-
-impl<F, U> IntoUpdate for FromFn<F>
-where
-    F: FnOnce(&View) -> U,
-    U: Update,
-{
-    type Update = U;
-
-    fn into_update(self, view: &View) -> Self::Update {
-        self.0(view)
-    }
-}
-
-impl<U> IntoUpdate for U
-where
-    U: Update,
-{
-    type Update = Self;
-
-    fn into_update(self, _: &View) -> Self::Update {
-        self
     }
 }
 
@@ -208,7 +177,7 @@ where
 
 impl<U> ApplicationHandler<U::Event> for Handler<U>
 where
-    U: Update,
+    U: IntoUpdate,
 {
     fn resumed(&mut self, el: &ActiveEventLoop) {
         log::debug!("resumed");

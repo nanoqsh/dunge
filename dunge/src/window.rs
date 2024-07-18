@@ -7,7 +7,7 @@ use {
         element::Element,
         format::Format,
         state::{State, Target},
-        update::Update,
+        update::IntoUpdate,
     },
     std::{error, fmt, sync::Arc},
     wgpu::{
@@ -86,7 +86,7 @@ impl<V> WindowState<V> {
     /// Runs an event loop.
     pub fn run<U>(self, cx: Context, upd: U) -> Result<(), LoopError>
     where
-        U: Update<Event = V> + 'static,
+        U: IntoUpdate<Event = V> + 'static,
     {
         el::run(self, cx, upd)
     }
@@ -95,7 +95,7 @@ impl<V> WindowState<V> {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn run_local<U>(self, cx: Context, upd: U) -> Result<(), LoopError>
     where
-        U: Update<Event = V>,
+        U: IntoUpdate<Event = V>,
     {
         el::run_local(self, cx, upd)
     }
