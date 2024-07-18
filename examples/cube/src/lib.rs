@@ -1,15 +1,12 @@
 type Error = Box<dyn std::error::Error>;
 
 pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
-    use {
-        dunge::{
-            color::Rgba,
-            glam::{Mat4, Quat, Vec3},
-            prelude::*,
-            sl::{Groups, InVertex, Out},
-            uniform::Uniform,
-        },
-        std::cell::OnceCell,
+    use dunge::{
+        color::Rgba,
+        glam::{Mat4, Quat, Vec3},
+        prelude::*,
+        sl::{Groups, InVertex, Out},
+        uniform::Uniform,
     };
 
     #[repr(C)]
@@ -112,32 +109,32 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let upd = {
+    let make_upd = {
         let cx = cx.clone();
-        move |ctrl: &Control| {
-            for key in ctrl.pressed_keys() {
-                if key.code == KeyCode::Escape {
-                    return Then::Close;
+        move |view: &View| {
+            let layer = cx.make_layer(&cube_shader, view.format());
+            let upd = move |ctrl: &Control| {
+                for key in ctrl.pressed_keys() {
+                    if key.code == KeyCode::Escape {
+                        return Then::Close;
+                    }
                 }
-            }
 
-            r += ctrl.delta_time().as_secs_f32() * 0.5;
-            let mat = transform(r, ctrl.size());
-            uniform.update(&cx, mat);
-            Then::Run
+                r += ctrl.delta_time().as_secs_f32() * 0.5;
+                let mat = transform(r, ctrl.size());
+                uniform.update(&cx, mat);
+                Then::Run
+            };
+
+            let draw = move |mut frame: Frame| {
+                let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+                frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
+            };
+
+            dunge::update(upd, draw)
         }
     };
 
-    let draw = {
-        let cx = cx.clone();
-        let layer = OnceCell::default();
-        move |mut frame: Frame| {
-            let layer = layer.get_or_init(|| cx.make_layer(&cube_shader, frame.format()));
-            let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-            frame.layer(layer, opts).bind(&bind_transform).draw(&mesh);
-        }
-    };
-
-    ws.run(cx, dunge::update(upd, draw))?;
+    ws.run(cx, dunge::from_view(make_upd))?;
     Ok(())
 }

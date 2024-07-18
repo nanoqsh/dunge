@@ -33,7 +33,10 @@ pub mod prelude {
     };
 
     #[cfg(feature = "winit")]
-    pub use crate::el::{Control, KeyCode, Then};
+    pub use crate::{
+        el::{Control, KeyCode, Then},
+        window::View,
+    };
 }
 
 pub use {
