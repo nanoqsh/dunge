@@ -116,38 +116,38 @@ We don't do anything special here, we just check is <kbd>Esc</kbd> pressed and e
 
 Second `Draw` is used directly to draw something in the final frame:
 ```rust
+// Create a layer for drawing a mesh on it
+let layer = cx.make_layer(&shader, view.format());
+
 // Describe the `Draw` handler
-let draw = {
-    // Clone the context to closure
-    let cx = cx.clone();
+let draw = move |mut frame: Frame| {
+    use dunge::color::Rgba;
 
-    // Create a layer for drawing a mesh on it
-    let layer = OnceCell::default();
+    // Create a black RGBA background
+    let bg = Rgba::from_bytes([0, 0, 0, !0]);
 
-    move |mut frame: Frame| {
-        use dunge::color::Rgba;
-
-        // Create a black RGBA background
-        let bg = Rgba::from_bytes([0, 0, 0, !0]);
-
-        // Lazily initialize a layer
-        let layer = layer.get_or_init(|| cx.make_layer(&shader, frame.format()));
-
-        frame
-            // Select a layer to draw on it
-            .layer(&layer, bg)
-            // The shader has no bindings, so call empty bind
-            .bind_empty()
-            // And finally draw the mesh
-            .draw(&mesh);
-    }
+    frame
+        // Select a layer to draw on it
+        .layer(&layer, bg)
+        // The shader has no bindings, so call empty bind
+        .bind_empty()
+        // And finally draw the mesh
+        .draw(&mesh);
 };
 ```
 
-Now you can run our application and see the window:
+> **Note:** To create a layer we need to know the window format. It would be possible to guess it, but it is better to get it directly from a view object. You can get the view from a special `make` helper, which will call a closure when the handler is initialized and passes the necessary data to it.
+
+Now you can join two steps in one hander and run the application and see the window:
 ```rust
+let make_handler = |cx: &Context, view: &View| {
+    let upd = |ctrl: &Control| {/***/};
+    let draw = move |mut frame: Frame| {/***/};
+    dunge::update(upd, draw)
+};
+
 // Run the window with handlers
-dunge::window().run_local(cx, dunge::update(upd, draw))?;
+dunge::window().run_local(cx, dunge::make(make_handler))?;
 ```
 
 <div align="center">

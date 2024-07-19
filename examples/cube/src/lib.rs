@@ -109,7 +109,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let make_upd = move |cx: &Context, view: &View| {
+    let make_handler = move |cx: &Context, view: &View| {
         let layer = cx.make_layer(&cube_shader, view.format());
 
         let cx = cx.clone();
@@ -134,6 +134,6 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         dunge::update(upd, draw)
     };
 
-    ws.run(cx, dunge::make(make_upd))?;
+    ws.run(cx, dunge::make(make_handler))?;
     Ok(())
 }

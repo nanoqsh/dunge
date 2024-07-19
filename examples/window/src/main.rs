@@ -8,7 +8,7 @@ fn main() {
 }
 
 async fn run() -> Result<(), Error> {
-    use {dunge::prelude::*, std::cell::OnceCell};
+    use dunge::prelude::*;
 
     // Create a vertex type
     #[repr(C)]
@@ -66,47 +66,43 @@ async fn run() -> Result<(), Error> {
         cx.make_mesh(&verts)
     };
 
-    // Describe the `Update` handler
-    let upd = |ctrl: &Control| {
-        for key in ctrl.pressed_keys() {
-            // Exit by pressing escape key
-            if key.code == KeyCode::Escape {
-                return Then::Close;
+    let make_handler = |cx: &Context, view: &View| {
+        // Describe the `Update` handler
+        let upd = |ctrl: &Control| {
+            for key in ctrl.pressed_keys() {
+                // Exit by pressing escape key
+                if key.code == KeyCode::Escape {
+                    return Then::Close;
+                }
             }
-        }
 
-        // Otherwise continue running
-        Then::Run
-    };
-
-    // Describe the `Draw` handler
-    let draw = {
-        // Clone the context to closure
-        let cx = cx.clone();
+            // Otherwise continue running
+            Then::Run
+        };
 
         // Create a layer for drawing a mesh on it
-        let layer = OnceCell::default();
+        let layer = cx.make_layer(&shader, view.format());
 
-        move |mut frame: Frame| {
+        // Describe the `Draw` handler
+        let draw = move |mut frame: Frame| {
             use dunge::color::Rgba;
 
             // Create a black RGBA background
             let bg = Rgba::from_bytes([0, 0, 0, !0]);
 
-            // Lazily initialize a layer
-            let layer = layer.get_or_init(|| cx.make_layer(&shader, frame.format()));
-
             frame
                 // Select a layer to draw on it
-                .layer(layer, bg)
+                .layer(&layer, bg)
                 // The shader has no bindings, so call empty bind
                 .bind_empty()
                 // And finally draw the mesh
                 .draw(&mesh);
-        }
+        };
+
+        dunge::update(upd, draw)
     };
 
     // Run the window with handlers
-    dunge::window().run_local(cx, dunge::update(upd, draw))?;
+    dunge::window().run_local(cx, dunge::make(make_handler))?;
     Ok(())
 }

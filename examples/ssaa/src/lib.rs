@@ -1,19 +1,16 @@
 type Error = Box<dyn std::error::Error>;
 
 pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
-    use {
-        dunge::{
-            bind::UniqueBinding,
-            color::Rgba,
-            glam::{Vec2, Vec4},
-            group::BoundTexture,
-            prelude::*,
-            sl::{Groups, InVertex, Index, Out},
-            texture::{DrawTexture, Filter, Sampler},
-            uniform::Uniform,
-            Format,
-        },
-        std::{cell::OnceCell, f32::consts},
+    use dunge::{
+        bind::UniqueBinding,
+        color::Rgba,
+        glam::{Vec2, Vec4},
+        group::BoundTexture,
+        prelude::*,
+        sl::{Groups, InVertex, Index, Out},
+        texture::{DrawTexture, Filter, Sampler},
+        uniform::Uniform,
+        Format,
     };
 
     const SCREEN_FACTOR: u32 = 2;
@@ -22,6 +19,8 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     struct Offset<'a>(&'a Uniform<f32>);
 
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
+        use std::f32::consts;
+
         let color = const { Vec4::new(1., 0.4, 0.8, 1.) };
         let third = const { consts::TAU / 3. };
 
@@ -91,11 +90,9 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let render_buf = make_render_buf(&cx, (1, 1));
     let sam = cx.make_sampler(Filter::Nearest);
 
-    let make_stp = |size| {
-        <[u32; 2]>::from(size).map(|v| {
-            let screen_inv = const { 1. / SCREEN_FACTOR as f32 };
-            screen_inv / v as f32
-        })
+    let make_stp = |(width, height)| {
+        let screen_inv = const { 1. / SCREEN_FACTOR as f32 };
+        [screen_inv / width as f32, screen_inv / height as f32]
     };
 
     let buf_size = render_buf.draw_texture().size();
@@ -112,31 +109,6 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         (binder.into_binding(), handler)
     };
 
-    let upd = move |state: &mut State<_>, ctrl: &Control| {
-        for key in ctrl.pressed_keys() {
-            if key.code == KeyCode::Escape {
-                return Then::Close;
-            }
-        }
-
-        if let Some(size) = ctrl.resized() {
-            state.render_buf = make_render_buf(&state.cx, size);
-            let buf_size = state.render_buf.draw_texture().size();
-            stp.update(&state.cx, make_stp(buf_size));
-            let map = Map {
-                tex: BoundTexture::new(&state.render_buf),
-                sam: &sam,
-                stp: &stp,
-            };
-
-            dunge::then!(state.cx.update_group(&mut state.bind_map, &handler, &map));
-        }
-
-        r += ctrl.delta_time().as_secs_f32() * 0.5;
-        uniform.update(&state.cx, r);
-        Then::Run
-    };
-
     let screen_mesh = {
         let verts = const {
             [[
@@ -151,31 +123,6 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let triangle_layer = cx.make_layer(&triangle_shader, Format::SrgbAlpha);
-    let screen_layer = OnceCell::default();
-    let draw = {
-        let cx = cx.clone();
-        move |state: &State<_>, mut frame: Frame| {
-            let main = |mut frame: Frame| {
-                let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-                frame
-                    .layer(&triangle_layer, opts)
-                    .bind(&bind)
-                    .draw_points(3);
-            };
-
-            state.cx.draw_to(&state.render_buf, dunge::draw(main));
-
-            let screen_layer =
-                screen_layer.get_or_init(|| cx.make_layer(&screen_shader, frame.format()));
-
-            frame
-                .layer(screen_layer, Options::default())
-                .bind(&state.bind_map)
-                .draw(&screen_mesh);
-        }
-    };
-
     struct State<R> {
         cx: Context,
         render_buf: R,
@@ -188,6 +135,55 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         bind_map,
     };
 
-    ws.run(cx, dunge::update_with_state(state, upd, draw))?;
+    let make_handler = move |cx: &Context, view: &View| {
+        let triangle_layer = cx.make_layer(&triangle_shader, Format::SrgbAlpha);
+        let screen_layer = cx.make_layer(&screen_shader, view.format());
+
+        let upd = move |state: &mut State<_>, ctrl: &Control| {
+            for key in ctrl.pressed_keys() {
+                if key.code == KeyCode::Escape {
+                    return Then::Close;
+                }
+            }
+
+            if let Some(size) = ctrl.resized() {
+                state.render_buf = make_render_buf(&state.cx, size);
+                let buf_size = state.render_buf.draw_texture().size();
+                stp.update(&state.cx, make_stp(buf_size));
+                let map = Map {
+                    tex: BoundTexture::new(&state.render_buf),
+                    sam: &sam,
+                    stp: &stp,
+                };
+
+                dunge::then!(state.cx.update_group(&mut state.bind_map, &handler, &map));
+            }
+
+            r += ctrl.delta_time().as_secs_f32() * 0.5;
+            uniform.update(&state.cx, r);
+            Then::Run
+        };
+
+        let draw = move |state: &State<_>, mut frame: Frame| {
+            let main = |mut frame: Frame| {
+                let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+                frame
+                    .layer(&triangle_layer, opts)
+                    .bind(&bind)
+                    .draw_points(3);
+            };
+
+            state.cx.draw_to(&state.render_buf, dunge::draw(main));
+
+            frame
+                .layer(&screen_layer, Options::default())
+                .bind(&state.bind_map)
+                .draw(&screen_mesh);
+        };
+
+        dunge::update_with_state(state, upd, draw)
+    };
+
+    ws.run(cx, dunge::make(make_handler))?;
     Ok(())
 }
