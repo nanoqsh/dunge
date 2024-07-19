@@ -151,6 +151,7 @@ pub struct Frame<'v, 'e> {
 }
 
 impl Frame<'_, '_> {
+    #[deprecated]
     pub fn format(&self) -> Format {
         self.target.format
     }

@@ -109,32 +109,31 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let make_upd = {
+    let make_upd = move |cx: &Context, view: &View| {
+        let layer = cx.make_layer(&cube_shader, view.format());
+
         let cx = cx.clone();
-        move |view: &View| {
-            let layer = cx.make_layer(&cube_shader, view.format());
-            let upd = move |ctrl: &Control| {
-                for key in ctrl.pressed_keys() {
-                    if key.code == KeyCode::Escape {
-                        return Then::Close;
-                    }
+        let upd = move |ctrl: &Control| {
+            for key in ctrl.pressed_keys() {
+                if key.code == KeyCode::Escape {
+                    return Then::Close;
                 }
+            }
 
-                r += ctrl.delta_time().as_secs_f32() * 0.5;
-                let mat = transform(r, ctrl.size());
-                uniform.update(&cx, mat);
-                Then::Run
-            };
+            r += ctrl.delta_time().as_secs_f32() * 0.5;
+            let mat = transform(r, ctrl.size());
+            uniform.update(&cx, mat);
+            Then::Run
+        };
 
-            let draw = move |mut frame: Frame| {
-                let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-                frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
-            };
+        let draw = move |mut frame: Frame| {
+            let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+            frame.layer(&layer, opts).bind(&bind_transform).draw(&mesh);
+        };
 
-            dunge::update(upd, draw)
-        }
+        dunge::update(upd, draw)
     };
 
-    ws.run(cx, dunge::from_view(make_upd))?;
+    ws.run(cx, dunge::make(make_upd))?;
     Ok(())
 }

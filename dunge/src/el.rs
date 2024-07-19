@@ -107,12 +107,12 @@ impl<U> Deferred<U>
 where
     U: IntoUpdate,
 {
-    fn init(&mut self, view: &View) {
+    fn init(&mut self, cx: &Context, view: &View) {
         use std::mem;
 
         let upd = match mem::replace(self, Self::Empty) {
             Self::Empty => unreachable!(),
-            Self::Uninit(into_upd) => into_upd.into_update(view),
+            Self::Uninit(into_upd) => into_upd.into_update(cx, view),
             Self::Init(upd) => upd,
         };
 
@@ -362,7 +362,7 @@ where
                     el.exit();
                 }
 
-                self.upd.init(&self.ctrl.view);
+                self.upd.init(&self.cx, &self.ctrl.view);
             }
         }
     }
