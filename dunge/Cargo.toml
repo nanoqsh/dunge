@@ -18,7 +18,7 @@ bytemuck.workspace = true
 glam.workspace = true
 instant = { version = "0.1", optional = true }
 log.workspace = true
-wgpu = { version = "0.20", default-features = false, features = ["naga-ir"] }
+wgpu = { version = "22.0", default-features = false, features = ["naga-ir"] }
 
 [dependencies.winit]
 version = "0.30"
@@ -28,7 +28,7 @@ optional = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
-wgpu = { version = "0.20", default-features = false, features = ["webgpu"] }
+wgpu = { version = "22.0", default-features = false, features = ["webgpu"] }
 web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
 
 [target.'cfg(target_os = "android")'.dependencies.winit]

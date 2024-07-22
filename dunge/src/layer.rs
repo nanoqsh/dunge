@@ -259,6 +259,7 @@ impl<V, I> Layer<V, I> {
                 targets: &targets,
             }),
             multiview: None,
+            cache: None,
         };
 
         let render = state.device().create_render_pipeline(&desc);
