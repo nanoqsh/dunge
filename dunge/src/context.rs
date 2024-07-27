@@ -17,8 +17,6 @@ use {
 
 /// Creates the context instance.
 ///
-/// If you need a window call the [`window`] function.
-///
 /// # Errors
 /// Returns an error when the context could not be created.
 /// See [`FailedMakeContext`] for details.

@@ -32,7 +32,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let bind = {
         let offset = Offset(&uniform);
         let mut binder = cx.make_binder(&shader);
-        binder.bind(&offset);
+        binder.add(&offset);
         binder.into_binding()
     };
 

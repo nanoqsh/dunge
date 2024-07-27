@@ -48,7 +48,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let bind_transform = {
         let tr = Transform(&uniform);
         let mut binder = cx.make_binder(&cube_shader);
-        binder.bind(&tr);
+        binder.add(&tr);
         binder.into_binding()
     };
 

@@ -60,7 +60,7 @@ fn render() -> Result<(), Error> {
         };
 
         let mut binder = cx.make_binder(&shader);
-        binder.bind(&map);
+        binder.add(&map);
         binder.into_binding()
     };
 

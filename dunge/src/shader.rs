@@ -12,6 +12,9 @@ use {
     },
 };
 
+/// The shader type.
+///
+/// Can be created using the context's [`make_shader`](crate::Context::make_shader) function.
 pub struct Shader<V, I> {
     inner: Inner,
     wgsl: String,

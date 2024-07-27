@@ -170,6 +170,9 @@ impl TypedGroup {
     }
 }
 
+/// The group binder type.
+///
+/// Can be created using the context's [`make_binder`](crate::Context::make_binder) function.
 pub struct Binder<'a> {
     shader_id: usize,
     device: &'a Device,
@@ -188,7 +191,17 @@ impl<'a> Binder<'a> {
         }
     }
 
-    pub fn bind<G>(&mut self, group: &G) -> GroupHandler<G::Projection>
+    /// Adds a group to the associated shader's binding.
+    ///
+    /// It returns a [group handler](GroupHandler) that can be used to update
+    /// the data in this binding. If you don't need to update the data, then
+    /// discard this handler.
+    ///
+    /// # Panic
+    /// It checks the group type matches to an associated shader's group at runtime.
+    /// If it's violated or there are more bindings than in the shader,
+    /// then this function will panic.
+    pub fn add<G>(&mut self, group: &G) -> GroupHandler<G::Projection>
     where
         G: Visit,
     {
@@ -221,6 +234,11 @@ impl<'a> Binder<'a> {
         }
     }
 
+    /// Constructs an object that can be [used](crate::layer::SetLayer::bind)
+    /// in the draw stage.
+    ///
+    /// # Panic
+    /// It will panic if some group bindings is not set.
     pub fn into_binding(self) -> UniqueBinding {
         assert!(
             self.groups.len() == self.layout.len(),

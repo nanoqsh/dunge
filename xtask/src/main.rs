@@ -179,10 +179,10 @@ fn serve(Opts { module, .. }: Opts) -> Result<(), Error> {
     let html = index.render()?.leak();
     let prefix = "xtask/web";
     let strip = |s: &'static str| -> &'static str { s.strip_prefix(prefix).expect("strip") };
-    let js_path = format!("{prefix}/{module}/wasm.js").leak();
-    let wasm_path = format!("{prefix}/{module}/wasm_bg.wasm").leak();
-    let js = fs::read_to_string(&js_path)?.leak();
-    let wasm = fs::read(&wasm_path)?.leak();
+    let js_path: &str = format!("{prefix}/{module}/wasm.js").leak();
+    let wasm_path: &str = format!("{prefix}/{module}/wasm_bg.wasm").leak();
+    let js = fs::read_to_string(js_path)?.leak();
+    let wasm = fs::read(wasm_path)?.leak();
     let routes = &[
         ("/", Page::html(html)),
         ("/favicon.ico", Page::html("")),
