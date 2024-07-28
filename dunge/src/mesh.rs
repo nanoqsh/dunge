@@ -2,7 +2,7 @@
 
 use {
     crate::{state::State, vertex, Vertex},
-    std::{borrow::Cow, error, fmt, marker::PhantomData, slice},
+    std::{borrow::Cow, error, fmt, marker::PhantomData},
     wgpu::{Buffer, RenderPass},
 };
 
@@ -39,21 +39,15 @@ impl<'a, V> MeshData<'a, V> {
     /// # Errors
     /// Returns an [error](crate::mesh::TooManyVertices) if too many vertices are passed.
     pub fn from_quads(verts: &'a [[V; 4]]) -> Result<Self, TooManyVertices> {
-        let new_len = verts.len() * 4;
-
-        // SAFETY:
-        // * It's ok to cast a slice of arrays to the flat slice.
-        //   (TODO) This can be done safely when this function will be stable:
-        //   https://doc.rust-lang.org/std/primitive.slice.html#method.flatten
-        let verts = unsafe { slice::from_raw_parts(verts.as_ptr().cast(), new_len) };
+        let verts = verts.as_flattened();
         let indxs = {
-            let len: u16 = new_len.try_into().map_err(|_| TooManyVertices)?;
-            Some(
-                (0..len)
-                    .step_by(4)
-                    .flat_map(|i| [[i, i + 1, i + 2], [i, i + 2, i + 3]])
-                    .collect(),
-            )
+            let len = u16::try_from(verts.len()).map_err(|_| TooManyVertices)?;
+            let faces = (0..len)
+                .step_by(4)
+                .flat_map(|i| [[i, i + 1, i + 2], [i, i + 2, i + 3]])
+                .collect();
+
+            Some(faces)
         };
 
         Ok(Self { verts, indxs })
