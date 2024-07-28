@@ -8,7 +8,7 @@ use {
         types::{MemberType, ValueType, VectorType},
         vertex::{self, Vertex},
     },
-    std::{any::TypeId, mem, ops},
+    std::{any::TypeId, ops},
 };
 
 #[derive(Clone, Copy)]
@@ -201,7 +201,7 @@ where
     type Instance = ();
 
     fn from_context_input(cx: &mut Context) -> Self {
-        let id = cx.add_vertex(V::DEF, mem::size_of::<V>());
+        let id = cx.add_vertex(V::DEF, size_of::<V>());
         Self(vertex::Projection::projection(id))
     }
 }

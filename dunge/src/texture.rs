@@ -2,7 +2,7 @@
 
 use {
     crate::{format::Format, state::State},
-    std::{error, fmt, future::IntoFuture, mem},
+    std::{error, fmt, future::IntoFuture},
     wgpu::{
         Buffer, BufferAsyncError, BufferSlice, BufferView, CommandEncoder, FilterMode,
         TextureUsages, TextureView, WasmNotSend,
@@ -229,7 +229,7 @@ impl CopyBuffer {
         use wgpu::*;
 
         let (pixel_size, alignment) = const {
-            let pixel_size = mem::size_of::<u32>() as u32;
+            let pixel_size = size_of::<u32>() as u32;
             let alignment = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT / pixel_size;
             (pixel_size, alignment)
         };

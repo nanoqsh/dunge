@@ -2,7 +2,7 @@
 
 use {
     crate::{state::State, vertex, Vertex},
-    std::{borrow::Cow, error, fmt, marker::PhantomData, mem, slice},
+    std::{borrow::Cow, error, fmt, marker::PhantomData, slice},
     wgpu::{Buffer, RenderPass},
 };
 
@@ -148,11 +148,11 @@ impl<V> Mesh<V> {
         match &self.indxs {
             Some(indxs) => {
                 pass.set_index_buffer(indxs.slice(..), IndexFormat::Uint16);
-                let len = indxs.size() as u32 / mem::size_of::<u16>() as u32;
+                let len = indxs.size() as u32 / size_of::<u16>() as u32;
                 pass.draw_indexed(0..len, 0, 0..count);
             }
             None => {
-                let len = self.verts.size() as u32 / mem::size_of::<V>() as u32;
+                let len = self.verts.size() as u32 / size_of::<V>() as u32;
                 pass.draw(0..len, 0..count);
             }
         }

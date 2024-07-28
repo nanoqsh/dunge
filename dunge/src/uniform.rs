@@ -6,7 +6,7 @@ use {
         state::State,
         types::{self, MatrixType, ScalarType, ValueType, VectorType},
     },
-    std::{marker::PhantomData, mem, slice},
+    std::{marker::PhantomData, slice},
     wgpu::Buffer,
 };
 
@@ -74,7 +74,7 @@ where
 {
     // SAFETY:
     // * The `Value` invariant states converting a slice of values to bytes is safe
-    unsafe { slice::from_raw_parts(values.as_ptr().cast(), mem::size_of_val(values)) }
+    unsafe { slice::from_raw_parts(values.as_ptr().cast(), size_of_val(values)) }
 }
 
 impl private::Sealed for f32 {}

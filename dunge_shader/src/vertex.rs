@@ -1,6 +1,6 @@
 use {
     crate::{define::Define, types::VectorType},
-    std::{mem, slice},
+    std::slice,
 };
 
 /// The vertex type description.
@@ -42,7 +42,7 @@ where
 {
     // SAFETY:
     // * The `Vertex` invariant states converting a slice of vertices to bytes is safe
-    unsafe { slice::from_raw_parts(verts.as_ptr().cast(), mem::size_of_val(verts)) }
+    unsafe { slice::from_raw_parts(verts.as_ptr().cast(), size_of_val(verts)) }
 }
 
 /// Vertex type projection in a shader.

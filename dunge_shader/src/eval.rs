@@ -18,7 +18,6 @@ use {
         collections::HashMap,
         iter,
         marker::PhantomData,
-        mem,
         rc::Rc,
     },
 };
@@ -972,7 +971,7 @@ struct Compiler {
 }
 
 impl Compiler {
-    const VECTOR_SIZE: u32 = mem::size_of::<f32>() as u32 * 4;
+    const VECTOR_SIZE: u32 = size_of::<f32>() as u32 * 4;
 
     fn define_index(&mut self) -> Handle<Type> {
         self.types.insert(ScalarType::Uint.ty(), Span::UNDEFINED)
