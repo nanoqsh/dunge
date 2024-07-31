@@ -6,10 +6,13 @@ use {
         state::State,
         types::{self, MatrixType, ScalarType, ValueType, VectorType},
     },
-    std::{marker::PhantomData, slice},
+    std::marker::PhantomData,
     wgpu::Buffer,
 };
 
+/// Uniform shader data.
+///
+/// Can be created using the context's [`make_uniform`](crate::Context::make_uniform) function.
 pub struct Uniform<U> {
     buf: Buffer,
     ty: PhantomData<U>,
@@ -38,6 +41,7 @@ impl<U> Uniform<U> {
         }
     }
 
+    /// Updates the uniform data.
     pub fn update<V>(&self, cx: &Context, val: V)
     where
         V: IntoValue<Value = U>,
@@ -53,6 +57,7 @@ impl<U> Uniform<U> {
     }
 }
 
+/// Uniform value.
 pub trait Value: private::Sealed {
     const TYPE: ValueType;
     type Type;
@@ -60,21 +65,13 @@ pub trait Value: private::Sealed {
     fn value(self) -> Self::Data;
 }
 
+/// Uniform binary data.
 pub struct Data<const N: usize = 4>([f32; N]);
 
 impl<const N: usize> AsRef<[u8]> for Data<N> {
     fn as_ref(&self) -> &[u8] {
         bytemuck::cast_slice(&self.0)
     }
-}
-
-pub(crate) fn values_as_bytes<U>(values: &[U]) -> &[u8]
-where
-    U: Value,
-{
-    // SAFETY:
-    // * The `Value` invariant states converting a slice of values to bytes is safe
-    unsafe { slice::from_raw_parts(values.as_ptr().cast(), size_of_val(values)) }
 }
 
 impl private::Sealed for f32 {}
@@ -163,6 +160,7 @@ impl Value for [[f32; 4]; 4] {
     }
 }
 
+/// Types that can be converted to a uniform value.
 pub trait IntoValue {
     type Value: Value;
     fn into_value(self) -> Self::Value;
@@ -228,5 +226,5 @@ impl IntoValue for glam::Mat4 {
 }
 
 mod private {
-    pub trait Sealed {}
+    pub trait Sealed: bytemuck::NoUninit {}
 }

@@ -6,7 +6,7 @@ use {
         sl::{ReadInstance, Ret},
         state::State,
         types::{self, ValueType, VectorType},
-        uniform::{self, Value},
+        uniform::Value,
         Instance,
     },
     std::{error, fmt, marker::PhantomData},
@@ -124,7 +124,7 @@ impl<U> Row<U> {
         let buf = {
             let desc = BufferInitDescriptor {
                 label: None,
-                contents: uniform::values_as_bytes(data),
+                contents: bytemuck::cast_slice(data),
                 usage: BufferUsages::VERTEX,
             };
 
@@ -148,7 +148,7 @@ impl<U> Row<U> {
         }
 
         let queue = cx.state().queue();
-        let data = uniform::values_as_bytes(data);
+        let data = bytemuck::cast_slice(data);
         queue.write_buffer(&self.buf, 0, data.as_ref());
         Ok(())
     }

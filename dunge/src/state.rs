@@ -228,11 +228,6 @@ impl<'v> Target<'v> {
             depthv: None,
         }
     }
-
-    fn with(mut self, depthv: &'v TextureView) -> Self {
-        self.depthv = Some(depthv);
-        self
-    }
 }
 
 /// Something that contains a [target](Target).
@@ -256,8 +251,9 @@ where
     D: DrawTexture,
 {
     fn as_target(&self) -> Target {
-        let depth = self.depth.draw_texture().view();
-        self.color.as_target().with(depth)
+        let mut target = self.color.as_target();
+        target.depthv = Some(self.depth.draw_texture().view());
+        target
     }
 }
 
