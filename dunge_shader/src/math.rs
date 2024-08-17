@@ -119,6 +119,14 @@ where
     Ret::new(Math::new((x,), MathFunction::Floor))
 }
 
+pub const fn pow<B, X, E>(base: B, exp: X) -> Ret<Math<(B, X), E>, f32>
+where
+    B: Eval<E, Out = f32>,
+    X: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((base, exp), MathFunction::Pow))
+}
+
 pub const fn sin<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
@@ -131,6 +139,13 @@ where
     X: Eval<E, Out = f32>,
 {
     Ret::new(Math::new((x,), MathFunction::Sinh))
+}
+
+pub const fn sqrt<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((x,), MathFunction::Sqrt))
 }
 
 pub const fn tan<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
