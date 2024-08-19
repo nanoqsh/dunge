@@ -1,7 +1,7 @@
 <div align="center">
     <h1>Dunge</h1>
     <p>
-        Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">WGPU</a>.
+        Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">WGPU</a>
     </p>
     <p>
         <a href="https://crates.io/crates/dunge"><img src="https://img.shields.io/crates/v/dunge.svg"></img></a>
