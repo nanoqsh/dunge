@@ -74,6 +74,18 @@ impl<const N: usize> AsRef<[u8]> for Data<N> {
     }
 }
 
+impl private::Sealed for u32 {}
+
+impl Value for u32 {
+    const TYPE: ValueType = ValueType::Scalar(ScalarType::Uint);
+    type Type = Self;
+    type Data = Data;
+
+    fn value(self) -> Self::Data {
+        Data([self as f32, 0., 0., 0.])
+    }
+}
+
 impl private::Sealed for f32 {}
 
 impl Value for f32 {

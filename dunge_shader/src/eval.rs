@@ -705,8 +705,20 @@ impl Entry {
         })
     }
 
-    fn load(&mut self, ptr: Expr) -> Expr {
+    pub(crate) fn load(&mut self, ptr: Expr) -> Expr {
         let ex = Expression::Load { pointer: ptr.0 };
+        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+        self.stack.insert(st, &self.exprs);
+        Expr(handle)
+    }
+
+    pub(crate) fn access(&mut self, base: Expr, index: Expr) -> Expr {
+        let ex = Expression::Access {
+            base: base.0,
+            index: index.0,
+        };
+
         let handle = self.exprs.append(ex, Span::UNDEFINED);
         let st = Statement::Emit(Range::new_from_bounds(handle, handle));
         self.stack.insert(st, &self.exprs);
@@ -1040,7 +1052,7 @@ impl Compiler {
     fn define_group(&mut self, group: u32, def: Define<MemberType>) {
         for (binding, member) in iter::zip(0.., def) {
             let space = member.address_space();
-            let ty = self.types.insert(member.ty(), Span::UNDEFINED);
+            let ty = member.add_type(&mut self.types, Span::UNDEFINED);
             let res = ResourceBinding { group, binding };
             self.globs.add(space, ty, res);
         }

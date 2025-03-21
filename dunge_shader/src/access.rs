@@ -2,6 +2,7 @@ use {
     crate::{
         eval::{Eval, Expr, GetEntry},
         op::Ret,
+        types::Value,
     },
     std::marker::PhantomData,
 };
@@ -86,4 +87,56 @@ impl Has<3> for Dimension<4> {}
 pub trait Access {
     type Dimension;
     type Member;
+}
+
+/// An expression that can be dynamically indexed into, like an array.
+pub trait Indexable {
+    type Member;
+}
+
+impl<A, O> Ret<A, O>
+where
+    O: Indexable,
+{
+    /// Dynamically index into the target, using a computed u32 index.
+    pub fn index<E, Q>(self, idx: Ret<Q, u32>) -> Ret<Lookup<Self, Ret<Q, u32>, E>, O::Member> {
+        Ret::new(Lookup::new(idx, self))
+    }
+}
+
+impl<T: Value> Indexable for crate::types::Array<T> {
+    type Member = T;
+}
+
+pub struct Lookup<A, Q, E> {
+    index: Q,
+    a: A,
+    e: PhantomData<E>,
+}
+
+impl<A, Q, E> Lookup<A, Q, E> {
+    const fn new(index: Q, a: A) -> Self {
+        Self {
+            index,
+            a,
+            e: PhantomData,
+        }
+    }
+}
+
+impl<A, Q, E> Eval<E> for Ret<Lookup<A, Q, E>, <A::Out as Indexable>::Member>
+where
+    A: Eval<E, Out: Indexable>,
+    Q: Eval<E, Out = u32>,
+    E: GetEntry,
+{
+    type Out = <A::Out as Indexable>::Member;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let me = self.get();
+        let arr = me.a.eval(en);
+        let idx = me.index.eval(en);
+        let access = en.get_entry().access(arr, idx);
+        en.get_entry().load(access)
+    }
 }

@@ -2,8 +2,8 @@
 
 use {
     crate::{
-        group::BoundTexture, shader::Shader, state::State, texture::Sampler, uniform::Uniform,
-        Group,
+        group::BoundTexture, shader::Shader, state::State, storage::Storage, texture::Sampler,
+        uniform::Uniform, Group,
     },
     std::{any::TypeId, error, fmt, marker::PhantomData, sync::Arc},
     wgpu::{
@@ -27,6 +27,13 @@ impl<'a> Visitor<'a> {
 
 pub trait VisitMember<'a> {
     fn visit_member(self, visitor: &mut Visitor<'a>);
+}
+
+impl<'a, V> VisitMember<'a> for &'a Storage<V> {
+    fn visit_member(self, visitor: &mut Visitor<'a>) {
+        let binding = self.buffer().as_entire_buffer_binding();
+        visitor.push(BindingResource::Buffer(binding));
+    }
 }
 
 impl<'a, V> VisitMember<'a> for &'a Uniform<V> {
