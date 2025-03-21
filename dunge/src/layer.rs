@@ -234,7 +234,7 @@ impl<V, I> Layer<V, I> {
             layout: Some(shader.layout()),
             vertex: VertexState {
                 module,
-                entry_point: "vs",
+                entry_point: Some("vs"),
                 compilation_options: PipelineCompilationOptions::default(),
                 buffers: &buffers,
             },
@@ -254,7 +254,7 @@ impl<V, I> Layer<V, I> {
             multisample: MultisampleState::default(),
             fragment: Some(FragmentState {
                 module,
-                entry_point: "fs",
+                entry_point: Some("fs"),
                 compilation_options: PipelineCompilationOptions::default(),
                 targets: &targets,
             }),

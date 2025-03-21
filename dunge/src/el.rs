@@ -325,6 +325,10 @@ where
                         log::error!("suface error: out of memory");
                         el.exit();
                     }
+                    Err(SurfaceError::Other) => {
+                        log::error!("suface error: other error");
+                        el.exit();
+                    }
                 }
             }
             _ => {}

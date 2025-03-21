@@ -823,6 +823,7 @@ impl Entry {
             stage: stage.shader_stage(),
             early_depth_test: None,
             workgroup_size: [0; 3],
+            workgroup_size_overrides: None,
             function: Function {
                 arguments: args.map(Argument::into_function).collect(),
                 result: Some(res),
