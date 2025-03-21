@@ -173,3 +173,24 @@ fn shader_reentrant() {
 
     _ = cx.make_shader(compute);
 }
+
+#[test]
+fn shader_storage() -> Result<(), Error> {
+    use dunge::sl::{self, Groups, Index, Out};
+    use dunge::{storage::Storage, Group};
+
+    #[derive(Group)]
+    struct Map<'a> {
+        array: &'a Storage<f32>,
+    }
+
+    let compute = |Groups(map): Groups<Map>, Index(index): Index| Out {
+        place: sl::splat_vec4(1.) * map.array.index(index),
+        color: sl::splat_vec4(1.),
+    };
+
+    let cx = helpers::block_on(dunge::context())?;
+    let shader = cx.make_shader(compute);
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_storage.wgsl"));
+    Ok(())
+}

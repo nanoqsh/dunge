@@ -39,7 +39,15 @@ impl Context {
 
         let backends;
 
-        #[cfg(any(target_os = "macos"))]
+        #[cfg(all(
+            any(target_family = "unix", target_family = "windows"),
+            not(target_os = "macos")
+        ))]
+        {
+            backends = Backends::VULKAN;
+        }
+
+        #[cfg(target_os = "macos")]
         {
             backends = Backends::METAL;
         }
@@ -56,7 +64,7 @@ impl Context {
                 ..Default::default()
             };
 
-            Instance::new(&desc)
+            Instance::new(desc)
         };
 
         let state = State::new(instance).await?;
