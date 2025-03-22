@@ -112,11 +112,39 @@ where
     Ret::new(Math::new((x, y), MathFunction::Dot))
 }
 
+pub const fn exp<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((x,), MathFunction::Exp))
+}
+
+pub const fn exp2<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((x,), MathFunction::Exp2))
+}
+
 pub const fn floor<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
 {
     Ret::new(Math::new((x,), MathFunction::Floor))
+}
+
+pub const fn log<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((x,), MathFunction::Log))
+}
+
+pub const fn log2<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
+where
+    X: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((x,), MathFunction::Log2))
 }
 
 pub const fn pow<B, X, E>(base: B, exp: X) -> Ret<Math<(B, X), E>, f32>
