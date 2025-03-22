@@ -14,7 +14,7 @@ rust-version.workspace = true
 [dependencies]
 glam.workspace = true
 log.workspace = true
-naga = "22.0"
+naga = "24.0"
 
 [features]
 wgsl = ["naga/wgsl-out"]

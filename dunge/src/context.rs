@@ -55,7 +55,7 @@ impl Context {
                 ..Default::default()
             };
 
-            Instance::new(desc)
+            Instance::new(&desc)
         };
 
         let state = State::new(instance).await?;
