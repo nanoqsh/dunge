@@ -131,14 +131,14 @@ impl Texture2d {
 
         if copy_data {
             state.queue().write_texture(
-                ImageCopyTexture {
+                TexelCopyTextureInfo {
                     texture: &inner,
                     mip_level: 0,
                     origin: Origin3d::ZERO,
                     aspect: TextureAspect::All,
                 },
                 data.data,
-                ImageDataLayout {
+                TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(width * data.format.bytes()),
                     rows_per_image: Some(height),
@@ -265,15 +265,15 @@ impl CopyBuffer {
         );
 
         encoder.copy_texture_to_buffer(
-            ImageCopyTexture {
+            TexelCopyTextureInfo {
                 texture,
                 mip_level: 0,
                 origin: Origin3d::ZERO,
                 aspect: TextureAspect::All,
             },
-            ImageCopyBuffer {
+            TexelCopyBufferInfo {
                 buffer: &self.buf,
-                layout: ImageDataLayout {
+                layout: TexelCopyBufferLayout {
                     bytes_per_row: Some(width * self.pixel_size),
                     rows_per_image: Some(height),
                     ..Default::default()
