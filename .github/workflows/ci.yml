@@ -14,7 +14,7 @@ env:
     CACHE_SUFFIX: c
 jobs:
     build:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         steps:
           - uses: actions/checkout@v3
           - name: Build
@@ -29,7 +29,7 @@ jobs:
                 sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
                 sudo add-apt-repository ppa:kisak/kisak-mesa
                 sudo apt-get update
-                sudo apt install -y libegl1 libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev vulkan-sdk mesa-vulkan-drivers
+                sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev vulkan-sdk mesa-vulkan-drivers
 
           - name: Dunge tests
             run: cargo test --profile ci --verbose --package dunge
