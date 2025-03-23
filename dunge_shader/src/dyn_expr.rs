@@ -34,7 +34,7 @@ where
     where
         T: Eval<E>,
     {
-        let mut new_self = DynLander {
+        let mut new_self = Self {
             a: None,
             phantom: PhantomData,
         };
@@ -47,7 +47,7 @@ pub struct DynRet<E, O> {
 }
 
 impl<E, O> DynRet<E, O> {
-    fn new<P>(a: Ret<P, O>) -> DynRet<E, O>
+    fn new<P>(a: Ret<P, O>) -> Self
     where
         Ret<P, O>: Eval<E, Out = O>,
         P: 'static,
@@ -57,7 +57,7 @@ impl<E, O> DynRet<E, O> {
             a: Some(a),
             phantom: PhantomData,
         };
-        DynRet {
+        Self {
             a: Box::new(lander),
         }
     }
