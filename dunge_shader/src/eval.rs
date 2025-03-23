@@ -116,13 +116,6 @@ impl FromIterator<Expr> for Exprs {
 pub trait Eval<E> {
     type Out;
     fn eval(self, en: &mut E) -> Expr;
-
-    /// Helper method required for "dyn" expressions whose
-    /// type depends on runtime information.  Do not implement
-    /// or call this method.  Should only be used within dyn_expr.
-    fn eval_boxed(&mut self, en: &mut E) -> Expr {
-        unreachable!("eval_boxed should only be used from dyn_expr()")
-    }
 }
 
 impl<E> Eval<E> for f32

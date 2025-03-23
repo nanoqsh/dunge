@@ -5,20 +5,30 @@ use crate::{
     sl::{Eval, Expr},
 };
 
+/// Helper trait implemented by the `DynLander` which is the expression
+/// type just inside the type-erased `DynRet` expression. `EvalBoxed` is a dyn-compatible
+/// and the `eval_boxed` method is dyn-dispatchable.
+trait EvalBoxed<E> {
+    type Out;
+
+    /// Helper method required for "dyn" expressions whose
+    /// type depends on runtime information.  Do not implement
+    /// or call this method.  Should only be used within dyn_expr.
+    /// The &mut self will effectively be consumed by this call,
+    /// leaving some default Self value behind.
+    fn eval_boxed(&mut self, en: &mut E) -> Expr;
+}
+
 struct DynLander<T, O> {
     a: Option<T>,
     phantom: PhantomData<O>,
 }
 
-impl<E, T, O> Eval<E> for DynLander<T, O>
+impl<E, T, O> EvalBoxed<E> for DynLander<T, O>
 where
     T: Eval<E>,
 {
     type Out = O;
-
-    fn eval(self, en: &mut E) -> crate::sl::Expr {
-        self.a.unwrap().eval(en)
-    }
 
     fn eval_boxed(&mut self, en: &mut E) -> crate::sl::Expr
     where
@@ -29,11 +39,11 @@ where
             phantom: PhantomData,
         };
         std::mem::swap(&mut new_self, self);
-        new_self.eval(en)
+        new_self.a.expect("DynLander should not be None").eval(en)
     }
 }
 pub struct DynRet<E, O> {
-    a: Box<dyn Eval<E, Out = O>>,
+    a: Box<dyn EvalBoxed<E, Out = O>>,
 }
 
 impl<E, O> DynRet<E, O> {
