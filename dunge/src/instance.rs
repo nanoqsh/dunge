@@ -6,7 +6,7 @@ use {
         sl::{ReadInstance, Ret},
         state::State,
         types::{self, ValueType, VectorType},
-        uniform::Value,
+        value::Value,
         Instance,
     },
     std::{error, fmt, marker::PhantomData},

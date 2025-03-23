@@ -407,7 +407,7 @@ impl MemberType {
                     inner: TypeInner::Array {
                         base,
                         size: naga::ArraySize::Dynamic,
-                        stride: size as u32,
+                        stride: u32::from(size),
                     },
                 };
                 types.insert(t.clone(), span)

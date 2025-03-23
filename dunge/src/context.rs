@@ -10,7 +10,8 @@ use {
         state::{AsTarget, State},
         storage::Storage,
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
-        uniform::{IntoValue, Uniform, Value},
+        uniform::Uniform,
+        value::{IntoValue, Value},
         Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
@@ -94,7 +95,10 @@ impl Context {
         Uniform::new(&self.0, val.value().as_ref())
     }
 
-    pub fn make_storage<V: bytemuck::Pod>(&self, data: &[V]) -> Storage<V> {
+    pub fn make_storage<U>(&self, data: &[U]) -> Storage<U>
+    where
+        U: Value,
+    {
         Storage::new(&self.0, data)
     }
 

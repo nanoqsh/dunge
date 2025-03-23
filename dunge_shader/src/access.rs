@@ -104,7 +104,10 @@ where
     }
 }
 
-impl<T: Value> Indexable for crate::types::Array<T> {
+impl<T> Indexable for crate::types::Array<T>
+where
+    T: Value,
+{
     type Member = T;
 }
 

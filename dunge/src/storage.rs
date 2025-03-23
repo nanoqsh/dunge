@@ -3,7 +3,7 @@
 //! data that can be directly casted to the GPU buffer.
 
 use {
-    crate::{context::Context, state::State},
+    crate::{context::Context, state::State, value::Value},
     std::marker::PhantomData,
     wgpu::Buffer,
 };
@@ -17,8 +17,11 @@ pub struct Storage<U> {
     len: usize,
 }
 
-impl<U: bytemuck::Pod> Storage<U> {
-    pub(crate) fn new(state: &State, contents: &[U]) -> Self {
+impl<U> Storage<U> {
+    pub(crate) fn new(state: &State, contents: &[U]) -> Self
+    where
+        U: Value,
+    {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BufferUsages,
@@ -42,16 +45,26 @@ impl<U: bytemuck::Pod> Storage<U> {
     }
 
     /// Updates the stored data.
-    pub fn update(&self, cx: &Context, contents: &[U]) {
-        if contents.len() != self.len() {
-            panic!("attempted to update storage buffer with an array of the wrong size. Buffer size: {}. Data size: {}", self.len, contents.len());
-        }
+    pub fn update(&self, cx: &Context, contents: &[U])
+    where
+        U: Value,
+    {
+        assert_eq!(
+            contents.len(),
+            self.len(),
+            "attempted to update storage buffer with an array of the wrong size",
+        );
+
         let queue = cx.state().queue();
         queue.write_buffer(&self.buf, 0, bytemuck::cast_slice(contents));
     }
 
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
 

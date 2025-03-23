@@ -5,7 +5,8 @@ use crate::{
     storage::Storage,
     texture::{BindTexture, Sampler, Texture2d},
     types::{self, MemberType},
-    uniform::{Uniform, Value},
+    uniform::Uniform,
+    value::Value,
 };
 
 pub use dunge_shader::group::Projection;
