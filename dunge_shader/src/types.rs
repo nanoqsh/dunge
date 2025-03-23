@@ -1,7 +1,10 @@
 //! Shader types.
 
 use {
-    naga::{AddressSpace, ImageClass, ImageDimension, ScalarKind, Type, TypeInner, VectorSize},
+    naga::{
+        AddressSpace, Handle, ImageClass, ImageDimension, ScalarKind, Span, StorageAccess, Type,
+        TypeInner, UniqueArena, VectorSize,
+    },
     std::marker::PhantomData,
 };
 
@@ -357,9 +360,13 @@ const SAMPLER: Type = Type {
     inner: TypeInner::Sampler { comparison: false },
 };
 
+/// A storage or uniform array.
+pub struct Array<T>(PhantomData<T>);
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MemberType {
     Scalar(ScalarType),
+    Array(ScalarType),
     Vector(VectorType),
     Matrix(MatrixType),
     Tx2df,
@@ -375,23 +382,50 @@ impl MemberType {
         }
     }
 
+    pub const fn array_from_value(v: ValueType) -> Self {
+        match v {
+            ValueType::Scalar(v) => Self::Array(v),
+            ValueType::Vector(_v) => unimplemented!(),
+            ValueType::Matrix(_v) => unimplemented!(),
+        }
+    }
+
     pub const fn is_value(self) -> bool {
         matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
     }
 
-    pub(crate) const fn ty(self) -> Type {
+    /// Add the self type, and any type dependencies to the arena, and return a handle to the new type.
+    pub(crate) fn add_type(self, types: &mut UniqueArena<Type>, span: Span) -> Handle<Type> {
+        let mut q = |v: Type| types.insert(v.clone(), span);
+
         match self {
-            Self::Scalar(v) => v.ty(),
-            Self::Vector(v) => v.ty(),
-            Self::Matrix(v) => v.ty(),
-            Self::Tx2df => TEXTURE2DF,
-            Self::Sampl => SAMPLER,
+            Self::Array(v) => {
+                let base = types.insert(v.ty(), span);
+                let size = v.inner().1;
+                let t = Type {
+                    name: None,
+                    inner: TypeInner::Array {
+                        base,
+                        size: naga::ArraySize::Dynamic,
+                        stride: u32::from(size),
+                    },
+                };
+                types.insert(t.clone(), span)
+            }
+            Self::Scalar(v) => q(v.ty()),
+            Self::Vector(v) => q(v.ty()),
+            Self::Matrix(v) => q(v.ty()),
+            Self::Tx2df => q(TEXTURE2DF),
+            Self::Sampl => q(SAMPLER),
         }
     }
 
     pub(crate) const fn address_space(self) -> AddressSpace {
         match self {
             Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
+            Self::Array(_) => AddressSpace::Storage {
+                access: StorageAccess::LOAD,
+            },
             Self::Tx2df | Self::Sampl => AddressSpace::Handle,
         }
     }

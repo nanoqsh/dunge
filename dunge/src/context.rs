@@ -8,8 +8,10 @@ use {
         shader::Shader,
         sl::IntoModule,
         state::{AsTarget, State},
+        storage::Storage,
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
-        uniform::{IntoValue, Uniform, Value},
+        uniform::Uniform,
+        value::{IntoValue, Value},
         Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
@@ -38,9 +40,17 @@ impl Context {
 
         let backends;
 
-        #[cfg(any(target_family = "unix", target_family = "windows"))]
+        #[cfg(all(
+            any(target_family = "unix", target_family = "windows"),
+            not(target_os = "macos")
+        ))]
         {
             backends = Backends::VULKAN;
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            backends = Backends::METAL;
         }
 
         #[cfg(target_family = "wasm")]
@@ -83,6 +93,13 @@ impl Context {
     {
         let val = val.into_value();
         Uniform::new(&self.0, val.value().as_ref())
+    }
+
+    pub fn make_storage<U>(&self, data: &[U]) -> Storage<U>
+    where
+        U: Value,
+    {
+        Storage::new(&self.0, data)
     }
 
     pub fn make_layer<V, I, O>(&self, shader: &Shader<V, I>, opts: O) -> Layer<V, I>

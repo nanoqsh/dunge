@@ -2,9 +2,11 @@
 
 use crate::{
     sl::{GlobalOut, ReadGlobal, Ret},
+    storage::Storage,
     texture::{BindTexture, Sampler, Texture2d},
     types::{self, MemberType},
-    uniform::{Uniform, Value},
+    uniform::Uniform,
+    value::Value,
 };
 
 pub use dunge_shader::group::Projection;
@@ -38,6 +40,20 @@ where
 {
     const TYPE: MemberType = MemberType::from_value(V::TYPE);
     type Field = Ret<ReadGlobal, V::Type>;
+
+    fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
+        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
+    }
+}
+
+impl<V> private::Sealed for &Storage<V> where V: Value {}
+
+impl<V> MemberProjection for &Storage<V>
+where
+    V: Value,
+{
+    const TYPE: MemberType = MemberType::array_from_value(V::TYPE);
+    type Field = Ret<ReadGlobal, types::Array<V>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)

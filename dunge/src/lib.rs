@@ -9,8 +9,10 @@ pub mod layer;
 pub mod mesh;
 mod shader;
 mod state;
+pub mod storage;
 pub mod texture;
 pub mod uniform;
+pub mod value;
 pub mod vertex;
 
 #[cfg(feature = "winit")]
