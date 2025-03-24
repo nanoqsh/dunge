@@ -194,3 +194,32 @@ fn shader_storage() -> Result<(), Error> {
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_storage.wgsl"));
     Ok(())
 }
+
+#[test]
+fn shader_dyn() -> Result<(), Error> {
+    use dunge::sl::{self, Out};
+
+    let cx = helpers::block_on(dunge::context())?;
+
+    for (do_sin, correct_shader) in [
+        (true, include_str!("shader_dyn_true.wgsl")),
+        (false, include_str!("shader_dyn_false.wgsl")),
+    ] {
+        let compute = |sl::Index(index): sl::Index| {
+            let new_val = if do_sin {
+                sl::dyn_expr(sl::sin(sl::f32(index)))
+            } else {
+                sl::dyn_expr(sl::f32(index))
+            };
+
+            Out {
+                place: sl::splat_vec4(new_val),
+                color: sl::splat_vec4(1.),
+            }
+        };
+
+        let shader = cx.make_shader(compute);
+        helpers::eq_lines(shader.debug_wgsl(), correct_shader);
+    }
+    Ok(())
+}
