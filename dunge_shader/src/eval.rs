@@ -108,12 +108,15 @@ impl Expr {
 pub(crate) struct Exprs(pub Vec<Handle<Expression>>);
 
 impl FromIterator<Expr> for Exprs {
-    fn from_iter<T: IntoIterator<Item = Expr>>(iter: T) -> Self {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = Expr>,
+    {
         Self(iter.into_iter().map(Expr::get).collect())
     }
 }
 
-pub trait Eval<E>: Sized {
+pub trait Eval<E> {
     type Out;
     fn eval(self, en: &mut E) -> Expr;
 }
@@ -364,64 +367,53 @@ fn in_stack(frame_id: u32) -> bool {
     })
 }
 
-pub fn thunk<A, E>(a: A) -> Ret<Thunk<A, E>, A::Out>
+pub fn thunk<A, E>(a: A) -> Ret<Thunk<E>, A::Out>
 where
-    A: Eval<E>,
+    A: Eval<E> + 'static,
 {
     let Some(frame_id) = top() else {
         panic!("thunk cannot be created outside of a shader function");
     };
 
-    Ret::new(Thunk::new(frame_id, a))
+    let thunk = Thunk {
+        frame_id,
+        cache: Rc::new(Cache(Cell::new(State::Eval(a)))),
+        e: PhantomData,
+    };
+
+    Ret::new(thunk)
 }
 
-pub struct Thunk<A, E> {
+pub struct Thunk<E> {
     frame_id: u32,
-    s: Rc<Cell<State<A>>>,
+    cache: Rc<dyn EvalCached<E>>,
     e: PhantomData<E>,
 }
 
-impl<A, E> Thunk<A, E> {
-    fn new(frame_id: u32, a: A) -> Self {
-        Self {
-            frame_id,
-            s: Rc::new(Cell::new(State::Eval(a))),
-            e: PhantomData,
-        }
-    }
-}
-
-impl<A, E> Clone for Thunk<A, E> {
+impl<E> Clone for Thunk<E> {
     fn clone(&self) -> Self {
         Self {
             frame_id: self.frame_id,
-            s: Rc::clone(&self.s),
+            cache: Rc::clone(&self.cache),
             e: PhantomData,
         }
     }
 }
 
-impl<A, E> Eval<E> for Ret<Thunk<A, E>, A::Out>
-where
-    A: Eval<E>,
-{
-    type Out = A::Out;
+impl<E, O> Eval<E> for Ret<Thunk<E>, O> {
+    type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let Thunk { frame_id, s, .. } = self.get();
+        let Thunk {
+            frame_id, cache, ..
+        } = self.get();
+
         assert!(
             in_stack(frame_id),
             "it's impossible to eval the thunk in this scope",
         );
 
-        let ex = match s.replace(State::None) {
-            State::None => unreachable!(),
-            State::Eval(a) => a.eval(en),
-            State::Expr(ex) => ex,
-        };
-
-        s.set(State::Expr(ex));
-        ex
+        cache.eval_cached(en)
     }
 }
 
@@ -429,6 +421,28 @@ enum State<A> {
     None,
     Eval(A),
     Expr(Expr),
+}
+
+trait EvalCached<E> {
+    fn eval_cached(&self, en: &mut E) -> Expr;
+}
+
+struct Cache<A>(Cell<State<A>>);
+
+impl<A, E> EvalCached<E> for Cache<A>
+where
+    A: Eval<E>,
+{
+    fn eval_cached(&self, en: &mut E) -> Expr {
+        let ex = match self.0.replace(State::None) {
+            State::None => unreachable!(),
+            State::Eval(a) => a.eval(en),
+            State::Expr(ex) => ex,
+        };
+
+        self.0.set(State::Expr(ex));
+        ex
+    }
 }
 
 #[derive(Default)]
