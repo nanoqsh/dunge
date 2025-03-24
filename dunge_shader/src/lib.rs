@@ -4,7 +4,6 @@ mod context;
 mod convert;
 mod define;
 mod discard;
-mod dyn_expr;
 mod eval;
 pub mod group;
 pub mod instance;
@@ -22,7 +21,7 @@ pub mod sl {
     //! Shader generator functions.
 
     pub use crate::{
-        branch::*, context::*, convert::*, define::*, discard::*, dyn_expr::*, eval::*, math::*,
-        matrix::*, module::*, op::*, texture::*, vector::*, zero::*,
+        branch::*, context::*, convert::*, define::*, discard::*, eval::*, math::*, matrix::*,
+        module::*, op::*, texture::*, vector::*, zero::*,
     };
 }

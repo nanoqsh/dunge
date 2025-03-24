@@ -207,9 +207,9 @@ fn shader_dyn() -> Result<(), Error> {
     ] {
         let compute = |sl::Index(index): sl::Index| {
             let new_val = if do_sin {
-                sl::dyn_expr(sl::sin(sl::f32(index)))
+                sl::thunk(sl::sin(sl::f32(index)))
             } else {
-                sl::dyn_expr(sl::f32(index))
+                sl::thunk(sl::f32(index))
             };
 
             Out {
