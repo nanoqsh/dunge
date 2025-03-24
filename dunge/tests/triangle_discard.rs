@@ -15,7 +15,7 @@ fn render() -> Result<(), Error> {
         },
         glam::Vec2,
         helpers::image::Image,
-        std::fs,
+        std::{env, fs},
     };
 
     #[repr(C)]
@@ -115,6 +115,9 @@ fn render() -> Result<(), Error> {
         data[idx as usize]
     });
 
-    fs::write("tests/triangle_discard.png", image.encode())?;
+    if env::var("DUNGE_TEST_OUTPUT").is_ok() {
+        fs::write("tests/triangle_discard_actual.png", image.encode())?;
+    }
+
     Ok(())
 }

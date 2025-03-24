@@ -14,7 +14,7 @@ fn render() -> Result<(), Error> {
         },
         glam::Vec2,
         helpers::image::Image,
-        std::{f32::consts, fs},
+        std::{env, f32::consts, fs},
     };
 
     #[derive(Instance)]
@@ -79,6 +79,9 @@ fn render() -> Result<(), Error> {
         data[idx as usize]
     });
 
-    fs::write("tests/triangle_instance.png", image.encode())?;
+    if env::var("DUNGE_TEST_OUTPUT").is_ok() {
+        fs::write("tests/triangle_instance_actual.png", image.encode())?;
+    }
+
     Ok(())
 }

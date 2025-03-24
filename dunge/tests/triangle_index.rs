@@ -13,7 +13,7 @@ fn render() -> Result<(), Error> {
         },
         glam::Vec4,
         helpers::image::Image,
-        std::{f32::consts, fs},
+        std::{env, f32::consts, fs},
     };
 
     let triangle = |Index(index): Index| {
@@ -63,6 +63,9 @@ fn render() -> Result<(), Error> {
         data[idx as usize]
     });
 
-    fs::write("tests/triangle_index.png", image.encode())?;
+    if env::var("DUNGE_TEST_OUTPUT").is_ok() {
+        fs::write("tests/triangle_index_actual.png", image.encode())?;
+    }
+
     Ok(())
 }
