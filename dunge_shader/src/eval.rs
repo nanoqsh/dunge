@@ -17,7 +17,6 @@ use {
         cell::{Cell, RefCell},
         collections::HashMap,
         iter,
-        marker::PhantomData,
         rc::Rc,
     },
 };
@@ -378,7 +377,6 @@ where
     let thunk = Thunk {
         frame_id,
         cache: Rc::new(Cache(Cell::new(State::Eval(a)))),
-        e: PhantomData,
     };
 
     Ret::new(thunk)
@@ -387,7 +385,6 @@ where
 pub struct Thunk<E> {
     frame_id: u32,
     cache: Rc<dyn EvalCached<E>>,
-    e: PhantomData<E>,
 }
 
 impl<E> Clone for Thunk<E> {
@@ -395,7 +392,6 @@ impl<E> Clone for Thunk<E> {
         Self {
             frame_id: self.frame_id,
             cache: Rc::clone(&self.cache),
-            e: PhantomData,
         }
     }
 }
