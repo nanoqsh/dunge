@@ -2,7 +2,7 @@ use {
     crate::{
         eval::{Eval, Expr, GetEntry},
         op::Ret,
-        types::Value,
+        types::{StorageReadWrite, Value},
     },
     std::marker::PhantomData,
 };
@@ -94,6 +94,8 @@ pub trait Indexable {
     type Member;
 }
 
+pub trait SetIndexable: Indexable {}
+
 impl<A, O> Ret<A, O>
 where
     O: Indexable,
@@ -104,12 +106,14 @@ where
     }
 }
 
-impl<T> Indexable for crate::types::Array<T>
+impl<T, S> Indexable for crate::types::Array<T, S>
 where
     T: Value,
 {
     type Member = T;
 }
+
+impl<T> SetIndexable for crate::types::Array<T, StorageReadWrite> where T: Value {}
 
 pub struct Lookup<A, Q, E> {
     index: Q,
@@ -141,5 +145,58 @@ where
         let idx = me.index.eval(en);
         let access = en.get_entry().access(arr, idx);
         en.get_entry().load(access)
+    }
+}
+
+pub struct SetIndex<A, Q, B, E> {
+    index: Q,
+    a: A,
+    value: B,
+    e: PhantomData<E>,
+}
+
+impl<A, Q, B, E> SetIndex<A, Q, B, E> {
+    const fn new(index: Q, a: A, value: B) -> Self {
+        Self {
+            index,
+            a,
+            value,
+            e: PhantomData,
+        }
+    }
+}
+
+impl<A, Q, B, E> Eval<E> for Ret<SetIndex<A, Q, B, E>, B::Out>
+where
+    A: Eval<E, Out: SetIndexable>,
+    Q: Eval<E, Out = u32>,
+    B: Eval<E, Out = <A::Out as Indexable>::Member>,
+    E: GetEntry,
+{
+    type Out = <A::Out as Indexable>::Member;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let me = self.get();
+        let arr = me.a.eval(en);
+        let idx = me.index.eval(en);
+        let access = en.get_entry().access(arr, idx);
+        let val = me.value.eval(en);
+        let en = en.get_entry();
+        en.store(access, val);
+        val
+    }
+}
+
+impl<A, O> Ret<A, O>
+where
+    O: SetIndexable,
+{
+    /// Dynamically index into the target, using a computed u32 index.
+    pub fn set_index<E, Q, B>(
+        self,
+        idx: Ret<Q, u32>,
+        val: Ret<B, O::Member>,
+    ) -> Ret<SetIndex<Self, Ret<Q, u32>, Ret<B, O::Member>, E>, O::Member> {
+        Ret::new(SetIndex::new(idx, self, val))
     }
 }

@@ -13,6 +13,7 @@ pub enum ValueType {
     Scalar(ScalarType),
     Vector(VectorType),
     Matrix(MatrixType),
+    Atomic(ScalarType),
 }
 
 impl ValueType {
@@ -21,6 +22,14 @@ impl ValueType {
             Self::Scalar(v) => v.ty(),
             Self::Vector(v) => v.ty(),
             Self::Matrix(v) => v.ty(),
+            Self::Atomic(v) => {
+                let (kind, width) = v.inner();
+                let scalar = naga::Scalar { kind, width };
+                Type {
+                    name: None,
+                    inner: TypeInner::Atomic(scalar),
+                }
+            }
         }
     }
 
@@ -83,6 +92,14 @@ pub trait Number: Scalar {}
 impl Number for f32 {}
 impl Number for i32 {}
 impl Number for u32 {}
+
+#[derive(Clone, Copy)]
+pub struct Atomic<T>(pub T);
+unsafe impl bytemuck::NoUninit for Atomic<u32> {}
+
+impl Value for Atomic<u32> {
+    const VALUE_TYPE: ValueType = ValueType::Atomic(ScalarType::Uint);
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ScalarType {
@@ -360,13 +377,30 @@ const SAMPLER: Type = Type {
     inner: TypeInner::Sampler { comparison: false },
 };
 
+pub trait ArrayType {
+    const STORAGE_ACCESS: StorageAccess;
+}
+
+pub struct StorageRead {}
+impl ArrayType for StorageRead {
+    const STORAGE_ACCESS: StorageAccess = StorageAccess::LOAD;
+}
+
+pub struct StorageReadWrite {}
+impl ArrayType for StorageReadWrite {
+    const STORAGE_ACCESS: StorageAccess = StorageAccess::LOAD.union(StorageAccess::STORE);
+}
+
 /// A storage or uniform array.
-pub struct Array<T>(PhantomData<T>);
+pub struct Array<T, S>(PhantomData<T>, PhantomData<S>);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MemberType {
     Scalar(ScalarType),
-    Array(ScalarType),
+    Atomic(ScalarType),
+    Array(ValueType),
+    WriteableArray(ValueType),
+    AtomicArray(ValueType),
     Vector(VectorType),
     Matrix(MatrixType),
     Tx2df,
@@ -379,15 +413,20 @@ impl MemberType {
             ValueType::Scalar(v) => Self::Scalar(v),
             ValueType::Vector(v) => Self::Vector(v),
             ValueType::Matrix(v) => Self::Matrix(v),
+            ValueType::Atomic(v) => Self::Scalar(v),
         }
     }
 
     pub const fn array_from_value(v: ValueType) -> Self {
-        match v {
-            ValueType::Scalar(v) => Self::Array(v),
-            ValueType::Vector(_v) => unimplemented!(),
-            ValueType::Matrix(_v) => unimplemented!(),
-        }
+        Self::Array(v)
+    }
+
+    pub const fn writeable_array_from_value(v: ValueType) -> Self {
+        Self::WriteableArray(v)
+    }
+
+    pub const fn atomic_array_from_value(v: ValueType) -> Self {
+        Self::AtomicArray(v)
     }
 
     pub const fn is_value(self) -> bool {
@@ -399,20 +438,43 @@ impl MemberType {
         let mut q = |v: Type| types.insert(v.clone(), span);
 
         match self {
-            Self::Array(v) => {
+            Self::Array(v) | Self::WriteableArray(v) | Self::AtomicArray(v) => {
                 let base = types.insert(v.ty(), span);
-                let size = v.inner().1;
+                let size = match v.ty().inner {
+                    TypeInner::Scalar(scalar) | TypeInner::Atomic(scalar) => {
+                        u32::from(scalar.width)
+                    }
+                    TypeInner::Vector { size, scalar } => size as u32 * u32::from(scalar.width),
+                    // matrices are treated as arrays of aligned columns
+                    TypeInner::Matrix {
+                        columns,
+                        rows,
+                        scalar,
+                    } => {
+                        naga::proc::Alignment::from(rows) * u32::from(scalar.width) * columns as u32
+                    }
+                    _ => panic!("unknown size"),
+                };
                 let t = Type {
                     name: None,
                     inner: TypeInner::Array {
                         base,
                         size: naga::ArraySize::Dynamic,
-                        stride: u32::from(size),
+                        stride: size,
                     },
                 };
                 types.insert(t.clone(), span)
             }
             Self::Scalar(v) => q(v.ty()),
+            Self::Atomic(v) => {
+                let (kind, width) = v.inner();
+                let s = naga::Scalar { kind, width };
+                let atomic = Type {
+                    name: None,
+                    inner: TypeInner::Atomic(s),
+                };
+                types.insert(atomic, span)
+            }
             Self::Vector(v) => q(v.ty()),
             Self::Matrix(v) => q(v.ty()),
             Self::Tx2df => q(TEXTURE2DF),
@@ -422,9 +484,19 @@ impl MemberType {
 
     pub(crate) const fn address_space(self) -> AddressSpace {
         match self {
-            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
+            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) | Self::Atomic(_) => {
+                AddressSpace::Uniform
+            }
             Self::Array(_) => AddressSpace::Storage {
                 access: StorageAccess::LOAD,
+            },
+            Self::WriteableArray(_) => AddressSpace::Storage {
+                access: StorageAccess::LOAD.union(StorageAccess::STORE),
+            },
+            Self::AtomicArray(_) => AddressSpace::Storage {
+                access: StorageAccess::LOAD
+                    .union(StorageAccess::STORE)
+                    .union(StorageAccess::ATOMIC),
             },
             Self::Tx2df | Self::Sampl => AddressSpace::Handle,
         }

@@ -4,6 +4,7 @@
 
 use {
     crate::{context::Context, state::State, value::Value},
+    dunge_shader::types::ArrayType,
     std::marker::PhantomData,
     wgpu::Buffer,
 };
@@ -11,13 +12,14 @@ use {
 /// Storage buffer data.
 ///
 /// Can be created using the context's [`make_storage`](crate::Context::make_storage) function.
-pub struct Storage<U> {
+pub struct Storage<U, S> {
     buf: Buffer,
     ty: PhantomData<U>,
+    st: PhantomData<S>,
     len: usize,
 }
 
-impl<U> Storage<U> {
+impl<U, S: ArrayType> Storage<U, S> {
     pub(crate) fn new(state: &State, contents: &[U]) -> Self
     where
         U: Value,
@@ -40,6 +42,7 @@ impl<U> Storage<U> {
         Self {
             buf,
             ty: PhantomData,
+            st: PhantomData,
             len: contents.len(),
         }
     }
@@ -68,7 +71,7 @@ impl<U> Storage<U> {
     }
 }
 
-impl<U> Storage<U> {
+impl<U, S> Storage<U, S> {
     pub(crate) fn buffer(&self) -> &Buffer {
         &self.buf
     }

@@ -1,5 +1,7 @@
 #![cfg(not(target_family = "wasm"))]
 
+use dunge::types::StorageRead;
+
 type Error = Box<dyn std::error::Error>;
 
 #[test]
@@ -181,7 +183,7 @@ fn shader_storage() -> Result<(), Error> {
 
     #[derive(Group)]
     struct Map<'a> {
-        array: &'a Storage<f32>,
+        array: &'a Storage<f32, StorageRead>,
     }
 
     let compute = |Groups(map): Groups<Map>, Index(index): Index| Out {
