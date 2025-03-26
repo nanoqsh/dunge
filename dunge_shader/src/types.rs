@@ -441,14 +441,18 @@ impl MemberType {
             Self::Array(v) | Self::WriteableArray(v) | Self::AtomicArray(v) => {
                 let base = types.insert(v.ty(), span);
                 let size = match v.ty().inner {
-                    TypeInner::Scalar(scalar) | TypeInner::Atomic(scalar) => scalar.width as u32,
-                    TypeInner::Vector { size, scalar } => size as u32 * scalar.width as u32,
+                    TypeInner::Scalar(scalar) | TypeInner::Atomic(scalar) => {
+                        u32::from(scalar.width)
+                    }
+                    TypeInner::Vector { size, scalar } => size as u32 * u32::from(scalar.width),
                     // matrices are treated as arrays of aligned columns
                     TypeInner::Matrix {
                         columns,
                         rows,
                         scalar,
-                    } => naga::proc::Alignment::from(rows) * scalar.width as u32 * columns as u32,
+                    } => {
+                        naga::proc::Alignment::from(rows) * u32::from(scalar.width) * columns as u32
+                    }
                     _ => panic!("unknown size"),
                 };
                 let t = Type {
@@ -456,7 +460,7 @@ impl MemberType {
                     inner: TypeInner::Array {
                         base,
                         size: naga::ArraySize::Dynamic,
-                        stride: u32::from(size),
+                        stride: size,
                     },
                 };
                 types.insert(t.clone(), span)

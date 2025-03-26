@@ -52,7 +52,9 @@ where
             ty: compl.define_index(),
             binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
         },
-        _ => unreachable!(),
+        InputInfo::GlobalInvocationId => {
+            unreachable!("can't use GlobalInvocationId in compute shader")
+        }
     };
 
     let inputs: Vec<_> = cx.inputs.iter().map(make_input).collect();
