@@ -155,6 +155,9 @@ impl_binary!(Sub::sub(u32, u32) -> u32);
 impl_binary!(Mul::mul(u32, u32) -> u32);
 impl_binary!(Div::div(u32, u32) -> u32);
 impl_binary!(Rem::rem(u32, u32) -> u32);
+impl_binary!(Shl::shl(u32, u32) -> u32);
+impl_binary!(Shr::shr(u32, u32) -> u32);
+impl_binary!(BitXor::bitxor(u32, u32) -> u32);
 
 impl_binary!(Add::add(glam::Vec2, glam::Vec2) -> glam::Vec2);
 impl_binary!(Add::add(glam::Vec3, glam::Vec3) -> glam::Vec3);
@@ -276,8 +279,11 @@ pub(crate) enum Bi {
     Mul,
     Div,
     Rem,
+    Shl,
+    Shr,
     And,
     Or,
+    BitXor,
     Eq,
     Ne,
     Lt,
@@ -294,8 +300,11 @@ impl Bi {
             Self::Mul => BinaryOperator::Multiply,
             Self::Div => BinaryOperator::Divide,
             Self::Rem => BinaryOperator::Modulo,
+            Self::Shl => BinaryOperator::ShiftLeft,
+            Self::Shr => BinaryOperator::ShiftRight,
             Self::And => BinaryOperator::LogicalAnd,
             Self::Or => BinaryOperator::LogicalOr,
+            Self::BitXor => BinaryOperator::ExclusiveOr,
             Self::Eq => BinaryOperator::Equal,
             Self::Ne => BinaryOperator::NotEqual,
             Self::Lt => BinaryOperator::Less,
