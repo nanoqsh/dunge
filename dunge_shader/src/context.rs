@@ -5,7 +5,8 @@ use {
         group::{self, Group},
         instance::{self, Instance},
         op::Ret,
-        types::{MemberType, ValueType, VectorType},
+        sl::ReadGlobalInvocationId,
+        types::{MemberType, ValueType, Vec3, VectorType},
         vertex::{self, Vertex},
     },
     std::{any::TypeId, ops},
@@ -22,6 +23,7 @@ pub struct GroupInfo {
 pub struct Stages {
     pub vs: bool,
     pub fs: bool,
+    pub cs: bool,
 }
 
 impl Stages {
@@ -29,6 +31,7 @@ impl Stages {
         match stage {
             Stage::Vertex => Self { vs: true, ..self },
             Stage::Fragment => Self { fs: true, ..self },
+            Stage::Compute => Self { cs: true, ..self },
         }
     }
 }
@@ -39,6 +42,9 @@ pub enum InputInfo {
     Vert(VertInfo),
     Inst(InstInfo),
     Index,
+    GlobalInvocationId,
+    // FIXME: it appears that supported inputs to compute shaders and vertex/fragment shaders are totally separate,
+    // so consider splitting this enum.
 }
 
 #[doc(hidden)]
@@ -120,6 +126,13 @@ impl Context {
         let id = self.inputs.len() as u32;
         let info = InstInfo { ty };
         self.inputs.push(InputInfo::Inst(info));
+        id
+    }
+
+    fn add_global_invocation_id(&mut self) -> u32 {
+        countdown(&mut self.limits.index, "too many indices in the shader");
+        let id = self.inputs.len() as u32;
+        self.inputs.push(InputInfo::GlobalInvocationId);
         id
     }
 
@@ -270,6 +283,16 @@ impl FromContext for Index {
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
         Self(ReadIndex::new(id))
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct GlobalInvocationId(pub Ret<ReadGlobalInvocationId, Vec3<u32>>);
+
+impl FromContext for GlobalInvocationId {
+    fn from_context(cx: &mut Context) -> Self {
+        let id = cx.add_global_invocation_id();
+        Self(ReadGlobalInvocationId::new(id))
     }
 }
 

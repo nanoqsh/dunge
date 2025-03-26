@@ -14,6 +14,10 @@ use {
         value::{IntoValue, Value},
         Vertex,
     },
+    dunge_shader::{
+        sl::{IntoCsModule, Module},
+        types::StorageRead,
+    },
     std::{error, fmt, future::IntoFuture, sync::Arc},
 };
 
@@ -83,6 +87,15 @@ impl Context {
         Shader::new(&self.0, module)
     }
 
+    pub fn make_compute_shader<M, A>(&self, module: M) -> Module
+    where
+        M: IntoCsModule<A>,
+    {
+        let m = module.into_cs_module();
+        println!("{}", m.wgsl);
+        m
+    }
+
     pub fn make_binder<'a, V, I>(&'a self, shader: &'a Shader<V, I>) -> Binder<'a> {
         Binder::new(&self.0, shader)
     }
@@ -95,7 +108,7 @@ impl Context {
         Uniform::new(&self.0, val.value().as_ref())
     }
 
-    pub fn make_storage<U>(&self, data: &[U]) -> Storage<U>
+    pub fn make_read_storage<U>(&self, data: &[U]) -> Storage<U, StorageRead>
     where
         U: Value,
     {

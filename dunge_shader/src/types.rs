@@ -360,13 +360,36 @@ const SAMPLER: Type = Type {
     inner: TypeInner::Sampler { comparison: false },
 };
 
+pub trait ArrayType {
+    const STORAGE_ACCESS: StorageAccess;
+}
+
+pub struct StorageRead {}
+impl ArrayType for StorageRead {
+    const STORAGE_ACCESS: StorageAccess = StorageAccess::LOAD;
+}
+
+pub struct StorageReadWrite {}
+impl ArrayType for StorageReadWrite {
+    const STORAGE_ACCESS: StorageAccess = StorageAccess::LOAD.union(StorageAccess::STORE);
+}
+
+pub struct StorageAtomicReadWrite {}
+impl ArrayType for StorageAtomicReadWrite {
+    const STORAGE_ACCESS: StorageAccess = StorageAccess::LOAD
+        .union(StorageAccess::STORE)
+        .union(StorageAccess::ATOMIC);
+}
+
 /// A storage or uniform array.
-pub struct Array<T>(PhantomData<T>);
+pub struct Array<T, S>(PhantomData<T>, PhantomData<S>);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MemberType {
     Scalar(ScalarType),
-    Array(ScalarType),
+    Array(ValueType),
+    WriteableArray(ValueType),
+    AtomicArray(ValueType),
     Vector(VectorType),
     Matrix(MatrixType),
     Tx2df,
@@ -384,9 +407,25 @@ impl MemberType {
 
     pub const fn array_from_value(v: ValueType) -> Self {
         match v {
-            ValueType::Scalar(v) => Self::Array(v),
-            ValueType::Vector(_v) => unimplemented!(),
-            ValueType::Matrix(_v) => unimplemented!(),
+            ValueType::Scalar(v) => Self::Array(ValueType::Scalar(v)),
+            ValueType::Vector(v) => Self::Array(ValueType::Vector(v)),
+            ValueType::Matrix(v) => Self::Array(ValueType::Matrix(v)),
+        }
+    }
+
+    pub const fn writeable_array_from_value(v: ValueType) -> Self {
+        match v {
+            ValueType::Scalar(v) => Self::WriteableArray(ValueType::Scalar(v)),
+            ValueType::Vector(v) => Self::WriteableArray(ValueType::Vector(v)),
+            ValueType::Matrix(v) => Self::WriteableArray(ValueType::Matrix(v)),
+        }
+    }
+
+    pub const fn atomic_array_from_value(v: ValueType) -> Self {
+        match v {
+            ValueType::Scalar(v) => Self::AtomicArray(ValueType::Scalar(v)),
+            ValueType::Vector(v) => Self::AtomicArray(ValueType::Vector(v)),
+            ValueType::Matrix(v) => Self::AtomicArray(ValueType::Matrix(v)),
         }
     }
 
@@ -399,9 +438,19 @@ impl MemberType {
         let mut q = |v: Type| types.insert(v.clone(), span);
 
         match self {
-            Self::Array(v) => {
+            Self::Array(v) | Self::WriteableArray(v) | Self::AtomicArray(v) => {
                 let base = types.insert(v.ty(), span);
-                let size = v.inner().1;
+                let size = match v.ty().inner {
+                    TypeInner::Scalar(scalar) | TypeInner::Atomic(scalar) => scalar.width as u32,
+                    TypeInner::Vector { size, scalar } => size as u32 * scalar.width as u32,
+                    // matrices are treated as arrays of aligned columns
+                    TypeInner::Matrix {
+                        columns,
+                        rows,
+                        scalar,
+                    } => naga::proc::Alignment::from(rows) * scalar.width as u32 * columns as u32,
+                    _ => panic!("unknown size"),
+                };
                 let t = Type {
                     name: None,
                     inner: TypeInner::Array {
@@ -425,6 +474,14 @@ impl MemberType {
             Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
             Self::Array(_) => AddressSpace::Storage {
                 access: StorageAccess::LOAD,
+            },
+            Self::WriteableArray(_) => AddressSpace::Storage {
+                access: StorageAccess::LOAD.union(StorageAccess::STORE),
+            },
+            Self::AtomicArray(_) => AddressSpace::Storage {
+                access: StorageAccess::LOAD
+                    .union(StorageAccess::STORE)
+                    .union(StorageAccess::ATOMIC),
             },
             Self::Tx2df | Self::Sampl => AddressSpace::Handle,
         }

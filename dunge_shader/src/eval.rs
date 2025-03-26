@@ -1,12 +1,13 @@
 use {
     crate::{
         context::{Context, InputInfo, InstInfo, Stages, VertInfo},
+        cs_module::CsOut,
         define::Define,
         math::Func,
         module::{Module, Out, Output},
         op::{Bi, Ret, Un},
         texture::Sampled,
-        types::{self, MemberType, ScalarType, ValueType, VectorType},
+        types::{self, MemberType, ScalarType, ValueType, Vec3, VectorType},
     },
     naga::{
         AddressSpace, Arena, Binding, BuiltIn, EntryPoint, Expression, Function, FunctionArgument,
@@ -51,6 +52,7 @@ where
             ty: compl.define_index(),
             binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
         },
+        _ => unreachable!(),
     };
 
     let inputs: Vec<_> = cx.inputs.iter().map(make_input).collect();
@@ -88,6 +90,54 @@ where
         types: compl.types,
         global_variables: compl.globs.vars,
         entry_points: vec![vs.point, fs.point],
+        ..Default::default()
+    };
+
+    _ = pop;
+    Module::new(cx, nm)
+}
+
+pub(crate) fn make_cs<F, P, O>(cx: Context, f: F) -> Module
+where
+    F: FnOnce() -> CsOut<P, O>,
+    P: Eval<Cs, Out = O>,
+{
+    assert!(
+        top().is_none(),
+        "reentrant in a shader function isn't allowed",
+    );
+
+    let pop = push();
+    let compute = f();
+    let mut compl = Compiler::default();
+    let make_input = |info: &_| match info {
+        InputInfo::GlobalInvocationId => Argument {
+            ty: compl.define_global_invocation_id(),
+            binding: Some(Binding::BuiltIn(BuiltIn::GlobalInvocationId)),
+        },
+        _ => unimplemented!(),
+    };
+
+    let inputs: Vec<_> = cx.inputs.iter().map(make_input).collect();
+    for (id, en) in iter::zip(0.., &cx.groups) {
+        compl.define_group(id, en.def());
+    }
+
+    let cs = {
+        let mut cs = Cs::new(compl);
+        let _ex = compute.compute.eval(&mut cs);
+        // Do not include the final return statement! Compute shaders must not return a value.
+        //cs.0.ret(ex);
+        let mut args = inputs.into_iter();
+        // FIXME(cs) - how can the user set the WG size?
+        cs.0.build_with_workgroup(Stage::Compute, &mut args, Return::Unit, [64, 1, 1])
+    };
+
+    let compl = cs.compl;
+    let nm = naga::Module {
+        types: compl.types,
+        global_variables: compl.globs.vars,
+        entry_points: vec![cs.point],
         ..Default::default()
     };
 
@@ -237,6 +287,25 @@ where
                 en.compose(ty, exprs)
             }
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ReadGlobalInvocationId {
+    id: u32,
+}
+
+impl ReadGlobalInvocationId {
+    pub(crate) const fn new(id: u32) -> Ret<Self, Vec3<u32>> {
+        Ret::new(Self { id })
+    }
+}
+
+impl Eval<Cs> for Ret<ReadGlobalInvocationId, Vec3<u32>> {
+    type Out = Vec3<u32>;
+
+    fn eval(self, en: &mut Cs) -> Expr {
+        en.get_entry().argument(self.get().id)
     }
 }
 
@@ -492,6 +561,7 @@ impl_eval_tuple!(X, Y, Z, W);
 pub(crate) enum Stage {
     Vertex,
     Fragment,
+    Compute,
 }
 
 impl Stage {
@@ -499,6 +569,7 @@ impl Stage {
         match self {
             Self::Vertex => "vs",
             Self::Fragment => "fs",
+            Self::Compute => "cs",
         }
     }
 
@@ -506,6 +577,7 @@ impl Stage {
         match self {
             Self::Vertex => ShaderStage::Vertex,
             Self::Fragment => ShaderStage::Fragment,
+            Self::Compute => ShaderStage::Compute,
         }
     }
 }
@@ -513,6 +585,22 @@ impl Stage {
 pub(crate) trait GetEntry {
     const STAGE: Stage;
     fn get_entry(&mut self) -> &mut Entry;
+}
+
+pub struct Cs(Entry);
+
+impl Cs {
+    fn new(compl: Compiler) -> Self {
+        Self(Entry::new(compl))
+    }
+}
+
+impl GetEntry for Cs {
+    const STAGE: Stage = Stage::Compute;
+
+    fn get_entry(&mut self) -> &mut Entry {
+        &mut self.0
+    }
 }
 
 pub struct Vs(Entry);
@@ -614,6 +702,7 @@ struct Built {
 enum Return {
     Ty(Handle<Type>),
     Color,
+    Unit, // compute shaders do not return anything
 }
 
 type Args<'a> = dyn Iterator<Item = Argument> + 'a;
@@ -723,6 +812,14 @@ impl Entry {
         Expr(handle)
     }
 
+    pub(crate) fn store(&mut self, ptr: Expr, val: Expr) {
+        let st = Statement::Store {
+            pointer: ptr.0,
+            value: val.0,
+        };
+        self.stack.insert(st, &self.exprs);
+    }
+
     pub(crate) fn access(&mut self, base: Expr, index: Expr) -> Expr {
         let ex = Expression::Access {
             base: base.0,
@@ -826,29 +923,40 @@ impl Entry {
         self.stack.insert(st, &self.exprs);
     }
 
-    fn build(mut self, stage: Stage, args: &mut Args, ret: Return) -> Built {
+    fn build(self, stage: Stage, args: &mut Args, ret: Return) -> Built {
+        self.build_with_workgroup(stage, args, ret, [0; 3])
+    }
+
+    fn build_with_workgroup(
+        mut self,
+        stage: Stage,
+        args: &mut Args,
+        ret: Return,
+        workgroup_size: [u32; 3],
+    ) -> Built {
         const COLOR_TYPE: Type = VectorType::Vec4f.ty();
 
-        let res = match ret {
-            Return::Ty(ty) => FunctionResult { ty, binding: None },
+        let result = match ret {
+            Return::Ty(ty) => Some(FunctionResult { ty, binding: None }),
             Return::Color => {
                 let mut binds = Bindings::default();
-                FunctionResult {
+                Some(FunctionResult {
                     ty: self.new_type(COLOR_TYPE),
                     binding: Some(binds.next(&COLOR_TYPE)),
-                }
+                })
             }
+            Return::Unit => None,
         };
 
         let point = EntryPoint {
             name: stage.name().to_owned(),
             stage: stage.shader_stage(),
             early_depth_test: None,
-            workgroup_size: [0; 3],
+            workgroup_size,
             workgroup_size_overrides: None,
             function: Function {
                 arguments: args.map(Argument::into_function).collect(),
-                result: Some(res),
+                result,
                 local_variables: self.locls,
                 expressions: self.exprs,
                 body: self.stack.pop().0.into(),
@@ -998,6 +1106,10 @@ impl Compiler {
 
     fn define_index(&mut self) -> Handle<Type> {
         self.types.insert(ScalarType::Uint.ty(), Span::UNDEFINED)
+    }
+
+    fn define_global_invocation_id(&mut self) -> Handle<Type> {
+        self.types.insert(VectorType::Vec3u.ty(), Span::UNDEFINED)
     }
 
     fn define_input(&mut self, new: &mut Members, binds: &mut Bindings) -> Handle<Type> {
