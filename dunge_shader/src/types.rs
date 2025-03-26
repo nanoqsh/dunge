@@ -13,6 +13,7 @@ pub enum ValueType {
     Scalar(ScalarType),
     Vector(VectorType),
     Matrix(MatrixType),
+    Atomic(ScalarType),
 }
 
 impl ValueType {
@@ -21,6 +22,14 @@ impl ValueType {
             Self::Scalar(v) => v.ty(),
             Self::Vector(v) => v.ty(),
             Self::Matrix(v) => v.ty(),
+            Self::Atomic(v) => {
+                let (kind, width) = v.inner();
+                let scalar = naga::Scalar { kind, width };
+                Type {
+                    name: None,
+                    inner: TypeInner::Atomic(scalar),
+                }
+            }
         }
     }
 
@@ -83,6 +92,14 @@ pub trait Number: Scalar {}
 impl Number for f32 {}
 impl Number for i32 {}
 impl Number for u32 {}
+
+#[derive(Clone, Copy)]
+pub struct Atomic<T>(pub T);
+unsafe impl bytemuck::NoUninit for Atomic<u32> {}
+
+impl Value for Atomic<u32> {
+    const VALUE_TYPE: ValueType = ValueType::Atomic(ScalarType::Uint);
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ScalarType {
@@ -374,19 +391,13 @@ impl ArrayType for StorageReadWrite {
     const STORAGE_ACCESS: StorageAccess = StorageAccess::LOAD.union(StorageAccess::STORE);
 }
 
-pub struct StorageAtomicReadWrite {}
-impl ArrayType for StorageAtomicReadWrite {
-    const STORAGE_ACCESS: StorageAccess = StorageAccess::LOAD
-        .union(StorageAccess::STORE)
-        .union(StorageAccess::ATOMIC);
-}
-
 /// A storage or uniform array.
 pub struct Array<T, S>(PhantomData<T>, PhantomData<S>);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MemberType {
     Scalar(ScalarType),
+    Atomic(ScalarType),
     Array(ValueType),
     WriteableArray(ValueType),
     AtomicArray(ValueType),
@@ -402,31 +413,20 @@ impl MemberType {
             ValueType::Scalar(v) => Self::Scalar(v),
             ValueType::Vector(v) => Self::Vector(v),
             ValueType::Matrix(v) => Self::Matrix(v),
+            ValueType::Atomic(v) => Self::Scalar(v),
         }
     }
 
     pub const fn array_from_value(v: ValueType) -> Self {
-        match v {
-            ValueType::Scalar(v) => Self::Array(ValueType::Scalar(v)),
-            ValueType::Vector(v) => Self::Array(ValueType::Vector(v)),
-            ValueType::Matrix(v) => Self::Array(ValueType::Matrix(v)),
-        }
+        Self::Array(v)
     }
 
     pub const fn writeable_array_from_value(v: ValueType) -> Self {
-        match v {
-            ValueType::Scalar(v) => Self::WriteableArray(ValueType::Scalar(v)),
-            ValueType::Vector(v) => Self::WriteableArray(ValueType::Vector(v)),
-            ValueType::Matrix(v) => Self::WriteableArray(ValueType::Matrix(v)),
-        }
+        Self::WriteableArray(v)
     }
 
     pub const fn atomic_array_from_value(v: ValueType) -> Self {
-        match v {
-            ValueType::Scalar(v) => Self::AtomicArray(ValueType::Scalar(v)),
-            ValueType::Vector(v) => Self::AtomicArray(ValueType::Vector(v)),
-            ValueType::Matrix(v) => Self::AtomicArray(ValueType::Matrix(v)),
-        }
+        Self::AtomicArray(v)
     }
 
     pub const fn is_value(self) -> bool {
@@ -466,6 +466,15 @@ impl MemberType {
                 types.insert(t.clone(), span)
             }
             Self::Scalar(v) => q(v.ty()),
+            Self::Atomic(v) => {
+                let (kind, width) = v.inner();
+                let s = naga::Scalar { kind, width };
+                let atomic = Type {
+                    name: None,
+                    inner: TypeInner::Atomic(s),
+                };
+                types.insert(atomic, span)
+            }
             Self::Vector(v) => q(v.ty()),
             Self::Matrix(v) => q(v.ty()),
             Self::Tx2df => q(TEXTURE2DF),
@@ -475,7 +484,9 @@ impl MemberType {
 
     pub(crate) const fn address_space(self) -> AddressSpace {
         match self {
-            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
+            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) | Self::Atomic(_) => {
+                AddressSpace::Uniform
+            }
             Self::Array(_) => AddressSpace::Storage {
                 access: StorageAccess::LOAD,
             },

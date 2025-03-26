@@ -3,7 +3,7 @@
 use dunge::{
     sl::{GlobalInvocationId, Groups},
     storage::Storage,
-    types::StorageReadWrite,
+    types::{Atomic, StorageAtomicReadWrite, StorageReadWrite},
     Group,
 };
 
@@ -26,5 +26,28 @@ fn simple_compute_shader() -> Result<(), Error> {
     let cx = helpers::block_on(dunge::context())?;
     let module = cx.make_compute_shader(compute);
     helpers::eq_lines(&module.wgsl, include_str!("simple_compute_shader.wgsl"));
+    Ok(())
+}
+
+#[test]
+fn atomic_compute_shader() -> Result<(), Error> {
+    use dunge::sl::{self, CsOut};
+
+    #[derive(Group)]
+    struct Map<'a> {
+        array: &'a Storage<f32, StorageReadWrite>,
+        histogram: &'a Storage<Atomic<u32>, StorageAtomicReadWrite>,
+    }
+
+    let compute = |GlobalInvocationId(inv): GlobalInvocationId, Groups(map): Groups<Map>| {
+        let v = map.array.index(inv.x()) / 100.0;
+        let idx = sl::u32(v);
+        let res = sl::atomic_add(map.histogram, idx, sl::u32(1u32));
+        CsOut { compute: res }
+    };
+
+    let cx = helpers::block_on(dunge::context())?;
+    let module = cx.make_compute_shader(compute);
+    helpers::eq_lines(&module.wgsl, include_str!("atomic_compute_shader.wgsl"));
     Ok(())
 }

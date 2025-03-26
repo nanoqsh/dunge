@@ -1,3 +1,5 @@
+use dunge_shader::types::Atomic;
+
 use crate::types::{self, MatrixType, ScalarType, ValueType, VectorType};
 
 /// Uniform value.
@@ -14,6 +16,18 @@ pub struct Data<const N: usize = 4>([f32; N]);
 impl<const N: usize> AsRef<[u8]> for Data<N> {
     fn as_ref(&self) -> &[u8] {
         bytemuck::cast_slice(&self.0)
+    }
+}
+
+impl private::Sealed for Atomic<u32> {}
+
+impl Value for Atomic<u32> {
+    const TYPE: ValueType = ValueType::Atomic(ScalarType::Uint);
+    type Type = Self;
+    type Data = Data;
+
+    fn value(self) -> Self::Data {
+        Data([self.0 as f32, 0., 0., 0.])
     }
 }
 

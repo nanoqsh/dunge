@@ -12,6 +12,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+bytemuck.workspace = true
 glam.workspace = true
 log.workspace = true
 naga = "24.0"

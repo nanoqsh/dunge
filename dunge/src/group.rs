@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub use dunge_shader::group::Projection;
-use dunge_shader::types::{StorageAtomicReadWrite, StorageRead, StorageReadWrite};
+use dunge_shader::types::{StorageRead, StorageReadWrite};
 
 #[derive(Clone, Copy)]
 pub struct BoundTexture<'a>(pub(crate) &'a Texture2d);
@@ -69,20 +69,6 @@ where
 {
     const TYPE: MemberType = MemberType::writeable_array_from_value(V::TYPE);
     type Field = Ret<ReadGlobal, types::Array<V::Type, StorageReadWrite>>;
-
-    fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
-    }
-}
-
-impl<V> private::Sealed for &Storage<V, StorageAtomicReadWrite> where V: Value {}
-
-impl<V> MemberProjection for &Storage<V, StorageAtomicReadWrite>
-where
-    V: Value,
-{
-    const TYPE: MemberType = MemberType::atomic_array_from_value(V::TYPE);
-    type Field = Ret<ReadGlobal, types::Array<V::Type, StorageAtomicReadWrite>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)

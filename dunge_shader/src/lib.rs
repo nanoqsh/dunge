@@ -1,4 +1,5 @@
 mod access;
+mod atomic;
 mod branch;
 mod context;
 mod convert;
@@ -22,7 +23,7 @@ pub mod sl {
     //! Shader generator functions.
 
     pub use crate::{
-        branch::*, context::*, convert::*, cs_module::*, define::*, discard::*, eval::*, math::*,
-        matrix::*, module::*, op::*, texture::*, vector::*, zero::*,
+        atomic::*, branch::*, context::*, convert::*, cs_module::*, define::*, discard::*, eval::*,
+        math::*, matrix::*, module::*, op::*, texture::*, vector::*, zero::*,
     };
 }

@@ -44,7 +44,9 @@ where
         InputInfo::Inst(InstInfo { ty }) => Argument {
             ty: compl.define_instance(*ty, &mut binds),
             binding: match ty {
-                ValueType::Scalar(_) | ValueType::Vector(_) => Some(binds.next(&ty.ty())),
+                ValueType::Scalar(_) | ValueType::Atomic(_) | ValueType::Vector(_) => {
+                    Some(binds.next(&ty.ty()))
+                }
                 ValueType::Matrix(_) => None,
             },
         },
@@ -278,7 +280,7 @@ where
         let en = en.get_entry();
         let id = self.get().id;
         match O::VALUE_TYPE {
-            ValueType::Scalar(_) | ValueType::Vector(_) => en.argument(id),
+            ValueType::Scalar(_) | ValueType::Atomic(_) | ValueType::Vector(_) => en.argument(id),
             ValueType::Matrix(mat) => {
                 let ty = en.new_type(O::VALUE_TYPE.ty());
                 let arg = en.argument(id);
@@ -846,6 +848,29 @@ impl Entry {
         Expr(handle)
     }
 
+    pub(crate) fn atomic(
+        &mut self,
+        ptr: Expr,
+        val: Expr,
+        op: naga::AtomicFunction,
+        ty: Handle<Type>,
+    ) -> Expr {
+        let res = Expression::AtomicResult {
+            ty,
+            comparison: false,
+        };
+        let result = self.exprs.append(res, Span::UNDEFINED);
+
+        let st = Statement::Atomic {
+            pointer: ptr.0,
+            fun: op,
+            value: val.0,
+            result: Some(result),
+        };
+        self.stack.insert(st, &self.exprs);
+        Expr(result)
+    }
+
     pub(crate) fn convert(&mut self, expr: Expr, ty: ScalarType) -> Expr {
         let (kind, width) = ty.inner();
         let ex = Expression::As {
@@ -1146,7 +1171,7 @@ impl Compiler {
 
     fn define_instance(&mut self, ty: ValueType, binds: &mut Bindings) -> Handle<Type> {
         let ty = match ty {
-            ValueType::Scalar(_) | ValueType::Vector(_) => ty.ty(),
+            ValueType::Scalar(_) | ValueType::Atomic(_) | ValueType::Vector(_) => ty.ty(),
             ValueType::Matrix(mat) => {
                 let len = mat.dims();
                 let mut members = Vec::with_capacity(len as usize);
