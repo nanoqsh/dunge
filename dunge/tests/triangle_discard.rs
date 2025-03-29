@@ -9,7 +9,7 @@ fn render() -> Result<(), Error> {
             color::Rgba,
             group::BoundTexture,
             prelude::*,
-            sl::{self, Groups, InVertex, Out},
+            sl::{self, Groups, InVertex, Render},
             texture::{Filter, Sampler},
             Format,
         },
@@ -39,11 +39,11 @@ fn render() -> Result<(), Error> {
             sl::if_then_else(sl::lt(alpha, 0.5), sl::discard, || samp)
         };
 
-        Out { place, color }
+        Render { place, color }
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(triangle);
+    let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_discard.wgsl"));
 
     let map = {

@@ -8,7 +8,7 @@ fn render() -> Result<(), Error> {
         dunge::{
             color::Rgba,
             prelude::*,
-            sl::{self, InVertex, Out},
+            sl::{self, InVertex, Render},
             Format,
         },
         glam::Vec2,
@@ -20,13 +20,13 @@ fn render() -> Result<(), Error> {
     #[derive(Vertex)]
     struct Vert([f32; 2], [f32; 3]);
 
-    let triangle = |vert: InVertex<Vert>| Out {
+    let triangle = |vert: InVertex<Vert>| Render {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: sl::vec4_with(sl::fragment(vert.1), 1.),
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(triangle);
+    let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_vertex.wgsl"));
 
     let size = const { (300, 300) };

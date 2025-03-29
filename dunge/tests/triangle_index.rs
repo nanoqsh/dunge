@@ -8,7 +8,7 @@ fn render() -> Result<(), Error> {
         dunge::{
             color::Rgba,
             prelude::*,
-            sl::{self, Index, Out},
+            sl::{self, Index, Render},
             Format,
         },
         glam::Vec4,
@@ -23,14 +23,14 @@ fn render() -> Result<(), Error> {
         let y_offset = 0.25;
 
         let i = sl::thunk(sl::f32(index) * third + r_offset);
-        Out {
+        Render {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i) + y_offset, 0., 1.),
             color,
         }
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(triangle);
+    let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_index.wgsl"));
 
     let size = const { (300, 300) };

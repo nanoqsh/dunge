@@ -3,7 +3,7 @@ use {
         context::{Context, InputInfo, InstInfo, Stages, VertInfo},
         define::Define,
         math::Func,
-        module::{ComputeOutput, Module, Out, RenderOutput, Unit},
+        module::{Compute, CsOut, FsOut, Module, Render, VsOut},
         op::{Bi, Ret, Un},
         texture::Sampled,
         types::{self, MemberType, ScalarType, ValueType, VectorType},
@@ -21,10 +21,11 @@ use {
     },
 };
 
-pub(crate) fn make_render<F, O>(cx: Context, f: F) -> Module
+pub(crate) fn make_render<F, P, C>(cx: Context, f: F) -> Module
 where
-    F: FnOnce() -> O,
-    O: RenderOutput,
+    F: FnOnce() -> Render<P, C>,
+    P: VsOut,
+    C: FsOut,
 {
     assert!(
         top().is_none(),
@@ -32,7 +33,7 @@ where
     );
 
     let pop = push();
-    let Out { place, color } = f().output();
+    let Render { place, color } = f();
 
     let mut compl = Compiler::default();
     let inputs = make_input(&cx, &mut compl);
@@ -79,10 +80,10 @@ where
     Module::new(cx, nm)
 }
 
-pub(crate) fn make_compute<F, O>(cx: Context, f: F) -> Module
+pub(crate) fn make_compute<F, C>(cx: Context, f: F) -> Module
 where
-    F: FnOnce() -> O,
-    O: ComputeOutput,
+    F: FnOnce() -> Compute<C>,
+    C: CsOut,
 {
     assert!(
         top().is_none(),
@@ -90,7 +91,7 @@ where
     );
 
     let pop = push();
-    let Unit { compute: result } = f().output();
+    let Compute { compute } = f();
 
     let mut compl = Compiler::default();
     let inputs = make_input(&cx, &mut compl);
@@ -100,7 +101,7 @@ where
 
     let cs = {
         let mut cs = Cs::new(compl);
-        _ = result.eval(&mut cs);
+        _ = compute.eval(&mut cs);
         let mut args = inputs.into_iter();
         cs.0.build(Stage::Vertex, &mut args, Return::Unit, [64, 0, 0])
     };

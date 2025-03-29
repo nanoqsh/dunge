@@ -6,7 +6,7 @@ type Error = Box<dyn std::error::Error>;
 fn shader_calc() -> Result<(), Error> {
     use dunge::{
         glam::Vec4,
-        sl::{self, Out},
+        sl::{self, Render},
     };
 
     let compute = || {
@@ -15,14 +15,14 @@ fn shader_calc() -> Result<(), Error> {
         let v = mt.clone().x() + mt.clone().y();
         let z = sl::splat_vec3(1.).z();
 
-        Out {
+        Render {
             place: sl::vec4_concat(mt.x(), v) * sl::f32(1) * z,
             color: sl::vec4(0., 0., 1., 1.) + Vec4::splat(0.),
         }
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(compute);
+    let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_calc.wgsl"));
     Ok(())
 }
@@ -31,43 +31,43 @@ fn shader_calc() -> Result<(), Error> {
 fn shader_if() -> Result<(), Error> {
     use dunge::{
         glam::Vec4,
-        sl::{self, Out},
+        sl::{self, Render},
     };
 
-    let compute = || Out {
+    let compute = || Render {
         place: sl::if_then_else(true, || Vec4::splat(3.), || sl::splat_vec4(2.) * 2.),
         color: sl::splat_vec4(1.),
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(compute);
+    let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_if.wgsl"));
     Ok(())
 }
 
 #[test]
 fn shader_branch() -> Result<(), Error> {
-    use dunge::sl::{self, Out};
+    use dunge::sl::{self, Render};
 
     let cx = helpers::block_on(dunge::context())?;
     let shader0 = {
-        let compute = || Out {
+        let compute = || Render {
             place: sl::default(|| sl::splat_vec4(1.)).when(false, || sl::splat_vec4(2.)),
             color: sl::splat_vec4(1.),
         };
 
-        cx.make_render_shader(compute)
+        cx.make_shader(compute)
     };
 
     let shader1 = {
-        let compute = || Out {
+        let compute = || Render {
             place: sl::default(|| sl::splat_vec4(1.))
                 .when(true, || sl::splat_vec4(2.))
                 .when(false, || sl::splat_vec4(3.)),
             color: sl::splat_vec4(1.),
         };
 
-        cx.make_render_shader(compute)
+        cx.make_shader(compute)
     };
 
     let shader2 = {
@@ -77,13 +77,13 @@ fn shader_branch() -> Result<(), Error> {
                 .when(true, || sl::splat_vec4(3.))
                 .when(false, || sl::splat_vec4(4.));
 
-            Out {
+            Render {
                 place: p,
                 color: sl::splat_vec4(1.),
             }
         };
 
-        cx.make_render_shader(compute)
+        cx.make_shader(compute)
     };
 
     helpers::eq_lines(shader0.debug_wgsl(), include_str!("shader_branch0.wgsl"));
@@ -94,45 +94,45 @@ fn shader_branch() -> Result<(), Error> {
 
 #[test]
 fn shader_discard() -> Result<(), Error> {
-    use dunge::sl::{self, Out};
+    use dunge::sl::{self, Render};
 
     let cx = helpers::block_on(dunge::context())?;
-    let compute = || Out {
+    let compute = || Render {
         place: sl::splat_vec4(1.),
         color: sl::discard(),
     };
 
-    let shader = cx.make_render_shader(compute);
+    let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_discard.wgsl"));
     Ok(())
 }
 
 #[test]
 fn shader_discard_if() -> Result<(), Error> {
-    use dunge::sl::{self, Out};
+    use dunge::sl::{self, Render};
 
     let cx = helpers::block_on(dunge::context())?;
-    let compute = || Out {
+    let compute = || Render {
         place: sl::splat_vec4(1.),
         color: sl::if_then_else(true, sl::discard, || sl::splat_vec4(1.)),
     };
 
-    let shader = cx.make_render_shader(compute);
+    let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_discard_if.wgsl"));
     Ok(())
 }
 
 #[test]
 fn shader_zero() -> Result<(), Error> {
-    use dunge::sl::{self, Out};
+    use dunge::sl::{self, Render};
 
     let cx = helpers::block_on(dunge::context())?;
-    let compute = || Out {
+    let compute = || Render {
         place: sl::zero_value(),
         color: sl::zero_value(),
     };
 
-    let shader = cx.make_render_shader(compute);
+    let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_zero.wgsl"));
     Ok(())
 }
@@ -152,31 +152,31 @@ fn shader_thunk_outside() {
 #[test]
 #[should_panic(expected = "reentrant in a shader function isn't allowed")]
 fn shader_reentrant() {
-    use dunge::sl::{self, Out};
+    use dunge::sl::{self, Render};
 
     let cx = helpers::block_on(dunge::context()).expect("create context");
     let compute = {
         let cx = cx.clone();
-        let inner = || Out {
+        let inner = || Render {
             place: sl::splat_vec4(1.),
             color: sl::splat_vec4(1.),
         };
 
         move || {
-            _ = cx.make_render_shader(inner);
-            Out {
+            _ = cx.make_shader(inner);
+            Render {
                 place: sl::splat_vec4(1.),
                 color: sl::splat_vec4(1.),
             }
         }
     };
 
-    _ = cx.make_render_shader(compute);
+    _ = cx.make_shader(compute);
 }
 
 #[test]
 fn shader_storage() -> Result<(), Error> {
-    use dunge::sl::{self, Groups, Index, Out};
+    use dunge::sl::{self, Groups, Index, Render};
     use dunge::{storage::Storage, Group};
 
     #[derive(Group)]
@@ -184,20 +184,20 @@ fn shader_storage() -> Result<(), Error> {
         array: &'a Storage<f32>,
     }
 
-    let compute = |Groups(map): Groups<Map>, Index(index): Index| Out {
+    let compute = |Groups(map): Groups<Map>, Index(index): Index| Render {
         place: sl::splat_vec4(1.) * map.array.index(index),
         color: sl::splat_vec4(1.),
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(compute);
+    let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_storage.wgsl"));
     Ok(())
 }
 
 #[test]
 fn shader_dyn() -> Result<(), Error> {
-    use dunge::sl::{self, Out};
+    use dunge::sl::{self, Render};
 
     let cx = helpers::block_on(dunge::context())?;
 
@@ -212,13 +212,13 @@ fn shader_dyn() -> Result<(), Error> {
                 sl::thunk(sl::f32(index))
             };
 
-            Out {
+            Render {
                 place: sl::splat_vec4(new_val),
                 color: sl::splat_vec4(1.),
             }
         };
 
-        let shader = cx.make_render_shader(compute);
+        let shader = cx.make_shader(compute);
         helpers::eq_lines(shader.debug_wgsl(), correct_shader);
     }
     Ok(())

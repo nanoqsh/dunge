@@ -4,7 +4,7 @@ use {
         eval::{GlobalOut, ReadIndex, ReadInvocation, Stage},
         group::{self, Group},
         instance::{self, Instance},
-        module::{Compute, Render},
+        module::{ComputeKind, RenderKind},
         op::Ret,
         types::{self, MemberType, ValueType, VectorType},
         vertex::{self, Vertex},
@@ -164,15 +164,15 @@ impl Context {
     }
 }
 
-pub trait FromRender {
+pub trait FromRender<K> {
     type Vertex;
     type Instance;
     fn from_render(cx: &mut Context) -> Self;
 }
 
-impl<V> FromRender for V
+impl<V> FromRender<RenderKind> for V
 where
-    V: FromContext<Render<(), ()>>,
+    V: FromContext<RenderKind>,
 {
     type Vertex = ();
     type Instance = ();
@@ -197,7 +197,7 @@ where
     }
 }
 
-impl<V> FromRender for InVertex<V>
+impl<V, O> FromRender<O> for InVertex<V>
 where
     V: Vertex,
 {
@@ -225,7 +225,7 @@ where
     }
 }
 
-impl<I> FromRender for InInstance<I>
+impl<I, O> FromRender<O> for InInstance<I>
 where
     I: Instance,
 {
@@ -248,7 +248,7 @@ where
     V: Vertex,
     I: Instance;
 
-impl<V, I> FromRender for In<V, I>
+impl<V, I, O> FromRender<O> for In<V, I>
 where
     V: Vertex,
     I: Instance,
@@ -257,8 +257,8 @@ where
     type Instance = I;
 
     fn from_render(cx: &mut Context) -> Self {
-        let InVertex(vert): InVertex<V> = InVertex::from_render(cx);
-        let InInstance(inst): InInstance<I> = InInstance::from_render(cx);
+        let InVertex(vert) = <InVertex<V> as FromRender<O>>::from_render(cx);
+        let InInstance(inst) = <InInstance<I> as FromRender<O>>::from_render(cx);
         Self(vert, inst)
     }
 }
@@ -270,7 +270,7 @@ pub trait FromContext<K> {
 #[derive(Clone, Copy)]
 pub struct Index(pub Ret<ReadIndex, u32>);
 
-impl<V, I> FromContext<Render<V, I>> for Index {
+impl FromContext<RenderKind> for Index {
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
         Self(ReadIndex::new(id))
@@ -280,7 +280,7 @@ impl<V, I> FromContext<Render<V, I>> for Index {
 #[derive(Clone, Copy)]
 pub struct Invocation(pub Ret<ReadInvocation, types::Vec3<u32>>);
 
-impl FromContext<Compute> for Invocation {
+impl FromContext<ComputeKind> for Invocation {
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
         Self(ReadInvocation::new(id))

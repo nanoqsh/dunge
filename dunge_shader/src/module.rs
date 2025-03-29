@@ -7,18 +7,22 @@ use {
     std::marker::PhantomData,
 };
 
-pub struct Render<V, I>(PhantomData<(V, I)>);
-pub struct Compute(());
-
 pub trait IntoModule<A, K> {
+    type Input;
     fn into_module(self) -> Module;
 }
 
-impl<M, O> IntoModule<(), Render<(), ()>> for M
+pub enum RenderKind {}
+pub struct RenderInput<V, I>(PhantomData<(V, I)>);
+
+impl<M, P, C> IntoModule<(), RenderKind> for M
 where
-    M: FnOnce() -> O,
-    O: RenderOutput,
+    M: FnOnce() -> Render<P, C>,
+    P: VsOut,
+    C: FsOut,
 {
+    type Input = RenderInput<(), ()>;
+
     fn into_module(self) -> Module {
         let cx = Context::new();
         eval::make_render(cx, self)
@@ -28,15 +32,18 @@ where
 macro_rules! impl_into_render_module {
     (A $(,)? $($t:ident),*) => {
         #[allow(non_snake_case)]
-        impl<M, O, A, $($t),*> IntoModule<(A, $($t),*), Render<A::Vertex, A::Instance>> for M
+        impl<M, P, C, A, $($t),*> IntoModule<(A, $($t),*), RenderKind> for M
         where
-            M: FnOnce(A, $($t),*) -> O,
-            O: RenderOutput,
-            A: FromRender,
+            M: FnOnce(A, $($t),*) -> Render<P, C>,
+            P: VsOut,
+            C: FsOut,
+            A: FromRender<RenderKind>,
             $(
-                $t: FromContext<Render<A::Vertex, A::Instance>>,
+                $t: FromContext<RenderKind>,
             )*
         {
+            type Input = RenderInput<A::Vertex, A::Instance>;
+
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
                 let a = A::from_render(&mut cx);
@@ -50,21 +57,26 @@ macro_rules! impl_into_render_module {
 }
 
 impl_into_render_module!(A);
-impl_into_render_module!(A, B);
-impl_into_render_module!(A, B, C);
-impl_into_render_module!(A, B, C, D);
+impl_into_render_module!(A, X);
+impl_into_render_module!(A, X, Y);
+impl_into_render_module!(A, X, Y, Z);
+
+pub enum ComputeKind {}
+pub struct ComputeInput(());
 
 macro_rules! impl_into_compute_module {
     ($($t:ident),*) => {
         #[allow(non_snake_case, unused_mut, unused_parens)]
-        impl<M, O, $($t),*> IntoModule<($($t),*), Compute> for M
+        impl<M, C, $($t),*> IntoModule<($($t),*), ComputeKind> for M
         where
-            M: FnOnce($($t),*) -> O,
-            O: ComputeOutput,
+            M: FnOnce($($t),*) -> Compute<C>,
+            C: CsOut,
             $(
-                $t: FromContext<Compute>,
+                $t: FromContext<ComputeKind>,
             )*
         {
+            type Input = ComputeInput;
+
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
                 $(
@@ -78,50 +90,33 @@ macro_rules! impl_into_compute_module {
 
 impl_into_compute_module!();
 impl_into_compute_module!(A);
-impl_into_compute_module!(A, B);
-impl_into_compute_module!(A, B, C);
-impl_into_compute_module!(A, B, C, D);
+impl_into_compute_module!(A, X);
+impl_into_compute_module!(A, X, Y);
+impl_into_compute_module!(A, X, Y, Z);
 
-pub struct Out<P, C>
+pub trait VsOut: Eval<Vs, Out = types::Vec4<f32>> {}
+impl<E> VsOut for E where E: Eval<Vs, Out = types::Vec4<f32>> {}
+
+pub trait FsOut: Eval<Fs, Out = types::Vec4<f32>> {}
+impl<E> FsOut for E where E: Eval<Fs, Out = types::Vec4<f32>> {}
+
+pub struct Render<P, C>
 where
-    P: Eval<Vs, Out = types::Vec4<f32>>,
-    C: Eval<Fs, Out = types::Vec4<f32>>,
+    P: VsOut,
+    C: FsOut,
 {
     pub place: P,
     pub color: C,
 }
 
-pub trait RenderOutput {
-    type Place: Eval<Vs, Out = types::Vec4<f32>>;
-    type Color: Eval<Fs, Out = types::Vec4<f32>>;
+pub trait CsOut: Eval<Cs, Out = types::Unit> {}
+impl<E> CsOut for E where E: Eval<Cs, Out = types::Unit> {}
 
-    fn output(self) -> Out<Self::Place, Self::Color>;
-}
-
-impl<P, C> RenderOutput for Out<P, C>
+pub struct Compute<C>
 where
-    P: Eval<Vs, Out = types::Vec4<f32>>,
-    C: Eval<Fs, Out = types::Vec4<f32>>,
-{
-    type Place = P;
-    type Color = C;
-
-    fn output(self) -> Self {
-        self
-    }
-}
-
-pub struct Unit<C>
-where
-    C: Eval<Cs, Out = types::Unit>,
+    C: CsOut,
 {
     pub compute: C,
-}
-
-pub trait ComputeOutput {
-    type Compute: Eval<Cs, Out = types::Unit>;
-
-    fn output(self) -> Unit<Self::Compute>;
 }
 
 pub struct Module {

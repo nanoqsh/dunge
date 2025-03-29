@@ -5,7 +5,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         color::Rgba,
         glam::{Mat4, Quat, Vec3},
         prelude::*,
-        sl::{Groups, InVertex, Out},
+        sl::{Groups, InVertex, Render},
         uniform::Uniform,
     };
 
@@ -19,7 +19,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     #[derive(Group)]
     struct Transform<'a>(&'a Uniform<[[f32; 4]; 4]>);
 
-    let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform>| Out {
+    let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform>| Render {
         place: tr.0 * sl::vec4_with(vert.pos, 1.),
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
@@ -38,7 +38,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let cx = dunge::context().await?;
-    let cube_shader = cx.make_render_shader(cube);
+    let cube_shader = cx.make_shader(cube);
     let mut r = 0.;
     let uniform = {
         let mat = transform(r, (1, 1));

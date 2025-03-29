@@ -5,7 +5,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         color::Rgba,
         glam::Vec4,
         prelude::*,
-        sl::{Groups, Index, Out},
+        sl::{Groups, Index, Render},
         uniform::Uniform,
     };
 
@@ -19,14 +19,14 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         let third = const { consts::TAU / 3. };
 
         let i = sl::thunk(sl::f32(idx) * third + offset.0);
-        Out {
+        Render {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
             color,
         }
     };
 
     let cx = dunge::context().await?;
-    let shader = cx.make_render_shader(triangle);
+    let shader = cx.make_shader(triangle);
     let mut r = 0.;
     let uniform = cx.make_uniform(r);
     let bind = {

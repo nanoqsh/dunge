@@ -5,7 +5,7 @@ use {
         instance::Row,
         layer::{Config, Layer},
         mesh::{self, Mesh},
-        shader::{ComputeShader, RenderShader, Shader},
+        shader::{RenderShader, Shader},
         sl,
         state::{AsTarget, State},
         storage::Storage,
@@ -76,16 +76,9 @@ impl Context {
         &self.0
     }
 
-    pub fn make_render_shader<M, A, V, I>(&self, module: M) -> RenderShader<V, I>
+    pub fn make_shader<M, A, K>(&self, module: M) -> Shader<M::Input>
     where
-        M: sl::IntoModule<A, sl::Render<V, I>>,
-    {
-        RenderShader::new(&self.0, module)
-    }
-
-    pub fn make_compute_shader<M, A>(&self, module: M) -> ComputeShader
-    where
-        M: sl::IntoModule<A, sl::Compute>,
+        M: sl::IntoModule<A, K>,
     {
         Shader::new(&self.0, module)
     }

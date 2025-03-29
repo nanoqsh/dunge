@@ -1,7 +1,7 @@
 use {
     crate::{
         bind::TypedGroup,
-        sl::{Compute, InputInfo, IntoModule, Module, Render, Stages},
+        sl::{ComputeInput, InputInfo, IntoModule, Module, RenderInput, Stages},
         state::State,
         types::{MemberType, ScalarType, ValueType, VectorType},
     },
@@ -12,23 +12,22 @@ use {
     },
 };
 
-pub type RenderShader<V, I> = Shader<Render<V, I>>;
-pub type ComputeShader = Shader<Compute>;
+pub type RenderShader<V, I> = Shader<RenderInput<V, I>>;
+pub type ComputeShader = Shader<ComputeInput>;
 
 /// The shader type.
 ///
-/// Can be created using the context's [`make_render_shader`](crate::Context::make_render_shader)
-/// or [`make_compute_shader`](crate::Context::make_compute_shader) function.
-pub struct Shader<K> {
+/// Can be created using the context's [`make_shader`](crate::Context::make_shader) function.
+pub struct Shader<I> {
     data: ShaderData,
     wgsl: String,
-    kind: PhantomData<K>,
+    kind: PhantomData<I>,
 }
 
-impl<K> Shader<K> {
-    pub(crate) fn new<M, A>(state: &State, module: M) -> Self
+impl<I> Shader<I> {
+    pub(crate) fn new<M, A, K>(state: &State, module: M) -> Self
     where
-        M: IntoModule<A, K>,
+        M: IntoModule<A, K, Input = I>,
     {
         let mut module = module.into_module();
         let wgsl = mem::take(&mut module.wgsl);

@@ -9,7 +9,7 @@ fn render() -> Result<(), Error> {
             color::Rgba,
             group::BoundTexture,
             prelude::*,
-            sl::{self, Groups, InVertex, Out},
+            sl::{self, Groups, InVertex, Render},
             texture::{Filter, Sampler},
             Format,
         },
@@ -31,13 +31,13 @@ fn render() -> Result<(), Error> {
         sam: &'a Sampler,
     }
 
-    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| Out {
+    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| Render {
         place: sl::vec4_concat(vert.pos, Vec2::new(0., 1.)),
         color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(triangle);
+    let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_group.wgsl"));
 
     let map = {

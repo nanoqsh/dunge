@@ -7,7 +7,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         glam::{Vec2, Vec4},
         group::BoundTexture,
         prelude::*,
-        sl::{Groups, InVertex, Index, Out},
+        sl::{Groups, InVertex, Index, Render},
         texture::{DrawTexture, Filter, Sampler},
         uniform::Uniform,
         Format,
@@ -25,7 +25,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         let third = const { consts::TAU / 3. };
 
         let i = sl::thunk(sl::f32(idx) * third + offset.0);
-        Out {
+        Render {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
             color,
         }
@@ -42,7 +42,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         stp: &'a Uniform<[f32; 2]>,
     }
 
-    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Out {
+    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Render {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: {
             let s = sl::thunk(sl::fragment(vert.1));
@@ -62,8 +62,8 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let cx = dunge::context().await?;
-    let triangle_shader = cx.make_render_shader(triangle);
-    let screen_shader = cx.make_render_shader(screen);
+    let triangle_shader = cx.make_shader(triangle);
+    let screen_shader = cx.make_shader(screen);
     let mut r = 0.;
     let uniform = cx.make_uniform(r);
     let bind = {

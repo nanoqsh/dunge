@@ -9,7 +9,7 @@ fn render() -> Result<(), Error> {
             color::Rgba,
             instance::Row,
             prelude::*,
-            sl::{self, InInstance, Index, Out},
+            sl::{self, InInstance, Index, Render},
             Format,
         },
         glam::Vec2,
@@ -27,14 +27,14 @@ fn render() -> Result<(), Error> {
 
         let i = sl::thunk(sl::f32(index) * third + r_offset);
         let p = sl::vec2(sl::cos(i.clone()), sl::sin(i)) * triangle_size + t.0;
-        Out {
+        Render {
             place: sl::vec4_concat(p, Vec2::new(0., 1.)),
             color: sl::vec4_with(sl::fragment(t.1), 1.),
         }
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_render_shader(triangle);
+    let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_instance.wgsl"));
 
     let size = const { (300, 300) };

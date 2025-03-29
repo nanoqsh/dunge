@@ -34,7 +34,7 @@ async fn run() -> Result<(), Error> {
 
         // As a result, return a program that describes how to
         // compute the vertex position and the fragment color
-        sl::Out { place, color }
+        sl::Render { place, color }
     };
 
     // Create the dunge context
@@ -42,7 +42,7 @@ async fn run() -> Result<(), Error> {
 
     // You can use the context to manage dunge objects.
     // Create a shader instance
-    let shader = cx.make_render_shader(triangle);
+    let shader = cx.make_shader(triangle);
 
     // Create a mesh from vertices
     let mesh = {
