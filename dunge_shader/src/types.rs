@@ -8,8 +8,6 @@ use {
     std::marker::PhantomData,
 };
 
-pub struct Unit;
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ValueType {
     Scalar(ScalarType),

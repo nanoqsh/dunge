@@ -109,8 +109,8 @@ where
     pub color: C,
 }
 
-pub trait CsOut: Eval<Cs, Out = types::Unit> {}
-impl<E> CsOut for E where E: Eval<Cs, Out = types::Unit> {}
+pub trait CsOut: Eval<Cs> {}
+impl<E> CsOut for E where E: Eval<Cs> {}
 
 pub struct Compute<C>
 where

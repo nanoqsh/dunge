@@ -2,7 +2,7 @@ use {
     crate::{
         eval::{Eval, Expr, GetEntry},
         op::Ret,
-        types::Value,
+        types,
     },
     std::marker::PhantomData,
 };
@@ -94,52 +94,97 @@ pub trait Indexable {
     type Member;
 }
 
-impl<A, O> Ret<A, O>
+impl<T> Indexable for types::Array<T>
 where
-    O: Indexable,
-{
-    /// Dynamically index into the target, using a computed u32 index.
-    pub fn index<E, Q>(self, idx: Ret<Q, u32>) -> Ret<Lookup<Self, Ret<Q, u32>, E>, O::Member> {
-        Ret::new(Lookup::new(idx, self))
-    }
-}
-
-impl<T> Indexable for crate::types::Array<T>
-where
-    T: Value,
+    T: types::Value,
 {
     type Member = T;
 }
 
-pub struct Lookup<A, Q, E> {
+impl<A, O> Ret<A, O>
+where
+    O: Indexable,
+{
+    /// Dynamically loads a value from an array, using a computed u32 index.
+    pub fn load<Q, E>(self, idx: Q) -> Ret<IndexLoad<Q, Self, E>, O::Member>
+    where
+        Q: Eval<E, Out = u32>,
+    {
+        Ret::new(IndexLoad::new(idx, self))
+    }
+}
+
+pub struct IndexLoad<Q, A, E> {
     index: Q,
-    a: A,
+    array: A,
     e: PhantomData<E>,
 }
 
-impl<A, Q, E> Lookup<A, Q, E> {
-    const fn new(index: Q, a: A) -> Self {
+impl<Q, A, E> IndexLoad<Q, A, E> {
+    const fn new(index: Q, array: A) -> Self {
         Self {
             index,
-            a,
+            array,
             e: PhantomData,
         }
     }
 }
 
-impl<A, Q, E> Eval<E> for Ret<Lookup<A, Q, E>, <A::Out as Indexable>::Member>
+impl<Q, A, E> Eval<E> for Ret<IndexLoad<Q, A, E>, <A::Out as Indexable>::Member>
 where
-    A: Eval<E, Out: Indexable>,
     Q: Eval<E, Out = u32>,
+    A: Eval<E, Out: Indexable>,
     E: GetEntry,
 {
     type Out = <A::Out as Indexable>::Member;
 
     fn eval(self, en: &mut E) -> Expr {
         let me = self.get();
-        let arr = me.a.eval(en);
-        let idx = me.index.eval(en);
-        let access = en.get_entry().access(arr, idx);
+        let array = me.array.eval(en);
+        let index = me.index.eval(en);
+        let access = en.get_entry().access(array, index);
         en.get_entry().load(access)
+    }
+}
+
+pub struct IndexStore<Q, A, V, E> {
+    index: Q,
+    array: A,
+    value: V,
+    e: PhantomData<E>,
+}
+
+impl<Q, A, V, E> IndexStore<Q, A, V, E> {
+    #[expect(dead_code)]
+    const fn new(index: Q, array: A, value: V) -> Self {
+        Self {
+            index,
+            array,
+            value,
+            e: PhantomData,
+        }
+    }
+}
+
+impl<Q, A, V, E> Eval<E> for Ret<IndexStore<Q, A, V, E>, V::Out>
+where
+    Q: Eval<E, Out = u32>,
+    A: Eval<E, Out: Indexable<Member = V::Out>>,
+    V: Eval<E>,
+    E: GetEntry,
+{
+    type Out = V::Out;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let me = self.get();
+
+        let array = me.array.eval(en);
+        let index = me.index.eval(en);
+        let access = en.get_entry().access(array, index);
+
+        let value = me.value.eval(en);
+        let en = en.get_entry();
+        en.store(access, value);
+        value
     }
 }

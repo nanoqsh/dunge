@@ -111,6 +111,17 @@ impl Context {
         id
     }
 
+    fn add_global_invocation_id(&mut self) -> u32 {
+        countdown(
+            &mut self.limits.index,
+            "too many global invocation ids in the shader",
+        );
+
+        let id = self.inputs.len() as u32;
+        self.inputs.push(InputInfo::GlobalInvocationId);
+        id
+    }
+
     fn add_vertex(&mut self, def: Define<VectorType>, size: usize) -> u32 {
         countdown(&mut self.limits.verts, "too many vertices in the shader");
         let id = self.inputs.len() as u32;
@@ -282,7 +293,7 @@ pub struct Invocation(pub Ret<ReadInvocation, types::Vec3<u32>>);
 
 impl FromContext<ComputeKind> for Invocation {
     fn from_context(cx: &mut Context) -> Self {
-        let id = cx.add_index();
+        let id = cx.add_global_invocation_id();
         Self(ReadInvocation::new(id))
     }
 }

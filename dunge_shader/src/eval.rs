@@ -103,7 +103,7 @@ where
         let mut cs = Cs::new(compl);
         _ = compute.eval(&mut cs);
         let mut args = inputs.into_iter();
-        cs.0.build(Stage::Vertex, &mut args, Return::Unit, [64, 0, 0])
+        cs.0.build(Stage::Compute, &mut args, Return::Unit, [64, 1, 1])
     };
 
     let nm = naga::Module {
@@ -804,9 +804,16 @@ impl Entry {
     pub(crate) fn load(&mut self, ptr: Expr) -> Expr {
         let ex = Expression::Load { pointer: ptr.0 };
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+        self.emit(handle)
+    }
+
+    pub(crate) fn store(&mut self, ptr: Expr, val: Expr) {
+        let st = Statement::Store {
+            pointer: ptr.0,
+            value: val.0,
+        };
+
         self.stack.insert(st, &self.exprs);
-        Expr(handle)
     }
 
     pub(crate) fn access(&mut self, base: Expr, index: Expr) -> Expr {
@@ -816,9 +823,7 @@ impl Entry {
         };
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn access_index(&mut self, base: Expr, index: u32) -> Expr {
@@ -828,9 +833,7 @@ impl Entry {
         };
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn convert(&mut self, expr: Expr, ty: ScalarType) -> Expr {
@@ -842,9 +845,7 @@ impl Entry {
         };
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn unary(&mut self, op: Un, a: Expr) -> Expr {
@@ -854,9 +855,7 @@ impl Entry {
         };
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn binary(&mut self, op: Bi, a: Expr, b: Expr) -> Expr {
@@ -867,17 +866,13 @@ impl Entry {
         };
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn math(&mut self, f: Func, exprs: Evaluated) -> Expr {
         let ex = f.expr(exprs);
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn compose(&mut self, ty: Handle<Type>, exprs: Exprs) -> Expr {
@@ -887,16 +882,12 @@ impl Entry {
         };
 
         let handle = self.exprs.append(ex, Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn sample(&mut self, ex: Sampled) -> Expr {
         let handle = self.exprs.append(ex.expr(), Span::UNDEFINED);
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
-        self.stack.insert(st, &self.exprs);
-        Expr(handle)
+        self.emit(handle)
     }
 
     pub(crate) fn kill(&mut self) {
@@ -904,11 +895,14 @@ impl Entry {
         self.stack.insert(st, &self.exprs);
     }
 
-    fn ret(&mut self, value: Expr) {
-        let st = Statement::Return {
-            value: Some(value.0),
-        };
+    fn emit(&mut self, handle: Handle<Expression>) -> Expr {
+        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+        self.stack.insert(st, &self.exprs);
+        Expr(handle)
+    }
 
+    fn ret(&mut self, e: Expr) {
+        let st = Statement::Return { value: Some(e.0) };
         self.stack.insert(st, &self.exprs);
     }
 
