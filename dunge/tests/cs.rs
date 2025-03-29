@@ -17,6 +17,7 @@ fn cs_empty() -> Result<(), Error> {
 
     let compute = |Invocation(_): Invocation, Groups(_): Groups<Map>| Compute {
         compute: sl::u32(0),
+        workgroup_size: [64, 1, 1],
     };
 
     let cx = helpers::block_on(dunge::context())?;

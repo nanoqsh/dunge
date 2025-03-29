@@ -117,6 +117,7 @@ where
     C: CsOut,
 {
     pub compute: C,
+    pub workgroup_size: [u32; 3],
 }
 
 pub struct Module {

@@ -91,7 +91,14 @@ where
     );
 
     let pop = push();
-    let Compute { compute } = f();
+    let Compute {
+        compute,
+        workgroup_size,
+    } = f();
+
+    for i in workgroup_size {
+        assert_ne!(i, 0, "workgroup size cannot be empty");
+    }
 
     let mut compl = Compiler::default();
     let inputs = make_input(&cx, &mut compl);
@@ -103,7 +110,7 @@ where
         let mut cs = Cs::new(compl);
         _ = compute.eval(&mut cs);
         let mut args = inputs.into_iter();
-        cs.0.build(Stage::Compute, &mut args, Return::Unit, [64, 1, 1])
+        cs.0.build(Stage::Compute, &mut args, Return::Unit, workgroup_size)
     };
 
     let nm = naga::Module {
