@@ -62,8 +62,8 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let cx = dunge::context().await?;
-    let triangle_shader = cx.make_shader(triangle);
-    let screen_shader = cx.make_shader(screen);
+    let triangle_shader = cx.make_render_shader(triangle);
+    let screen_shader = cx.make_render_shader(screen);
     let mut r = 0.;
     let uniform = cx.make_uniform(r);
     let bind = {

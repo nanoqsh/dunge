@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        group::BoundTexture, shader::Shader, state::State, storage::Storage, texture::Sampler,
+        group::BoundTexture, shader::ShaderData, state::State, storage::Storage, texture::Sampler,
         uniform::Uniform, Group,
     },
     std::{any::TypeId, error, fmt, marker::PhantomData, sync::Arc},
@@ -188,7 +188,7 @@ pub struct Binder<'a> {
 }
 
 impl<'a> Binder<'a> {
-    pub(crate) fn new<V, I>(state: &'a State, shader: &'a Shader<V, I>) -> Self {
+    pub(crate) fn new(state: &'a State, shader: &'a ShaderData) -> Self {
         let layout = shader.groups();
         Self {
             shader_id: shader.id(),

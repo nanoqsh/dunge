@@ -38,7 +38,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let cx = dunge::context().await?;
-    let cube_shader = cx.make_shader(cube);
+    let cube_shader = cx.make_render_shader(cube);
     let mut r = 0.;
     let uniform = {
         let mat = transform(r, (1, 1));

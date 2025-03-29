@@ -22,7 +22,7 @@ fn shader_calc() -> Result<(), Error> {
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(compute);
+    let shader = cx.make_render_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_calc.wgsl"));
     Ok(())
 }
@@ -40,7 +40,7 @@ fn shader_if() -> Result<(), Error> {
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(compute);
+    let shader = cx.make_render_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_if.wgsl"));
     Ok(())
 }
@@ -56,7 +56,7 @@ fn shader_branch() -> Result<(), Error> {
             color: sl::splat_vec4(1.),
         };
 
-        cx.make_shader(compute)
+        cx.make_render_shader(compute)
     };
 
     let shader1 = {
@@ -67,7 +67,7 @@ fn shader_branch() -> Result<(), Error> {
             color: sl::splat_vec4(1.),
         };
 
-        cx.make_shader(compute)
+        cx.make_render_shader(compute)
     };
 
     let shader2 = {
@@ -83,7 +83,7 @@ fn shader_branch() -> Result<(), Error> {
             }
         };
 
-        cx.make_shader(compute)
+        cx.make_render_shader(compute)
     };
 
     helpers::eq_lines(shader0.debug_wgsl(), include_str!("shader_branch0.wgsl"));
@@ -102,7 +102,7 @@ fn shader_discard() -> Result<(), Error> {
         color: sl::discard(),
     };
 
-    let shader = cx.make_shader(compute);
+    let shader = cx.make_render_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_discard.wgsl"));
     Ok(())
 }
@@ -117,7 +117,7 @@ fn shader_discard_if() -> Result<(), Error> {
         color: sl::if_then_else(true, sl::discard, || sl::splat_vec4(1.)),
     };
 
-    let shader = cx.make_shader(compute);
+    let shader = cx.make_render_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_discard_if.wgsl"));
     Ok(())
 }
@@ -132,7 +132,7 @@ fn shader_zero() -> Result<(), Error> {
         color: sl::zero_value(),
     };
 
-    let shader = cx.make_shader(compute);
+    let shader = cx.make_render_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_zero.wgsl"));
     Ok(())
 }
@@ -163,7 +163,7 @@ fn shader_reentrant() {
         };
 
         move || {
-            _ = cx.make_shader(inner);
+            _ = cx.make_render_shader(inner);
             Out {
                 place: sl::splat_vec4(1.),
                 color: sl::splat_vec4(1.),
@@ -171,7 +171,7 @@ fn shader_reentrant() {
         }
     };
 
-    _ = cx.make_shader(compute);
+    _ = cx.make_render_shader(compute);
 }
 
 #[test]
@@ -190,7 +190,7 @@ fn shader_storage() -> Result<(), Error> {
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(compute);
+    let shader = cx.make_render_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("shader_storage.wgsl"));
     Ok(())
 }
@@ -218,7 +218,7 @@ fn shader_dyn() -> Result<(), Error> {
             }
         };
 
-        let shader = cx.make_shader(compute);
+        let shader = cx.make_render_shader(compute);
         helpers::eq_lines(shader.debug_wgsl(), correct_shader);
     }
     Ok(())

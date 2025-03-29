@@ -1,60 +1,86 @@
-use crate::{
-    context::{Context, FromContext, FromContextInput},
-    eval::{self, Eval, Fs, Vs},
-    types,
+use {
+    crate::{
+        context::{Context, FromContext, FromRender},
+        eval::{self, Cs, Eval, Fs, Vs},
+        types,
+    },
+    std::marker::PhantomData,
 };
 
-pub trait IntoModule<A> {
-    type Vertex;
-    type Instance;
+pub struct Render<V, I>(PhantomData<(V, I)>);
+pub struct Compute(());
+
+pub trait IntoModule<A, K> {
     fn into_module(self) -> Module;
 }
 
-impl<M, O> IntoModule<()> for M
+impl<M, O> IntoModule<(), Render<(), ()>> for M
 where
     M: FnOnce() -> O,
-    O: Output,
+    O: RenderOutput,
 {
-    type Vertex = ();
-    type Instance = ();
-
     fn into_module(self) -> Module {
         let cx = Context::new();
-        eval::make(cx, self)
+        eval::make_render(cx, self)
     }
 }
 
-macro_rules! impl_into_module {
+macro_rules! impl_into_render_module {
     (A $(,)? $($t:ident),*) => {
-        impl<M, O, A, $($t),*> IntoModule<(A, $($t),*)> for M
+        #[allow(non_snake_case)]
+        impl<M, O, A, $($t),*> IntoModule<(A, $($t),*), Render<A::Vertex, A::Instance>> for M
         where
             M: FnOnce(A, $($t),*) -> O,
-            O: Output,
-            A: FromContextInput,
+            O: RenderOutput,
+            A: FromRender,
             $(
-                $t: FromContext,
+                $t: FromContext<Render<A::Vertex, A::Instance>>,
             )*
         {
-            type Vertex = A::Vertex;
-            type Instance = A::Instance;
-
-            #[allow(non_snake_case)]
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
-                let a = A::from_context_input(&mut cx);
+                let a = A::from_render(&mut cx);
                 $(
                     let $t = $t::from_context(&mut cx);
                 )*
-                eval::make(cx, || self(a, $($t),*))
+                eval::make_render(cx, || self(a, $($t),*))
             }
         }
     };
 }
 
-impl_into_module!(A);
-impl_into_module!(A, B);
-impl_into_module!(A, B, C);
-impl_into_module!(A, B, C, D);
+impl_into_render_module!(A);
+impl_into_render_module!(A, B);
+impl_into_render_module!(A, B, C);
+impl_into_render_module!(A, B, C, D);
+
+macro_rules! impl_into_compute_module {
+    ($($t:ident),*) => {
+        #[allow(non_snake_case, unused_mut, unused_parens)]
+        impl<M, O, $($t),*> IntoModule<($($t),*), Compute> for M
+        where
+            M: FnOnce($($t),*) -> O,
+            O: ComputeOutput,
+            $(
+                $t: FromContext<Compute>,
+            )*
+        {
+            fn into_module(self) -> Module {
+                let mut cx = Context::new();
+                $(
+                    let $t = $t::from_context(&mut cx);
+                )*
+                eval::make_compute(cx, || self($($t),*))
+            }
+        }
+    };
+}
+
+impl_into_compute_module!();
+impl_into_compute_module!(A);
+impl_into_compute_module!(A, B);
+impl_into_compute_module!(A, B, C);
+impl_into_compute_module!(A, B, C, D);
 
 pub struct Out<P, C>
 where
@@ -65,14 +91,14 @@ where
     pub color: C,
 }
 
-pub trait Output {
+pub trait RenderOutput {
     type Place: Eval<Vs, Out = types::Vec4<f32>>;
     type Color: Eval<Fs, Out = types::Vec4<f32>>;
 
     fn output(self) -> Out<Self::Place, Self::Color>;
 }
 
-impl<P, C> Output for Out<P, C>
+impl<P, C> RenderOutput for Out<P, C>
 where
     P: Eval<Vs, Out = types::Vec4<f32>>,
     C: Eval<Fs, Out = types::Vec4<f32>>,
@@ -83,6 +109,19 @@ where
     fn output(self) -> Self {
         self
     }
+}
+
+pub struct Unit<C>
+where
+    C: Eval<Cs, Out = types::Unit>,
+{
+    pub compute: C,
+}
+
+pub trait ComputeOutput {
+    type Compute: Eval<Cs, Out = types::Unit>;
+
+    fn output(self) -> Unit<Self::Compute>;
 }
 
 pub struct Module {

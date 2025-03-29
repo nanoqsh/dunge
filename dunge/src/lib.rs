@@ -46,6 +46,7 @@ pub use {
         context::{context, Context, FailedMakeContext},
         draw::{draw, Draw},
         format::Format,
+        shader::{ComputeShader, RenderShader, Shader},
         state::{AsTarget, Frame, Options, RenderBuffer, Target},
     },
     dunge_macros::{Group, Instance, Vertex},

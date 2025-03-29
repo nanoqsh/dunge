@@ -1,11 +1,12 @@
 use {
     crate::{
         define::Define,
-        eval::{GlobalOut, ReadIndex, Stage},
+        eval::{GlobalOut, ReadIndex, ReadInvocation, Stage},
         group::{self, Group},
         instance::{self, Instance},
+        module::{Compute, Render},
         op::Ret,
-        types::{MemberType, ValueType, VectorType},
+        types::{self, MemberType, ValueType, VectorType},
         vertex::{self, Vertex},
     },
     std::{any::TypeId, ops},
@@ -22,6 +23,7 @@ pub struct GroupInfo {
 pub struct Stages {
     pub vs: bool,
     pub fs: bool,
+    pub cs: bool,
 }
 
 impl Stages {
@@ -29,6 +31,7 @@ impl Stages {
         match stage {
             Stage::Vertex => Self { vs: true, ..self },
             Stage::Fragment => Self { fs: true, ..self },
+            Stage::Compute => Self { cs: true, ..self },
         }
     }
 }
@@ -39,6 +42,7 @@ pub enum InputInfo {
     Vert(VertInfo),
     Inst(InstInfo),
     Index,
+    GlobalInvocationId,
 }
 
 #[doc(hidden)]
@@ -160,20 +164,20 @@ impl Context {
     }
 }
 
-pub trait FromContextInput {
+pub trait FromRender {
     type Vertex;
     type Instance;
-    fn from_context_input(cx: &mut Context) -> Self;
+    fn from_render(cx: &mut Context) -> Self;
 }
 
-impl<V> FromContextInput for V
+impl<V> FromRender for V
 where
-    V: FromContext,
+    V: FromContext<Render<(), ()>>,
 {
     type Vertex = ();
     type Instance = ();
 
-    fn from_context_input(cx: &mut Context) -> Self {
+    fn from_render(cx: &mut Context) -> Self {
         V::from_context(cx)
     }
 }
@@ -193,14 +197,14 @@ where
     }
 }
 
-impl<V> FromContextInput for InVertex<V>
+impl<V> FromRender for InVertex<V>
 where
     V: Vertex,
 {
     type Vertex = V;
     type Instance = ();
 
-    fn from_context_input(cx: &mut Context) -> Self {
+    fn from_render(cx: &mut Context) -> Self {
         let id = cx.add_vertex(V::DEF, size_of::<V>());
         Self(vertex::Projection::projection(id))
     }
@@ -221,14 +225,14 @@ where
     }
 }
 
-impl<I> FromContextInput for InInstance<I>
+impl<I> FromRender for InInstance<I>
 where
     I: Instance,
 {
     type Vertex = ();
     type Instance = I;
 
-    fn from_context_input(cx: &mut Context) -> Self {
+    fn from_render(cx: &mut Context) -> Self {
         let mut id = None;
         for ty in I::DEF {
             id.get_or_insert(cx.add_instance(ty));
@@ -244,7 +248,7 @@ where
     V: Vertex,
     I: Instance;
 
-impl<V, I> FromContextInput for In<V, I>
+impl<V, I> FromRender for In<V, I>
 where
     V: Vertex,
     I: Instance,
@@ -252,24 +256,34 @@ where
     type Vertex = V;
     type Instance = I;
 
-    fn from_context_input(cx: &mut Context) -> Self {
-        let InVertex(vert): InVertex<V> = InVertex::from_context_input(cx);
-        let InInstance(inst): InInstance<I> = InInstance::from_context_input(cx);
+    fn from_render(cx: &mut Context) -> Self {
+        let InVertex(vert): InVertex<V> = InVertex::from_render(cx);
+        let InInstance(inst): InInstance<I> = InInstance::from_render(cx);
         Self(vert, inst)
     }
 }
 
-pub trait FromContext {
+pub trait FromContext<K> {
     fn from_context(cx: &mut Context) -> Self;
 }
 
 #[derive(Clone, Copy)]
 pub struct Index(pub Ret<ReadIndex, u32>);
 
-impl FromContext for Index {
+impl<V, I> FromContext<Render<V, I>> for Index {
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
         Self(ReadIndex::new(id))
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Invocation(pub Ret<ReadInvocation, types::Vec3<u32>>);
+
+impl FromContext<Compute> for Invocation {
+    fn from_context(cx: &mut Context) -> Self {
+        let id = cx.add_index();
+        Self(ReadInvocation::new(id))
     }
 }
 
@@ -326,7 +340,7 @@ pub struct Groups<G>(pub G::Projection)
 where
     G: ProjectionFromContext;
 
-impl<G> FromContext for Groups<G>
+impl<G, K> FromContext<K> for Groups<G>
 where
     G: ProjectionFromContext,
 {

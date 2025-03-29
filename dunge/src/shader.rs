@@ -1,7 +1,7 @@
 use {
     crate::{
         bind::TypedGroup,
-        sl::{InputInfo, IntoModule, Module, Stages},
+        sl::{Compute, InputInfo, IntoModule, Module, Render, Stages},
         state::State,
         types::{MemberType, ScalarType, ValueType, VectorType},
     },
@@ -12,26 +12,30 @@ use {
     },
 };
 
+pub type RenderShader<V, I> = Shader<Render<V, I>>;
+pub type ComputeShader = Shader<Compute>;
+
 /// The shader type.
 ///
-/// Can be created using the context's [`make_shader`](crate::Context::make_shader) function.
-pub struct Shader<V, I> {
-    inner: Inner,
+/// Can be created using the context's [`make_render_shader`](crate::Context::make_render_shader)
+/// or [`make_compute_shader`](crate::Context::make_compute_shader) function.
+pub struct Shader<K> {
+    data: ShaderData,
     wgsl: String,
-    ty: PhantomData<(V, I)>,
+    kind: PhantomData<K>,
 }
 
-impl<V, I> Shader<V, I> {
+impl<K> Shader<K> {
     pub(crate) fn new<M, A>(state: &State, module: M) -> Self
     where
-        M: IntoModule<A, Vertex = V>,
+        M: IntoModule<A, K>,
     {
         let mut module = module.into_module();
         let wgsl = mem::take(&mut module.wgsl);
         Self {
-            inner: Inner::new(state, module),
+            data: ShaderData::new(state, module),
             wgsl,
-            ty: PhantomData,
+            kind: PhantomData,
         }
     }
 
@@ -42,38 +46,8 @@ impl<V, I> Shader<V, I> {
         &self.wgsl
     }
 
-    pub(crate) fn id(&self) -> usize {
-        self.inner.id
-    }
-
-    pub(crate) fn module(&self) -> &ShaderModule {
-        &self.inner.module
-    }
-
-    pub(crate) fn layout(&self) -> &PipelineLayout {
-        &self.inner.layout
-    }
-
-    pub(crate) fn buffers(&self) -> Box<[VertexBufferLayout]> {
-        use wgpu::*;
-
-        fn layout(vert: &Vertex) -> VertexBufferLayout {
-            VertexBufferLayout {
-                array_stride: vert.array_stride,
-                step_mode: vert.step_mode,
-                attributes: &vert.attributes,
-            }
-        }
-
-        self.inner.vertex.iter().map(layout).collect()
-    }
-
-    pub(crate) fn slots(&self) -> Slots {
-        self.inner.slots
-    }
-
-    pub(crate) fn groups(&self) -> &[TypedGroup] {
-        &self.inner.groups
+    pub(crate) fn data(&self) -> &ShaderData {
+        &self.data
     }
 }
 
@@ -89,7 +63,7 @@ pub(crate) struct Slots {
     pub instance: u32,
 }
 
-struct Inner {
+pub(crate) struct ShaderData {
     id: usize,
     module: ShaderModule,
     layout: PipelineLayout,
@@ -98,7 +72,7 @@ struct Inner {
     groups: Box<[TypedGroup]>,
 }
 
-impl Inner {
+impl ShaderData {
     fn new(state: &State, Module { cx, nm, .. }: Module) -> Self {
         use {
             std::{borrow::Cow, iter},
@@ -118,6 +92,7 @@ impl Inner {
             let mut out = ShaderStages::empty();
             out.set(ShaderStages::VERTEX, stages.vs);
             out.set(ShaderStages::FRAGMENT, stages.fs);
+            out.set(ShaderStages::COMPUTE, stages.cs);
             out
         };
 
@@ -261,7 +236,7 @@ impl Inner {
 
                     vertex.push(vert);
                 }
-                InputInfo::Index => {}
+                InputInfo::Index | InputInfo::GlobalInvocationId => {}
             }
         }
 
@@ -273,6 +248,40 @@ impl Inner {
             slots,
             groups,
         }
+    }
+
+    pub(crate) fn id(&self) -> usize {
+        self.id
+    }
+
+    pub(crate) fn module(&self) -> &ShaderModule {
+        &self.module
+    }
+
+    pub(crate) fn layout(&self) -> &PipelineLayout {
+        &self.layout
+    }
+
+    pub(crate) fn buffers(&self) -> Box<[VertexBufferLayout]> {
+        use wgpu::*;
+
+        fn layout(vert: &Vertex) -> VertexBufferLayout {
+            VertexBufferLayout {
+                array_stride: vert.array_stride,
+                step_mode: vert.step_mode,
+                attributes: &vert.attributes,
+            }
+        }
+
+        self.vertex.iter().map(layout).collect()
+    }
+
+    pub(crate) fn slots(&self) -> Slots {
+        self.slots
+    }
+
+    pub(crate) fn groups(&self) -> &[TypedGroup] {
+        &self.groups
     }
 }
 

@@ -42,7 +42,7 @@ async fn run() -> Result<(), Error> {
 
     // You can use the context to manage dunge objects.
     // Create a shader instance
-    let shader = cx.make_shader(triangle);
+    let shader = cx.make_render_shader(triangle);
 
     // Create a mesh from vertices
     let mesh = {

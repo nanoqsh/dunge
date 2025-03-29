@@ -26,7 +26,7 @@ fn render() -> Result<(), Error> {
     };
 
     let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(triangle);
+    let shader = cx.make_render_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_vertex.wgsl"));
 
     let size = const { (300, 300) };

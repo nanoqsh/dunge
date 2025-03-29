@@ -6,7 +6,7 @@ use {
         format::Format,
         instance::{Set, Setter},
         mesh::Mesh,
-        shader::{Shader, Slots},
+        shader::{ShaderData, Slots},
         state::State,
     },
     std::{iter, marker::PhantomData},
@@ -208,7 +208,7 @@ pub struct Layer<V, I> {
 }
 
 impl<V, I> Layer<V, I> {
-    pub(crate) fn new(state: &State, shader: &Shader<V, I>, conf: &Config) -> Self {
+    pub(crate) fn new(state: &State, shader: &ShaderData, conf: &Config) -> Self {
         use wgpu::*;
 
         let Config {
@@ -263,6 +263,7 @@ impl<V, I> Layer<V, I> {
         };
 
         let render = state.device().create_render_pipeline(&desc);
+
         Self {
             shader_id: shader.id(),
             no_bindings: shader.groups().is_empty(),

@@ -5,8 +5,8 @@ use {
         instance::Row,
         layer::{Config, Layer},
         mesh::{self, Mesh},
-        shader::Shader,
-        sl::IntoModule,
+        shader::{ComputeShader, RenderShader, Shader},
+        sl,
         state::{AsTarget, State},
         storage::Storage,
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
@@ -76,15 +76,22 @@ impl Context {
         &self.0
     }
 
-    pub fn make_shader<M, A>(&self, module: M) -> Shader<M::Vertex, M::Instance>
+    pub fn make_render_shader<M, A, V, I>(&self, module: M) -> RenderShader<V, I>
     where
-        M: IntoModule<A>,
+        M: sl::IntoModule<A, sl::Render<V, I>>,
+    {
+        RenderShader::new(&self.0, module)
+    }
+
+    pub fn make_compute_shader<M, A>(&self, module: M) -> ComputeShader
+    where
+        M: sl::IntoModule<A, sl::Compute>,
     {
         Shader::new(&self.0, module)
     }
 
-    pub fn make_binder<'a, V, I>(&'a self, shader: &'a Shader<V, I>) -> Binder<'a> {
-        Binder::new(&self.0, shader)
+    pub fn make_binder<'a, K>(&'a self, shader: &'a Shader<K>) -> Binder<'a> {
+        Binder::new(&self.0, shader.data())
     }
 
     pub fn make_uniform<U>(&self, val: U) -> Uniform<U::Value>
@@ -102,12 +109,12 @@ impl Context {
         Storage::new(&self.0, data)
     }
 
-    pub fn make_layer<V, I, O>(&self, shader: &Shader<V, I>, opts: O) -> Layer<V, I>
+    pub fn make_layer<V, I, O>(&self, shader: &RenderShader<V, I>, opts: O) -> Layer<V, I>
     where
         O: Into<Config>,
     {
         let opts = opts.into();
-        Layer::new(&self.0, shader, &opts)
+        Layer::new(&self.0, shader.data(), &opts)
     }
 
     pub fn make_mesh<V>(&self, data: &mesh::MeshData<V>) -> Mesh<V>
