@@ -11,7 +11,7 @@ use {
         storage::Storage,
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
         uniform::Uniform,
-        value::{IntoValue, Value},
+        value::Value,
         Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
@@ -87,11 +87,10 @@ impl Context {
         Binder::new(&self.0, shader.data())
     }
 
-    pub fn make_uniform<U>(&self, val: U) -> Uniform<U::Value>
+    pub fn make_uniform<U>(&self, val: U) -> Uniform<U>
     where
-        U: IntoValue,
+        U: Value,
     {
-        let val = val.into_value();
         Uniform::new(&self.0, val.value().as_ref())
     }
 

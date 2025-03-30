@@ -17,7 +17,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     }
 
     #[derive(Group)]
-    struct Transform<'a>(&'a Uniform<[[f32; 4]; 4]>);
+    struct Transform<'a>(&'a Uniform<Mat4>);
 
     let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform>| Render {
         place: tr.0 * sl::vec4_with(vert.pos, 1.),

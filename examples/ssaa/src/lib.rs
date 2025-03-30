@@ -39,7 +39,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     struct Map<'a> {
         tex: BoundTexture<'a>,
         sam: &'a Sampler,
-        stp: &'a Uniform<[f32; 2]>,
+        stp: &'a Uniform<Vec2>,
     }
 
     let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Render {
@@ -92,7 +92,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
 
     let make_stp = |(width, height)| {
         let screen_inv = const { 1. / SCREEN_FACTOR as f32 };
-        [screen_inv / width as f32, screen_inv / height as f32]
+        Vec2::new(screen_inv / width as f32, screen_inv / height as f32)
     };
 
     let buf_size = render_buf.draw_texture().size();
