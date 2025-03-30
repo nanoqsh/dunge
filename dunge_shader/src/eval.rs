@@ -332,16 +332,21 @@ impl GlobalOut {
 pub struct ReadGlobal {
     id: u32,
     binding: u32,
-    is_value: bool,
+    indirect_load: bool,
     out: GlobalOut,
 }
 
 impl ReadGlobal {
-    pub const fn new<T>(id: u32, binding: u32, is_value: bool, out: GlobalOut) -> Ret<Self, T> {
+    pub const fn new<T>(
+        id: u32,
+        binding: u32,
+        indirect_load: bool,
+        out: GlobalOut,
+    ) -> Ret<Self, T> {
         Ret::new(Self {
             id,
             binding,
-            is_value,
+            indirect_load,
             out,
         })
     }
@@ -357,7 +362,7 @@ where
         let ReadGlobal {
             id,
             binding,
-            is_value,
+            indirect_load,
             out,
         } = self.get();
 
@@ -366,7 +371,8 @@ where
         let res = ResourceBinding { group: id, binding };
         let var = en.compl.globs.get(&res);
         let global = en.global(var);
-        if is_value {
+
+        if indirect_load {
             en.load(global)
         } else {
             global

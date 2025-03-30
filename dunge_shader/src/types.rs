@@ -390,7 +390,8 @@ impl MemberType {
         }
     }
 
-    pub const fn is_value(self) -> bool {
+    /// Some values require an indirect load to be read from a global variable.
+    pub const fn indirect_load(self) -> bool {
         matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
     }
 

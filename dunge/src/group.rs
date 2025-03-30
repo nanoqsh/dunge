@@ -42,7 +42,7 @@ where
     type Field = Ret<ReadGlobal, V::Type>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
+        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
     }
 }
 
@@ -56,7 +56,7 @@ where
     type Field = Ret<ReadGlobal, types::Array<V>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
+        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
     }
 }
 
@@ -67,7 +67,7 @@ impl MemberProjection for BoundTexture<'_> {
     type Field = Ret<ReadGlobal, types::Texture2d<f32>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
+        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
     }
 }
 
@@ -78,7 +78,7 @@ impl MemberProjection for &Sampler {
     type Field = Ret<ReadGlobal, types::Sampler>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.is_value(), out)
+        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
     }
 }
 
