@@ -114,7 +114,8 @@ pub struct Row<U> {
 impl<U> Row<U> {
     pub(crate) fn new(state: &State, data: &[U]) -> Self
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -132,6 +133,7 @@ impl<U> Row<U> {
         };
 
         let len = data.len() as u32;
+
         Self {
             buf,
             len,
@@ -141,7 +143,8 @@ impl<U> Row<U> {
 
     pub fn update(&self, cx: &Context, data: &[U]) -> Result<(), UpdateError>
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         if data.len() != self.len as usize {
             return Err(UpdateError);

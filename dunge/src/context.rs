@@ -97,7 +97,8 @@ impl Context {
 
     pub fn make_storage<U>(&self, data: &[U]) -> Storage<U>
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         Storage::new(&self.0, data)
     }
@@ -119,7 +120,8 @@ impl Context {
 
     pub fn make_row<U>(&self, data: &[U]) -> Row<U>
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         Row::new(&self.0, data)
     }

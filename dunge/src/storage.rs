@@ -20,7 +20,8 @@ pub struct Storage<U> {
 impl<U> Storage<U> {
     pub(crate) fn new(state: &State, contents: &[U]) -> Self
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -47,7 +48,8 @@ impl<U> Storage<U> {
     /// Updates the stored data.
     pub fn update(&self, cx: &Context, contents: &[U])
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         assert_eq!(
             contents.len(),

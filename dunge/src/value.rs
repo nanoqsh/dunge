@@ -1,7 +1,7 @@
 use crate::types::{self, MatrixType, ScalarType, ValueType, VectorType};
 
 /// Uniform value.
-pub trait Value: private::Sealed {
+pub trait Value {
     const TYPE: ValueType;
     type Type;
     type Data: AsRef<[u8]>;
@@ -17,8 +17,6 @@ impl<const N: usize> AsRef<[u8]> for Data<N> {
     }
 }
 
-impl private::Sealed for u32 {}
-
 impl Value for u32 {
     const TYPE: ValueType = ValueType::Scalar(ScalarType::Uint);
     type Type = Self;
@@ -29,8 +27,6 @@ impl Value for u32 {
     }
 }
 
-impl private::Sealed for f32 {}
-
 impl Value for f32 {
     const TYPE: ValueType = ValueType::Scalar(ScalarType::Float);
     type Type = Self;
@@ -40,8 +36,6 @@ impl Value for f32 {
         Data([self, 0., 0., 0.])
     }
 }
-
-impl private::Sealed for [f32; 2] {}
 
 impl Value for [f32; 2] {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
@@ -54,8 +48,6 @@ impl Value for [f32; 2] {
     }
 }
 
-impl private::Sealed for [f32; 3] {}
-
 impl Value for [f32; 3] {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
     type Type = types::Vec3<f32>;
@@ -67,8 +59,6 @@ impl Value for [f32; 3] {
     }
 }
 
-impl private::Sealed for [f32; 4] {}
-
 impl Value for [f32; 4] {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
     type Type = types::Vec4<f32>;
@@ -78,8 +68,6 @@ impl Value for [f32; 4] {
         Data(self)
     }
 }
-
-impl private::Sealed for [[f32; 2]; 2] {}
 
 impl Value for [[f32; 2]; 2] {
     const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat2);
@@ -91,8 +79,6 @@ impl Value for [[f32; 2]; 2] {
     }
 }
 
-impl private::Sealed for [[f32; 3]; 3] {}
-
 impl Value for [[f32; 3]; 3] {
     const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat3);
     type Type = types::Mat3;
@@ -102,8 +88,6 @@ impl Value for [[f32; 3]; 3] {
         Data(bytemuck::cast(self))
     }
 }
-
-impl private::Sealed for [[f32; 4]; 4] {}
 
 impl Value for [[f32; 4]; 4] {
     const TYPE: ValueType = ValueType::Matrix(MatrixType::Mat4);
@@ -178,8 +162,4 @@ impl IntoValue for glam::Mat4 {
     fn into_value(self) -> Self::Value {
         self.to_cols_array_2d()
     }
-}
-
-mod private {
-    pub trait Sealed: bytemuck::NoUninit {}
 }
