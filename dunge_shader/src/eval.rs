@@ -70,7 +70,7 @@ where
     };
 
     let nm = naga::Module {
-        types: vs.compl.types,
+        types: vs.compl.types.0,
         global_variables: vs.compl.globs.vars,
         entry_points: vec![vs.point, fs.point],
         ..Default::default()
@@ -114,7 +114,7 @@ where
     };
 
     let nm = naga::Module {
-        types: cs.compl.types,
+        types: cs.compl.types.0,
         global_variables: cs.compl.globs.vars,
         entry_points: vec![cs.point],
         ..Default::default()
@@ -134,8 +134,9 @@ fn make_input(cx: &Context, compl: &mut Compiler) -> Vec<Argument> {
         InputInfo::Inst(InstInfo { ty }) => Argument {
             ty: compl.define_instance(*ty, &mut binds),
             binding: match ty {
-                ValueType::Scalar(_) | ValueType::Vector(_) => Some(binds.next(&ty.ty())),
-                ValueType::Matrix(_) => None,
+                ValueType::Scalar(v) => Some(binds.next(&v.naga())),
+                ValueType::Vector(v) => Some(binds.next(&v.naga())),
+                ValueType::Matrix(_) | ValueType::Array(_) => None,
             },
         },
         InputInfo::Index => Argument {
@@ -284,7 +285,7 @@ where
         match O::VALUE_TYPE {
             ValueType::Scalar(_) | ValueType::Vector(_) => en.argument(id),
             ValueType::Matrix(mat) => {
-                let ty = en.new_type(O::VALUE_TYPE.ty());
+                let ty = O::VALUE_TYPE.ty(en);
                 let arg = en.argument(id);
                 let exprs = (0..mat.dims())
                     .map(|index| en.access_index(arg, index))
@@ -292,6 +293,7 @@ where
 
                 en.compose(ty, exprs)
             }
+            ValueType::Array(_) => todo!(),
         }
     }
 }
@@ -736,6 +738,10 @@ impl Argument {
     }
 }
 
+pub(crate) trait AddType {
+    fn add_type(&mut self, ty: Type) -> Handle<Type>;
+}
+
 pub struct Entry {
     compl: Compiler,
     stack: Stack,
@@ -767,10 +773,6 @@ impl Entry {
     fn pop(&mut self, pop: PopGuard) -> Statements {
         _ = pop;
         self.stack.pop()
-    }
-
-    pub(crate) fn new_type(&mut self, ty: Type) -> Handle<Type> {
-        self.compl.types.insert(ty, Span::UNDEFINED)
     }
 
     fn add_local(&mut self, ty: Handle<Type>) -> Handle<LocalVariable> {
@@ -926,15 +928,14 @@ impl Entry {
         ret: Return,
         workgroup_size: [u32; 3],
     ) -> Built {
-        const COLOR_TYPE: Type = VectorType::Vec4f.ty();
-
         let result = match ret {
             Return::Ty(ty) => Some(FunctionResult { ty, binding: None }),
             Return::Color => {
+                let color_type = VectorType::Vec4f;
                 let mut binds = Bindings::default();
                 Some(FunctionResult {
-                    ty: self.new_type(COLOR_TYPE),
-                    binding: Some(binds.next(&COLOR_TYPE)),
+                    ty: color_type.ty(&mut self),
+                    binding: Some(binds.next(&color_type.naga())),
                 })
             }
             Return::Unit => None,
@@ -960,6 +961,12 @@ impl Entry {
             compl: self.compl,
             point,
         }
+    }
+}
+
+impl AddType for Entry {
+    fn add_type(&mut self, ty: Type) -> Handle<Type> {
+        self.compl.types.add_type(ty)
     }
 }
 
@@ -1088,8 +1095,17 @@ impl Statements {
 type Members<'a> = dyn ExactSizeIterator<Item = Member> + 'a;
 
 #[derive(Default)]
+struct Types(UniqueArena<Type>);
+
+impl AddType for Types {
+    fn add_type(&mut self, ty: Type) -> Handle<Type> {
+        self.0.insert(ty, Span::UNDEFINED)
+    }
+}
+
+#[derive(Default)]
 struct Compiler {
-    types: UniqueArena<Type>,
+    types: Types,
     globs: Globals,
 }
 
@@ -1097,27 +1113,27 @@ impl Compiler {
     const VECTOR_SIZE: u32 = size_of::<f32>() as u32 * 4;
 
     fn define_index(&mut self) -> Handle<Type> {
-        self.types.insert(ScalarType::Uint.ty(), Span::UNDEFINED)
+        ScalarType::Uint.ty(&mut self.types)
     }
 
     fn define_global_invocation_id(&mut self) -> Handle<Type> {
-        self.types.insert(VectorType::Vec3u.ty(), Span::UNDEFINED)
+        VectorType::Vec3u.ty(&mut self.types)
     }
 
     fn define_input(&mut self, new: &mut Members, binds: &mut Bindings) -> Handle<Type> {
         let len = new.len();
         let mut members = Vec::with_capacity(len);
         for (idx, Member { vecty, built }) in iter::zip(0.., new) {
-            let ty = vecty.ty();
+            let ty = vecty.ty(&mut self.types);
             let binding = match built {
                 Some(bi @ BuiltIn::Position { .. }) => Binding::BuiltIn(bi),
-                None => binds.next(&ty),
+                None => binds.next(&vecty.naga()),
                 _ => unimplemented!(),
             };
 
             members.push(StructMember {
                 name: None,
-                ty: self.types.insert(ty, Span::UNDEFINED),
+                ty,
                 binding: Some(binding),
                 offset: idx * Self::VECTOR_SIZE,
             });
@@ -1131,43 +1147,43 @@ impl Compiler {
             },
         };
 
-        self.types.insert(ty, Span::UNDEFINED)
+        self.types.add_type(ty)
     }
 
     fn define_instance(&mut self, ty: ValueType, binds: &mut Bindings) -> Handle<Type> {
-        let ty = match ty {
-            ValueType::Scalar(_) | ValueType::Vector(_) => ty.ty(),
+        match ty {
+            ValueType::Scalar(_) | ValueType::Vector(_) => ty.ty(&mut self.types),
             ValueType::Matrix(mat) => {
                 let len = mat.dims();
                 let mut members = Vec::with_capacity(len as usize);
                 for idx in 0..len {
-                    let ty = mat.vector_type().ty();
-                    let binding = binds.next(&ty);
+                    let vecty = mat.vector_type();
+                    let ty = vecty.ty(&mut self.types);
+                    let binding = binds.next(&vecty.naga());
                     members.push(StructMember {
                         name: None,
-                        ty: self.types.insert(ty, Span::UNDEFINED),
+                        ty,
                         binding: Some(binding),
                         offset: idx * Self::VECTOR_SIZE,
                     });
                 }
 
-                Type {
+                self.types.add_type(Type {
                     name: None,
                     inner: TypeInner::Struct {
                         members,
                         span: len * Self::VECTOR_SIZE,
                     },
-                }
+                })
             }
-        };
-
-        self.types.insert(ty, Span::UNDEFINED)
+            ValueType::Array(_) => todo!(),
+        }
     }
 
     fn define_group(&mut self, group: u32, def: Define<MemberType>) {
         for (binding, member) in iter::zip(0.., def) {
             let space = member.address_space();
-            let ty = member.add_type(&mut self.types, Span::UNDEFINED);
+            let ty = member.ty(&mut self.types);
             let res = ResourceBinding { group, binding };
             self.globs.add(space, ty, res);
         }

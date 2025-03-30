@@ -52,8 +52,8 @@ impl<V> MemberProjection for &Storage<V>
 where
     V: Value,
 {
-    const TYPE: MemberType = MemberType::array_from_value(V::TYPE);
-    type Field = Ret<ReadGlobal, types::Array<V>>;
+    const TYPE: MemberType = MemberType::from_value(V::TYPE);
+    type Field = Ret<ReadGlobal, V::Type>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)

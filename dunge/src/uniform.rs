@@ -43,7 +43,7 @@ impl<U> Uniform<U> {
         U: Value,
     {
         let queue = cx.state().queue();
-        queue.write_buffer(&self.buf, 0, val.value().as_ref());
+        queue.write_buffer(&self.buf, 0, val.value());
     }
 
     pub(crate) fn buffer(&self) -> &Buffer {

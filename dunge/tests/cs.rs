@@ -12,7 +12,7 @@ fn cs_empty() -> Result<(), Error> {
 
     #[derive(Group)]
     struct Map<'a> {
-        array: &'a Storage<f32>,
+        array: &'a Storage<[f32; 4]>,
     }
 
     let compute = |Invocation(_): Invocation, Groups(_): Groups<Map>| Compute {

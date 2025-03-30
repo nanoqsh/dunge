@@ -17,14 +17,14 @@ macro_rules! impl_eval_vec {
             type Out = $t;
 
             fn eval(self, en: &mut E) -> Expr {
-                let mut components = Vec::with_capacity(<$t>::TYPE.dims());
+                let mut components = Vec::with_capacity(<$t>::TYPE.dims() as usize);
                 self.into_vector(|scalar| {
                     let v = scalar.eval(en).get();
                     components.push(v);
                 });
 
                 let en = en.get_entry();
-                let ty = en.new_type(<$t>::TYPE.ty());
+                let ty = <$t>::TYPE.ty(en);
                 en.compose(ty, Exprs(components))
             }
         }
@@ -109,7 +109,7 @@ where
     fn eval(self, en: &mut E) -> Expr {
         let val = self.get().a.eval(en);
         let en = en.get_entry();
-        let ty = en.new_type(O::TYPE.ty());
+        let ty = O::TYPE.ty(en);
         let components = (0..O::TYPE.dims()).map(|_| val).collect();
         en.compose(ty, components)
     }
@@ -171,7 +171,7 @@ where
         let mut o = Evaluated::default();
         self.get().a.eval(en, &mut o);
         let en = en.get_entry();
-        let ty = en.new_type(O::TYPE.ty());
+        let ty = O::TYPE.ty(en);
         let components = o.into_iter().collect();
         en.compose(ty, components)
     }
@@ -221,7 +221,7 @@ where
         let x = a.eval(en).get();
         let y = b.eval(en).get();
         let en = en.get_entry();
-        let ty = en.new_type(O::TYPE.ty());
+        let ty = O::TYPE.ty(en);
         en.compose(ty, Exprs(vec![x, y]))
     }
 }

@@ -87,19 +87,18 @@ impl Context {
         Binder::new(&self.0, shader.data())
     }
 
-    pub fn make_uniform<U>(&self, val: U) -> Uniform<U>
+    pub fn make_uniform<V>(&self, val: V) -> Uniform<V>
     where
-        U: Value,
+        V: Value,
     {
-        Uniform::new(&self.0, val.value().as_ref())
+        Uniform::new(&self.0, val.value())
     }
 
-    pub fn make_storage<U>(&self, data: &[U]) -> Storage<U>
+    pub fn make_storage<V>(&self, val: V) -> Storage<V>
     where
-        // TODO: remove NoUninit
-        U: Value + bytemuck::NoUninit,
+        V: Value,
     {
-        Storage::new(&self.0, data)
+        Storage::new(&self.0, val.value())
     }
 
     pub fn make_layer<V, I, O>(&self, shader: &RenderShader<V, I>, opts: O) -> Layer<V, I>

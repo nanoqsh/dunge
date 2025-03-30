@@ -25,7 +25,7 @@ where
         let en = en.get_entry();
         en.kill();
 
-        let ty = en.new_type(O::VALUE_TYPE.ty());
+        let ty = O::VALUE_TYPE.ty(en);
         en.zero_value(ty)
     }
 }

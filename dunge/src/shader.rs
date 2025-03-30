@@ -308,5 +308,6 @@ where
                 to_format(ValueType::Vector(mat.vector_type()), f);
             }
         }
+        ValueType::Array(_) => todo!(),
     }
 }

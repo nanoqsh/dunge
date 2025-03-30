@@ -22,7 +22,7 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         let en = en.get_entry();
-        let ty = en.new_type(O::VALUE_TYPE.ty());
+        let ty = O::VALUE_TYPE.ty(en);
         en.zero_value(ty)
     }
 }
