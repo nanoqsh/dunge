@@ -49,7 +49,7 @@ impl State {
             let desc = DeviceDescriptor {
                 required_limits: Limits {
                     ..if cfg!(target_arch = "wasm32") {
-                        Limits::downlevel_webgl2_defaults()
+                        Limits::downlevel_defaults()
                     } else {
                         Limits::default()
                     }

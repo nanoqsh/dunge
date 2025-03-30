@@ -11,7 +11,7 @@ use {
         storage::Storage,
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
         uniform::Uniform,
-        value::{IntoValue, Value},
+        value::Value,
         Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
@@ -87,19 +87,18 @@ impl Context {
         Binder::new(&self.0, shader.data())
     }
 
-    pub fn make_uniform<U>(&self, val: U) -> Uniform<U::Value>
+    pub fn make_uniform<V>(&self, val: V) -> Uniform<V>
     where
-        U: IntoValue,
+        V: Value,
     {
-        let val = val.into_value();
-        Uniform::new(&self.0, val.value().as_ref())
+        Uniform::new(&self.0, val.value())
     }
 
-    pub fn make_storage<U>(&self, data: &[U]) -> Storage<U>
+    pub fn make_storage<V>(&self, val: V) -> Storage<V>
     where
-        U: Value,
+        V: Value,
     {
-        Storage::new(&self.0, data)
+        Storage::new(&self.0, val.value())
     }
 
     pub fn make_layer<V, I, O>(&self, shader: &RenderShader<V, I>, opts: O) -> Layer<V, I>
@@ -119,7 +118,8 @@ impl Context {
 
     pub fn make_row<U>(&self, data: &[U]) -> Row<U>
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         Row::new(&self.0, data)
     }

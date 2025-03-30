@@ -181,7 +181,7 @@ fn rs_storage() -> Result<(), Error> {
 
     #[derive(Group)]
     struct Map<'a> {
-        array: &'a Storage<f32>,
+        array: &'a Storage<[f32; 4]>,
     }
 
     let compute = |Groups(map): Groups<Map>, Index(index): Index| Render {

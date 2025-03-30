@@ -47,7 +47,7 @@ where
         let a = |en: &mut E| a().eval(en);
         let b = |branch: &mut Branch<_>| Some(b().eval(branch.entry()));
         let valty = <X::Out as types::Value>::VALUE_TYPE;
-        let ty = en.get_entry().new_type(valty.ty());
+        let ty = valty.ty(en.get_entry());
         let mut branch = Branch::new(en, ty);
         branch.add(c, a, b);
         branch.load()
@@ -119,7 +119,7 @@ where
     fn eval(self, en: &mut E) -> Expr {
         let when = self.get();
         let valty = <X::Out as types::Value>::VALUE_TYPE;
-        let ty = en.get_entry().new_type(valty.ty());
+        let ty = valty.ty(en.get_entry());
         let mut branch = Branch::new(en, ty);
         when.eval_branch(&mut branch);
         branch.load()

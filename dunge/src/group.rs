@@ -27,6 +27,7 @@ impl<'a> BoundTexture<'a> {
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
 pub trait MemberProjection: private::Sealed {
+    // TODO: Remove
     const TYPE: MemberType;
     type Field;
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field;
@@ -38,11 +39,11 @@ impl<V> MemberProjection for &Uniform<V>
 where
     V: Value,
 {
-    const TYPE: MemberType = MemberType::from_value(V::TYPE);
+    const TYPE: MemberType = MemberType::from_value(<V::Type as types::Value>::VALUE_TYPE);
     type Field = Ret<ReadGlobal, V::Type>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
+        ReadGlobal::new(id, binding, out)
     }
 }
 
@@ -52,11 +53,11 @@ impl<V> MemberProjection for &Storage<V>
 where
     V: Value,
 {
-    const TYPE: MemberType = MemberType::array_from_value(V::TYPE);
-    type Field = Ret<ReadGlobal, types::Array<V>>;
+    const TYPE: MemberType = MemberType::from_value(<V::Type as types::Value>::VALUE_TYPE);
+    type Field = Ret<ReadGlobal, V::Type>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
+        ReadGlobal::new(id, binding, out)
     }
 }
 
@@ -67,7 +68,7 @@ impl MemberProjection for BoundTexture<'_> {
     type Field = Ret<ReadGlobal, types::Texture2d<f32>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
+        ReadGlobal::new(id, binding, out)
     }
 }
 
@@ -78,7 +79,7 @@ impl MemberProjection for &Sampler {
     type Field = Ret<ReadGlobal, types::Sampler>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        ReadGlobal::new(id, binding, Self::TYPE.indirect_load(), out)
+        ReadGlobal::new(id, binding, out)
     }
 }
 

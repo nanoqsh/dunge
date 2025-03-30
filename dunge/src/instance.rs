@@ -24,9 +24,9 @@ pub trait MemberProjection: private::Sealed {
     fn member_projection(id: u32) -> Self::Field;
 }
 
-impl private::Sealed for Row<[f32; 2]> {}
+impl private::Sealed for Row<glam::Vec2> {}
 
-impl MemberProjection for Row<[f32; 2]> {
+impl MemberProjection for Row<glam::Vec2> {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
     type Field = Ret<ReadInstance, types::Vec2<f32>>;
 
@@ -35,9 +35,9 @@ impl MemberProjection for Row<[f32; 2]> {
     }
 }
 
-impl private::Sealed for Row<[f32; 3]> {}
+impl private::Sealed for Row<glam::Vec3> {}
 
-impl MemberProjection for Row<[f32; 3]> {
+impl MemberProjection for Row<glam::Vec3> {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
     type Field = Ret<ReadInstance, types::Vec3<f32>>;
 
@@ -46,9 +46,9 @@ impl MemberProjection for Row<[f32; 3]> {
     }
 }
 
-impl private::Sealed for Row<[f32; 4]> {}
+impl private::Sealed for Row<glam::Vec4> {}
 
-impl MemberProjection for Row<[f32; 4]> {
+impl MemberProjection for Row<glam::Vec4> {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
     type Field = Ret<ReadInstance, types::Vec4<f32>>;
 
@@ -114,7 +114,8 @@ pub struct Row<U> {
 impl<U> Row<U> {
     pub(crate) fn new(state: &State, data: &[U]) -> Self
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -132,6 +133,7 @@ impl<U> Row<U> {
         };
 
         let len = data.len() as u32;
+
         Self {
             buf,
             len,
@@ -141,7 +143,8 @@ impl<U> Row<U> {
 
     pub fn update(&self, cx: &Context, data: &[U]) -> Result<(), UpdateError>
     where
-        U: Value,
+        // TODO: remove NoUninit
+        U: Value + bytemuck::NoUninit,
     {
         if data.len() != self.len as usize {
             return Err(UpdateError);

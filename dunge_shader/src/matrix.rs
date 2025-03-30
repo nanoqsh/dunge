@@ -24,7 +24,7 @@ macro_rules! impl_eval_mat {
                 });
 
                 let en = en.get_entry();
-                let ty = en.new_type(<$t>::TYPE.ty());
+                let ty = <$t>::TYPE.ty(en);
                 en.compose(ty, Exprs(components))
             }
         }
@@ -106,7 +106,7 @@ where
         let mut o = Evaluated::default();
         self.get().a.eval(en, &mut o);
         let en = en.get_entry();
-        let ty = en.new_type(O::TYPE.ty());
+        let ty = O::TYPE.ty(en);
         let components = o.into_iter().collect();
         en.compose(ty, components)
     }

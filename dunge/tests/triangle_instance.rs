@@ -12,13 +12,13 @@ fn render() -> Result<(), Error> {
             sl::{self, InInstance, Index, Render},
             Format,
         },
-        glam::Vec2,
+        glam::{Vec2, Vec3},
         helpers::image::Image,
         std::{env, f32::consts, fs},
     };
 
     #[derive(Instance)]
-    struct Transform(Row<[f32; 2]>, Row<[f32; 3]>);
+    struct Transform(Row<Vec2>, Row<Vec3>);
 
     let triangle = |t: InInstance<Transform>, Index(index): Index| {
         let triangle_size = 0.4;
@@ -48,10 +48,23 @@ fn render() -> Result<(), Error> {
     };
 
     let transform = {
-        let pos = const { [[0.0, -0.375], [0.433, 0.375], [-0.433, 0.375]] };
-        let col = const { [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]] };
+        let poss = const {
+            [
+                Vec2::new(0., -0.375),
+                Vec2::new(0.433, 0.375),
+                Vec2::new(-0.433, 0.375),
+            ]
+        };
 
-        Transform(cx.make_row(&pos), cx.make_row(&col))
+        let cols = const {
+            [
+                Vec3::new(1., 0., 0.),
+                Vec3::new(0., 1., 0.),
+                Vec3::new(0., 0., 1.),
+            ]
+        };
+
+        Transform(cx.make_row(&poss), cx.make_row(&cols))
     };
 
     let buffer = cx.make_copy_buffer(size);

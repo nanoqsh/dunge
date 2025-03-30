@@ -11,17 +11,13 @@ use {
 /// Storage buffer data.
 ///
 /// Can be created using the context's [`make_storage`](crate::Context::make_storage) function.
-pub struct Storage<U> {
+pub struct Storage<V> {
     buf: Buffer,
-    ty: PhantomData<U>,
-    len: usize,
+    ty: PhantomData<V>,
 }
 
-impl<U> Storage<U> {
-    pub(crate) fn new(state: &State, contents: &[U]) -> Self
-    where
-        U: Value,
-    {
+impl<V> Storage<V> {
+    pub(crate) fn new(state: &State, contents: &[u8]) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
             BufferUsages,
@@ -30,7 +26,7 @@ impl<U> Storage<U> {
         let buf = {
             let desc = BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(contents),
+                contents,
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
             };
 
@@ -40,35 +36,18 @@ impl<U> Storage<U> {
         Self {
             buf,
             ty: PhantomData,
-            len: contents.len(),
         }
     }
 
     /// Updates the stored data.
-    pub fn update(&self, cx: &Context, contents: &[U])
+    pub fn update(&self, cx: &Context, val: V)
     where
-        U: Value,
+        V: Value,
     {
-        assert_eq!(
-            contents.len(),
-            self.len(),
-            "attempted to update storage buffer with an array of the wrong size",
-        );
-
         let queue = cx.state().queue();
-        queue.write_buffer(&self.buf, 0, bytemuck::cast_slice(contents));
+        queue.write_buffer(&self.buf, 0, val.value());
     }
 
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-}
-
-impl<U> Storage<U> {
     pub(crate) fn buffer(&self) -> &Buffer {
         &self.buf
     }

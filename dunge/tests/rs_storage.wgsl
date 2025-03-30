@@ -3,7 +3,7 @@ struct VertexOutput {
 }
 
 @group(0) @binding(0) 
-var<storage> global: array<f32>;
+var<storage> global: array<f32, 4>;
 
 @vertex 
 fn vs(@builtin(vertex_index) param: u32) -> VertexOutput {

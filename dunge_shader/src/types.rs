@@ -1,11 +1,12 @@
 //! Shader types.
 
 use {
+    crate::eval::AddType,
     naga::{
-        AddressSpace, Handle, ImageClass, ImageDimension, ScalarKind, Span, StorageAccess, Type,
-        TypeInner, UniqueArena, VectorSize,
+        AddressSpace, ArraySize, Handle, ImageClass, ImageDimension, ScalarKind, StorageAccess,
+        Type, TypeInner, VectorSize,
     },
-    std::marker::PhantomData,
+    std::{marker::PhantomData, num::NonZeroU32},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -13,14 +14,32 @@ pub enum ValueType {
     Scalar(ScalarType),
     Vector(VectorType),
     Matrix(MatrixType),
+    Array(ArrayType),
 }
 
 impl ValueType {
-    pub(crate) const fn ty(self) -> Type {
+    pub const fn indirect_load(self) -> bool {
+        matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
+    }
+
+    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    where
+        A: AddType,
+    {
         match self {
-            Self::Scalar(v) => v.ty(),
-            Self::Vector(v) => v.ty(),
-            Self::Matrix(v) => v.ty(),
+            Self::Scalar(v) => v.ty(add),
+            Self::Vector(v) => v.ty(add),
+            Self::Matrix(v) => v.ty(add),
+            Self::Array(v) => v.ty(add),
+        }
+    }
+
+    fn stride(self) -> u32 {
+        match self {
+            Self::Scalar(v) => v.stride(),
+            Self::Vector(v) => v.stride(),
+            Self::Matrix(v) => v.stride(),
+            Self::Array(v) => v.stride(),
         }
     }
 
@@ -93,7 +112,7 @@ pub enum ScalarType {
 }
 
 impl ScalarType {
-    pub(crate) const fn inner(self) -> (ScalarKind, u8) {
+    pub(crate) fn inner(self) -> (ScalarKind, u8) {
         match self {
             Self::Float => (ScalarKind::Float, 4),
             Self::Sint => (ScalarKind::Sint, 4),
@@ -102,13 +121,28 @@ impl ScalarType {
         }
     }
 
-    pub(crate) const fn ty(self) -> Type {
+    pub(crate) fn naga(self) -> Type {
         use naga::Scalar;
 
         let (kind, width) = self.inner();
+
         Type {
             name: None,
             inner: TypeInner::Scalar(Scalar { kind, width }),
+        }
+    }
+
+    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    where
+        A: AddType,
+    {
+        add.add_type(self.naga())
+    }
+
+    fn stride(self) -> u32 {
+        match self {
+            Self::Float | Self::Sint | Self::Uint => 4,
+            Self::Bool => 1,
         }
     }
 }
@@ -131,7 +165,7 @@ pub enum VectorType {
 }
 
 impl VectorType {
-    pub(crate) const fn dims(self) -> usize {
+    pub(crate) const fn dims(self) -> u32 {
         match self {
             Self::Vec2f | Self::Vec2u | Self::Vec2i => 2,
             Self::Vec3f | Self::Vec3u | Self::Vec3i => 3,
@@ -139,18 +173,41 @@ impl VectorType {
         }
     }
 
-    pub(crate) const fn ty(self) -> Type {
-        match self {
-            Self::Vec2f => VEC2F,
-            Self::Vec3f => VEC3F,
-            Self::Vec4f => VEC4F,
-            Self::Vec2u => VEC2U,
-            Self::Vec3u => VEC3U,
-            Self::Vec4u => VEC4U,
-            Self::Vec2i => VEC2I,
-            Self::Vec3i => VEC3I,
-            Self::Vec4i => VEC4I,
+    pub(crate) fn naga(self) -> Type {
+        const fn new(size: VectorSize, kind: ScalarKind) -> Type {
+            use naga::Scalar;
+
+            Type {
+                name: None,
+                inner: TypeInner::Vector {
+                    size,
+                    scalar: Scalar { kind, width: 4 },
+                },
+            }
         }
+
+        match self {
+            Self::Vec2f => const { new(VectorSize::Bi, ScalarKind::Float) },
+            Self::Vec3f => const { new(VectorSize::Tri, ScalarKind::Float) },
+            Self::Vec4f => const { new(VectorSize::Quad, ScalarKind::Float) },
+            Self::Vec2u => const { new(VectorSize::Bi, ScalarKind::Uint) },
+            Self::Vec3u => const { new(VectorSize::Tri, ScalarKind::Uint) },
+            Self::Vec4u => const { new(VectorSize::Quad, ScalarKind::Uint) },
+            Self::Vec2i => const { new(VectorSize::Bi, ScalarKind::Sint) },
+            Self::Vec3i => const { new(VectorSize::Tri, ScalarKind::Sint) },
+            Self::Vec4i => const { new(VectorSize::Quad, ScalarKind::Sint) },
+        }
+    }
+
+    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    where
+        A: AddType,
+    {
+        add.add_type(self.naga())
+    }
+
+    fn stride(self) -> u32 {
+        self.dims() * 4
     }
 }
 
@@ -232,28 +289,6 @@ impl Vector for Vec4<i32> {
     type Scalar = i32;
 }
 
-const VEC2F: Type = vec(VectorSize::Bi, ScalarKind::Float);
-const VEC3F: Type = vec(VectorSize::Tri, ScalarKind::Float);
-const VEC4F: Type = vec(VectorSize::Quad, ScalarKind::Float);
-const VEC2U: Type = vec(VectorSize::Bi, ScalarKind::Uint);
-const VEC3U: Type = vec(VectorSize::Tri, ScalarKind::Uint);
-const VEC4U: Type = vec(VectorSize::Quad, ScalarKind::Uint);
-const VEC2I: Type = vec(VectorSize::Bi, ScalarKind::Sint);
-const VEC3I: Type = vec(VectorSize::Tri, ScalarKind::Sint);
-const VEC4I: Type = vec(VectorSize::Quad, ScalarKind::Sint);
-
-const fn vec(size: VectorSize, kind: ScalarKind) -> Type {
-    use naga::Scalar;
-
-    Type {
-        name: None,
-        inner: TypeInner::Vector {
-            size,
-            scalar: Scalar { kind, width: 4 },
-        },
-    }
-}
-
 pub struct Mat2;
 pub struct Mat3;
 pub struct Mat4;
@@ -274,12 +309,40 @@ impl MatrixType {
         }
     }
 
-    pub(crate) const fn ty(self) -> Type {
-        match self {
-            Self::Mat2 => MAT2F,
-            Self::Mat3 => MAT3F,
-            Self::Mat4 => MAT4F,
+    pub(crate) fn naga(self) -> Type {
+        const fn new(size: VectorSize) -> Type {
+            use naga::Scalar;
+
+            Type {
+                name: None,
+                inner: TypeInner::Matrix {
+                    columns: size,
+                    rows: size,
+                    scalar: Scalar {
+                        width: 4,
+                        kind: ScalarKind::Float,
+                    },
+                },
+            }
         }
+
+        match self {
+            Self::Mat2 => const { new(VectorSize::Bi) },
+            Self::Mat3 => const { new(VectorSize::Tri) },
+            Self::Mat4 => const { new(VectorSize::Quad) },
+        }
+    }
+
+    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    where
+        A: AddType,
+    {
+        add.add_type(self.naga())
+    }
+
+    fn stride(self) -> u32 {
+        let dims = self.dims();
+        dims * dims * 4
     }
 
     pub const fn vector_type(self) -> VectorType {
@@ -312,112 +375,122 @@ impl Matrix for Mat2 {}
 impl Matrix for Mat3 {}
 impl Matrix for Mat4 {}
 
-const MAT2F: Type = mat(VectorSize::Bi);
-const MAT3F: Type = mat(VectorSize::Tri);
-const MAT4F: Type = mat(VectorSize::Quad);
+impl<V, const N: usize> Value for [V; N]
+where
+    V: Value,
+{
+    const VALUE_TYPE: ValueType = ValueType::Array(ArrayType {
+        base: &V::VALUE_TYPE,
+        size: NonZeroU32::new(N as u32).expect("array size cannot be zero"),
+    });
+}
 
-const fn mat(size: VectorSize) -> Type {
-    use naga::Scalar;
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct ArrayType {
+    pub base: &'static ValueType,
+    pub size: NonZeroU32,
+}
 
-    Type {
-        name: None,
-        inner: TypeInner::Matrix {
-            columns: size,
-            rows: size,
-            scalar: Scalar {
-                width: 4,
-                kind: ScalarKind::Float,
+impl ArrayType {
+    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    where
+        A: AddType,
+    {
+        let base = self.base.ty(add);
+        let ty = Type {
+            name: None,
+            inner: TypeInner::Array {
+                base,
+                size: ArraySize::Constant(self.size),
+                stride: self.base.stride(),
             },
-        },
+        };
+
+        add.add_type(ty)
     }
+
+    fn stride(self) -> u32 {
+        self.base.stride() * self.size.get()
+    }
+}
+
+pub trait Member {
+    const MEMBER_TYPE: MemberType;
+}
+
+impl<V> Member for V
+where
+    V: Value,
+{
+    const MEMBER_TYPE: MemberType = MemberType::from_value(V::VALUE_TYPE);
 }
 
 pub struct Texture2d<T>(PhantomData<T>);
 
-const TEXTURE2DF: Type = texture(ImageDimension::D2, ScalarKind::Float);
-
-#[allow(dead_code)]
-const TEXTURE2DU: Type = texture(ImageDimension::D2, ScalarKind::Uint);
-
-#[allow(dead_code)]
-const TEXTURE2DI: Type = texture(ImageDimension::D2, ScalarKind::Sint);
-
-const fn texture(dim: ImageDimension, kind: ScalarKind) -> Type {
-    Type {
-        name: None,
-        inner: TypeInner::Image {
-            dim,
-            arrayed: false,
-            class: ImageClass::Sampled { kind, multi: false },
-        },
-    }
+impl Member for Texture2d<f32> {
+    const MEMBER_TYPE: MemberType = MemberType::Tx2df;
 }
 
 pub struct Sampler;
 
-const SAMPLER: Type = Type {
-    name: None,
-    inner: TypeInner::Sampler { comparison: false },
-};
-
-/// A storage or uniform array.
-pub struct Array<T>(PhantomData<T>);
+impl Member for Sampler {
+    const MEMBER_TYPE: MemberType = MemberType::Sampl;
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MemberType {
     Scalar(ScalarType),
-    Array(ScalarType),
     Vector(VectorType),
     Matrix(MatrixType),
+    Array(ArrayType),
     Tx2df,
     Sampl,
 }
 
 impl MemberType {
-    pub const fn from_value(v: ValueType) -> Self {
-        match v {
-            ValueType::Scalar(v) => Self::Scalar(v),
-            ValueType::Vector(v) => Self::Vector(v),
-            ValueType::Matrix(v) => Self::Matrix(v),
-        }
-    }
-
-    pub const fn array_from_value(v: ValueType) -> Self {
-        match v {
-            ValueType::Scalar(v) => Self::Array(v),
-            ValueType::Vector(_v) => unimplemented!(),
-            ValueType::Matrix(_v) => unimplemented!(),
-        }
-    }
-
     /// Some values require an indirect load to be read from a global variable.
     pub const fn indirect_load(self) -> bool {
         matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
     }
 
-    /// Add the self type, and any type dependencies to the arena, and return a handle to the new type.
-    pub(crate) fn add_type(self, types: &mut UniqueArena<Type>, span: Span) -> Handle<Type> {
-        let mut q = |v: Type| types.insert(v.clone(), span);
+    pub const fn from_value(v: ValueType) -> Self {
+        match v {
+            ValueType::Scalar(v) => Self::Scalar(v),
+            ValueType::Vector(v) => Self::Vector(v),
+            ValueType::Matrix(v) => Self::Matrix(v),
+            ValueType::Array(v) => Self::Array(v),
+        }
+    }
+
+    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    where
+        A: AddType,
+    {
+        const fn texture(dim: ImageDimension, kind: ScalarKind) -> Type {
+            Type {
+                name: None,
+                inner: TypeInner::Image {
+                    dim,
+                    arrayed: false,
+                    class: ImageClass::Sampled { kind, multi: false },
+                },
+            }
+        }
 
         match self {
-            Self::Array(v) => {
-                let base = types.insert(v.ty(), span);
-                let size = v.inner().1;
-                let t = Type {
-                    name: None,
-                    inner: TypeInner::Array {
-                        base,
-                        size: naga::ArraySize::Dynamic,
-                        stride: u32::from(size),
-                    },
-                };
-                types.insert(t.clone(), span)
-            }
-            Self::Scalar(v) => q(v.ty()),
-            Self::Vector(v) => q(v.ty()),
-            Self::Matrix(v) => q(v.ty()),
-            Self::Tx2df => q(TEXTURE2DF),
-            Self::Sampl => q(SAMPLER),
+            Self::Scalar(v) => v.ty(add),
+            Self::Vector(v) => v.ty(add),
+            Self::Matrix(v) => v.ty(add),
+            Self::Array(v) => v.ty(add),
+            Self::Tx2df => add.add_type(const { texture(ImageDimension::D2, ScalarKind::Float) }),
+            Self::Sampl => add.add_type(
+                const {
+                    Type {
+                        name: None,
+                        inner: TypeInner::Sampler { comparison: false },
+                    }
+                },
+            ),
         }
     }
 

@@ -1,11 +1,7 @@
 //! Uniform and value traits.
 
 use {
-    crate::{
-        context::Context,
-        state::State,
-        value::{IntoValue, Value},
-    },
+    crate::{context::Context, state::State, value::Value},
     std::marker::PhantomData,
     wgpu::Buffer,
 };
@@ -42,14 +38,12 @@ impl<U> Uniform<U> {
     }
 
     /// Updates the uniform data.
-    pub fn update<V>(&self, cx: &Context, val: V)
+    pub fn update(&self, cx: &Context, val: U)
     where
-        V: IntoValue<Value = U>,
         U: Value,
     {
         let queue = cx.state().queue();
-        let val = val.into_value();
-        queue.write_buffer(&self.buf, 0, val.value().as_ref());
+        queue.write_buffer(&self.buf, 0, val.value());
     }
 
     pub(crate) fn buffer(&self) -> &Buffer {
