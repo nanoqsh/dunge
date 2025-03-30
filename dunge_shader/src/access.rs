@@ -91,14 +91,14 @@ pub trait Access {
 
 /// An expression that can be dynamically indexed into, like an array.
 pub trait Indexable {
-    type Member;
+    type Member: types::Value;
 }
 
-impl<T> Indexable for types::Array<T>
+impl<V, const N: usize> Indexable for [V; N]
 where
-    T: types::Value,
+    V: types::Value,
 {
-    type Member = T;
+    type Member = V;
 }
 
 impl<A, O> Ret<A, O>
@@ -142,8 +142,15 @@ where
         let me = self.get();
         let array = me.array.eval(en);
         let index = me.index.eval(en);
-        let access = en.get_entry().access(array, index);
-        en.get_entry().load(access)
+
+        let en = en.get_entry();
+        let access = en.access(array, index);
+
+        if const { <Self::Out as types::Value>::VALUE_TYPE.indirect_load() } {
+            en.load(access)
+        } else {
+            access
+        }
     }
 }
 

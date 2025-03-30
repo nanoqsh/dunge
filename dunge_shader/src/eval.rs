@@ -334,39 +334,24 @@ impl GlobalOut {
 pub struct ReadGlobal {
     id: u32,
     binding: u32,
-    indirect_load: bool,
     out: GlobalOut,
 }
 
 impl ReadGlobal {
-    pub const fn new<T>(
-        id: u32,
-        binding: u32,
-        indirect_load: bool,
-        out: GlobalOut,
-    ) -> Ret<Self, T> {
-        Ret::new(Self {
-            id,
-            binding,
-            indirect_load,
-            out,
-        })
+    pub const fn new<T>(id: u32, binding: u32, out: GlobalOut) -> Ret<Self, T> {
+        Ret::new(Self { id, binding, out })
     }
 }
 
 impl<O, E> Eval<E> for Ret<ReadGlobal, O>
 where
+    O: types::Member,
     E: GetEntry,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let ReadGlobal {
-            id,
-            binding,
-            indirect_load,
-            out,
-        } = self.get();
+        let ReadGlobal { id, binding, out } = self.get();
 
         out.with_stage(E::STAGE);
         let en = en.get_entry();
@@ -374,7 +359,7 @@ where
         let var = en.compl.globs.get(&res);
         let global = en.global(var);
 
-        if indirect_load {
+        if const { O::MEMBER_TYPE.indirect_load() } {
             en.load(global)
         } else {
             global

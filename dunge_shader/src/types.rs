@@ -18,6 +18,10 @@ pub enum ValueType {
 }
 
 impl ValueType {
+    pub const fn indirect_load(self) -> bool {
+        matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
+    }
+
     pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
     where
         A: AddType,
@@ -305,15 +309,35 @@ impl MatrixType {
         }
     }
 
+    pub(crate) fn naga(self) -> Type {
+        const fn new(size: VectorSize) -> Type {
+            use naga::Scalar;
+
+            Type {
+                name: None,
+                inner: TypeInner::Matrix {
+                    columns: size,
+                    rows: size,
+                    scalar: Scalar {
+                        width: 4,
+                        kind: ScalarKind::Float,
+                    },
+                },
+            }
+        }
+
+        match self {
+            Self::Mat2 => const { new(VectorSize::Bi) },
+            Self::Mat3 => const { new(VectorSize::Tri) },
+            Self::Mat4 => const { new(VectorSize::Quad) },
+        }
+    }
+
     pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
     where
         A: AddType,
     {
-        match self {
-            Self::Mat2 => add.add_type(MAT2F),
-            Self::Mat3 => add.add_type(MAT3F),
-            Self::Mat4 => add.add_type(MAT4F),
-        }
+        add.add_type(self.naga())
     }
 
     fn stride(self) -> u32 {
@@ -351,32 +375,15 @@ impl Matrix for Mat2 {}
 impl Matrix for Mat3 {}
 impl Matrix for Mat4 {}
 
-const MAT2F: Type = mat(VectorSize::Bi);
-const MAT3F: Type = mat(VectorSize::Tri);
-const MAT4F: Type = mat(VectorSize::Quad);
-
-const fn mat(size: VectorSize) -> Type {
-    use naga::Scalar;
-
-    Type {
-        name: None,
-        inner: TypeInner::Matrix {
-            columns: size,
-            rows: size,
-            scalar: Scalar {
-                width: 4,
-                kind: ScalarKind::Float,
-            },
-        },
-    }
+impl<V, const N: usize> Value for [V; N]
+where
+    V: Value,
+{
+    const VALUE_TYPE: ValueType = ValueType::Array(ArrayType {
+        base: &V::VALUE_TYPE,
+        size: NonZeroU32::new(N as u32).expect("array size cannot be zero"),
+    });
 }
-
-pub struct Texture2d<T>(PhantomData<T>);
-
-pub struct Sampler;
-
-/// A storage or uniform array.
-pub struct Array<T>(PhantomData<T>);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct ArrayType {
@@ -407,6 +414,29 @@ impl ArrayType {
     }
 }
 
+pub trait Member {
+    const MEMBER_TYPE: MemberType;
+}
+
+impl<V> Member for V
+where
+    V: Value,
+{
+    const MEMBER_TYPE: MemberType = MemberType::from_value(V::VALUE_TYPE);
+}
+
+pub struct Texture2d<T>(PhantomData<T>);
+
+impl Member for Texture2d<f32> {
+    const MEMBER_TYPE: MemberType = MemberType::Tx2df;
+}
+
+pub struct Sampler;
+
+impl Member for Sampler {
+    const MEMBER_TYPE: MemberType = MemberType::Sampl;
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MemberType {
     Scalar(ScalarType),
@@ -418,6 +448,11 @@ pub enum MemberType {
 }
 
 impl MemberType {
+    /// Some values require an indirect load to be read from a global variable.
+    pub const fn indirect_load(self) -> bool {
+        matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
+    }
+
     pub const fn from_value(v: ValueType) -> Self {
         match v {
             ValueType::Scalar(v) => Self::Scalar(v),
@@ -425,11 +460,6 @@ impl MemberType {
             ValueType::Matrix(v) => Self::Matrix(v),
             ValueType::Array(v) => Self::Array(v),
         }
-    }
-
-    /// Some values require an indirect load to be read from a global variable.
-    pub const fn indirect_load(self) -> bool {
-        matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
     }
 
     pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
