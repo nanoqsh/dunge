@@ -74,7 +74,7 @@ impl<V, const N: usize> Value for [V; N]
 where
     V: Value + bytemuck::Pod,
 {
-    type Type = [V::Type; N];
+    type Type = types::Array<V::Type, N>;
 
     fn value(&self) -> &[u8] {
         bytemuck::bytes_of(self)

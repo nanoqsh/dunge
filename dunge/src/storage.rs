@@ -1,9 +1,8 @@
 //! Storage type representing a typed array that can be read by a shader
-//! Currently only supports read-only arrays. Must be used with
-//! data that can be directly casted to the GPU buffer.
+//! Must be used with data that can be directly casted to the GPU buffer.
 
 use {
-    crate::{context::Context, state::State, value::Value},
+    crate::{context::Context, state::State, types, value::Value},
     std::{error, fmt, marker::PhantomData},
     wgpu::Buffer,
 };
@@ -30,19 +29,22 @@ where
     }
 }
 
+pub type RwStorage<V> = Storage<V, types::Mutable>;
+
 /// Storage buffer data.
 ///
 /// Can be created using the context's [`make_storage`](crate::Context::make_storage) function.
-pub struct Storage<V>
+pub struct Storage<V, M = types::Immutable>
 where
     V: ?Sized,
 {
     buf: Buffer,
     size: usize,
     ty: PhantomData<V>,
+    mu: PhantomData<M>,
 }
 
-impl<V> Storage<V>
+impl<V, M> Storage<V, M>
 where
     V: ?Sized,
 {
@@ -68,6 +70,7 @@ where
             buf,
             size,
             ty: PhantomData,
+            mu: PhantomData,
         }
     }
 
@@ -90,7 +93,21 @@ where
     }
 }
 
-/// An error returned from the [update_slice](crate::storage::Storage::update_slice) function.
+impl<V> Storage<V>
+where
+    V: ?Sized,
+{
+    pub fn rw(self) -> RwStorage<V> {
+        RwStorage {
+            buf: self.buf,
+            size: self.size,
+            ty: PhantomData,
+            mu: PhantomData,
+        }
+    }
+}
+
+/// An error returned from the [update](crate::storage::Storage::update) function.
 ///
 /// Returned when passed data size is invalid.
 #[derive(Debug)]

@@ -6,7 +6,7 @@ use {
         instance::{self, Instance},
         module::{ComputeKind, RenderKind},
         op::Ret,
-        types::{self, MemberType, ValueType, VectorType},
+        types::{self, MemberData, ValueType, VectorType},
         vertex::{self, Vertex},
     },
     std::{any::TypeId, ops},
@@ -15,7 +15,7 @@ use {
 #[derive(Clone, Copy)]
 pub struct GroupInfo {
     pub tyid: TypeId,
-    pub def: Define<MemberType>,
+    pub def: Define<MemberData>,
     pub stages: Stages,
 }
 
@@ -60,12 +60,12 @@ pub struct InstInfo {
 
 pub(crate) struct GroupEntry {
     tyid: TypeId,
-    def: Define<MemberType>,
+    def: Define<MemberData>,
     out: GlobalOut,
 }
 
 impl GroupEntry {
-    pub fn def(&self) -> Define<MemberType> {
+    pub fn def(&self) -> Define<MemberData> {
         self.def
     }
 }
@@ -138,7 +138,7 @@ impl Context {
         id
     }
 
-    fn add_group(&mut self, tyid: TypeId, def: Define<MemberType>) -> (u32, GlobalOut) {
+    fn add_group(&mut self, tyid: TypeId, def: Define<MemberData>) -> (u32, GlobalOut) {
         countdown(&mut self.limits.group, "too many groups in the shader");
         let out = GlobalOut::default();
         let en = GroupEntry {

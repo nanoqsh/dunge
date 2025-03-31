@@ -374,7 +374,9 @@ impl Matrix for Mat2 {}
 impl Matrix for Mat3 {}
 impl Matrix for Mat4 {}
 
-impl<V, const N: usize> Value for [V; N]
+pub struct Array<V, const N: usize>(PhantomData<V>);
+
+impl<V, const N: usize> Value for Array<V, N>
 where
     V: Value,
 {
@@ -525,12 +527,14 @@ impl MemberType {
         }
     }
 
-    pub(crate) const fn address_space(self) -> AddressSpace {
+    pub(crate) fn address_space(self, mutable: bool) -> AddressSpace {
         match self {
             Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
-            Self::Array(_) | Self::DynamicArrayType(_) => AddressSpace::Storage {
-                access: StorageAccess::LOAD,
-            },
+            Self::Array(_) | Self::DynamicArrayType(_) => {
+                let mut access = StorageAccess::LOAD;
+                access.set(StorageAccess::STORE, mutable);
+                AddressSpace::Storage { access }
+            }
             Self::Tx2df | Self::Sampl => AddressSpace::Handle,
         }
     }
@@ -545,4 +549,25 @@ where
         M::MEMBER_TYPE,
         MemberType::Scalar(_) | MemberType::Vector(_) | MemberType::Matrix(_),
     )
+}
+
+pub enum Immutable {}
+pub enum Mutable {}
+
+pub trait Mutability {
+    const MUTABLE: bool;
+}
+
+impl Mutability for Immutable {
+    const MUTABLE: bool = false;
+}
+
+impl Mutability for Mutable {
+    const MUTABLE: bool = true;
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct MemberData {
+    pub ty: MemberType,
+    pub mutable: bool,
 }

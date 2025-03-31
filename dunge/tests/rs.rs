@@ -1,5 +1,10 @@
 #![cfg(not(target_family = "wasm"))]
 
+use {dunge::Context, std::sync::LazyLock};
+
+static CONTEXT: LazyLock<Context> =
+    LazyLock::new(|| helpers::block_on(dunge::context()).expect("failed to create dunge context"));
+
 type Error = Box<dyn std::error::Error>;
 
 #[test]
@@ -21,8 +26,7 @@ fn rs_calc() -> Result<(), Error> {
         }
     };
 
-    let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(compute);
+    let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_calc.wgsl"));
     Ok(())
 }
@@ -39,8 +43,7 @@ fn rs_if() -> Result<(), Error> {
         color: sl::splat_vec4(1.),
     };
 
-    let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(compute);
+    let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_if.wgsl"));
     Ok(())
 }
@@ -49,14 +52,13 @@ fn rs_if() -> Result<(), Error> {
 fn rs_branch() -> Result<(), Error> {
     use dunge::sl::{self, Render};
 
-    let cx = helpers::block_on(dunge::context())?;
     let shader0 = {
         let compute = || Render {
             place: sl::default(|| sl::splat_vec4(1.)).when(false, || sl::splat_vec4(2.)),
             color: sl::splat_vec4(1.),
         };
 
-        cx.make_shader(compute)
+        CONTEXT.make_shader(compute)
     };
 
     let shader1 = {
@@ -67,7 +69,7 @@ fn rs_branch() -> Result<(), Error> {
             color: sl::splat_vec4(1.),
         };
 
-        cx.make_shader(compute)
+        CONTEXT.make_shader(compute)
     };
 
     let shader2 = {
@@ -83,7 +85,7 @@ fn rs_branch() -> Result<(), Error> {
             }
         };
 
-        cx.make_shader(compute)
+        CONTEXT.make_shader(compute)
     };
 
     helpers::eq_lines(shader0.debug_wgsl(), include_str!("rs_branch0.wgsl"));
@@ -96,13 +98,12 @@ fn rs_branch() -> Result<(), Error> {
 fn rs_discard() -> Result<(), Error> {
     use dunge::sl::{self, Render};
 
-    let cx = helpers::block_on(dunge::context())?;
     let compute = || Render {
         place: sl::splat_vec4(1.),
         color: sl::discard(),
     };
 
-    let shader = cx.make_shader(compute);
+    let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_discard.wgsl"));
     Ok(())
 }
@@ -111,13 +112,12 @@ fn rs_discard() -> Result<(), Error> {
 fn rs_discard_if() -> Result<(), Error> {
     use dunge::sl::{self, Render};
 
-    let cx = helpers::block_on(dunge::context())?;
     let compute = || Render {
         place: sl::splat_vec4(1.),
         color: sl::if_then_else(true, sl::discard, || sl::splat_vec4(1.)),
     };
 
-    let shader = cx.make_shader(compute);
+    let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_discard_if.wgsl"));
     Ok(())
 }
@@ -126,13 +126,12 @@ fn rs_discard_if() -> Result<(), Error> {
 fn rs_zero() -> Result<(), Error> {
     use dunge::sl::{self, Render};
 
-    let cx = helpers::block_on(dunge::context())?;
     let compute = || Render {
         place: sl::zero_value(),
         color: sl::zero_value(),
     };
 
-    let shader = cx.make_shader(compute);
+    let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_zero.wgsl"));
     Ok(())
 }
@@ -154,9 +153,8 @@ fn rs_thunk_outside() {
 fn rs_reentrant() {
     use dunge::sl::{self, Render};
 
-    let cx = helpers::block_on(dunge::context()).expect("create context");
     let compute = {
-        let cx = cx.clone();
+        let cx = CONTEXT.clone();
         let inner = || Render {
             place: sl::splat_vec4(1.),
             color: sl::splat_vec4(1.),
@@ -171,7 +169,7 @@ fn rs_reentrant() {
         }
     };
 
-    _ = cx.make_shader(compute);
+    _ = CONTEXT.make_shader(compute);
 }
 
 #[test]
@@ -189,8 +187,7 @@ fn rs_storage() -> Result<(), Error> {
         color: sl::splat_vec4(1.),
     };
 
-    let cx = helpers::block_on(dunge::context())?;
-    let shader = cx.make_shader(compute);
+    let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_storage.wgsl"));
     Ok(())
 }
@@ -198,8 +195,6 @@ fn rs_storage() -> Result<(), Error> {
 #[test]
 fn rs_dyn() -> Result<(), Error> {
     use dunge::sl::{self, Render};
-
-    let cx = helpers::block_on(dunge::context())?;
 
     for (do_sin, correct_shader) in [
         (true, include_str!("rs_dyn_true.wgsl")),
@@ -218,7 +213,7 @@ fn rs_dyn() -> Result<(), Error> {
             }
         };
 
-        let shader = cx.make_shader(compute);
+        let shader = CONTEXT.make_shader(compute);
         helpers::eq_lines(shader.debug_wgsl(), correct_shader);
     }
     Ok(())

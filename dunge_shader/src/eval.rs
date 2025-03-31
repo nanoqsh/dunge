@@ -6,7 +6,7 @@ use {
         module::{Compute, CsOut, FsOut, Module, Render, VsOut},
         op::{Bi, Ret, Un},
         texture::Sampled,
-        types::{self, AddType, MemberType, ScalarType, ValueType, VectorType},
+        types::{self, AddType, MemberData, ScalarType, ValueType, VectorType},
     },
     naga::{
         AddressSpace, Arena, Binding, BuiltIn, EntryPoint, Expression, Function, FunctionArgument,
@@ -17,6 +17,7 @@ use {
         cell::{Cell, RefCell},
         collections::HashMap,
         iter,
+        marker::PhantomData,
         rc::Rc,
     },
 };
@@ -331,20 +332,36 @@ impl GlobalOut {
     }
 }
 
-#[derive(Clone)]
-pub struct ReadGlobal {
+pub struct Global<M = types::Immutable> {
     id: u32,
     binding: u32,
     out: GlobalOut,
+    mu: PhantomData<M>,
 }
 
-impl ReadGlobal {
+impl<M> Global<M> {
     pub const fn new<T>(id: u32, binding: u32, out: GlobalOut) -> Ret<Self, T> {
-        Ret::new(Self { id, binding, out })
+        Ret::new(Self {
+            id,
+            binding,
+            out,
+            mu: PhantomData,
+        })
     }
 }
 
-impl<O, E> Eval<E> for Ret<ReadGlobal, O>
+impl<M> Clone for Global<M> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id,
+            binding: self.binding,
+            out: self.out.clone(),
+            mu: PhantomData,
+        }
+    }
+}
+
+impl<M, O, E> Eval<E> for Ret<Global<M>, O>
 where
     O: types::Member,
     E: GetEntry,
@@ -352,7 +369,9 @@ where
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let ReadGlobal { id, binding, out } = self.get();
+        let Global {
+            id, binding, out, ..
+        } = self.get();
 
         out.with_stage(E::STAGE);
         let en = en.get_entry();
@@ -1162,10 +1181,10 @@ impl Compiler {
         }
     }
 
-    fn define_group(&mut self, group: u32, def: Define<MemberType>) {
+    fn define_group(&mut self, group: u32, def: Define<MemberData>) {
         for (binding, member) in iter::zip(0.., def) {
-            let space = member.address_space();
-            let ty = member.ty(&mut self.types);
+            let space = member.ty.address_space(member.mutable);
+            let ty = member.ty.ty(&mut self.types);
             let res = ResourceBinding { group, binding };
             self.globs.add(space, ty, res);
         }

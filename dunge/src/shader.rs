@@ -100,7 +100,7 @@ impl ShaderData {
         for info in cx.groups() {
             entries.clear();
             for (binding, member) in iter::zip(0.., info.def) {
-                let entry = match member {
+                let entry = match member.ty {
                     MemberType::Scalar(_) | MemberType::Vector(_) | MemberType::Matrix(_) => {
                         BindGroupLayoutEntry {
                             binding,
@@ -118,7 +118,9 @@ impl ShaderData {
                             binding,
                             visibility: visibility(info.stages),
                             ty: BindingType::Buffer {
-                                ty: BufferBindingType::Storage { read_only: true },
+                                ty: BufferBindingType::Storage {
+                                    read_only: !member.mutable,
+                                },
                                 has_dynamic_offset: false,
                                 min_binding_size: None,
                             },

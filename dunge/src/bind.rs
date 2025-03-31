@@ -29,7 +29,7 @@ pub trait VisitMember<'a> {
     fn visit_member(self, visitor: &mut Visitor<'a>);
 }
 
-impl<'a, V> VisitMember<'a> for &'a Storage<V>
+impl<'a, V, M> VisitMember<'a> for &'a Storage<V, M>
 where
     V: ?Sized,
 {

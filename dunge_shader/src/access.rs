@@ -1,6 +1,6 @@
 use {
     crate::{
-        eval::{Eval, Expr, GetEntry},
+        eval::{Eval, Expr, GetEntry, Global},
         op::Ret,
         types,
     },
@@ -94,7 +94,7 @@ pub trait Indexable {
     type Member: types::Value;
 }
 
-impl<V, const N: usize> Indexable for [V; N]
+impl<V, const N: usize> Indexable for types::Array<V, N>
 where
     V: types::Value,
 {
@@ -113,22 +113,29 @@ where
     O: Indexable,
 {
     /// Dynamically loads a value from an array, using a computed u32 index.
-    pub fn load<Q, E>(self, idx: Q) -> Ret<IndexLoad<Q, Self, E>, O::Member>
+    pub fn load<I, E>(self, index: I) -> Ret<IndexLoad<I, Self, E>, O::Member>
     where
-        Q: Eval<E, Out = u32>,
+        I: Eval<E, Out = u32>,
     {
-        Ret::new(IndexLoad::new(idx, self))
+        Ret::new(IndexLoad::new(index, self))
     }
 }
 
-pub struct IndexLoad<Q, A, E> {
-    index: Q,
+impl<O> Ret<Global<types::Mutable>, O>
+where
+    O: Indexable,
+{
+    // store
+}
+
+pub struct IndexLoad<I, A, E> {
+    index: I,
     array: A,
     e: PhantomData<E>,
 }
 
-impl<Q, A, E> IndexLoad<Q, A, E> {
-    const fn new(index: Q, array: A) -> Self {
+impl<I, A, E> IndexLoad<I, A, E> {
+    const fn new(index: I, array: A) -> Self {
         Self {
             index,
             array,
@@ -137,9 +144,9 @@ impl<Q, A, E> IndexLoad<Q, A, E> {
     }
 }
 
-impl<Q, A, E> Eval<E> for Ret<IndexLoad<Q, A, E>, <A::Out as Indexable>::Member>
+impl<I, A, E> Eval<E> for Ret<IndexLoad<I, A, E>, <A::Out as Indexable>::Member>
 where
-    Q: Eval<E, Out = u32>,
+    I: Eval<E, Out = u32>,
     A: Eval<E, Out: Indexable>,
     E: GetEntry,
 {
@@ -161,16 +168,16 @@ where
     }
 }
 
-pub struct IndexStore<Q, A, V, E> {
-    index: Q,
+pub struct IndexStore<I, A, V, E> {
+    index: I,
     array: A,
     value: V,
     e: PhantomData<E>,
 }
 
-impl<Q, A, V, E> IndexStore<Q, A, V, E> {
+impl<I, A, V, E> IndexStore<I, A, V, E> {
     #[expect(dead_code)]
-    const fn new(index: Q, array: A, value: V) -> Self {
+    const fn new(index: I, array: A, value: V) -> Self {
         Self {
             index,
             array,
@@ -180,9 +187,9 @@ impl<Q, A, V, E> IndexStore<Q, A, V, E> {
     }
 }
 
-impl<Q, A, V, E> Eval<E> for Ret<IndexStore<Q, A, V, E>, V::Out>
+impl<I, A, V, E> Eval<E> for Ret<IndexStore<I, A, V, E>, V::Out>
 where
-    Q: Eval<E, Out = u32>,
+    I: Eval<E, Out = u32>,
     A: Eval<E, Out: Indexable<Member = V::Out>>,
     V: Eval<E>,
     E: GetEntry,

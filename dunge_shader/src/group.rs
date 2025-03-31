@@ -1,9 +1,9 @@
-use crate::{define::Define, eval::GlobalOut, types::MemberType};
+use crate::{define::Define, eval::GlobalOut, types::MemberData};
 
 /// The group type description.
 pub trait Group {
     type Projection: Projection + 'static;
-    const DEF: Define<MemberType>;
+    const DEF: Define<MemberData>;
 }
 
 /// Group type projection in a shader.
