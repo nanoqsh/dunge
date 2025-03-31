@@ -62,7 +62,7 @@ where
         mutable: M::MUTABLE,
     };
 
-    type Field = Ret<Global, V::Type>;
+    type Field = Ret<Global<M>, V::Type>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         Global::new(id, binding, out)
@@ -83,7 +83,7 @@ where
         mutable: M::MUTABLE,
     };
 
-    type Field = Ret<Global, types::DynamicArray<V::Type>>;
+    type Field = Ret<Global<M>, types::DynamicArray<V::Type>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         Global::new(id, binding, out)

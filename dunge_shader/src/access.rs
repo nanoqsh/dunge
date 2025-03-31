@@ -112,7 +112,7 @@ impl<A, O> Ret<A, O>
 where
     O: Indexable,
 {
-    /// Dynamically loads a value from an array, using a computed u32 index.
+    /// Loads a value from an array, using a computed u32 index.
     pub fn load<I, E>(self, index: I) -> Ret<IndexLoad<I, Self, E>, O::Member>
     where
         I: Eval<E, Out = u32>,
@@ -125,7 +125,14 @@ impl<O> Ret<Global<types::Mutable>, O>
 where
     O: Indexable,
 {
-    // store
+    /// Stores a value to an array, using a computed u32 index.
+    pub fn store<I, V, E>(self, index: I, value: V) -> Ret<IndexStore<I, Self, V, E>, O::Member>
+    where
+        I: Eval<E, Out = u32>,
+        V: Eval<E, Out = O::Member>,
+    {
+        Ret::new(IndexStore::new(index, self, value))
+    }
 }
 
 pub struct IndexLoad<I, A, E> {
@@ -176,7 +183,6 @@ pub struct IndexStore<I, A, V, E> {
 }
 
 impl<I, A, V, E> IndexStore<I, A, V, E> {
-    #[expect(dead_code)]
     const fn new(index: I, array: A, value: V) -> Self {
         Self {
             index,

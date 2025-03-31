@@ -10,7 +10,7 @@ type Error = Box<dyn std::error::Error>;
 #[test]
 fn cs_array() -> Result<(), Error> {
     use dunge::{
-        sl::{self, Compute, Groups},
+        sl::{Compute, Groups},
         storage::Storage,
         Group,
     };
@@ -20,9 +20,8 @@ fn cs_array() -> Result<(), Error> {
         array: &'a Storage<[f32; 4]>,
     }
 
-    let compute = |Groups(_): Groups<Map>| Compute {
-        // TODO: array operations
-        compute: sl::u32(0),
+    let compute = |Groups(m): Groups<Map>| Compute {
+        compute: m.array.load(0u32),
         workgroup_size: [64, 1, 1],
     };
 
@@ -32,9 +31,9 @@ fn cs_array() -> Result<(), Error> {
 }
 
 #[test]
-fn cs_array_mut() -> Result<(), Error> {
+fn cs_array_rw() -> Result<(), Error> {
     use dunge::{
-        sl::{self, Compute, Groups},
+        sl::{Compute, Groups},
         storage::RwStorage,
         Group,
     };
@@ -44,21 +43,20 @@ fn cs_array_mut() -> Result<(), Error> {
         array: &'a RwStorage<[f32; 4]>,
     }
 
-    let compute = |Groups(_): Groups<Map>| Compute {
-        // TODO: array operations
-        compute: sl::u32(0),
+    let compute = |Groups(m): Groups<Map>| Compute {
+        compute: m.array.store(0u32, 1.),
         workgroup_size: [64, 1, 1],
     };
 
     let shader = CONTEXT.make_shader(compute);
-    helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array_mut.wgsl"));
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array_rw.wgsl"));
     Ok(())
 }
 
 #[test]
 fn cs_dynamic_array() -> Result<(), Error> {
     use dunge::{
-        sl::{self, Compute, Groups},
+        sl::{Compute, Groups},
         storage::Storage,
         Group,
     };
@@ -68,9 +66,8 @@ fn cs_dynamic_array() -> Result<(), Error> {
         array: &'a Storage<[f32]>,
     }
 
-    let compute = |Groups(_): Groups<Map>| Compute {
-        // TODO: array operations
-        compute: sl::u32(0),
+    let compute = |Groups(m): Groups<Map>| Compute {
+        compute: m.array.load(0u32),
         workgroup_size: [64, 1, 1],
     };
 
@@ -80,9 +77,9 @@ fn cs_dynamic_array() -> Result<(), Error> {
 }
 
 #[test]
-fn cs_dynamic_array_mut() -> Result<(), Error> {
+fn cs_dynamic_array_rw() -> Result<(), Error> {
     use dunge::{
-        sl::{self, Compute, Groups},
+        sl::{Compute, Groups},
         storage::RwStorage,
         Group,
     };
@@ -92,16 +89,15 @@ fn cs_dynamic_array_mut() -> Result<(), Error> {
         array: &'a RwStorage<[f32]>,
     }
 
-    let compute = |Groups(_): Groups<Map>| Compute {
-        // TODO: array operations
-        compute: sl::u32(0),
+    let compute = |Groups(m): Groups<Map>| Compute {
+        compute: m.array.store(0u32, 1.),
         workgroup_size: [64, 1, 1],
     };
 
     let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(
         shader.debug_wgsl(),
-        include_str!("cs_dynamic_array_mut.wgsl"),
+        include_str!("cs_dynamic_array_rw.wgsl"),
     );
 
     Ok(())
