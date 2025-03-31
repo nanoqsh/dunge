@@ -42,7 +42,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let mut r = 0.;
     let uniform = {
         let mat = transform(r, (1, 1));
-        cx.make_uniform(mat)
+        cx.make_uniform(&mat)
     };
 
     let bind_transform = {
@@ -92,18 +92,16 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             ]
         };
 
-        let indxs = const {
-            [
-                [0, 1, 2],
-                [0, 2, 3], // -x
-                [4, 5, 6],
-                [4, 6, 7], // +x
-                [0, 3, 5],
-                [0, 5, 4], // -z
-                [6, 2, 1],
-                [7, 6, 1], // +z
-            ]
-        };
+        let indxs = [
+            [0, 1, 2],
+            [0, 2, 3], // -x
+            [4, 5, 6],
+            [4, 6, 7], // +x
+            [0, 3, 5],
+            [0, 5, 4], // -z
+            [6, 2, 1],
+            [7, 6, 1], // +z
+        ];
 
         let data = MeshData::new(&verts, &indxs)?;
         cx.make_mesh(&data)
@@ -122,7 +120,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
 
             r += ctrl.delta_time().as_secs_f32() * 0.5;
             let mat = transform(r, ctrl.size());
-            uniform.update(&cx, mat);
+            uniform.update(&cx, &mat);
             Then::Run
         };
 

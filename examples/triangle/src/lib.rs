@@ -15,7 +15,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
         use std::f32::consts;
 
-        let color = const { Vec4::new(1., 0.4, 0.8, 1.) };
+        let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
         let i = sl::thunk(sl::f32(idx) * third + offset.0);
@@ -28,7 +28,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let cx = dunge::context().await?;
     let shader = cx.make_shader(triangle);
     let mut r = 0.;
-    let uniform = cx.make_uniform(r);
+    let uniform = cx.make_uniform(&r);
     let bind = {
         let offset = Offset(&uniform);
         let mut binder = cx.make_binder(&shader);
@@ -48,7 +48,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             }
 
             r += ctrl.delta_time().as_secs_f32() * 0.5;
-            uniform.update(&cx, r);
+            uniform.update(&cx, &r);
             Then::Run
         };
 

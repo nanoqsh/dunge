@@ -172,6 +172,7 @@ impl FromIterator<Expr> for Exprs {
     }
 }
 
+#[diagnostic::on_unimplemented(message = "`{Self}` type cannot be evaluated in `{E}` shader stage")]
 pub trait Eval<E> {
     type Out;
     fn eval(self, en: &mut E) -> Expr;

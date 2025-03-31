@@ -21,7 +21,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
         use std::f32::consts;
 
-        let color = const { Vec4::new(1., 0.4, 0.8, 1.) };
+        let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
         let i = sl::thunk(sl::f32(idx) * third + offset.0);
@@ -65,7 +65,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let triangle_shader = cx.make_shader(triangle);
     let screen_shader = cx.make_shader(screen);
     let mut r = 0.;
-    let uniform = cx.make_uniform(r);
+    let uniform = cx.make_uniform(&r);
     let bind = {
         let offset = Offset(&uniform);
         let mut binder = cx.make_binder(&triangle_shader);
@@ -96,7 +96,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let buf_size = render_buf.draw_texture().size();
-    let stp = cx.make_uniform(make_stp(buf_size));
+    let stp = cx.make_uniform(&make_stp(buf_size));
     let (bind_map, handler) = {
         let map = Map {
             tex: BoundTexture::new(&render_buf),
@@ -149,7 +149,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             if let Some(size) = ctrl.resized() {
                 state.render_buf = make_render_buf(&state.cx, size);
                 let buf_size = state.render_buf.draw_texture().size();
-                stp.update(&state.cx, make_stp(buf_size));
+                stp.update(&state.cx, &make_stp(buf_size));
                 let map = Map {
                     tex: BoundTexture::new(&state.render_buf),
                     sam: &sam,
@@ -160,7 +160,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             }
 
             r += ctrl.delta_time().as_secs_f32() * 0.5;
-            uniform.update(&state.cx, r);
+            uniform.update(&state.cx, &r);
             Then::Run
         };
 

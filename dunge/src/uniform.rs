@@ -9,12 +9,12 @@ use {
 /// Uniform shader data.
 ///
 /// Can be created using the context's [`make_uniform`](crate::Context::make_uniform) function.
-pub struct Uniform<U> {
+pub struct Uniform<V> {
     buf: Buffer,
-    ty: PhantomData<U>,
+    ty: PhantomData<V>,
 }
 
-impl<U> Uniform<U> {
+impl<V> Uniform<V> {
     pub(crate) fn new(state: &State, contents: &[u8]) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -38,9 +38,9 @@ impl<U> Uniform<U> {
     }
 
     /// Updates the uniform data.
-    pub fn update(&self, cx: &Context, val: U)
+    pub fn update(&self, cx: &Context, val: &V)
     where
-        U: Value,
+        V: Value,
     {
         let queue = cx.state().queue();
         queue.write_buffer(&self.buf, 0, val.value());

@@ -40,7 +40,7 @@ impl<V> Storage<V> {
     }
 
     /// Updates the stored data.
-    pub fn update(&self, cx: &Context, val: V)
+    pub fn update(&self, cx: &Context, val: &V)
     where
         V: Value,
     {
