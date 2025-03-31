@@ -359,7 +359,7 @@ where
         let var = en.compl.globs.get(&res);
         let global = en.global(var);
 
-        if const { O::MEMBER_TYPE.indirect_load() } {
+        if const { types::indirect_load::<O>() } {
             en.load(global)
         } else {
             global

@@ -146,7 +146,7 @@ where
         let en = en.get_entry();
         let access = en.access(array, index);
 
-        if const { <Self::Out as types::Value>::VALUE_TYPE.indirect_load() } {
+        if const { types::indirect_load::<Self::Out>() } {
             en.load(access)
         } else {
             access

@@ -18,10 +18,6 @@ pub enum ValueType {
 }
 
 impl ValueType {
-    pub const fn indirect_load(self) -> bool {
-        matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
-    }
-
     pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
     where
         A: AddType,
@@ -448,11 +444,6 @@ pub enum MemberType {
 }
 
 impl MemberType {
-    /// Some values require an indirect load to be read from a global variable.
-    pub const fn indirect_load(self) -> bool {
-        matches!(self, Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_))
-    }
-
     pub const fn from_value(v: ValueType) -> Self {
         match v {
             ValueType::Scalar(v) => Self::Scalar(v),
@@ -503,4 +494,15 @@ impl MemberType {
             Self::Tx2df | Self::Sampl => AddressSpace::Handle,
         }
     }
+}
+
+/// Some values require an indirect load to be read from a global variable.
+pub const fn indirect_load<M>() -> bool
+where
+    M: Member,
+{
+    matches!(
+        M::MEMBER_TYPE,
+        MemberType::Scalar(_) | MemberType::Vector(_) | MemberType::Matrix(_),
+    )
 }

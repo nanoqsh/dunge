@@ -27,7 +27,6 @@ impl<'a> BoundTexture<'a> {
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
 pub trait MemberProjection: private::Sealed {
-    // TODO: Remove
     const TYPE: MemberType;
     type Field;
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field;
