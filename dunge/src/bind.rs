@@ -29,7 +29,10 @@ pub trait VisitMember<'a> {
     fn visit_member(self, visitor: &mut Visitor<'a>);
 }
 
-impl<'a, V> VisitMember<'a> for &'a Storage<V> {
+impl<'a, V> VisitMember<'a> for &'a Storage<V>
+where
+    V: ?Sized,
+{
     fn visit_member(self, visitor: &mut Visitor<'a>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(BindingResource::Buffer(binding));

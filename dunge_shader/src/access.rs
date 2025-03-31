@@ -101,6 +101,13 @@ where
     type Member = V;
 }
 
+impl<V> Indexable for types::DynamicArray<V>
+where
+    V: types::Value,
+{
+    type Member = V;
+}
+
 impl<A, O> Ret<A, O>
 where
     O: Indexable,

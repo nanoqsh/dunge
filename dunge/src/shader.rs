@@ -113,16 +113,18 @@ impl ShaderData {
                             count: None,
                         }
                     }
-                    MemberType::Array(_) => BindGroupLayoutEntry {
-                        binding,
-                        visibility: visibility(info.stages),
-                        ty: BindingType::Buffer {
-                            ty: BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
+                    MemberType::Array(_) | MemberType::DynamicArrayType(_) => {
+                        BindGroupLayoutEntry {
+                            binding,
+                            visibility: visibility(info.stages),
+                            ty: BindingType::Buffer {
+                                ty: BufferBindingType::Storage { read_only: true },
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        }
+                    }
                     MemberType::Tx2df => BindGroupLayoutEntry {
                         binding,
                         visibility: visibility(info.stages),

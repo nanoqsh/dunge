@@ -3,9 +3,9 @@
 type Error = Box<dyn std::error::Error>;
 
 #[test]
-fn cs_empty() -> Result<(), Error> {
+fn cs_array() -> Result<(), Error> {
     use dunge::{
-        sl::{self, Compute, Groups, Invocation},
+        sl::{self, Compute, Groups},
         storage::Storage,
         Group,
     };
@@ -15,7 +15,8 @@ fn cs_empty() -> Result<(), Error> {
         array: &'a Storage<[f32; 4]>,
     }
 
-    let compute = |Invocation(_): Invocation, Groups(_): Groups<Map>| Compute {
+    let compute = |Groups(_): Groups<Map>| Compute {
+        // TODO: array operations
         compute: sl::u32(0),
         workgroup_size: [64, 1, 1],
     };
@@ -23,6 +24,31 @@ fn cs_empty() -> Result<(), Error> {
     let cx = helpers::block_on(dunge::context())?;
     let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array.wgsl"));
+    Ok(())
+}
+
+#[test]
+fn cs_dynamic_array() -> Result<(), Error> {
+    use dunge::{
+        sl::{self, Compute, Groups},
+        storage::Storage,
+        Group,
+    };
+
+    #[derive(Group)]
+    struct Map<'a> {
+        array: &'a Storage<[f32]>,
+    }
+
+    let compute = |Groups(_): Groups<Map>| Compute {
+        // TODO: array operations
+        compute: sl::u32(0),
+        workgroup_size: [64, 1, 1],
+    };
+
+    let cx = helpers::block_on(dunge::context())?;
+    let shader = cx.make_shader(compute);
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_dynamic_array.wgsl"));
     Ok(())
 }
 

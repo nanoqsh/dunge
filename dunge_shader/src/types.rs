@@ -1,13 +1,16 @@
 //! Shader types.
 
 use {
-    crate::eval::AddType,
     naga::{
         AddressSpace, ArraySize, Handle, ImageClass, ImageDimension, ScalarKind, StorageAccess,
         Type, TypeInner, VectorSize,
     },
     std::{marker::PhantomData, num::NonZeroU32},
 };
+
+pub(crate) trait AddType {
+    fn add_type(&mut self, ty: Type) -> Handle<Type>;
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ValueType {
@@ -421,6 +424,41 @@ where
     const MEMBER_TYPE: MemberType = MemberType::from_value(V::VALUE_TYPE);
 }
 
+pub struct DynamicArray<V>(PhantomData<V>);
+
+impl<V> Member for DynamicArray<V>
+where
+    V: Value,
+{
+    const MEMBER_TYPE: MemberType = MemberType::DynamicArrayType(DynamicArrayType {
+        base: &V::VALUE_TYPE,
+    });
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct DynamicArrayType {
+    pub base: &'static ValueType,
+}
+
+impl DynamicArrayType {
+    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    where
+        A: AddType,
+    {
+        let base = self.base.ty(add);
+        let ty = Type {
+            name: None,
+            inner: TypeInner::Array {
+                base,
+                size: ArraySize::Dynamic,
+                stride: self.base.stride(),
+            },
+        };
+
+        add.add_type(ty)
+    }
+}
+
 pub struct Texture2d<T>(PhantomData<T>);
 
 impl Member for Texture2d<f32> {
@@ -439,6 +477,7 @@ pub enum MemberType {
     Vector(VectorType),
     Matrix(MatrixType),
     Array(ArrayType),
+    DynamicArrayType(DynamicArrayType),
     Tx2df,
     Sampl,
 }
@@ -473,6 +512,7 @@ impl MemberType {
             Self::Vector(v) => v.ty(add),
             Self::Matrix(v) => v.ty(add),
             Self::Array(v) => v.ty(add),
+            Self::DynamicArrayType(v) => v.ty(add),
             Self::Tx2df => add.add_type(const { texture(ImageDimension::D2, ScalarKind::Float) }),
             Self::Sampl => add.add_type(
                 const {
@@ -488,7 +528,7 @@ impl MemberType {
     pub(crate) const fn address_space(self) -> AddressSpace {
         match self {
             Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
-            Self::Array(_) => AddressSpace::Storage {
+            Self::Array(_) | Self::DynamicArrayType(_) => AddressSpace::Storage {
                 access: StorageAccess::LOAD,
             },
             Self::Tx2df | Self::Sampl => AddressSpace::Handle,

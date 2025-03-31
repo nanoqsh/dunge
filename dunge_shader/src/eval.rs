@@ -6,7 +6,7 @@ use {
         module::{Compute, CsOut, FsOut, Module, Render, VsOut},
         op::{Bi, Ret, Un},
         texture::Sampled,
-        types::{self, MemberType, ScalarType, ValueType, VectorType},
+        types::{self, AddType, MemberType, ScalarType, ValueType, VectorType},
     },
     naga::{
         AddressSpace, Arena, Binding, BuiltIn, EntryPoint, Expression, Function, FunctionArgument,
@@ -294,7 +294,7 @@ where
 
                 en.compose(ty, exprs)
             }
-            ValueType::Array(_) => todo!(),
+            ValueType::Array(_) => unreachable!(),
         }
     }
 }
@@ -722,10 +722,6 @@ impl Argument {
             binding: self.binding,
         }
     }
-}
-
-pub(crate) trait AddType {
-    fn add_type(&mut self, ty: Type) -> Handle<Type>;
 }
 
 pub struct Entry {
@@ -1162,7 +1158,7 @@ impl Compiler {
                     },
                 })
             }
-            ValueType::Array(_) => todo!(),
+            ValueType::Array(_) => unreachable!(),
         }
     }
 

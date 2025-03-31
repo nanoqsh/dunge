@@ -4,19 +4,48 @@
 
 use {
     crate::{context::Context, state::State, value::Value},
-    std::marker::PhantomData,
+    std::{error, fmt, marker::PhantomData},
     wgpu::Buffer,
 };
+
+pub trait StorageValue {
+    fn storage_value(&self) -> &[u8];
+}
+
+impl<V> StorageValue for V
+where
+    V: Value,
+{
+    fn storage_value(&self) -> &[u8] {
+        self.value()
+    }
+}
+
+impl<V> StorageValue for [V]
+where
+    V: Value + bytemuck::Pod,
+{
+    fn storage_value(&self) -> &[u8] {
+        bytemuck::cast_slice(self)
+    }
+}
 
 /// Storage buffer data.
 ///
 /// Can be created using the context's [`make_storage`](crate::Context::make_storage) function.
-pub struct Storage<V> {
+pub struct Storage<V>
+where
+    V: ?Sized,
+{
     buf: Buffer,
+    size: usize,
     ty: PhantomData<V>,
 }
 
-impl<V> Storage<V> {
+impl<V> Storage<V>
+where
+    V: ?Sized,
+{
     pub(crate) fn new(state: &State, contents: &[u8]) -> Self {
         use wgpu::{
             util::{BufferInitDescriptor, DeviceExt},
@@ -33,22 +62,44 @@ impl<V> Storage<V> {
             state.device().create_buffer_init(&desc)
         };
 
+        let size = contents.len();
+
         Self {
             buf,
+            size,
             ty: PhantomData,
         }
     }
 
     /// Updates the stored data.
-    pub fn update(&self, cx: &Context, val: &V)
+    pub fn update(&self, cx: &Context, val: &V) -> Result<(), UpdateError>
     where
-        V: Value,
+        V: StorageValue,
     {
+        if size_of_val(val) != self.size {
+            return Err(UpdateError);
+        }
+
         let queue = cx.state().queue();
-        queue.write_buffer(&self.buf, 0, val.value());
+        queue.write_buffer(&self.buf, 0, val.storage_value());
+        Ok(())
     }
 
     pub(crate) fn buffer(&self) -> &Buffer {
         &self.buf
     }
 }
+
+/// An error returned from the [update_slice](crate::storage::Storage::update_slice) function.
+///
+/// Returned when passed data size is invalid.
+#[derive(Debug)]
+pub struct UpdateError;
+
+impl fmt::Display for UpdateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "update error: the data size is invalid")
+    }
+}
+
+impl error::Error for UpdateError {}

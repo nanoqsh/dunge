@@ -8,7 +8,7 @@ use {
         shader::{RenderShader, Shader},
         sl,
         state::{AsTarget, State},
-        storage::Storage,
+        storage::{Storage, StorageValue},
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
         uniform::Uniform,
         value::Value,
@@ -96,9 +96,9 @@ impl Context {
 
     pub fn make_storage<V>(&self, val: &V) -> Storage<V>
     where
-        V: Value,
+        V: StorageValue + ?Sized,
     {
-        Storage::new(&self.0, val.value())
+        Storage::new(&self.0, val.storage_value())
     }
 
     pub fn make_layer<V, I, O>(&self, shader: &RenderShader<V, I>, opts: O) -> Layer<V, I>

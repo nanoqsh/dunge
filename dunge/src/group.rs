@@ -60,6 +60,23 @@ where
     }
 }
 
+impl<V> private::Sealed for &Storage<[V]> where V: Value {}
+
+impl<V> MemberProjection for &Storage<[V]>
+where
+    V: Value,
+{
+    const TYPE: MemberType = MemberType::DynamicArrayType(types::DynamicArrayType {
+        base: &<V::Type as types::Value>::VALUE_TYPE,
+    });
+
+    type Field = Ret<ReadGlobal, types::DynamicArray<V::Type>>;
+
+    fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
+        ReadGlobal::new(id, binding, out)
+    }
+}
+
 impl private::Sealed for BoundTexture<'_> {}
 
 impl MemberProjection for BoundTexture<'_> {
