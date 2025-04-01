@@ -6,7 +6,7 @@ use {
         format::Format,
         instance::{Set, Setter},
         mesh::Mesh,
-        shader::{ShaderData, Slots},
+        shader::{ShaderData, SlotNumbers},
         state::State,
     },
     std::{iter, marker::PhantomData},
@@ -17,7 +17,7 @@ pub struct SetLayer<'p, V, I> {
     shader_id: usize,
     no_bindings: bool,
     only_indexed_mesh: bool,
-    slots: Slots,
+    slots: SlotNumbers,
     pass: RenderPass<'p>,
     ty: PhantomData<(V, I)>,
 }
@@ -50,13 +50,13 @@ impl<'p, V, I> SetLayer<'p, V, I> {
 
 pub struct SetBinding<'s, 'p, V, I> {
     only_indexed_mesh: bool,
-    slots: Slots,
+    slots: SlotNumbers,
     pass: &'s mut RenderPass<'p>,
     ty: PhantomData<(V, I)>,
 }
 
 impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
-    fn new(only_indexed_mesh: bool, slots: Slots, pass: &'s mut RenderPass<'p>) -> Self {
+    fn new(only_indexed_mesh: bool, slots: SlotNumbers, pass: &'s mut RenderPass<'p>) -> Self {
         Self {
             only_indexed_mesh,
             slots,
@@ -109,7 +109,7 @@ impl SetBinding<'_, '_, (), ()> {
 pub struct SetInstance<'s, 'p, V> {
     only_indexed_mesh: bool,
     len: u32,
-    slots: Slots,
+    slots: SlotNumbers,
     pass: &'s mut RenderPass<'p>,
     ty: PhantomData<V>,
 }
@@ -200,7 +200,7 @@ pub struct Layer<V, I> {
     shader_id: usize,
     no_bindings: bool,
     only_indexed_mesh: bool,
-    slots: Slots,
+    slots: SlotNumbers,
     depth: bool,
     format: Format,
     render: RenderPipeline,
@@ -226,7 +226,7 @@ impl<V, I> Layer<V, I> {
         })];
 
         let module = shader.module();
-        let buffers = shader.buffers();
+        let buffers = shader.vertex_buffers();
         let topology = topology.wgpu();
         let only_indexed_mesh = *indexed_mesh && topology.is_strip();
         let desc = RenderPipelineDescriptor {

@@ -5,13 +5,14 @@ use {
         instance::Row,
         layer::{Config, Layer},
         mesh::{self, Mesh},
-        shader::{RenderShader, Shader},
+        shader::{ComputeShader, RenderShader, Shader},
         sl,
         state::{AsTarget, State},
         storage::{Storage, StorageValue},
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
         uniform::Uniform,
         value::Value,
+        workload::Workload,
         Vertex,
     },
     std::{error, fmt, future::IntoFuture, sync::Arc},
@@ -107,6 +108,10 @@ impl Context {
     {
         let opts = opts.into();
         Layer::new(&self.0, shader.data(), &opts)
+    }
+
+    pub fn make_workload(&self, shader: &ComputeShader) -> Workload {
+        Workload::new(&self.0, shader.data())
     }
 
     pub fn make_mesh<V>(&self, data: &mesh::MeshData<V>) -> Mesh<V>

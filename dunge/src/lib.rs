@@ -14,6 +14,7 @@ pub mod texture;
 pub mod uniform;
 pub mod value;
 pub mod vertex;
+pub mod workload;
 
 #[cfg(feature = "winit")]
 mod el;

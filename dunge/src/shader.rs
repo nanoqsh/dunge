@@ -57,7 +57,7 @@ struct Vertex {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct Slots {
+pub(crate) struct SlotNumbers {
     pub vertex: u32,
     pub instance: u32,
 }
@@ -67,7 +67,7 @@ pub(crate) struct ShaderData {
     module: ShaderModule,
     layout: PipelineLayout,
     vertex: Box<[Vertex]>,
-    slots: Slots,
+    slots: SlotNumbers,
     groups: Box<[TypedGroup]>,
 }
 
@@ -195,7 +195,7 @@ impl ShaderData {
         };
 
         let mut set_instance = true;
-        let mut slots = Slots {
+        let mut slots = SlotNumbers {
             vertex: 0,
             instance: 0,
         };
@@ -265,7 +265,7 @@ impl ShaderData {
         &self.layout
     }
 
-    pub(crate) fn buffers(&self) -> Box<[VertexBufferLayout]> {
+    pub(crate) fn vertex_buffers(&self) -> Box<[VertexBufferLayout]> {
         use wgpu::*;
 
         fn layout(vert: &Vertex) -> VertexBufferLayout {
@@ -279,7 +279,7 @@ impl ShaderData {
         self.vertex.iter().map(layout).collect()
     }
 
-    pub(crate) fn slots(&self) -> Slots {
+    pub(crate) fn slots(&self) -> SlotNumbers {
         self.slots
     }
 
