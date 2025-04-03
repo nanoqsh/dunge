@@ -17,7 +17,7 @@ fn render() -> Result<(), Error> {
     };
 
     let triangle = |Index(index): Index| {
-        let color = const { Vec4::new(1., 0., 0., 1.) };
+        let color = Vec4::new(1., 0., 0., 1.);
         let third = const { consts::TAU / 3. };
         let r_offset = const { -consts::TAU / 4. };
         let y_offset = 0.25;
@@ -33,7 +33,7 @@ fn render() -> Result<(), Error> {
     let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_index.wgsl"));
 
-    let size = const { (300, 300) };
+    let size = (300, 300);
     let layer = cx.make_layer(&shader, Format::SrgbAlpha);
     let view = {
         let data = TextureData::empty(size, Format::SrgbAlpha)?

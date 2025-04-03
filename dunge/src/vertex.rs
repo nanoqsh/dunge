@@ -10,13 +10,13 @@ pub use dunge_shader::vertex::{verts_as_bytes, Projection};
 /// Describes an input type projection.
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
-pub trait InputProjection: private::Sealed {
+pub trait InputProjection: private::F32Aligned {
     const TYPE: VectorType;
     type Field;
     fn input_projection(id: u32, index: u32) -> Self::Field;
 }
 
-impl private::Sealed for [f32; 2] {}
+impl private::F32Aligned for [f32; 2] {}
 
 impl InputProjection for [f32; 2] {
     const TYPE: VectorType = VectorType::Vec2f;
@@ -27,7 +27,7 @@ impl InputProjection for [f32; 2] {
     }
 }
 
-impl private::Sealed for [f32; 3] {}
+impl private::F32Aligned for [f32; 3] {}
 
 impl InputProjection for [f32; 3] {
     const TYPE: VectorType = VectorType::Vec3f;
@@ -38,7 +38,7 @@ impl InputProjection for [f32; 3] {
     }
 }
 
-impl private::Sealed for [f32; 4] {}
+impl private::F32Aligned for [f32; 4] {}
 
 impl InputProjection for [f32; 4] {
     const TYPE: VectorType = VectorType::Vec4f;
@@ -49,6 +49,44 @@ impl InputProjection for [f32; 4] {
     }
 }
 
+impl private::F32Aligned for glam::Vec2 {}
+
+impl InputProjection for glam::Vec2 {
+    const TYPE: VectorType = VectorType::Vec2f;
+    type Field = Ret<ReadVertex, types::Vec2<f32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl private::F32Aligned for glam::Vec3 {}
+
+impl InputProjection for glam::Vec3 {
+    const TYPE: VectorType = VectorType::Vec3f;
+    type Field = Ret<ReadVertex, types::Vec3<f32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+#[cfg(any())]
+mod ignore {
+    // glam::Vec4 is not f32 aligned
+    impl !InputProjection for glam::Vec4 {}
+}
+
+pub const fn check_projection_type<P>()
+where
+    P: private::F32Aligned,
+{
+    assert!(
+        align_of::<P>() == align_of::<f32>(),
+        "the type must be f32 aligned",
+    );
+}
+
 mod private {
-    pub trait Sealed {}
+    pub trait F32Aligned {}
 }

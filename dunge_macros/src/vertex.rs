@@ -80,6 +80,11 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         }
     };
 
+    let checks = fields.iter().map(|field| {
+        let ty = &field.ty;
+        quote::quote! { const _: () = ::dunge::vertex::check_projection_type::<#ty>(); }
+    });
+
     quote::quote! {
         unsafe impl ::dunge::Vertex for #name {
             type Projection = #projection_name;
@@ -89,6 +94,8 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         }
 
         #projection
+
+        #(#checks)*
 
         impl ::dunge::vertex::Projection for #projection_name {
             fn projection(id: ::core::primitive::u32) -> Self {
@@ -142,6 +149,9 @@ mod tests {
                 col: <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
             }
 
+            const _: () = ::dunge::vertex::check_projection_type::<[f32; 2]>();
+            const _: () = ::dunge::vertex::check_projection_type::<[f32; 3]>();
+
             impl ::dunge::vertex::Projection for VertProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
@@ -177,6 +187,9 @@ mod tests {
                 <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
                 <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
             );
+
+            const _: () = ::dunge::vertex::check_projection_type::<[f32; 2]>();
+            const _: () = ::dunge::vertex::check_projection_type::<[f32; 3]>();
 
             impl ::dunge::vertex::Projection for VertProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {

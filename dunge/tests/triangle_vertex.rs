@@ -11,14 +11,14 @@ fn render() -> Result<(), Error> {
             sl::{self, InVertex, Render},
             Format,
         },
-        glam::Vec2,
+        glam::{Vec2, Vec3},
         helpers::image::Image,
         std::{env, fs},
     };
 
     #[repr(C)]
     #[derive(Vertex)]
-    struct Vert([f32; 2], [f32; 3]);
+    struct Vert(Vec2, Vec3);
 
     let triangle = |vert: InVertex<Vert>| Render {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
@@ -40,15 +40,15 @@ fn render() -> Result<(), Error> {
     };
 
     let mesh = {
-        let data = const {
-            MeshData::from_verts(&[
-                Vert([0., -0.75], [1., 0., 0.]),
-                Vert([0.866, 0.75], [0., 1., 0.]),
-                Vert([-0.866, 0.75], [0., 0., 1.]),
-            ])
-        };
+        const VERTS: [Vert; 3] = [
+            Vert(Vec2::new(0., -0.75), Vec3::new(1., 0., 0.)),
+            Vert(Vec2::new(0.866, 0.75), Vec3::new(0., 1., 0.)),
+            Vert(Vec2::new(-0.866, 0.75), Vec3::new(0., 0., 1.)),
+        ];
 
-        cx.make_mesh(&data)
+        const DATA: MeshData<'_, Vert> = MeshData::from_verts(&VERTS);
+
+        cx.make_mesh(&DATA)
     };
 
     let buffer = cx.make_copy_buffer(size);

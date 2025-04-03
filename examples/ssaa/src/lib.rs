@@ -33,7 +33,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
 
     #[repr(C)]
     #[derive(Vertex)]
-    struct Screen([f32; 2], [f32; 2]);
+    struct Screen(Vec2, Vec2);
 
     #[derive(Group)]
     struct Map<'a> {
@@ -110,16 +110,14 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let screen_mesh = {
-        let verts = const {
-            [[
-                Screen([-1., -1.], [0., 1.]),
-                Screen([1., -1.], [1., 1.]),
-                Screen([1., 1.], [1., 0.]),
-                Screen([-1., 1.], [0., 0.]),
-            ]]
-        };
+        const VERTS: [[Screen; 4]; 1] = [[
+            Screen(Vec2::new(-1., -1.), Vec2::new(0., 1.)),
+            Screen(Vec2::new(1., -1.), Vec2::new(1., 1.)),
+            Screen(Vec2::new(1., 1.), Vec2::new(1., 0.)),
+            Screen(Vec2::new(-1., 1.), Vec2::new(0., 0.)),
+        ]];
 
-        let data = MeshData::from_quads(&verts)?;
+        let data = MeshData::from_quads(&VERTS)?;
         cx.make_mesh(&data)
     };
 

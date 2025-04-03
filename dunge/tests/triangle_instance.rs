@@ -37,7 +37,7 @@ fn render() -> Result<(), Error> {
     let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_instance.wgsl"));
 
-    let size = const { (300, 300) };
+    let size = (300, 300);
     let layer = cx.make_layer(&shader, Format::SrgbAlpha);
     let view = {
         let data = TextureData::empty(size, Format::SrgbAlpha)?
@@ -48,23 +48,19 @@ fn render() -> Result<(), Error> {
     };
 
     let transform = {
-        let poss = const {
-            [
-                Vec2::new(0., -0.375),
-                Vec2::new(0.433, 0.375),
-                Vec2::new(-0.433, 0.375),
-            ]
-        };
+        const POSS: [Vec2; 3] = [
+            Vec2::new(0., -0.375),
+            Vec2::new(0.433, 0.375),
+            Vec2::new(-0.433, 0.375),
+        ];
 
-        let cols = const {
-            [
-                Vec3::new(1., 0., 0.),
-                Vec3::new(0., 1., 0.),
-                Vec3::new(0., 0., 1.),
-            ]
-        };
+        const COLS: [Vec3; 3] = [
+            Vec3::new(1., 0., 0.),
+            Vec3::new(0., 1., 0.),
+            Vec3::new(0., 0., 1.),
+        ];
 
-        Transform(cx.make_row(&poss), cx.make_row(&cols))
+        Transform(cx.make_row(&POSS), cx.make_row(&COLS))
     };
 
     let buffer = cx.make_copy_buffer(size);

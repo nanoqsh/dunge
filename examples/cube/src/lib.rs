@@ -12,8 +12,8 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     #[repr(C)]
     #[derive(Vertex)]
     struct Vert {
-        pos: [f32; 3],
-        col: [f32; 3],
+        pos: Vec3,
+        col: Vec3,
     }
 
     #[derive(Group)]
@@ -53,46 +53,46 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     let mesh = {
-        let verts = const {
+        const VERTS: [Vert; 8] = {
             let p = 0.5;
 
             [
                 Vert {
-                    pos: [-p, -p, -p],
-                    col: [0., 0., 0.],
+                    pos: Vec3::new(-p, -p, -p),
+                    col: Vec3::new(0., 0., 0.),
                 },
                 Vert {
-                    pos: [-p, -p, p],
-                    col: [0., 0., 1.],
+                    pos: Vec3::new(-p, -p, p),
+                    col: Vec3::new(0., 0., 1.),
                 },
                 Vert {
-                    pos: [-p, p, p],
-                    col: [0., 1., 1.],
+                    pos: Vec3::new(-p, p, p),
+                    col: Vec3::new(0., 1., 1.),
                 },
                 Vert {
-                    pos: [-p, p, -p],
-                    col: [0., 1., 0.],
+                    pos: Vec3::new(-p, p, -p),
+                    col: Vec3::new(0., 1., 0.),
                 },
                 Vert {
-                    pos: [p, -p, -p],
-                    col: [1., 0., 0.],
+                    pos: Vec3::new(p, -p, -p),
+                    col: Vec3::new(1., 0., 0.),
                 },
                 Vert {
-                    pos: [p, p, -p],
-                    col: [1., 1., 0.],
+                    pos: Vec3::new(p, p, -p),
+                    col: Vec3::new(1., 1., 0.),
                 },
                 Vert {
-                    pos: [p, p, p],
-                    col: [1., 1., 1.],
+                    pos: Vec3::new(p, p, p),
+                    col: Vec3::new(1., 1., 1.),
                 },
                 Vert {
-                    pos: [p, -p, p],
-                    col: [1., 0., 1.],
+                    pos: Vec3::new(p, -p, p),
+                    col: Vec3::new(1., 0., 1.),
                 },
             ]
         };
 
-        let indxs = [
+        const INDXS: [[u16; 3]; 8] = [
             [0, 1, 2],
             [0, 2, 3], // -x
             [4, 5, 6],
@@ -103,7 +103,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             [7, 6, 1], // +z
         ];
 
-        let data = MeshData::new(&verts, &indxs)?;
+        let data = MeshData::new(&VERTS, &INDXS)?;
         cx.make_mesh(&data)
     };
 
