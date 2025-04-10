@@ -98,7 +98,7 @@ fn render() -> Result<(), Error> {
     let buffer = cx.make_copy_buffer(size);
     let opts = Rgba::from_standard([1., 0., 0., 1.]);
     let draw = dunge::draw(|mut frame| {
-        frame.layer(&layer, opts).bind(&map).draw(&mesh);
+        frame.set_layer(&layer, opts).bind(&map).draw(&mesh);
         frame.copy_texture(&buffer, &view);
     });
 

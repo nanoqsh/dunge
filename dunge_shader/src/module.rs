@@ -1,19 +1,34 @@
 use {
     crate::{
-        context::{Context, FromContext, FromRender},
+        context::{Context, FromContext, FromRender, GroupSet},
         eval::{self, Cs, Eval, Fs, Vs},
         types,
     },
     std::marker::PhantomData,
 };
 
+macro_rules! merge_group_set {
+    () => {
+        GroupSet
+    };
+
+    ($h:ident) => {
+        <$h>::Set<GroupSet>
+    };
+
+    ($h:ident $($t:ident)*) => {
+        <$h>::Set<merge_group_set!($($t)*)>
+    };
+}
+
 pub trait IntoModule<A, K> {
     type Input;
+    type Set;
     fn into_module(self) -> Module;
 }
 
 pub enum RenderKind {}
-pub struct RenderInput<V, I>(PhantomData<(V, I)>);
+pub struct RenderInput<D>(PhantomData<D>);
 
 impl<M, P, C> IntoModule<(), RenderKind> for M
 where
@@ -21,7 +36,8 @@ where
     P: VsOut,
     C: FsOut,
 {
-    type Input = RenderInput<(), ()>;
+    type Input = RenderInput<((), ())>;
+    type Set = GroupSet;
 
     fn into_module(self) -> Module {
         let cx = Context::new();
@@ -30,7 +46,7 @@ where
 }
 
 macro_rules! impl_into_render_module {
-    (A $(,)? $($t:ident),*) => {
+    (A $($t:ident)*) => {
         #[allow(non_snake_case)]
         impl<M, P, C, A, $($t),*> IntoModule<(A, $($t),*), RenderKind> for M
         where
@@ -42,7 +58,8 @@ macro_rules! impl_into_render_module {
                 $t: FromContext<RenderKind>,
             )*
         {
-            type Input = RenderInput<A::Vertex, A::Instance>;
+            type Input = RenderInput<(A::Vertex, A::Instance)>;
+            type Set = merge_group_set!($($t)*);
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
@@ -57,15 +74,15 @@ macro_rules! impl_into_render_module {
 }
 
 impl_into_render_module!(A);
-impl_into_render_module!(A, X);
-impl_into_render_module!(A, X, Y);
-impl_into_render_module!(A, X, Y, Z);
+impl_into_render_module!(A X);
+impl_into_render_module!(A X Y);
+impl_into_render_module!(A X Y Z);
 
 pub enum ComputeKind {}
 pub struct ComputeInput(());
 
 macro_rules! impl_into_compute_module {
-    ($($t:ident),*) => {
+    ($($t:ident)*) => {
         #[allow(non_snake_case, unused_mut, unused_parens)]
         impl<M, C, $($t),*> IntoModule<($($t),*), ComputeKind> for M
         where
@@ -76,6 +93,7 @@ macro_rules! impl_into_compute_module {
             )*
         {
             type Input = ComputeInput;
+            type Set = merge_group_set!($($t)*);
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
@@ -90,9 +108,9 @@ macro_rules! impl_into_compute_module {
 
 impl_into_compute_module!();
 impl_into_compute_module!(A);
-impl_into_compute_module!(A, X);
-impl_into_compute_module!(A, X, Y);
-impl_into_compute_module!(A, X, Y, Z);
+impl_into_compute_module!(A X);
+impl_into_compute_module!(A X Y);
+impl_into_compute_module!(A X Y Z);
 
 pub trait VsOut: Eval<Vs, Out = types::Vec4<f32>> {}
 impl<E> VsOut for E where E: Eval<Vs, Out = types::Vec4<f32>> {}

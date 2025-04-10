@@ -13,18 +13,18 @@ use {
     wgpu::{BlendState, PrimitiveTopology, RenderPass, RenderPipeline},
 };
 
-pub struct SetLayer<'p, V, I> {
+pub struct SetLayer<'p, D> {
     shader_id: usize,
     no_bindings: bool,
     only_indexed_mesh: bool,
     slots: SlotNumbers,
     pass: RenderPass<'p>,
-    ty: PhantomData<(V, I)>,
+    ty: PhantomData<D>,
 }
 
-impl<'p, V, I> SetLayer<'p, V, I> {
+impl<'p, V, I> SetLayer<'p, (V, I)> {
     #[inline]
-    pub fn bind<B>(&mut self, bind: &'p B) -> SetBinding<'_, 'p, V, I>
+    pub fn bind<B>(&mut self, bind: &'p B) -> SetBinding<'_, 'p, (V, I)>
     where
         B: Binding,
     {
@@ -42,20 +42,20 @@ impl<'p, V, I> SetLayer<'p, V, I> {
     }
 
     #[inline]
-    pub fn bind_empty(&mut self) -> SetBinding<'_, 'p, V, I> {
+    pub fn bind_empty(&mut self) -> SetBinding<'_, 'p, (V, I)> {
         assert!(self.no_bindings, "ths shader has any bindings");
         SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
     }
 }
 
-pub struct SetBinding<'s, 'p, V, I> {
+pub struct SetBinding<'s, 'p, D> {
     only_indexed_mesh: bool,
     slots: SlotNumbers,
     pass: &'s mut RenderPass<'p>,
-    ty: PhantomData<(V, I)>,
+    ty: PhantomData<D>,
 }
 
-impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
+impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
     fn new(only_indexed_mesh: bool, slots: SlotNumbers, pass: &'s mut RenderPass<'p>) -> Self {
         Self {
             only_indexed_mesh,
@@ -82,7 +82,7 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, V, I> {
     }
 }
 
-impl<'p, V> SetBinding<'_, 'p, V, ()> {
+impl<'p, V> SetBinding<'_, 'p, (V, ())> {
     #[inline]
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
         assert!(
@@ -94,7 +94,7 @@ impl<'p, V> SetBinding<'_, 'p, V, ()> {
     }
 }
 
-impl SetBinding<'_, '_, (), ()> {
+impl SetBinding<'_, '_, ((), ())> {
     #[inline]
     pub fn draw_points(&mut self, n: u32) {
         assert!(
@@ -196,7 +196,7 @@ impl From<Format> for Config {
     }
 }
 
-pub struct Layer<V, I> {
+pub struct Layer<D> {
     shader_id: usize,
     no_bindings: bool,
     only_indexed_mesh: bool,
@@ -204,10 +204,10 @@ pub struct Layer<V, I> {
     depth: bool,
     format: Format,
     render: RenderPipeline,
-    ty: PhantomData<(V, I)>,
+    ty: PhantomData<D>,
 }
 
-impl<V, I> Layer<V, I> {
+impl<D> Layer<D> {
     pub(crate) fn new(state: &State, shader: &ShaderData, conf: &Config) -> Self {
         use wgpu::*;
 
@@ -284,7 +284,11 @@ impl<V, I> Layer<V, I> {
         self.format
     }
 
-    pub(crate) fn set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, V, I> {
+    pub(crate) fn render(&self) -> &wgpu::RenderPipeline {
+        &self.render
+    }
+
+    pub(crate) fn set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, D> {
         pass.set_pipeline(&self.render);
         SetLayer {
             shader_id: self.shader_id,

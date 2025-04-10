@@ -8,7 +8,10 @@ use {
         texture::{CopyBuffer, CopyTexture, DrawTexture},
     },
     std::sync::atomic::{self, AtomicUsize},
-    wgpu::{CommandEncoder, Device, Instance, Queue, TextureView},
+    wgpu::{
+        Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags, Queue,
+        TextureView,
+    },
 };
 
 #[cfg(feature = "winit")]
@@ -25,7 +28,37 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new(instance: Instance) -> Result<Self, FailedMakeContext> {
+    pub async fn new() -> Result<Self, FailedMakeContext> {
+        let backends;
+
+        #[cfg(all(
+            any(target_family = "unix", target_family = "windows"),
+            not(target_os = "macos")
+        ))]
+        {
+            backends = Backends::VULKAN;
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            backends = Backends::METAL;
+        }
+
+        #[cfg(target_family = "wasm")]
+        {
+            backends = Backends::BROWSER_WEBGPU;
+        }
+
+        let instance = {
+            let desc = InstanceDescriptor {
+                backends,
+                flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
+                ..Default::default()
+            };
+
+            Instance::new(&desc)
+        };
+
         let adapter = {
             use wgpu::{PowerPreference, RequestAdapterOptions};
 
@@ -117,6 +150,83 @@ impl State {
     }
 }
 
+pub struct Scheduler<'shed> {
+    encoder: &'shed mut CommandEncoder,
+}
+
+impl<'shed> Scheduler<'shed> {
+    pub fn render<O>(&'shed mut self, target: Target<'_>, opts: O) -> Render<'shed>
+    where
+        O: Into<Options>,
+    {
+        let opts = opts.into();
+        let color_attachment = wgpu::RenderPassColorAttachment {
+            view: target.colorv,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: opts
+                    .clear_color
+                    .map(Rgba::wgpu)
+                    .map_or(wgpu::LoadOp::Load, wgpu::LoadOp::Clear),
+                store: wgpu::StoreOp::Store,
+            },
+        };
+
+        let depth_attachment = |view| {
+            let ops = wgpu::Operations {
+                load: opts
+                    .clear_depth
+                    .map_or(wgpu::LoadOp::Load, wgpu::LoadOp::Clear),
+                store: wgpu::StoreOp::Store,
+            };
+
+            wgpu::RenderPassDepthStencilAttachment {
+                view,
+                depth_ops: Some(ops),
+                stencil_ops: None,
+            }
+        };
+
+        let desc = wgpu::RenderPassDescriptor {
+            color_attachments: &[Some(color_attachment)],
+            depth_stencil_attachment: target.depthv.map(depth_attachment),
+            ..Default::default()
+        };
+
+        let pass = self.encoder.begin_render_pass(&desc);
+        Render { pass }
+    }
+}
+
+pub struct Render<'shed> {
+    pass: wgpu::RenderPass<'shed>,
+}
+
+impl<'shed> Render<'shed> {
+    pub fn on<'on, D>(&'on mut self, layer: &Layer<D>) -> OnLayer<'shed, 'on> {
+        self.pass.set_pipeline(layer.render());
+
+        OnLayer {
+            pass: &mut self.pass,
+        }
+    }
+}
+
+pub struct OnLayer<'shed, 'on> {
+    #[expect(dead_code)]
+    pass: &'on mut wgpu::RenderPass<'shed>,
+}
+
+impl OnLayer<'_, '_> {
+    pub fn bind(&mut self, _binding: ()) {
+        todo!()
+    }
+
+    pub fn bind_empty(&mut self) {
+        todo!()
+    }
+}
+
 /// Current layer options.
 #[derive(Clone, Copy, Default)]
 pub struct Options {
@@ -151,7 +261,7 @@ pub struct Frame<'v, 'e> {
 }
 
 impl Frame<'_, '_> {
-    pub fn layer<'p, V, I, O>(&'p mut self, layer: &'p Layer<V, I>, opts: O) -> SetLayer<'p, V, I>
+    pub fn set_layer<'p, D, O>(&'p mut self, layer: &'p Layer<D>, opts: O) -> SetLayer<'p, D>
     where
         O: Into<Options>,
     {

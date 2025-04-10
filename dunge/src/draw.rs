@@ -10,14 +10,14 @@ use crate::state::Frame;
 ///
 /// struct App {
 ///     bg: Rgba,
-///     layer: Layer<(), ()>,
+///     layer: Layer<((), ())>,
 /// }
 ///
 /// impl Draw for App {
 ///     fn draw(&self, mut frame: Frame) {
 ///         frame
 ///             // set a layer
-///             .layer(&self.layer, self.bg)
+///             .set_layer(&self.layer, self.bg)
 ///             // without any binding
 ///             .bind_empty()
 ///             // draw some triangle
@@ -31,10 +31,10 @@ use crate::state::Frame;
 /// ```rust
 /// use dunge::{Draw, Frame, layer::Layer, color::Rgba};
 ///
-/// fn make_draw(bg: Rgba, layer: Layer<(), ()>) -> impl Draw {
+/// fn make_draw(bg: Rgba, layer: Layer<((), ())>) -> impl Draw {
 ///     dunge::draw(move |mut frame: Frame| {
 ///         frame
-///             .layer(&layer, bg)
+///             .set_layer(&layer, bg)
 ///             .bind_empty()
 ///             .draw_points(3);
 ///     })

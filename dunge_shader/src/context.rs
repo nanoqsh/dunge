@@ -9,7 +9,7 @@ use {
         types::{self, MemberData, ValueType, VectorType},
         vertex::{self, Vertex},
     },
-    std::{any::TypeId, ops},
+    std::{any::TypeId, convert::Infallible, marker::PhantomData, ops},
 };
 
 #[derive(Clone, Copy)]
@@ -99,7 +99,7 @@ impl Context {
                 index: 1,
                 verts: 1,
                 insts: 2,
-                group: 4,
+                group: 1,
             },
         }
     }
@@ -138,8 +138,11 @@ impl Context {
         id
     }
 
-    fn add_group(&mut self, tyid: TypeId, def: Define<MemberData>) -> (u32, GlobalOut) {
+    fn add_group_set(&mut self) {
         countdown(&mut self.limits.group, "too many groups in the shader");
+    }
+
+    fn add_group(&mut self, tyid: TypeId, def: Define<MemberData>) -> (u32, GlobalOut) {
         let out = GlobalOut::default();
         let en = GroupEntry {
             tyid,
@@ -274,14 +277,12 @@ where
     }
 }
 
-pub trait FromContext<K> {
-    fn from_context(cx: &mut Context) -> Self;
-}
-
 #[derive(Clone, Copy)]
 pub struct Index(pub Ret<ReadIndex, u32>);
 
 impl FromContext<RenderKind> for Index {
+    type Set<T> = NoGroupSet;
+
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
         Self(ReadIndex::new(id))
@@ -292,6 +293,8 @@ impl FromContext<RenderKind> for Index {
 pub struct Invocation(pub Ret<ReadInvocation, types::Vec3<u32>>);
 
 impl FromContext<ComputeKind> for Invocation {
+    type Set<T> = NoGroupSet;
+
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_global_invocation_id();
         Self(ReadInvocation::new(id))
@@ -299,11 +302,13 @@ impl FromContext<ComputeKind> for Invocation {
 }
 
 pub trait ProjectionFromContext {
+    type Set<T>: GetGroupSet<T>;
     type Projection;
     fn from_context(cx: &mut Context) -> Self::Projection;
 }
 
 impl ProjectionFromContext for () {
+    type Set<T> = GroupSet;
     type Projection = ();
     fn from_context(_: &mut Context) -> Self::Projection {}
 }
@@ -312,9 +317,11 @@ impl<A> ProjectionFromContext for A
 where
     A: Group,
 {
+    type Set<T> = GroupSet<A>;
     type Projection = A::Projection;
 
     fn from_context(cx: &mut Context) -> Self::Projection {
+        cx.add_group_set();
         let (id, out) = cx.add_group(TypeId::of::<A::Projection>(), A::DEF);
         group::Projection::projection(id, out)
     }
@@ -328,9 +335,12 @@ macro_rules! impl_projection_from_context {
                 $t: Group,
             )*
         {
+            type Set<T> = GroupSet<$($t),*,>;
             type Projection = ($($t::Projection),*,);
 
             fn from_context(cx: &mut Context) -> Self::Projection {
+                cx.add_group_set();
+
                 (
                     $({
                         let (id, out) = cx.add_group(TypeId::of::<$t::Projection>(), $t::DEF);
@@ -355,7 +365,32 @@ impl<G, K> FromContext<K> for Groups<G>
 where
     G: ProjectionFromContext,
 {
+    type Set<T> = G::Set<T>;
+
     fn from_context(cx: &mut Context) -> Self {
         Self(G::from_context(cx))
     }
+}
+
+pub trait GetGroupSet<T> {
+    type Set;
+}
+
+pub struct GroupSet<G0 = Infallible, G1 = Infallible, G2 = Infallible, G3 = Infallible>(
+    PhantomData<(G0, G1, G2, G3)>,
+);
+
+impl<T, G0, G1, G2, G3> GetGroupSet<T> for GroupSet<G0, G1, G2, G3> {
+    type Set = Self;
+}
+
+pub trait FromContext<K> {
+    type Set<T>: GetGroupSet<T>;
+    fn from_context(cx: &mut Context) -> Self;
+}
+
+pub struct NoGroupSet(());
+
+impl<T> GetGroupSet<T> for NoGroupSet {
+    type Set = T;
 }

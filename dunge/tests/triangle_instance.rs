@@ -67,7 +67,7 @@ fn render() -> Result<(), Error> {
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = dunge::draw(|mut frame| {
         frame
-            .layer(&layer, opts)
+            .set_layer(&layer, opts)
             .bind_empty()
             .instance(&transform)
             .draw_points(3);

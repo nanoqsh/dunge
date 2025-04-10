@@ -127,8 +127,8 @@ let draw = move |mut frame: Frame| {
     let bg = Rgba::from_bytes([0, 0, 0, !0]);
 
     frame
-        // Select a layer to draw on it
-        .layer(&layer, bg)
+        // Set a layer to draw on it
+        .set_layer(&layer, bg)
         // The shader has no bindings, so call empty bind
         .bind_empty()
         // And finally draw the mesh

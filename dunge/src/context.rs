@@ -7,7 +7,7 @@ use {
         mesh::{self, Mesh},
         shader::{ComputeShader, RenderShader, Shader},
         sl,
-        state::{AsTarget, State},
+        state::{AsTarget, Scheduler, State},
         storage::{Storage, StorageValue},
         texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
         uniform::Uniform,
@@ -24,7 +24,8 @@ use {
 /// Returns an error when the context could not be created.
 /// See [`FailedMakeContext`] for details.
 pub async fn context() -> Result<Context, FailedMakeContext> {
-    Context::new().await
+    let state = State::new().await?;
+    Ok(Context(Arc::new(state)))
 }
 
 /// The main dunge context.
@@ -36,55 +37,18 @@ pub async fn context() -> Result<Context, FailedMakeContext> {
 pub struct Context(Arc<State>);
 
 impl Context {
-    pub(crate) async fn new() -> Result<Self, FailedMakeContext> {
-        use wgpu::{Backends, Instance, InstanceDescriptor, InstanceFlags};
-
-        let backends;
-
-        #[cfg(all(
-            any(target_family = "unix", target_family = "windows"),
-            not(target_os = "macos")
-        ))]
-        {
-            backends = Backends::VULKAN;
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-            backends = Backends::METAL;
-        }
-
-        #[cfg(target_family = "wasm")]
-        {
-            backends = Backends::BROWSER_WEBGPU;
-        }
-
-        let instance = {
-            let desc = InstanceDescriptor {
-                backends,
-                flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
-                ..Default::default()
-            };
-
-            Instance::new(&desc)
-        };
-
-        let state = State::new(instance).await?;
-        Ok(Self(Arc::new(state)))
-    }
-
     pub(crate) fn state(&self) -> &State {
         &self.0
     }
 
-    pub fn make_shader<M, A, K>(&self, module: M) -> Shader<M::Input>
+    pub fn make_shader<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
     where
         M: sl::IntoModule<A, K>,
     {
         Shader::new(&self.0, module)
     }
 
-    pub fn make_binder<'a, K>(&'a self, shader: &'a Shader<K>) -> Binder<'a> {
+    pub fn make_binder<'a, K, S>(&'a self, shader: &'a Shader<K, S>) -> Binder<'a> {
         Binder::new(&self.0, shader.data())
     }
 
@@ -102,7 +66,7 @@ impl Context {
         Storage::new(&self.0, val.storage_value())
     }
 
-    pub fn make_layer<V, I, O>(&self, shader: &RenderShader<V, I>, opts: O) -> Layer<V, I>
+    pub fn make_layer<D, S, O>(&self, shader: &RenderShader<D, S>, opts: O) -> Layer<D>
     where
         O: Into<Config>,
     {
@@ -110,7 +74,7 @@ impl Context {
         Layer::new(&self.0, shader.data(), &opts)
     }
 
-    pub fn make_workload(&self, shader: &ComputeShader) -> Workload {
+    pub fn make_workload<S>(&self, shader: &ComputeShader<S>) -> Workload {
         Workload::new(&self.0, shader.data())
     }
 
@@ -170,6 +134,12 @@ impl Context {
     {
         let target = target.as_target();
         self.0.draw(target, draw);
+    }
+
+    pub async fn shed<F, O>(_f: F)
+    where
+        F: FnOnce(Scheduler<'_>),
+    {
     }
 }
 

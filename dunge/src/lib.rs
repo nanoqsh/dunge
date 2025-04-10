@@ -48,7 +48,7 @@ pub use {
         draw::{draw, Draw},
         format::Format,
         shader::{ComputeShader, RenderShader, Shader},
-        state::{AsTarget, Frame, Options, RenderBuffer, Target},
+        state::{AsTarget, Frame, Options, RenderBuffer, Scheduler, Target},
     },
     dunge_macros::{Group, Instance, Vertex},
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},

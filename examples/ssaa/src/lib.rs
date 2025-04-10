@@ -166,7 +166,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             let main = |mut frame: Frame| {
                 let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
                 frame
-                    .layer(&triangle_layer, opts)
+                    .set_layer(&triangle_layer, opts)
                     .bind(&bind)
                     .draw_points(3);
             };
@@ -174,7 +174,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             state.cx.draw_to(&state.render_buf, dunge::draw(main));
 
             frame
-                .layer(&screen_layer, Options::default())
+                .set_layer(&screen_layer, Options::default())
                 .bind(&state.bind_map)
                 .draw(&screen_mesh);
         };

@@ -12,22 +12,22 @@ use {
     },
 };
 
-pub type RenderShader<V, I> = Shader<RenderInput<V, I>>;
-pub type ComputeShader = Shader<ComputeInput>;
+pub type RenderShader<D, S> = Shader<RenderInput<D>, S>;
+pub type ComputeShader<S> = Shader<ComputeInput, S>;
 
 /// The shader type.
 ///
 /// Can be created using the context's [`make_shader`](crate::Context::make_shader) function.
-pub struct Shader<I> {
+pub struct Shader<I, S> {
     data: ShaderData,
     wgsl: String,
-    kind: PhantomData<I>,
+    kind: PhantomData<(I, S)>,
 }
 
-impl<I> Shader<I> {
+impl<I, S> Shader<I, S> {
     pub(crate) fn new<M, A, K>(state: &State, module: M) -> Self
     where
-        M: IntoModule<A, K, Input = I>,
+        M: IntoModule<A, K, Input = I, Set = S>,
     {
         let mut module = module.into_module();
         let wgsl = mem::take(&mut module.wgsl);
