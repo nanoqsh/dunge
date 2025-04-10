@@ -1,6 +1,6 @@
 use {
     crate::{
-        bind::{self, Binder, ForeignShader, GroupHandler, UniqueBinding, Visit},
+        bind::{self, Binder, GroupHandler, Set, UniqueBinding, UniqueSet, Visit},
         draw::Draw,
         instance::Row,
         layer::{Config, Layer},
@@ -52,6 +52,13 @@ impl Context {
         Binder::new(&self.0, shader.data())
     }
 
+    pub fn make_set<K, S>(&self, shader: &Shader<K, S>, set: S) -> UniqueSet<S>
+    where
+        S: Set,
+    {
+        UniqueSet::new(&self.0, shader.data(), set)
+    }
+
     pub fn make_uniform<V>(&self, val: &V) -> Uniform<V>
     where
         V: Value,
@@ -66,7 +73,7 @@ impl Context {
         Storage::new(&self.0, val.storage_value())
     }
 
-    pub fn make_layer<D, S, O>(&self, shader: &RenderShader<D, S>, opts: O) -> Layer<D>
+    pub fn make_layer<D, S, O>(&self, shader: &RenderShader<D, S>, opts: O) -> Layer<D, S>
     where
         O: Into<Config>,
     {
@@ -115,16 +122,26 @@ impl Context {
         view.map(&self.0, tx, rx).await
     }
 
-    pub fn update_group<G>(
+    pub fn _update_group<G>(
         &self,
         uni: &mut UniqueBinding,
-        handler: &GroupHandler<G::Projection>,
+        handler: &GroupHandler<(), G::Projection>,
         group: &G,
-    ) -> Result<(), ForeignShader>
-    where
+    ) where
         G: Visit,
     {
-        bind::update(&self.0, uni, handler, group)
+        bind::_update(&self.0, uni, handler, group);
+    }
+
+    pub fn update_group<S, G>(
+        &self,
+        set: &mut UniqueSet<S>,
+        handler: &GroupHandler<S, G::Projection>,
+        group: G,
+    ) where
+        G: Visit,
+    {
+        bind::update(&self.0, set, handler, group);
     }
 
     pub fn draw_to<T, D>(&self, target: &T, draw: D)

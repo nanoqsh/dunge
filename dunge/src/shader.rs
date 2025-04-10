@@ -63,7 +63,6 @@ pub(crate) struct SlotNumbers {
 }
 
 pub(crate) struct ShaderData {
-    id: usize,
     module: ShaderModule,
     layout: PipelineLayout,
     vertex: Box<[Vertex]>,
@@ -244,17 +243,12 @@ impl ShaderData {
         }
 
         Self {
-            id: state.next_shader_id(),
             module,
             layout,
             vertex: Box::from(vertex),
             slots,
             groups,
         }
-    }
-
-    pub(crate) fn id(&self) -> usize {
-        self.id
     }
 
     pub(crate) fn module(&self) -> &ShaderModule {

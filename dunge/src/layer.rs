@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        bind::Binding,
+        bind::Bind,
         format::Format,
         instance::{Set, Setter},
         mesh::Mesh,
@@ -13,28 +13,27 @@ use {
     wgpu::{BlendState, PrimitiveTopology, RenderPass, RenderPipeline},
 };
 
-pub struct SetLayer<'p, D> {
-    shader_id: usize,
+pub struct SetLayer<'p, D, S> {
     no_bindings: bool,
     only_indexed_mesh: bool,
     slots: SlotNumbers,
     pass: RenderPass<'p>,
-    ty: PhantomData<D>,
+    ty: PhantomData<(D, S)>,
 }
 
-impl<'p, V, I> SetLayer<'p, (V, I)> {
+impl<'p, V, I, S> SetLayer<'p, (V, I), S> {
     #[inline]
     pub fn bind<B>(&mut self, bind: &'p B) -> SetBinding<'_, 'p, (V, I)>
     where
-        B: Binding,
+        B: Bind<S>,
     {
-        let bind = bind.binding();
-        assert!(
-            self.shader_id == bind.shader_id,
-            "the binding doesn't belong to this shader",
-        );
+        let bind = bind.bind();
+        // assert!(
+        //     self.shader_id == bind.shader_id,
+        //     "the binding doesn't belong to this shader",
+        // );
 
-        for (id, group) in iter::zip(0.., bind.groups) {
+        for (id, group) in iter::zip(0.., bind.bind_groups) {
             self.pass.set_bind_group(id, group, &[]);
         }
 
@@ -196,18 +195,17 @@ impl From<Format> for Config {
     }
 }
 
-pub struct Layer<D> {
-    shader_id: usize,
+pub struct Layer<D, S> {
     no_bindings: bool,
     only_indexed_mesh: bool,
     slots: SlotNumbers,
     depth: bool,
     format: Format,
     render: RenderPipeline,
-    ty: PhantomData<D>,
+    ty: PhantomData<(D, S)>,
 }
 
-impl<D> Layer<D> {
+impl<D, S> Layer<D, S> {
     pub(crate) fn new(state: &State, shader: &ShaderData, conf: &Config) -> Self {
         use wgpu::*;
 
@@ -265,7 +263,6 @@ impl<D> Layer<D> {
         let render = state.device().create_render_pipeline(&desc);
 
         Self {
-            shader_id: shader.id(),
             no_bindings: shader.groups().is_empty(),
             only_indexed_mesh,
             slots: shader.slots(),
@@ -288,10 +285,9 @@ impl<D> Layer<D> {
         &self.render
     }
 
-    pub(crate) fn set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, D> {
+    pub(crate) fn set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, D, S> {
         pass.set_pipeline(&self.render);
         SetLayer {
-            shader_id: self.shader_id,
             no_bindings: self.no_bindings,
             only_indexed_mesh: self.only_indexed_mesh,
             slots: self.slots,

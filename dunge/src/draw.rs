@@ -10,7 +10,7 @@ use crate::state::Frame;
 ///
 /// struct App {
 ///     bg: Rgba,
-///     layer: Layer<((), ())>,
+///     layer: Layer<((), ()), ()>,
 /// }
 ///
 /// impl Draw for App {
@@ -31,7 +31,7 @@ use crate::state::Frame;
 /// ```rust
 /// use dunge::{Draw, Frame, layer::Layer, color::Rgba};
 ///
-/// fn make_draw(bg: Rgba, layer: Layer<((), ())>) -> impl Draw {
+/// fn make_draw(bg: Rgba, layer: Layer<((), ()), ()>) -> impl Draw {
 ///     dunge::draw(move |mut frame: Frame| {
 ///         frame
 ///             .set_layer(&layer, bg)

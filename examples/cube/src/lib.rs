@@ -126,7 +126,10 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
 
         let draw = move |mut frame: Frame| {
             let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-            frame.set_layer(&layer, opts).bind(&bind_transform).draw(&mesh);
+            frame
+                .set_layer(&layer, opts)
+                .bind(&bind_transform)
+                .draw(&mesh);
         };
 
         dunge::update(upd, draw)

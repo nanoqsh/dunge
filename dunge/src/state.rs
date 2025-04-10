@@ -7,7 +7,6 @@ use {
         layer::{Layer, SetLayer},
         texture::{CopyBuffer, CopyTexture, DrawTexture},
     },
-    std::sync::atomic::{self, AtomicUsize},
     wgpu::{
         Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags, Queue,
         TextureView,
@@ -24,7 +23,6 @@ pub(crate) struct State {
     adapter: Adapter,
     device: Device,
     queue: Queue,
-    shader_ids: AtomicUsize,
 }
 
 impl State {
@@ -103,7 +101,6 @@ impl State {
             adapter,
             device,
             queue,
-            shader_ids: AtomicUsize::default(),
         })
     }
 
@@ -123,10 +120,6 @@ impl State {
 
     pub fn queue(&self) -> &Queue {
         &self.queue
-    }
-
-    pub fn next_shader_id(&self) -> usize {
-        self.shader_ids.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
     pub fn draw<D>(&self, target: Target, draw: D)
@@ -203,7 +196,7 @@ pub struct Render<'shed> {
 }
 
 impl<'shed> Render<'shed> {
-    pub fn on<'on, D>(&'on mut self, layer: &Layer<D>) -> OnLayer<'shed, 'on> {
+    pub fn on<'on, D, S>(&'on mut self, layer: &Layer<D, S>) -> OnLayer<'shed, 'on> {
         self.pass.set_pipeline(layer.render());
 
         OnLayer {
@@ -261,7 +254,11 @@ pub struct Frame<'v, 'e> {
 }
 
 impl Frame<'_, '_> {
-    pub fn set_layer<'p, D, O>(&'p mut self, layer: &'p Layer<D>, opts: O) -> SetLayer<'p, D>
+    pub fn set_layer<'p, D, S, O>(
+        &'p mut self,
+        layer: &'p Layer<D, S>,
+        opts: O,
+    ) -> SetLayer<'p, D, S>
     where
         O: Into<Options>,
     {

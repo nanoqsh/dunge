@@ -2,10 +2,15 @@
 
 use {
     crate::{
-        group::BoundTexture, shader::ShaderData, state::State, storage::Storage, texture::Sampler,
-        uniform::Uniform, Group,
+        group::BoundTexture,
+        shader::{Shader, ShaderData},
+        state::State,
+        storage::Storage,
+        texture::Sampler,
+        uniform::Uniform,
+        Group,
     },
-    std::{any::TypeId, error, fmt, marker::PhantomData, sync::Arc},
+    std::{any::TypeId, marker::PhantomData, mem, sync::Arc},
     wgpu::{
         BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
     },
@@ -13,10 +18,40 @@ use {
 
 pub trait Visit: Group {
     const N_MEMBERS: usize;
-    fn visit<'a>(&'a self, visitor: &mut Visitor<'a>);
+    fn visit<'group>(&'group self, visitor: &mut Visitor<'group>);
 }
 
-pub struct Visitor<'a>(Vec<BindGroupEntry<'a>>);
+impl<V> Visit for &V
+where
+    V: Visit,
+{
+    const N_MEMBERS: usize = V::N_MEMBERS;
+
+    fn visit<'group>(&'group self, visitor: &mut Visitor<'group>) {
+        (*self).visit(visitor);
+    }
+}
+
+pub struct Visitor<'group>(Vec<wgpu::BindGroupEntry<'group>>);
+
+impl<'group> Visitor<'group> {
+    fn clear(&mut self) {
+        self.0.clear();
+    }
+
+    fn visit<G>(&mut self, group: &'group G)
+    where
+        G: Visit,
+    {
+        let mut visitor = Visitor(mem::take(&mut self.0));
+        group.visit(&mut visitor);
+        self.0 = visitor.0;
+    }
+
+    fn entries(&self) -> &[wgpu::BindGroupEntry<'group>] {
+        &self.0
+    }
+}
 
 impl<'a> Visitor<'a> {
     fn push(&mut self, resource: BindingResource<'a>) {
@@ -25,40 +60,40 @@ impl<'a> Visitor<'a> {
     }
 }
 
-pub trait VisitMember<'a> {
-    fn visit_member(self, visitor: &mut Visitor<'a>);
+pub trait VisitMember<'group> {
+    fn visit_member(self, visitor: &mut Visitor<'group>);
 }
 
-impl<'a, V, M> VisitMember<'a> for &'a Storage<V, M>
+impl<'group, V, M> VisitMember<'group> for &'group Storage<V, M>
 where
     V: ?Sized,
 {
-    fn visit_member(self, visitor: &mut Visitor<'a>) {
+    fn visit_member(self, visitor: &mut Visitor<'group>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(BindingResource::Buffer(binding));
     }
 }
 
-impl<'a, V> VisitMember<'a> for &'a Uniform<V> {
-    fn visit_member(self, visitor: &mut Visitor<'a>) {
+impl<'group, V> VisitMember<'group> for &'group Uniform<V> {
+    fn visit_member(self, visitor: &mut Visitor<'group>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(BindingResource::Buffer(binding));
     }
 }
 
-impl<'a> VisitMember<'a> for BoundTexture<'a> {
-    fn visit_member(self, visitor: &mut Visitor<'a>) {
+impl<'group> VisitMember<'group> for BoundTexture<'group> {
+    fn visit_member(self, visitor: &mut Visitor<'group>) {
         visitor.push(BindingResource::TextureView(self.0.view()));
     }
 }
 
-impl<'a> VisitMember<'a> for &'a Sampler {
-    fn visit_member(self, visitor: &mut Visitor<'a>) {
+impl<'group> VisitMember<'group> for &'group Sampler {
+    fn visit_member(self, visitor: &mut Visitor<'group>) {
         visitor.push(BindingResource::Sampler(self.inner()));
     }
 }
 
-fn visit<G>(group: &G) -> Vec<BindGroupEntry>
+fn _visit<G>(group: &G) -> Vec<BindGroupEntry>
 where
     G: Visit,
 {
@@ -67,81 +102,85 @@ where
     visitor.0
 }
 
-pub struct GroupHandler<P> {
-    shader_id: usize,
+pub struct GroupHandler<S, P> {
     id: usize,
     layout: Arc<BindGroupLayout>,
-    ty: PhantomData<P>,
+    ty: PhantomData<(S, P)>,
 }
 
-#[derive(Debug)]
-pub struct ForeignShader;
-
-impl fmt::Display for ForeignShader {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "the handler doesn't belong to this shader")
-    }
+pub trait Bind<S> {
+    fn bind(&self) -> Bindings<'_>;
 }
 
-impl error::Error for ForeignShader {}
-
-pub trait Binding {
-    fn binding(&self) -> Bind;
-}
-
-pub struct Bind<'a> {
-    pub(crate) shader_id: usize,
-    pub(crate) groups: &'a [BindGroup],
+pub struct Bindings<'group> {
+    pub(crate) bind_groups: &'group [BindGroup],
 }
 
 #[derive(Clone)]
 pub struct SharedBinding {
-    shader_id: usize,
     groups: Arc<[BindGroup]>,
 }
 
 impl SharedBinding {
-    fn new(shader_id: usize, groups: Vec<BindGroup>) -> Self {
+    fn new(groups: Vec<BindGroup>) -> Self {
         Self {
-            shader_id,
             groups: Arc::from(groups),
         }
     }
 }
 
-impl Binding for SharedBinding {
-    fn binding(&self) -> Bind {
-        Bind {
-            shader_id: self.shader_id,
-            groups: &self.groups,
+impl<S> Bind<S> for SharedBinding {
+    fn bind(&self) -> Bindings {
+        Bindings {
+            bind_groups: &self.groups,
         }
     }
 }
 
-pub(crate) fn update<G>(
+pub(crate) fn _update<S, G>(
     state: &State,
     uni: &mut UniqueBinding,
-    handler: &GroupHandler<G::Projection>,
+    handler: &GroupHandler<S, G::Projection>,
     group: &G,
-) -> Result<(), ForeignShader>
-where
+) where
     G: Visit,
 {
-    if handler.shader_id != uni.0.shader_id {
-        return Err(ForeignShader);
-    }
+    let device = state.device();
+    group.set(&mut |_, visitor| {
+        let entries = visitor.entries();
+        let desc = BindGroupDescriptor {
+            label: None,
+            layout: &handler.layout,
+            entries,
+        };
 
-    let entries = visit(group);
-    let desc = BindGroupDescriptor {
-        label: None,
-        layout: &handler.layout,
-        entries: &entries,
-    };
+        let new = device.create_bind_group(&desc);
+        let groups = uni.groups();
+        groups[handler.id] = new;
+    });
+}
 
-    let new = state.device().create_bind_group(&desc);
-    let groups = uni.groups();
-    groups[handler.id] = new;
-    Ok(())
+pub(crate) fn update<S, G>(
+    state: &State,
+    set: &mut UniqueSet<S>,
+    handler: &GroupHandler<S, G::Projection>,
+    group: G,
+) where
+    G: Visit,
+{
+    let device = state.device();
+    group.set(&mut |_, visitor| {
+        let entries = visitor.entries();
+        let desc = BindGroupDescriptor {
+            label: None,
+            layout: &handler.layout,
+            entries,
+        };
+
+        let new = device.create_bind_group(&desc);
+        let groups = set.bind_groups();
+        groups[handler.id] = new;
+    });
 }
 
 pub struct UniqueBinding(SharedBinding);
@@ -156,13 +195,14 @@ impl UniqueBinding {
     }
 }
 
-impl Binding for UniqueBinding {
-    fn binding(&self) -> Bind {
-        self.0.binding()
+impl<S> Bind<S> for UniqueBinding {
+    fn bind(&self) -> Bindings {
+        <SharedBinding as Bind<S>>::bind(&self.0)
     }
 }
 
 pub(crate) struct TypedGroup {
+    // TODO: remove
     tyid: TypeId,
     bind: Arc<BindGroupLayout>,
 }
@@ -184,7 +224,6 @@ impl TypedGroup {
 ///
 /// Can be created using the context's [`make_binder`](crate::Context::make_binder) function.
 pub struct Binder<'a> {
-    shader_id: usize,
     device: &'a Device,
     layout: &'a [TypedGroup],
     groups: Vec<BindGroup>,
@@ -194,7 +233,6 @@ impl<'a> Binder<'a> {
     pub(crate) fn new(state: &'a State, shader: &'a ShaderData) -> Self {
         let layout = shader.groups();
         Self {
-            shader_id: shader.id(),
             device: state.device(),
             layout,
             groups: Vec::with_capacity(layout.len()),
@@ -211,7 +249,7 @@ impl<'a> Binder<'a> {
     /// It checks the group type matches to an associated shader's group at runtime.
     /// If it's violated or there are more bindings than in the shader,
     /// then this function will panic.
-    pub fn add<G>(&mut self, group: &G) -> GroupHandler<G::Projection>
+    pub fn add<G>(&mut self, group: &G) -> GroupHandler<(), G::Projection>
     where
         G: Visit,
     {
@@ -226,7 +264,7 @@ impl<'a> Binder<'a> {
         );
 
         let layout = Arc::clone(&layout.bind);
-        let entries = visit(group);
+        let entries = _visit(group);
         let desc = BindGroupDescriptor {
             label: None,
             layout: &layout,
@@ -237,7 +275,6 @@ impl<'a> Binder<'a> {
         self.groups.push(bind);
 
         GroupHandler {
-            shader_id: self.shader_id,
             id,
             layout,
             ty: PhantomData,
@@ -255,7 +292,206 @@ impl<'a> Binder<'a> {
             "some group bindings is not set",
         );
 
-        let binding = SharedBinding::new(self.shader_id, self.groups);
+        let binding = SharedBinding::new(self.groups);
         UniqueBinding(binding)
     }
+}
+
+pub struct UniqueSet<S>(SharedSet<S>);
+
+impl<S> UniqueSet<S> {
+    pub(crate) fn new(state: &State, shader: &ShaderData, set: S) -> Self
+    where
+        S: Set,
+    {
+        let groups = shader.groups();
+        let mut bind_groups = Vec::with_capacity(groups.len());
+
+        let device = state.device();
+        set.set(&mut |id, visitor| {
+            let layout = &groups[id].bind;
+            let entries = visitor.entries();
+            let desc = BindGroupDescriptor {
+                label: None,
+                layout,
+                entries,
+            };
+
+            bind_groups.push(device.create_bind_group(&desc));
+        });
+
+        Self(SharedSet {
+            bind_groups: Arc::from(bind_groups),
+            ty: PhantomData,
+        })
+    }
+
+    pub fn handler<K, const N: usize>(
+        &self,
+        shader: &Shader<K, S>,
+    ) -> GroupHandler<S, <S::Group as Group>::Projection>
+    where
+        S: Take<N>,
+    {
+        let groups = shader.data().groups();
+        let layout = Arc::clone(&groups[N].bind);
+
+        GroupHandler {
+            id: N,
+            layout,
+            ty: PhantomData,
+        }
+    }
+
+    pub fn shared(self) -> SharedSet<S> {
+        self.0
+    }
+
+    fn bind_groups(&mut self) -> &mut [BindGroup] {
+        Arc::get_mut(&mut self.0.bind_groups).expect("uniqueness is guaranteed by the type")
+    }
+}
+
+impl<S> Bind<S> for UniqueSet<S> {
+    fn bind(&self) -> Bindings {
+        self.0.bind()
+    }
+}
+
+#[derive(Clone)]
+pub struct SharedSet<S> {
+    bind_groups: Arc<[BindGroup]>,
+    ty: PhantomData<S>,
+}
+
+impl<S> Bind<S> for SharedSet<S> {
+    fn bind(&self) -> Bindings {
+        Bindings {
+            bind_groups: &self.bind_groups,
+        }
+    }
+}
+
+pub trait Set {
+    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>));
+}
+
+impl<G> Set for G
+where
+    G: Visit,
+{
+    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>)) {
+        let mut visitor = Visitor(Vec::with_capacity(G::N_MEMBERS));
+        visitor.visit(self);
+        f(0, &visitor);
+    }
+}
+
+impl<A> Set for (A,)
+where
+    A: Visit,
+{
+    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>)) {
+        let mut visitor = Visitor(Vec::with_capacity(A::N_MEMBERS));
+        visitor.visit(&self.0);
+        f(0, &visitor);
+    }
+}
+
+impl<A, B> Set for (A, B)
+where
+    A: Visit,
+    B: Visit,
+{
+    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>)) {
+        let cap = usize::max(A::N_MEMBERS, B::N_MEMBERS);
+        let mut visitor = Visitor(Vec::with_capacity(cap));
+        visitor.visit(&self.0);
+        f(0, &visitor);
+
+        visitor.clear();
+        visitor.visit(&self.1);
+        f(1, &visitor);
+    }
+}
+
+pub trait Take<const N: usize> {
+    type Group: Group;
+}
+
+impl<G> Take<0> for G
+where
+    G: Visit,
+{
+    type Group = G;
+}
+
+impl<A> Take<0> for (A,)
+where
+    A: Visit,
+{
+    type Group = A;
+}
+
+impl<A, B> Take<0> for (A, B)
+where
+    A: Visit,
+{
+    type Group = A;
+}
+
+impl<A, B> Take<1> for (A, B)
+where
+    B: Visit,
+{
+    type Group = B;
+}
+
+impl<A, B, C> Take<0> for (A, B, C)
+where
+    A: Visit,
+{
+    type Group = A;
+}
+
+impl<A, B, C> Take<1> for (A, B, C)
+where
+    B: Visit,
+{
+    type Group = B;
+}
+
+impl<A, B, C> Take<2> for (A, B, C)
+where
+    C: Visit,
+{
+    type Group = C;
+}
+
+impl<A, B, C, D> Take<0> for (A, B, C, D)
+where
+    A: Visit,
+{
+    type Group = A;
+}
+
+impl<A, B, C, D> Take<1> for (A, B, C, D)
+where
+    B: Visit,
+{
+    type Group = B;
+}
+
+impl<A, B, C, D> Take<2> for (A, B, C, D)
+where
+    C: Visit,
+{
+    type Group = C;
+}
+
+impl<A, B, C, D> Take<3> for (A, B, C, D)
+where
+    D: Visit,
+{
+    type Group = D;
 }

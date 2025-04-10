@@ -7,17 +7,13 @@ use {
     std::marker::PhantomData,
 };
 
-macro_rules! merge_group_set {
+macro_rules! merge_groups {
     () => {
         GroupSet
     };
 
-    ($h:ident) => {
-        <$h>::Set<GroupSet>
-    };
-
     ($h:ident $($t:ident)*) => {
-        <$h>::Set<merge_group_set!($($t)*)>
+        <$h>::GetGroups<merge_groups!($($t)*)>
     };
 }
 
@@ -59,7 +55,7 @@ macro_rules! impl_into_render_module {
             )*
         {
             type Input = RenderInput<(A::Vertex, A::Instance)>;
-            type Set = merge_group_set!($($t)*);
+            type Set = merge_groups!($($t)*);
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
@@ -93,7 +89,7 @@ macro_rules! impl_into_compute_module {
             )*
         {
             type Input = ComputeInput;
-            type Set = merge_group_set!($($t)*);
+            type Set = merge_groups!($($t)*);
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();

@@ -154,7 +154,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
                     stp: &stp,
                 };
 
-                dunge::then!(state.cx.update_group(&mut state.bind_map, &handler, &map));
+                state.cx._update_group(&mut state.bind_map, &handler, &map);
             }
 
             r += ctrl.delta_time().as_secs_f32() * 0.5;

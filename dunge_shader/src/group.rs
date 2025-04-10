@@ -6,6 +6,14 @@ pub trait Group {
     const DEF: Define<MemberData>;
 }
 
+impl<G> Group for &G
+where
+    G: Group,
+{
+    type Projection = G::Projection;
+    const DEF: Define<MemberData> = G::DEF;
+}
+
 /// Group type projection in a shader.
 pub trait Projection {
     fn projection(id: u32, out: GlobalOut) -> Self;
