@@ -10,7 +10,7 @@ use {
         uniform::Uniform,
         Group,
     },
-    std::{any::TypeId, marker::PhantomData, mem, sync::Arc},
+    std::{marker::PhantomData, mem, sync::Arc},
     wgpu::{
         BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
     },
@@ -53,8 +53,8 @@ impl<'group> Visitor<'group> {
     }
 }
 
-impl<'a> Visitor<'a> {
-    fn push(&mut self, resource: BindingResource<'a>) {
+impl<'group> Visitor<'group> {
+    fn push(&mut self, resource: BindingResource<'group>) {
         let binding = self.0.len() as u32;
         self.0.push(BindGroupEntry { binding, resource });
     }
@@ -201,36 +201,17 @@ impl<S> Bind<S> for UniqueBinding {
     }
 }
 
-pub(crate) struct TypedGroup {
-    // TODO: remove
-    tyid: TypeId,
-    bind: Arc<BindGroupLayout>,
-}
-
-impl TypedGroup {
-    pub fn new(tyid: TypeId, bind: BindGroupLayout) -> Self {
-        Self {
-            tyid,
-            bind: Arc::new(bind),
-        }
-    }
-
-    pub fn bind(&self) -> &BindGroupLayout {
-        &self.bind
-    }
-}
-
 /// The group binder type.
 ///
 /// Can be created using the context's [`make_binder`](crate::Context::make_binder) function.
-pub struct Binder<'a> {
-    device: &'a Device,
-    layout: &'a [TypedGroup],
+pub struct Binder<'state> {
+    device: &'state Device,
+    layout: &'state [Arc<BindGroupLayout>],
     groups: Vec<BindGroup>,
 }
 
-impl<'a> Binder<'a> {
-    pub(crate) fn new(state: &'a State, shader: &'a ShaderData) -> Self {
+impl<'state> Binder<'state> {
+    pub(crate) fn new(state: &'state State, shader: &'state ShaderData) -> Self {
         let layout = shader.groups();
         Self {
             device: state.device(),
@@ -258,12 +239,7 @@ impl<'a> Binder<'a> {
             panic!("too many bindings");
         };
 
-        assert!(
-            layout.tyid == TypeId::of::<G::Projection>(),
-            "group type doesn't match",
-        );
-
-        let layout = Arc::clone(&layout.bind);
+        let layout = Arc::clone(&layout);
         let entries = _visit(group);
         let desc = BindGroupDescriptor {
             label: None,
@@ -309,7 +285,7 @@ impl<S> UniqueSet<S> {
 
         let device = state.device();
         set.set(&mut |id, visitor| {
-            let layout = &groups[id].bind;
+            let layout = &groups[id];
             let entries = visitor.entries();
             let desc = BindGroupDescriptor {
                 label: None,
@@ -334,7 +310,7 @@ impl<S> UniqueSet<S> {
         S: Take<N>,
     {
         let groups = shader.data().groups();
-        let layout = Arc::clone(&groups[N].bind);
+        let layout = Arc::clone(&groups[N]);
 
         GroupHandler {
             id: N,

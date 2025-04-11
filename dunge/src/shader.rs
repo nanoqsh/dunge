@@ -1,11 +1,10 @@
 use {
     crate::{
-        bind::TypedGroup,
         sl::{ComputeInput, InputInfo, IntoModule, Module, RenderInput, Stages},
         state::State,
         types::{MemberType, ScalarType, ValueType, VectorType},
     },
-    std::{cell::Cell, marker::PhantomData, mem},
+    std::{cell::Cell, marker::PhantomData, mem, sync::Arc},
     wgpu::{
         BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout,
         VertexFormat, VertexStepMode,
@@ -67,7 +66,7 @@ pub(crate) struct ShaderData {
     layout: PipelineLayout,
     vertex: Box<[Vertex]>,
     slots: SlotNumbers,
-    groups: Box<[TypedGroup]>,
+    groups: Box<[Arc<wgpu::BindGroupLayout>]>,
 }
 
 impl ShaderData {
@@ -153,13 +152,12 @@ impl ShaderData {
             };
 
             let bind = state.device().create_bind_group_layout(&desc);
-            let layout = TypedGroup::new(info.tyid, bind);
-            groups.push(layout);
+            groups.push(Arc::new(bind));
         }
 
         let groups = groups.into_boxed_slice();
         let layout = {
-            let groups: Vec<_> = groups.iter().map(TypedGroup::bind).collect();
+            let groups: Vec<_> = groups.iter().map(|g| g.as_ref()).collect();
             let desc = PipelineLayoutDescriptor {
                 bind_group_layouts: &groups,
                 ..Default::default()
@@ -277,7 +275,7 @@ impl ShaderData {
         self.slots
     }
 
-    pub(crate) fn groups(&self) -> &[TypedGroup] {
+    pub(crate) fn groups(&self) -> &[Arc<wgpu::BindGroupLayout>] {
         &self.groups
     }
 }
