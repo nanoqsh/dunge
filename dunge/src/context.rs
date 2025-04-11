@@ -48,13 +48,13 @@ impl Context {
         Shader::new(&self.0, module)
     }
 
-    pub fn make_binder<'a, K, S>(&'a self, shader: &'a Shader<K, S>) -> Binder<'a> {
+    pub fn make_binder<'state, K, S>(&'state self, shader: &'state Shader<K, S>) -> Binder<'state> {
         Binder::new(&self.0, shader.data())
     }
 
-    pub fn make_set<K, S>(&self, shader: &Shader<K, S>, set: S) -> UniqueSet<S>
+    pub fn make_set<K, S, D>(&self, shader: &Shader<K, S>, set: D) -> UniqueSet<S>
     where
-        S: Set,
+        D: Set<Set = S>,
     {
         UniqueSet::new(&self.0, shader.data(), set)
     }

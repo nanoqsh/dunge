@@ -146,7 +146,7 @@ pub(crate) fn _update<S, G>(
     G: Visit,
 {
     let device = state.device();
-    group.set(&mut |_, visitor| {
+    group.set(|_, visitor| {
         let entries = visitor.entries();
         let desc = BindGroupDescriptor {
             label: None,
@@ -169,7 +169,7 @@ pub(crate) fn update<S, G>(
     G: Visit,
 {
     let device = state.device();
-    group.set(&mut |_, visitor| {
+    group.set(|_, visitor| {
         let entries = visitor.entries();
         let desc = BindGroupDescriptor {
             label: None,
@@ -239,7 +239,7 @@ impl<'state> Binder<'state> {
             panic!("too many bindings");
         };
 
-        let layout = Arc::clone(&layout);
+        let layout = Arc::clone(layout);
         let entries = _visit(group);
         let desc = BindGroupDescriptor {
             label: None,
@@ -276,15 +276,15 @@ impl<'state> Binder<'state> {
 pub struct UniqueSet<S>(SharedSet<S>);
 
 impl<S> UniqueSet<S> {
-    pub(crate) fn new(state: &State, shader: &ShaderData, set: S) -> Self
+    pub(crate) fn new<D>(state: &State, shader: &ShaderData, set: D) -> Self
     where
-        S: Set,
+        D: Set<Set = S>,
     {
         let groups = shader.groups();
         let mut bind_groups = Vec::with_capacity(groups.len());
 
         let device = state.device();
-        set.set(&mut |id, visitor| {
+        set.set(|id, visitor| {
             let layout = &groups[id];
             let entries = visitor.entries();
             let desc = BindGroupDescriptor {
@@ -349,14 +349,23 @@ impl<S> Bind<S> for SharedSet<S> {
 }
 
 pub trait Set {
-    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>));
+    type Set;
+
+    fn set<F>(&self, f: F)
+    where
+        F: FnMut(usize, &Visitor<'_>);
 }
 
 impl<G> Set for G
 where
     G: Visit,
 {
-    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>)) {
+    type Set = (G,);
+
+    fn set<F>(&self, mut f: F)
+    where
+        F: FnMut(usize, &Visitor<'_>),
+    {
         let mut visitor = Visitor(Vec::with_capacity(G::N_MEMBERS));
         visitor.visit(self);
         f(0, &visitor);
@@ -367,7 +376,12 @@ impl<A> Set for (A,)
 where
     A: Visit,
 {
-    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>)) {
+    type Set = Self;
+
+    fn set<F>(&self, mut f: F)
+    where
+        F: FnMut(usize, &Visitor<'_>),
+    {
         let mut visitor = Visitor(Vec::with_capacity(A::N_MEMBERS));
         visitor.visit(&self.0);
         f(0, &visitor);
@@ -379,7 +393,12 @@ where
     A: Visit,
     B: Visit,
 {
-    fn set(&self, f: &mut dyn FnMut(usize, &Visitor<'_>)) {
+    type Set = Self;
+
+    fn set<F>(&self, mut f: F)
+    where
+        F: FnMut(usize, &Visitor<'_>),
+    {
         let cap = usize::max(A::N_MEMBERS, B::N_MEMBERS);
         let mut visitor = Visitor(Vec::with_capacity(cap));
         visitor.visit(&self.0);
@@ -388,6 +407,69 @@ where
         visitor.clear();
         visitor.visit(&self.1);
         f(1, &visitor);
+    }
+}
+
+impl<A, B, C> Set for (A, B, C)
+where
+    A: Visit,
+    B: Visit,
+    C: Visit,
+{
+    type Set = Self;
+
+    fn set<F>(&self, mut f: F)
+    where
+        F: FnMut(usize, &Visitor<'_>),
+    {
+        let cap = usize::max(A::N_MEMBERS, usize::max(B::N_MEMBERS, C::N_MEMBERS));
+        let mut visitor = Visitor(Vec::with_capacity(cap));
+        visitor.visit(&self.0);
+        f(0, &visitor);
+
+        visitor.clear();
+        visitor.visit(&self.1);
+        f(1, &visitor);
+
+        visitor.clear();
+        visitor.visit(&self.2);
+        f(2, &visitor);
+    }
+}
+
+impl<A, B, C, D> Set for (A, B, C, D)
+where
+    A: Visit,
+    B: Visit,
+    C: Visit,
+    D: Visit,
+{
+    type Set = Self;
+
+    fn set<F>(&self, mut f: F)
+    where
+        F: FnMut(usize, &Visitor<'_>),
+    {
+        let cap = usize::max(
+            usize::max(A::N_MEMBERS, B::N_MEMBERS),
+            usize::max(C::N_MEMBERS, D::N_MEMBERS),
+        );
+
+        let mut visitor = Visitor(Vec::with_capacity(cap));
+        visitor.visit(&self.0);
+        f(0, &visitor);
+
+        visitor.clear();
+        visitor.visit(&self.1);
+        f(1, &visitor);
+
+        visitor.clear();
+        visitor.visit(&self.2);
+        f(2, &visitor);
+
+        visitor.clear();
+        visitor.visit(&self.3);
+        f(3, &visitor);
     }
 }
 

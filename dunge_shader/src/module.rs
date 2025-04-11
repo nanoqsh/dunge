@@ -1,19 +1,27 @@
 use {
     crate::{
-        context::{Context, FromContext, FromRender, GroupSet},
+        context::{Context, FromContext, FromRender, TakeSet},
         eval::{self, Cs, Eval, Fs, Vs},
         types,
     },
     std::marker::PhantomData,
 };
 
-macro_rules! merge_groups {
+macro_rules! triple {
     () => {
-        GroupSet
+        ((), (), ())
     };
 
-    ($h:ident $($t:ident)*) => {
-        <$h>::GetGroups<merge_groups!($($t)*)>
+    ($a:path) => {
+        ($a, (), ())
+    };
+
+    ($a:path, $b:path) => {
+        ($a, $b, ())
+    };
+
+    ($a:path, $b:path, $c:path) => {
+        ($a, $b, $c)
     };
 }
 
@@ -33,7 +41,7 @@ where
     C: FsOut,
 {
     type Input = RenderInput<((), ())>;
-    type Set = GroupSet;
+    type Set = ();
 
     fn into_module(self) -> Module {
         let cx = Context::new();
@@ -53,9 +61,10 @@ macro_rules! impl_into_render_module {
             $(
                 $t: FromContext<RenderKind>,
             )*
+            triple!($($t::Set),*): TakeSet,
         {
             type Input = RenderInput<(A::Vertex, A::Instance)>;
-            type Set = merge_groups!($($t)*);
+            type Set = <triple!($($t::Set),*) as TakeSet>::Set;
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
@@ -87,9 +96,10 @@ macro_rules! impl_into_compute_module {
             $(
                 $t: FromContext<ComputeKind>,
             )*
+            triple!($($t::Set),*): TakeSet,
         {
             type Input = ComputeInput;
-            type Set = merge_groups!($($t)*);
+            type Set = <triple!($($t::Set),*) as TakeSet>::Set;
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
@@ -103,10 +113,9 @@ macro_rules! impl_into_compute_module {
 }
 
 impl_into_compute_module!();
-impl_into_compute_module!(A);
-impl_into_compute_module!(A X);
-impl_into_compute_module!(A X Y);
-impl_into_compute_module!(A X Y Z);
+impl_into_compute_module!(X);
+impl_into_compute_module!(X Y);
+impl_into_compute_module!(X Y Z);
 
 pub trait VsOut: Eval<Vs, Out = types::Vec4<f32>> {}
 impl<E> VsOut for E where E: Eval<Vs, Out = types::Vec4<f32>> {}

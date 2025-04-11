@@ -28,18 +28,15 @@ impl<'p, V, I, S> SetLayer<'p, (V, I), S> {
         B: Bind<S>,
     {
         let bind = bind.bind();
-        // assert!(
-        //     self.shader_id == bind.shader_id,
-        //     "the binding doesn't belong to this shader",
-        // );
-
         for (id, group) in iter::zip(0.., bind.bind_groups) {
             self.pass.set_bind_group(id, group, &[]);
         }
 
         SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
     }
+}
 
+impl<'p, V, I> SetLayer<'p, (V, I), ()> {
     #[inline]
     pub fn bind_empty(&mut self) -> SetBinding<'_, 'p, (V, I)> {
         assert!(self.no_bindings, "ths shader has any bindings");

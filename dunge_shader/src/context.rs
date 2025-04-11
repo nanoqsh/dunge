@@ -9,7 +9,7 @@ use {
         types::{self, MemberData, ValueType, VectorType},
         vertex::{self, Vertex},
     },
-    std::{any::TypeId, convert::Infallible, marker::PhantomData, ops},
+    std::{any::TypeId, ops},
 };
 
 #[derive(Clone, Copy)]
@@ -282,7 +282,7 @@ where
 pub struct Index(pub Ret<ReadIndex, u32>);
 
 impl FromContext<RenderKind> for Index {
-    type GetGroups<T> = NoGroups;
+    type Set = ();
 
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
@@ -294,7 +294,7 @@ impl FromContext<RenderKind> for Index {
 pub struct Invocation(pub Ret<ReadInvocation, types::Vec3<u32>>);
 
 impl FromContext<ComputeKind> for Invocation {
-    type GetGroups<T> = NoGroups;
+    type Set = ();
 
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_global_invocation_id();
@@ -303,14 +303,14 @@ impl FromContext<ComputeKind> for Invocation {
 }
 
 pub trait ProjectionFromContext {
-    type GetGroups<T>: GetGroups<T>;
+    type Set;
     type Projection;
     fn from_context(cx: &mut Context) -> Self::Projection;
 }
 
 impl ProjectionFromContext for () {
-    type GetGroups<T> = GroupSet;
-    type Projection = ();
+    type Set = Self;
+    type Projection = Self;
     fn from_context(_: &mut Context) -> Self::Projection {}
 }
 
@@ -318,7 +318,7 @@ impl<A> ProjectionFromContext for A
 where
     A: Group,
 {
-    type GetGroups<T> = GroupSet<A>;
+    type Set = (A,);
     type Projection = A::Projection;
 
     fn from_context(cx: &mut Context) -> Self::Projection {
@@ -336,7 +336,7 @@ macro_rules! impl_projection_from_context {
                 $t: Group,
             )*
         {
-            type GetGroups<T> = GroupSet<$($t),*,>;
+            type Set = Self;
             type Projection = ($($t::Projection),*,);
 
             fn from_context(cx: &mut Context) -> Self::Projection {
@@ -366,32 +366,70 @@ impl<G, K> FromContext<K> for Groups<G>
 where
     G: ProjectionFromContext,
 {
-    type GetGroups<T> = G::GetGroups<T>;
+    type Set = G::Set;
 
     fn from_context(cx: &mut Context) -> Self {
         Self(G::from_context(cx))
     }
 }
 
-pub trait GetGroups<T> {
-    type Get;
-}
-
-pub struct GroupSet<G0 = Infallible, G1 = Infallible, G2 = Infallible, G3 = Infallible>(
-    PhantomData<(G0, G1, G2, G3)>,
-);
-
-impl<T, G0, G1, G2, G3> GetGroups<T> for GroupSet<G0, G1, G2, G3> {
-    type Get = Self;
-}
-
-pub struct NoGroups(());
-
-impl<T> GetGroups<T> for NoGroups {
-    type Get = T;
-}
-
 pub trait FromContext<K> {
-    type GetGroups<T>: GetGroups<T>;
+    type Set;
     fn from_context(cx: &mut Context) -> Self;
+}
+
+pub trait TakeSet {
+    type Set;
+}
+
+impl TakeSet for ((), (), ()) {
+    type Set = ();
+}
+
+impl<A> TakeSet for ((A,), (), ()) {
+    type Set = (A,);
+}
+
+impl<A, B> TakeSet for ((A, B), (), ()) {
+    type Set = (A, B);
+}
+
+impl<A, B, C> TakeSet for ((A, B, C), (), ()) {
+    type Set = (A, B, C);
+}
+
+impl<A, B, C, D> TakeSet for ((A, B, C, D), (), ()) {
+    type Set = (A, B, C, D);
+}
+
+impl<A> TakeSet for ((), (A,), ()) {
+    type Set = (A,);
+}
+
+impl<A, B> TakeSet for ((), (A, B), ()) {
+    type Set = (A, B);
+}
+
+impl<A, B, C> TakeSet for ((), (A, B, C), ()) {
+    type Set = (A, B, C);
+}
+
+impl<A, B, C, D> TakeSet for ((), (A, B, C, D), ()) {
+    type Set = (A, B, C, D);
+}
+
+impl<A> TakeSet for ((), (), (A,)) {
+    type Set = (A,);
+}
+
+impl<A, B> TakeSet for ((), (), (A, B)) {
+    type Set = (A, B);
+}
+
+impl<A, B, C> TakeSet for ((), (), (A, B, C)) {
+    type Set = (A, B, C);
+}
+
+impl<A, B, C, D> TakeSet for ((), (), (A, B, C, D)) {
+    type Set = (A, B, C, D);
 }
