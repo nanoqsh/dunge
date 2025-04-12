@@ -4,7 +4,7 @@ struct VertexOutput {
 
 @vertex 
 fn vs() -> VertexOutput {
-    const _e7: mat2x2<f32> = -(mat2x2<f32>(vec2<f32>(1f, 0f), vec2<f32>(0f, 1f)));
+    let _e7: mat2x2<f32> = -(mat2x2<f32>(vec2<f32>(1f, 0f), vec2<f32>(0f, 1f)));
     return VertexOutput(((vec4<f32>(_e7[0], (_e7[0] + _e7[1])) * f32(1i)) * vec3<f32>(1f, 1f, 1f).z));
 }
 

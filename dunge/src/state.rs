@@ -29,10 +29,12 @@ impl State {
     pub async fn new() -> Result<Self, FailedMakeContext> {
         let backends;
 
-        #[cfg(all(
-            any(target_family = "unix", target_family = "windows"),
-            not(target_os = "macos")
-        ))]
+        #[cfg(all(target_family = "unix", not(target_os = "macos")))]
+        {
+            backends = Backends::VULKAN;
+        }
+
+        #[cfg(target_family = "windows")]
         {
             backends = Backends::VULKAN;
         }
@@ -68,7 +70,7 @@ impl State {
             instance
                 .request_adapter(&options)
                 .await
-                .ok_or(FailedMakeContext::BackendSelection)?
+                .map_err(FailedMakeContext::BackendSelection)?
         };
 
         let backend = adapter.get_info().backend;
@@ -89,7 +91,7 @@ impl State {
             };
 
             adapter
-                .request_device(&desc, None)
+                .request_device(&desc)
                 .await
                 .map_err(FailedMakeContext::RequestDevice)?
         };

@@ -313,7 +313,7 @@ impl<'a> CopyBufferView<'a> {
         use wgpu::*;
 
         self.0.map_async(MapMode::Read, tx);
-        state.device().poll(Maintain::Wait);
+        _ = state.device().poll(PollType::Wait);
         if let Err(err) = rx.await {
             panic!("failed to copy texture: {err}");
         }

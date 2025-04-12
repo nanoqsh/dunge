@@ -376,7 +376,7 @@ where
         out.with_stage(E::STAGE);
         let en = en.get_entry();
         let res = ResourceBinding { group: id, binding };
-        let var = en.compl.globs.get(&res);
+        let var = en.compl.globs.get(res);
         let global = en.global(var);
 
         if const { types::indirect_load::<O>() } {
@@ -1199,7 +1199,7 @@ struct Globals {
 
 impl Globals {
     fn add(&mut self, space: AddressSpace, ty: Handle<Type>, res: ResourceBinding) {
-        self.handles.entry(res.clone()).or_insert_with(|| {
+        self.handles.entry(res).or_insert_with(|| {
             let var = GlobalVariable {
                 name: None,
                 space,
@@ -1212,8 +1212,8 @@ impl Globals {
         });
     }
 
-    fn get(&self, res: &ResourceBinding) -> Handle<GlobalVariable> {
-        self.handles[res]
+    fn get(&self, res: ResourceBinding) -> Handle<GlobalVariable> {
+        self.handles[&res]
     }
 }
 
@@ -1224,9 +1224,9 @@ impl Bindings {
     fn next(&mut self, ty: &Type) -> Binding {
         let mut binding = Binding::Location {
             location: self.0,
-            second_blend_source: false,
             interpolation: None,
             sampling: None,
+            blend_src: None,
         };
 
         self.0 += 1;
