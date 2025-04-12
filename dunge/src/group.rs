@@ -9,7 +9,7 @@ use crate::{
     value::Value,
 };
 
-pub use dunge_shader::group::Projection;
+pub use dunge_shader::group::{Projection, Take};
 
 #[derive(Clone, Copy)]
 pub struct BoundTexture<'a>(pub(crate) &'a Texture2d);

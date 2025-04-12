@@ -1,10 +1,10 @@
 use {
     crate::{
-        bind::{self, Binder, GroupHandler, Set, UniqueBinding, UniqueSet, Visit},
         draw::Draw,
         instance::Row,
         layer::{Config, Layer},
         mesh::{self, Mesh},
+        set::{self, Data, GroupHandler, UniqueSet, Visit},
         shader::{ComputeShader, RenderShader, Shader},
         sl,
         state::{AsTarget, Scheduler, State},
@@ -48,13 +48,9 @@ impl Context {
         Shader::new(&self.0, module)
     }
 
-    pub fn make_binder<'state, K, S>(&'state self, shader: &'state Shader<K, S>) -> Binder<'state> {
-        Binder::new(&self.0, shader.data())
-    }
-
     pub fn make_set<K, S, D>(&self, shader: &Shader<K, S>, set: D) -> UniqueSet<S>
     where
-        D: Set<Set = S>,
+        D: Data<Set = S>,
     {
         UniqueSet::new(&self.0, shader.data(), set)
     }
@@ -122,17 +118,6 @@ impl Context {
         view.map(&self.0, tx, rx).await
     }
 
-    pub fn _update_group<G>(
-        &self,
-        uni: &mut UniqueBinding,
-        handler: &GroupHandler<(), G::Projection>,
-        group: &G,
-    ) where
-        G: Visit,
-    {
-        bind::_update(&self.0, uni, handler, group);
-    }
-
     pub fn update_group<S, G>(
         &self,
         set: &mut UniqueSet<S>,
@@ -141,7 +126,7 @@ impl Context {
     ) where
         G: Visit,
     {
-        bind::update(&self.0, set, handler, group);
+        set::update(&self.0, set, handler, group);
     }
 
     pub fn draw_to<T, D>(&self, target: &T, draw: D)

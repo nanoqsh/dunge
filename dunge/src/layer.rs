@@ -2,10 +2,10 @@
 
 use {
     crate::{
-        bind::Bind,
         format::Format,
         instance::{Set, Setter},
         mesh::Mesh,
+        set::Bind,
         shader::{ShaderData, SlotNumbers},
         state::State,
     },
@@ -14,6 +14,7 @@ use {
 };
 
 pub struct SetLayer<'p, D, S> {
+    // TODO: remove
     no_bindings: bool,
     only_indexed_mesh: bool,
     slots: SlotNumbers,
@@ -23,7 +24,7 @@ pub struct SetLayer<'p, D, S> {
 
 impl<'p, V, I, S> SetLayer<'p, (V, I), S> {
     #[inline]
-    pub fn bind<B>(&mut self, bind: &'p B) -> SetBinding<'_, 'p, (V, I)>
+    pub fn with<B>(&mut self, bind: &'p B) -> SetBinding<'_, 'p, (V, I)>
     where
         B: Bind<S>,
     {
