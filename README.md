@@ -30,14 +30,17 @@ Specify the `winit` feature if you need to create a windowed application. Althou
 
 So what if you want to draw something on the screen? Let's say you want to draw a simple colored triangle. Then start by creating a vertex type. To do this, derive the `Vertex` trait for your struct:
 ```rust
-use dunge::prelude::*;
+use dunge::{
+    glam::{Vec2, Vec3},
+    prelude::*,
+};
 
 // Create a vertex type
 #[repr(C)]
 #[derive(Vertex)]
 struct Vert {
-    pos: [f32; 2],
-    col: [f32; 3],
+    pos: Vec2,
+    col: Vec3,
 }
 ```
 
@@ -87,9 +90,9 @@ Also create a triangle mesh that we're going to draw:
 let mesh = {
     let data = const {
         MeshData::from_verts(&[
-            Vert { pos: [-0.5, -0.5], col: [1., 0., 0.] },
-            Vert { pos: [ 0.5, -0.5], col: [0., 1., 0.] },
-            Vert { pos: [ 0. ,  0.5], col: [0., 0., 1.] },
+            Vert { pos: Vec2::new(-0.5, -0.5), col: Vec3::new(1., 0., 0.) },
+            Vert { pos: Vec2::new( 0.5, -0.5), col: Vec3::new(0., 1., 0.) },
+            Vert { pos: Vec2::new( 0. ,  0.5), col: Vec3::new(0., 0., 1.) },
         ])
     };
 
