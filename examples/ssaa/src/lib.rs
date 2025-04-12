@@ -66,7 +66,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let screen_shader = cx.make_shader(screen);
     let mut r = 0.;
     let uniform = cx.make_uniform(&r);
-    let bind = cx.make_set(&triangle_shader, Offset(&uniform));
+    let set = cx.make_set(&triangle_shader, Offset(&uniform));
 
     let make_render_buf = |cx: &Context, (width, height)| {
         let size = (
@@ -162,7 +162,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
                 let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
                 frame
                     .set_layer(&triangle_layer, opts)
-                    .with(&bind)
+                    .with(&set)
                     .draw_points(3);
             };
 
