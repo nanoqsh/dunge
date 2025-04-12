@@ -7,7 +7,7 @@ use {
     std::marker::PhantomData,
 };
 
-macro_rules! triple {
+macro_rules! tuple {
     () => {
         ((), (), ())
     };
@@ -61,10 +61,10 @@ macro_rules! impl_into_render_module {
             $(
                 $t: FromContext<RenderKind>,
             )*
-            triple!($($t::Set),*): TakeSet,
+            tuple!($($t::Set),*): TakeSet,
         {
             type Input = RenderInput<(A::Vertex, A::Instance)>;
-            type Set = <triple!($($t::Set),*) as TakeSet>::Set;
+            type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
@@ -96,10 +96,10 @@ macro_rules! impl_into_compute_module {
             $(
                 $t: FromContext<ComputeKind>,
             )*
-            triple!($($t::Set),*): TakeSet,
+            tuple!($($t::Set),*): TakeSet,
         {
             type Input = ComputeInput;
-            type Set = <triple!($($t::Set),*) as TakeSet>::Set;
+            type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
 
             fn into_module(self) -> Module {
                 let mut cx = Context::new();

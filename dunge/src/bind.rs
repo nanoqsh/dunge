@@ -10,7 +10,7 @@ use {
         uniform::Uniform,
         Group,
     },
-    std::{marker::PhantomData, mem, sync::Arc},
+    std::{marker::PhantomData, sync::Arc},
     wgpu::{
         BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
     },
@@ -37,15 +37,6 @@ pub struct Visitor<'group>(Vec<wgpu::BindGroupEntry<'group>>);
 impl<'group> Visitor<'group> {
     fn clear(&mut self) {
         self.0.clear();
-    }
-
-    fn visit<G>(&mut self, group: &'group G)
-    where
-        G: Visit,
-    {
-        let mut visitor = Visitor(mem::take(&mut self.0));
-        group.visit(&mut visitor);
-        self.0 = visitor.0;
     }
 
     fn entries(&self) -> &[wgpu::BindGroupEntry<'group>] {
@@ -367,7 +358,7 @@ where
         F: FnMut(usize, &Visitor<'_>),
     {
         let mut visitor = Visitor(Vec::with_capacity(G::N_MEMBERS));
-        visitor.visit(self);
+        self.visit(&mut visitor);
         f(0, &visitor);
     }
 }
@@ -383,7 +374,7 @@ where
         F: FnMut(usize, &Visitor<'_>),
     {
         let mut visitor = Visitor(Vec::with_capacity(A::N_MEMBERS));
-        visitor.visit(&self.0);
+        self.0.visit(&mut visitor);
         f(0, &visitor);
     }
 }
@@ -401,11 +392,11 @@ where
     {
         let cap = usize::max(A::N_MEMBERS, B::N_MEMBERS);
         let mut visitor = Visitor(Vec::with_capacity(cap));
-        visitor.visit(&self.0);
+        self.0.visit(&mut visitor);
         f(0, &visitor);
 
         visitor.clear();
-        visitor.visit(&self.1);
+        self.1.visit(&mut visitor);
         f(1, &visitor);
     }
 }
@@ -424,15 +415,15 @@ where
     {
         let cap = usize::max(A::N_MEMBERS, usize::max(B::N_MEMBERS, C::N_MEMBERS));
         let mut visitor = Visitor(Vec::with_capacity(cap));
-        visitor.visit(&self.0);
+        self.0.visit(&mut visitor);
         f(0, &visitor);
 
         visitor.clear();
-        visitor.visit(&self.1);
+        self.1.visit(&mut visitor);
         f(1, &visitor);
 
         visitor.clear();
-        visitor.visit(&self.2);
+        self.2.visit(&mut visitor);
         f(2, &visitor);
     }
 }
@@ -456,19 +447,19 @@ where
         );
 
         let mut visitor = Visitor(Vec::with_capacity(cap));
-        visitor.visit(&self.0);
+        self.0.visit(&mut visitor);
         f(0, &visitor);
 
         visitor.clear();
-        visitor.visit(&self.1);
+        self.1.visit(&mut visitor);
         f(1, &visitor);
 
         visitor.clear();
-        visitor.visit(&self.2);
+        self.2.visit(&mut visitor);
         f(2, &visitor);
 
         visitor.clear();
-        visitor.visit(&self.3);
+        self.3.visit(&mut visitor);
         f(3, &visitor);
     }
 }
