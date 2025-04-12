@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        group::BoundTexture,
+        group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
         storage::Storage,
@@ -11,9 +11,7 @@ use {
         Group,
     },
     std::{marker::PhantomData, sync::Arc},
-    wgpu::{
-        BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource, Device,
-    },
+    wgpu::{BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource},
 };
 
 pub trait Visit: Group {
@@ -84,15 +82,6 @@ impl<'group> VisitMember<'group> for &'group Sampler {
     }
 }
 
-fn _visit<G>(group: &G) -> Vec<BindGroupEntry>
-where
-    G: Visit,
-{
-    let mut visitor = Visitor(Vec::with_capacity(G::N_MEMBERS));
-    group.visit(&mut visitor);
-    visitor.0
-}
-
 pub struct GroupHandler<S, P> {
     id: usize,
     layout: Arc<BindGroupLayout>,
@@ -105,50 +94,6 @@ pub trait Bind<S> {
 
 pub struct Bindings<'group> {
     pub(crate) bind_groups: &'group [BindGroup],
-}
-
-#[derive(Clone)]
-pub struct SharedBinding {
-    groups: Arc<[BindGroup]>,
-}
-
-impl SharedBinding {
-    fn new(groups: Vec<BindGroup>) -> Self {
-        Self {
-            groups: Arc::from(groups),
-        }
-    }
-}
-
-impl<S> Bind<S> for SharedBinding {
-    fn bind(&self) -> Bindings {
-        Bindings {
-            bind_groups: &self.groups,
-        }
-    }
-}
-
-pub(crate) fn _update<S, G>(
-    state: &State,
-    uni: &mut UniqueBinding,
-    handler: &GroupHandler<S, G::Projection>,
-    group: &G,
-) where
-    G: Visit,
-{
-    let device = state.device();
-    group.set(|_, visitor| {
-        let entries = visitor.entries();
-        let desc = BindGroupDescriptor {
-            label: None,
-            layout: &handler.layout,
-            entries,
-        };
-
-        let new = device.create_bind_group(&desc);
-        let groups = uni.groups();
-        groups[handler.id] = new;
-    });
 }
 
 pub(crate) fn update<S, G>(
@@ -174,102 +119,12 @@ pub(crate) fn update<S, G>(
     });
 }
 
-pub struct UniqueBinding(SharedBinding);
-
-impl UniqueBinding {
-    pub fn shared(self) -> SharedBinding {
-        self.0
-    }
-
-    fn groups(&mut self) -> &mut [BindGroup] {
-        Arc::get_mut(&mut self.0.groups).expect("uniqueness is guaranteed by the type")
-    }
-}
-
-impl<S> Bind<S> for UniqueBinding {
-    fn bind(&self) -> Bindings {
-        <SharedBinding as Bind<S>>::bind(&self.0)
-    }
-}
-
-/// The group binder type.
-///
-/// Can be created using the context's [`make_binder`](crate::Context::make_binder) function.
-pub struct Binder<'state> {
-    device: &'state Device,
-    layout: &'state [Arc<BindGroupLayout>],
-    groups: Vec<BindGroup>,
-}
-
-impl<'state> Binder<'state> {
-    pub(crate) fn new(state: &'state State, shader: &'state ShaderData) -> Self {
-        let layout = shader.groups();
-        Self {
-            device: state.device(),
-            layout,
-            groups: Vec::with_capacity(layout.len()),
-        }
-    }
-
-    /// Adds a group to the associated shader's binding.
-    ///
-    /// It returns a [group handler](GroupHandler) that can be used to update
-    /// the data in this binding. If you don't need to update the data, then
-    /// discard this handler.
-    ///
-    /// # Panic
-    /// It checks the group type matches to an associated shader's group at runtime.
-    /// If it's violated or there are more bindings than in the shader,
-    /// then this function will panic.
-    pub fn add<G>(&mut self, group: &G) -> GroupHandler<(), G::Projection>
-    where
-        G: Visit,
-    {
-        let id = self.groups.len();
-        let Some(layout) = self.layout.get(id) else {
-            panic!("too many bindings");
-        };
-
-        let layout = Arc::clone(layout);
-        let entries = _visit(group);
-        let desc = BindGroupDescriptor {
-            label: None,
-            layout: &layout,
-            entries: &entries,
-        };
-
-        let bind = self.device.create_bind_group(&desc);
-        self.groups.push(bind);
-
-        GroupHandler {
-            id,
-            layout,
-            ty: PhantomData,
-        }
-    }
-
-    /// Constructs an object that can be [used](crate::layer::SetLayer::bind)
-    /// in the draw stage.
-    ///
-    /// # Panic
-    /// It will panic if some group bindings is not set.
-    pub fn into_binding(self) -> UniqueBinding {
-        assert!(
-            self.groups.len() == self.layout.len(),
-            "some group bindings is not set",
-        );
-
-        let binding = SharedBinding::new(self.groups);
-        UniqueBinding(binding)
-    }
-}
-
 pub struct UniqueSet<S>(SharedSet<S>);
 
 impl<S> UniqueSet<S> {
     pub(crate) fn new<D>(state: &State, shader: &ShaderData, set: D) -> Self
     where
-        D: Set<Set = S>,
+        D: Data<Set = S>,
     {
         let groups = shader.groups();
         let mut bind_groups = Vec::with_capacity(groups.len());
@@ -293,10 +148,18 @@ impl<S> UniqueSet<S> {
         })
     }
 
-    pub fn handler<K, const N: usize>(
-        &self,
-        shader: &Shader<K, S>,
-    ) -> GroupHandler<S, <S::Group as Group>::Projection>
+    pub fn shared(self) -> SharedSet<S> {
+        self.0
+    }
+
+    pub fn handler<K>(&self, shader: &Shader<K, S>) -> GroupHandler<S, S::Projection>
+    where
+        S: Take<0>,
+    {
+        self.handler_n(shader)
+    }
+
+    fn handler_n<K, const N: usize>(&self, shader: &Shader<K, S>) -> GroupHandler<S, S::Projection>
     where
         S: Take<N>,
     {
@@ -308,10 +171,6 @@ impl<S> UniqueSet<S> {
             layout,
             ty: PhantomData,
         }
-    }
-
-    pub fn shared(self) -> SharedSet<S> {
-        self.0
     }
 
     fn bind_groups(&mut self) -> &mut [BindGroup] {
@@ -339,7 +198,7 @@ impl<S> Bind<S> for SharedSet<S> {
     }
 }
 
-pub trait Set {
+pub trait Data {
     type Set;
 
     fn set<F>(&self, f: F)
@@ -347,11 +206,11 @@ pub trait Set {
         F: FnMut(usize, &Visitor<'_>);
 }
 
-impl<G> Set for G
+impl<G> Data for G
 where
     G: Visit,
 {
-    type Set = (G,);
+    type Set = (G::Projection,);
 
     fn set<F>(&self, mut f: F)
     where
@@ -363,11 +222,11 @@ where
     }
 }
 
-impl<A> Set for (A,)
+impl<A> Data for (A,)
 where
     A: Visit,
 {
-    type Set = Self;
+    type Set = (A::Projection,);
 
     fn set<F>(&self, mut f: F)
     where
@@ -379,12 +238,12 @@ where
     }
 }
 
-impl<A, B> Set for (A, B)
+impl<A, B> Data for (A, B)
 where
     A: Visit,
     B: Visit,
 {
-    type Set = Self;
+    type Set = (A::Projection, B::Projection);
 
     fn set<F>(&self, mut f: F)
     where
@@ -401,13 +260,13 @@ where
     }
 }
 
-impl<A, B, C> Set for (A, B, C)
+impl<A, B, C> Data for (A, B, C)
 where
     A: Visit,
     B: Visit,
     C: Visit,
 {
-    type Set = Self;
+    type Set = (A::Projection, B::Projection, C::Projection);
 
     fn set<F>(&self, mut f: F)
     where
@@ -428,14 +287,14 @@ where
     }
 }
 
-impl<A, B, C, D> Set for (A, B, C, D)
+impl<A, B, C, D> Data for (A, B, C, D)
 where
     A: Visit,
     B: Visit,
     C: Visit,
     D: Visit,
 {
-    type Set = Self;
+    type Set = (A::Projection, B::Projection, C::Projection, D::Projection);
 
     fn set<F>(&self, mut f: F)
     where
@@ -462,85 +321,4 @@ where
         self.3.visit(&mut visitor);
         f(3, &visitor);
     }
-}
-
-pub trait Take<const N: usize> {
-    type Group: Group;
-}
-
-impl<G> Take<0> for G
-where
-    G: Visit,
-{
-    type Group = G;
-}
-
-impl<A> Take<0> for (A,)
-where
-    A: Visit,
-{
-    type Group = A;
-}
-
-impl<A, B> Take<0> for (A, B)
-where
-    A: Visit,
-{
-    type Group = A;
-}
-
-impl<A, B> Take<1> for (A, B)
-where
-    B: Visit,
-{
-    type Group = B;
-}
-
-impl<A, B, C> Take<0> for (A, B, C)
-where
-    A: Visit,
-{
-    type Group = A;
-}
-
-impl<A, B, C> Take<1> for (A, B, C)
-where
-    B: Visit,
-{
-    type Group = B;
-}
-
-impl<A, B, C> Take<2> for (A, B, C)
-where
-    C: Visit,
-{
-    type Group = C;
-}
-
-impl<A, B, C, D> Take<0> for (A, B, C, D)
-where
-    A: Visit,
-{
-    type Group = A;
-}
-
-impl<A, B, C, D> Take<1> for (A, B, C, D)
-where
-    B: Visit,
-{
-    type Group = B;
-}
-
-impl<A, B, C, D> Take<2> for (A, B, C, D)
-where
-    C: Visit,
-{
-    type Group = C;
-}
-
-impl<A, B, C, D> Take<3> for (A, B, C, D)
-where
-    D: Visit,
-{
-    type Group = D;
 }

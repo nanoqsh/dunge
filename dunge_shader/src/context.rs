@@ -318,7 +318,7 @@ impl<A> ProjectionFromContext for A
 where
     A: Group,
 {
-    type Set = (A,);
+    type Set = (A::Projection,);
     type Projection = A::Projection;
 
     fn from_context(cx: &mut Context) -> Self::Projection {
@@ -336,7 +336,7 @@ macro_rules! impl_projection_from_context {
                 $t: Group,
             )*
         {
-            type Set = Self;
+            type Set = ($($t::Projection),*,);
             type Projection = ($($t::Projection),*,);
 
             fn from_context(cx: &mut Context) -> Self::Projection {

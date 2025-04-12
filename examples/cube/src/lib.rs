@@ -45,12 +45,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         cx.make_uniform(&mat)
     };
 
-    let bind_transform = {
-        let tr = Transform(&uniform);
-        let mut binder = cx.make_binder(&cube_shader);
-        binder.add(&tr);
-        binder.into_binding()
-    };
+    let transform_set = cx.make_set(&cube_shader, Transform(&uniform));
 
     let mesh = {
         const VERTS: [Vert; 8] = {
@@ -128,7 +123,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
             frame
                 .set_layer(&layer, opts)
-                .bind(&bind_transform)
+                .with(&transform_set)
                 .draw(&mesh);
         };
 

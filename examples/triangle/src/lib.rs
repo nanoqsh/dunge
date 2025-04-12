@@ -29,12 +29,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let shader = cx.make_shader(triangle);
     let mut r = 0.;
     let uniform = cx.make_uniform(&r);
-    let bind = {
-        let offset = Offset(&uniform);
-        let mut binder = cx.make_binder(&shader);
-        binder.add(&offset);
-        binder.into_binding()
-    };
+    let set = cx.make_set(&shader, Offset(&uniform));
 
     let make_handler = move |cx: &Context, view: &View| {
         let layer = cx.make_layer(&shader, view.format());
@@ -54,7 +49,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
 
         let draw = move |mut frame: Frame| {
             let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-            frame.set_layer(&layer, opts).bind(&bind).draw_points(3);
+            frame.set_layer(&layer, opts).with(&set).draw_points(3);
         };
 
         dunge::update(upd, draw)

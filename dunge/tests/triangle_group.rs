@@ -50,14 +50,13 @@ fn render() -> Result<(), Error> {
         };
 
         let sampler = cx.make_sampler(Filter::Nearest);
+
         let map = Map {
             tex: BoundTexture::new(&texture),
             sam: &sampler,
         };
 
-        let mut binder = cx.make_binder(&shader);
-        binder.add(&map);
-        binder.into_binding()
+        cx.make_set(&shader, map)
     };
 
     let size = (300, 300);
@@ -94,7 +93,7 @@ fn render() -> Result<(), Error> {
     let buffer = cx.make_copy_buffer(size);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = dunge::draw(|mut frame| {
-        frame.set_layer(&layer, opts).bind(&map).draw(&mesh);
+        frame.set_layer(&layer, opts).with(&map).draw(&mesh);
         frame.copy_texture(&buffer, &view);
     });
 

@@ -1,4 +1,3 @@
-pub mod bind;
 pub mod color;
 mod context;
 mod draw;
@@ -7,6 +6,7 @@ pub mod group;
 pub mod instance;
 pub mod layer;
 pub mod mesh;
+pub mod set;
 mod shader;
 mod state;
 pub mod storage;
