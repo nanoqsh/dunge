@@ -5,21 +5,17 @@ use {
         draw::Draw,
         format::Format,
         layer::{Layer, SetLayer},
+        render::{Input, Render},
         texture::{CopyBuffer, CopyTexture, DrawTexture},
     },
     wgpu::{
-        Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags, Queue,
-        TextureView,
+        Adapter, Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags,
+        Queue, TextureView,
     },
 };
 
-#[cfg(feature = "winit")]
-use wgpu::Adapter;
-
 pub(crate) struct State {
-    #[cfg(feature = "winit")]
     instance: Instance,
-    #[cfg(feature = "winit")]
     adapter: Adapter,
     device: Device,
     queue: Queue,
@@ -81,7 +77,7 @@ impl State {
 
             let desc = DeviceDescriptor {
                 required_limits: Limits {
-                    ..if cfg!(target_arch = "wasm32") {
+                    ..if cfg!(target_family = "wasm") {
                         Limits::downlevel_defaults()
                     } else {
                         Limits::default()
@@ -97,21 +93,17 @@ impl State {
         };
 
         Ok(Self {
-            #[cfg(feature = "winit")]
             instance,
-            #[cfg(feature = "winit")]
             adapter,
             device,
             queue,
         })
     }
 
-    #[cfg(feature = "winit")]
     pub fn instance(&self) -> &Instance {
         &self.instance
     }
 
-    #[cfg(feature = "winit")]
     pub fn adapter(&self) -> &Adapter {
         &self.adapter
     }
@@ -150,6 +142,16 @@ pub struct Scheduler<'shed> {
 }
 
 impl<'shed> Scheduler<'shed> {
+    pub fn compute(&'shed mut self) -> Compute<'shed> {
+        let desc = wgpu::ComputePassDescriptor {
+            label: None,
+            timestamp_writes: None,
+        };
+
+        let pass = self.encoder.begin_compute_pass(&desc);
+        Compute(pass)
+    }
+
     pub fn render<O>(&'shed mut self, target: Target<'_>, opts: O) -> Render<'shed>
     where
         O: Into<Options>,
@@ -189,38 +191,11 @@ impl<'shed> Scheduler<'shed> {
         };
 
         let pass = self.encoder.begin_render_pass(&desc);
-        Render { pass }
+        Render(pass)
     }
 }
 
-pub struct Render<'shed> {
-    pass: wgpu::RenderPass<'shed>,
-}
-
-impl<'shed> Render<'shed> {
-    pub fn on<'on, D, S>(&'on mut self, layer: &Layer<D, S>) -> OnLayer<'shed, 'on> {
-        self.pass.set_pipeline(layer.render());
-
-        OnLayer {
-            pass: &mut self.pass,
-        }
-    }
-}
-
-pub struct OnLayer<'shed, 'on> {
-    #[expect(dead_code)]
-    pass: &'on mut wgpu::RenderPass<'shed>,
-}
-
-impl OnLayer<'_, '_> {
-    pub fn bind(&mut self, _binding: ()) {
-        todo!()
-    }
-
-    pub fn bind_empty(&mut self) {
-        todo!()
-    }
-}
+pub struct Compute<'shed>(#[expect(dead_code)] wgpu::ComputePass<'shed>);
 
 /// Current layer options.
 #[derive(Clone, Copy, Default)]
@@ -256,11 +231,11 @@ pub struct Frame<'v, 'e> {
 }
 
 impl Frame<'_, '_> {
-    pub fn set_layer<'p, D, S, O>(
+    pub fn set_layer<'p, V, I, S, O>(
         &'p mut self,
-        layer: &'p Layer<D, S>,
+        layer: &'p Layer<Input<V, I, S>>,
         opts: O,
-    ) -> SetLayer<'p, D, S>
+    ) -> SetLayer<'p, (V, I), S>
     where
         O: Into<Options>,
     {
@@ -310,7 +285,7 @@ impl Frame<'_, '_> {
         };
 
         let pass = self.encoder.begin_render_pass(&desc);
-        layer.set(pass)
+        layer._set(pass)
     }
 
     pub fn copy_texture<T>(&mut self, buffer: &CopyBuffer, texture: &T)

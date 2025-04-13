@@ -7,7 +7,7 @@ publish = false
 [lib]
 crate-type = ["cdylib"]
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
+[target.'cfg(target_family = "wasm")'.dependencies]
 console_error_panic_hook = "0.1"
 cube = { path = "../cube", optional = true }
 dunge = { workspace = true, features = ["winit"] }

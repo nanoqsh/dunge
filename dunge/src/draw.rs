@@ -6,11 +6,11 @@ use crate::state::Frame;
 ///
 /// # Example
 /// ```rust
-/// use dunge::{Draw, Frame, layer::Layer, color::Rgba};
+/// use dunge::{Draw, Frame, layer::Layer, render::Input, color::Rgba};
 ///
 /// struct App {
 ///     bg: Rgba,
-///     layer: Layer<((), ()), ()>,
+///     layer: Layer<Input<(), (), ()>>,
 /// }
 ///
 /// impl Draw for App {
@@ -29,9 +29,9 @@ use crate::state::Frame;
 /// Instead of manually implementing the trait, you can use an [helper](draw)
 /// function that will make an implementation from a closure:
 /// ```rust
-/// use dunge::{Draw, Frame, layer::Layer, color::Rgba};
+/// use dunge::{Draw, Frame, layer::Layer, render::Input, color::Rgba};
 ///
-/// fn make_draw(bg: Rgba, layer: Layer<((), ()), ()>) -> impl Draw {
+/// fn make_draw(bg: Rgba, layer: Layer<Input<(), (), ()>>) -> impl Draw {
 ///     dunge::draw(move |mut frame: Frame| {
 ///         frame
 ///             .set_layer(&layer, bg)

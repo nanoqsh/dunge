@@ -6,7 +6,6 @@ use {
 };
 
 pub struct Workload {
-    #[expect(dead_code)]
     compute: ComputePipeline,
 }
 
@@ -31,5 +30,10 @@ impl Workload {
 
         let compute = state.device().create_compute_pipeline(&desc);
         Self { compute }
+    }
+
+    #[expect(dead_code)]
+    pub(crate) fn compute(&self) -> &wgpu::ComputePipeline {
+        &self.compute
     }
 }
