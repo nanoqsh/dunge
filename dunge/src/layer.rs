@@ -63,8 +63,8 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
         I: Set,
     {
         let len = crate::instance::set(
-            self.slots.instance,
             crate::render::VertexSetter::_new(self.pass),
+            self.slots.instance,
             instance,
         );
 

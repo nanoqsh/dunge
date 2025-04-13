@@ -1,5 +1,6 @@
 use {
     crate::{
+        instance::{self, Set},
         layer::Layer,
         mesh::Mesh,
         set::{Bind, Bindings},
@@ -22,10 +23,10 @@ impl<V, I, S> Types for Input<V, I, S> {
     type Set = S;
 }
 
-pub struct Render<'shed>(pub(crate) wgpu::RenderPass<'shed>);
+pub struct Render<'ren>(pub(crate) wgpu::RenderPass<'ren>);
 
-impl<'shed> Render<'shed> {
-    pub fn layer<'ren, I>(&'ren mut self, layer: &Layer<I>) -> On<'shed, 'ren, I, state::Layer> {
+impl<'ren> Render<'ren> {
+    pub fn layer<I>(&mut self, layer: &Layer<I>) -> On<'ren, '_, I, state::Layer> {
         let mut on = On::new(Runner {
             pass: &mut self.0,
             slots: layer.slots(),
@@ -44,6 +45,10 @@ pub mod state {
     pub enum DrawPoints {}
 }
 
+#[diagnostic::on_unimplemented(
+    message = "Render cannot transition into `{B}` state",
+    label = "This render function cannot be called"
+)]
 pub trait To<A, B> {}
 
 impl<V, I, S> To<state::Layer, state::Set> for Input<V, I, S> {}
@@ -68,12 +73,12 @@ impl<I, S> To<state::DrawPoints, state::Set> for Input<(), I, S> {}
 impl<I, S> To<state::DrawPoints, state::Inst> for Input<(), I, S> {}
 impl<I, S> To<state::DrawPoints, state::DrawPoints> for Input<(), I, S> {}
 
-struct Runner<'shed, 'ren> {
-    pass: &'ren mut wgpu::RenderPass<'shed>,
+struct Runner<'ren, 'layer> {
+    pass: &'layer mut wgpu::RenderPass<'ren>,
     slots: SlotNumbers,
 }
 
-impl<'shed, 'ren> Runner<'shed, 'ren> {
+impl Runner<'_, '_> {
     fn layer(&mut self, render: &wgpu::RenderPipeline) {
         self.pass.set_pipeline(render);
     }
@@ -84,32 +89,39 @@ impl<'shed, 'ren> Runner<'shed, 'ren> {
         }
     }
 
-    #[expect(dead_code)]
-    fn instance<I>(&mut self, _instance: &I) {
-        todo!()
+    fn instance<S>(&mut self, instance: &S)
+    where
+        S: Set,
+    {
+        let vs = VertexSetter(self.pass);
+        instance::set(vs, self.slots.instance, instance);
     }
 
-    fn draw<V>(&mut self, mesh: &'shed Mesh<V>) {
+    fn draw<V>(&mut self, mesh: &Mesh<V>) {
         mesh.draw(self.pass, self.slots.vertex, 1);
+    }
+
+    fn draw_points(&mut self, n: u32) {
+        self.pass.draw(0..n, 0..1);
     }
 }
 
-pub struct On<'shed, 'ren, I, A> {
-    run: Runner<'shed, 'ren>,
+pub struct On<'ren, 'layer, I, A> {
+    run: Runner<'ren, 'layer>,
     inp: PhantomData<(I, A)>,
 }
 
-impl<'shed, 'ren, I, A> On<'shed, 'ren, I, A> {
-    fn new(run: Runner<'shed, 'ren>) -> Self {
+impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
+    fn new(run: Runner<'ren, 'layer>) -> Self {
         Self {
             run,
             inp: PhantomData,
         }
     }
 
-    fn to<B>(self) -> On<'shed, 'ren, I, B>
+    fn to<B>(self) -> On<'ren, 'layer, I, B>
     where
-        Self: To<A, B>,
+        I: To<A, B>,
     {
         On {
             run: self.run,
@@ -117,38 +129,52 @@ impl<'shed, 'ren, I, A> On<'shed, 'ren, I, A> {
         }
     }
 
-    pub fn layer(mut self, layer: &Layer<I>) -> On<'shed, 'ren, I, state::Layer>
+    pub fn layer(mut self, layer: &Layer<I>) -> On<'ren, 'layer, I, state::Layer>
     where
-        Self: To<A, state::Layer>,
+        I: To<A, state::Layer>,
     {
         self.run.layer(layer.render());
         self.to()
     }
 
-    pub fn set<S>(mut self, set: &S) -> On<'shed, 'ren, I, state::Set>
+    pub fn set<S>(mut self, set: &S) -> On<'ren, 'layer, I, state::Set>
     where
-        Self: To<A, state::Set>,
-        I: Types,
+        I: To<A, state::Set> + Types,
         S: Bind<I::Set>,
     {
         self.run.set(set.bind());
         self.to()
     }
 
-    pub fn draw(mut self, mesh: &'shed Mesh<I::Vertex>) -> On<'shed, 'ren, I, state::Draw>
+    pub fn instance(mut self, instance: &I::Instance) -> On<'ren, 'layer, I, state::Inst>
     where
-        Self: To<A, state::Draw>,
-        I: Types,
+        I: To<A, state::Inst> + Types<Instance: Set>,
+    {
+        self.run.instance(instance);
+        self.to()
+    }
+
+    pub fn draw(mut self, mesh: &Mesh<I::Vertex>) -> On<'ren, 'layer, I, state::Draw>
+    where
+        I: To<A, state::Draw> + Types,
     {
         self.run.draw(mesh);
         self.to()
     }
+
+    pub fn draw_points(mut self, n: u32) -> On<'ren, 'layer, I, state::DrawPoints>
+    where
+        I: To<A, state::DrawPoints>,
+    {
+        self.run.draw_points(n);
+        self.to()
+    }
 }
 
-pub(crate) struct VertexSetter<'shed, 'set>(&'set mut wgpu::RenderPass<'shed>);
+pub(crate) struct VertexSetter<'ren, 'layer>(&'layer mut wgpu::RenderPass<'ren>);
 
-impl<'shed, 'set> VertexSetter<'shed, 'set> {
-    pub fn _new(pass: &'set mut wgpu::RenderPass<'shed>) -> Self {
+impl<'ren, 'layer> VertexSetter<'ren, 'layer> {
+    pub fn _new(pass: &'layer mut wgpu::RenderPass<'ren>) -> Self {
         Self(pass)
     }
 

@@ -143,10 +143,11 @@ impl Context {
         self.0.draw(target, draw);
     }
 
-    pub async fn shed<F, O>(_f: F)
+    pub async fn shed<F>(&self, f: F)
     where
         F: FnOnce(Scheduler<'_>),
     {
+        self.0.run(f).await;
     }
 }
 

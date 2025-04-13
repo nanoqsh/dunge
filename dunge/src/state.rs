@@ -6,7 +6,16 @@ use {
         format::Format,
         layer::{Layer, SetLayer},
         render::{Input, Render},
+        runtime::{self, Worker},
         texture::{CopyBuffer, CopyTexture, DrawTexture},
+    },
+    std::{
+        future,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex,
+        },
+        task::{Poll, Waker},
     },
     wgpu::{
         Adapter, Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags,
@@ -14,40 +23,41 @@ use {
     },
 };
 
+const DEFAULT_BACKEND: wgpu::Backends = {
+    #[cfg(all(target_family = "unix", not(target_os = "macos")))]
+    {
+        Backends::VULKAN
+    }
+
+    #[cfg(target_family = "windows")]
+    {
+        Backends::VULKAN
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Backends::METAL
+    }
+
+    #[cfg(target_family = "wasm")]
+    {
+        Backends::BROWSER_WEBGPU
+    }
+};
+
 pub(crate) struct State {
     instance: Instance,
     adapter: Adapter,
     device: Device,
     queue: Queue,
+    worker: Worker,
 }
 
 impl State {
     pub async fn new() -> Result<Self, FailedMakeContext> {
-        let backends;
-
-        #[cfg(all(target_family = "unix", not(target_os = "macos")))]
-        {
-            backends = Backends::VULKAN;
-        }
-
-        #[cfg(target_family = "windows")]
-        {
-            backends = Backends::VULKAN;
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-            backends = Backends::METAL;
-        }
-
-        #[cfg(target_family = "wasm")]
-        {
-            backends = Backends::BROWSER_WEBGPU;
-        }
-
         let instance = {
             let desc = InstanceDescriptor {
-                backends,
+                backends: DEFAULT_BACKEND,
                 flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
                 ..Default::default()
             };
@@ -92,11 +102,14 @@ impl State {
                 .map_err(FailedMakeContext::RequestDevice)?
         };
 
+        let worker = runtime::poll_in_background(instance.clone());
+
         Ok(Self {
             instance,
             adapter,
             device,
             queue,
+            worker,
         })
     }
 
@@ -135,28 +148,73 @@ impl State {
 
         self.queue.submit([encoder.finish()]);
     }
+
+    pub async fn run<F>(&self, f: F)
+    where
+        F: FnOnce(Scheduler<'_>),
+    {
+        let mut encoder = {
+            let desc = wgpu::CommandEncoderDescriptor::default();
+            self.device.create_command_encoder(&desc)
+        };
+
+        f(Scheduler(&mut encoder));
+
+        self.queue.submit([encoder.finish()]);
+        self.worker.work();
+
+        struct Notify {
+            done: AtomicBool,
+            waker: Mutex<Waker>,
+        }
+
+        let notify = Arc::new(Notify {
+            done: AtomicBool::new(false),
+            waker: Mutex::new(Waker::noop().clone()),
+        });
+
+        self.queue.on_submitted_work_done({
+            let notify = notify.clone();
+            move || {
+                notify.done.store(true, Ordering::Release);
+                notify.waker.lock().expect("lock waker").wake_by_ref();
+            }
+        });
+
+        let fu = future::poll_fn(|cx| {
+            if notify.done.load(Ordering::Acquire) {
+                Poll::Ready(())
+            } else {
+                *notify.waker.lock().expect("lock waker") = cx.waker().clone();
+                Poll::Pending
+            }
+        });
+
+        fu.await;
+    }
 }
 
-pub struct Scheduler<'shed> {
-    encoder: &'shed mut CommandEncoder,
-}
+pub struct Scheduler<'shed>(&'shed mut CommandEncoder);
 
-impl<'shed> Scheduler<'shed> {
-    pub fn compute(&'shed mut self) -> Compute<'shed> {
+impl Scheduler<'_> {
+    pub fn compute(&mut self) -> Compute<'_> {
         let desc = wgpu::ComputePassDescriptor {
             label: None,
             timestamp_writes: None,
         };
 
-        let pass = self.encoder.begin_compute_pass(&desc);
+        let pass = self.0.begin_compute_pass(&desc);
         Compute(pass)
     }
 
-    pub fn render<O>(&'shed mut self, target: Target<'_>, opts: O) -> Render<'shed>
+    pub fn render<T, O>(&mut self, target: T, opts: O) -> Render<'_>
     where
+        T: AsTarget,
         O: Into<Options>,
     {
+        let target = target.as_target();
         let opts = opts.into();
+
         let color_attachment = wgpu::RenderPassColorAttachment {
             view: target.colorv,
             resolve_target: None,
@@ -190,12 +248,12 @@ impl<'shed> Scheduler<'shed> {
             ..Default::default()
         };
 
-        let pass = self.encoder.begin_render_pass(&desc);
+        let pass = self.0.begin_render_pass(&desc);
         Render(pass)
     }
 }
 
-pub struct Compute<'shed>(#[expect(dead_code)] wgpu::ComputePass<'shed>);
+pub struct Compute<'com>(#[expect(dead_code)] wgpu::ComputePass<'com>);
 
 /// Current layer options.
 #[derive(Clone, Copy, Default)]

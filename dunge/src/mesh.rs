@@ -131,7 +131,7 @@ impl<V> Mesh<V> {
         }
     }
 
-    pub(crate) fn draw<'a>(&'a self, pass: &mut RenderPass<'a>, slot: u32, count: u32) {
+    pub(crate) fn draw(&self, pass: &mut RenderPass<'_>, slot: u32, count: u32) {
         use wgpu::IndexFormat;
 
         pass.set_vertex_buffer(slot, self.verts.slice(..));

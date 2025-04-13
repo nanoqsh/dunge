@@ -61,7 +61,7 @@ pub trait Set: Instance {
     fn set(&self, setter: &mut Setter<'_, '_>);
 }
 
-pub(crate) fn set<I>(slot: u32, vs: VertexSetter<'_, '_>, instance: &I) -> u32
+pub(crate) fn set<I>(vs: VertexSetter<'_, '_>, slot: u32, instance: &I) -> u32
 where
     I: Set,
 {
@@ -71,13 +71,13 @@ where
     setter.len()
 }
 
-pub struct Setter<'shed, 'set> {
+pub struct Setter<'ren, 'layer> {
     len: Option<u32>,
     slot: u32,
-    vs: VertexSetter<'set, 'shed>,
+    vs: VertexSetter<'ren, 'layer>,
 }
 
-impl<'shed, 'set> Setter<'shed, 'set> {
+impl Setter<'_, '_> {
     fn len(&self) -> u32 {
         self.len.unwrap_or_default()
     }
