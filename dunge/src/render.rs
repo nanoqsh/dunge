@@ -26,6 +26,7 @@ impl<V, I, S> Types for Input<V, I, S> {
 pub struct Render<'ren>(pub(crate) wgpu::RenderPass<'ren>);
 
 impl<'ren> Render<'ren> {
+    #[inline]
     pub fn layer<I>(&mut self, layer: &Layer<I>) -> On<'ren, '_, I, state::Layer> {
         let mut on = On::new(Runner {
             pass: &mut self.0,
@@ -79,16 +80,19 @@ struct Runner<'ren, 'layer> {
 }
 
 impl Runner<'_, '_> {
+    #[inline]
     fn layer(&mut self, render: &wgpu::RenderPipeline) {
         self.pass.set_pipeline(render);
     }
 
+    #[inline]
     fn set(&mut self, bindings: Bindings<'_>) {
         for (id, group) in iter::zip(0.., bindings.bind_groups) {
             self.pass.set_bind_group(id, group, &[]);
         }
     }
 
+    #[inline]
     fn instance<S>(&mut self, instance: &S)
     where
         S: Set,
@@ -97,10 +101,12 @@ impl Runner<'_, '_> {
         instance::set(vs, self.slots.instance, instance);
     }
 
+    #[inline]
     fn draw<V>(&mut self, mesh: &Mesh<V>) {
         mesh.draw(self.pass, self.slots.vertex, 1);
     }
 
+    #[inline]
     fn draw_points(&mut self, n: u32) {
         self.pass.draw(0..n, 0..1);
     }
@@ -112,6 +118,7 @@ pub struct On<'ren, 'layer, I, A> {
 }
 
 impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
+    #[inline]
     fn new(run: Runner<'ren, 'layer>) -> Self {
         Self {
             run,
@@ -119,6 +126,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         }
     }
 
+    #[inline]
     fn to<B>(self) -> On<'ren, 'layer, I, B>
     where
         I: To<A, B>,
@@ -129,6 +137,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         }
     }
 
+    #[inline]
     pub fn layer(mut self, layer: &Layer<I>) -> On<'ren, 'layer, I, state::Layer>
     where
         I: To<A, state::Layer>,
@@ -137,6 +146,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         self.to()
     }
 
+    #[inline]
     pub fn set<S>(mut self, set: &S) -> On<'ren, 'layer, I, state::Set>
     where
         I: To<A, state::Set> + Types,
@@ -146,6 +156,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         self.to()
     }
 
+    #[inline]
     pub fn instance(mut self, instance: &I::Instance) -> On<'ren, 'layer, I, state::Inst>
     where
         I: To<A, state::Inst> + Types<Instance: Set>,
@@ -154,6 +165,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         self.to()
     }
 
+    #[inline]
     pub fn draw(mut self, mesh: &Mesh<I::Vertex>) -> On<'ren, 'layer, I, state::Draw>
     where
         I: To<A, state::Draw> + Types,
@@ -162,6 +174,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         self.to()
     }
 
+    #[inline]
     pub fn draw_points(mut self, n: u32) -> On<'ren, 'layer, I, state::DrawPoints>
     where
         I: To<A, state::DrawPoints>,
@@ -178,6 +191,7 @@ impl<'ren, 'layer> VertexSetter<'ren, 'layer> {
         Self(pass)
     }
 
+    #[inline]
     pub fn set(&mut self, buf: &wgpu::Buffer, slot: u32) {
         let slice = buf.slice(..);
         self.0.set_vertex_buffer(slot, slice);

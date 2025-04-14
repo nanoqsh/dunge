@@ -197,6 +197,7 @@ impl State {
 pub struct Scheduler<'shed>(&'shed mut CommandEncoder);
 
 impl Scheduler<'_> {
+    #[inline]
     pub fn compute(&mut self) -> Compute<'_> {
         let desc = wgpu::ComputePassDescriptor {
             label: None,
@@ -207,6 +208,7 @@ impl Scheduler<'_> {
         Compute(pass)
     }
 
+    #[inline]
     pub fn render<T, O>(&mut self, target: T, opts: O) -> Render<'_>
     where
         T: AsTarget,
@@ -250,6 +252,11 @@ impl Scheduler<'_> {
 
         let pass = self.0.begin_render_pass(&desc);
         Render(pass)
+    }
+
+    #[inline]
+    pub fn copy(&self, _from: (), _to: ()) {
+        todo!()
     }
 }
 
