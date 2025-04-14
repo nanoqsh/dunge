@@ -45,7 +45,7 @@ where
         let IfThenElse { c, a, b, .. } = self.get();
         let c = c.eval(en);
         let a = |en: &mut E| a().eval(en);
-        let b = |branch: &mut Branch<_>| Some(b().eval(branch.entry()));
+        let b = |branch: &mut Branch<'_, _>| Some(b().eval(branch.entry()));
         let valty = <X::Out as types::Value>::VALUE_TYPE;
         let ty = valty.ty(en.get_entry());
         let mut branch = Branch::new(en, ty);
@@ -127,7 +127,7 @@ where
 }
 
 pub trait EvalBranch<E> {
-    fn eval_branch(self, branch: &mut Branch<E>) -> Option<Expr>;
+    fn eval_branch(self, branch: &mut Branch<'_, E>) -> Option<Expr>;
 }
 
 impl<F, R, E> EvalBranch<E> for F
@@ -135,7 +135,7 @@ where
     F: FnOnce() -> R,
     R: Eval<E>,
 {
-    fn eval_branch(self, branch: &mut Branch<E>) -> Option<Expr> {
+    fn eval_branch(self, branch: &mut Branch<'_, E>) -> Option<Expr> {
         Some(self().eval(branch.entry()))
     }
 }
@@ -148,11 +148,11 @@ where
     B: EvalBranch<E>,
     E: GetEntry,
 {
-    fn eval_branch(self, branch: &mut Branch<E>) -> Option<Expr> {
+    fn eval_branch(self, branch: &mut Branch<'_, E>) -> Option<Expr> {
         let Self { c, a, b, .. } = self;
         let c = c.eval(branch.entry());
         let a = |en: &mut E| a().eval(en);
-        let b = |branch: &mut Branch<_>| b.eval_branch(branch);
+        let b = |branch: &mut Branch<'_, _>| b.eval_branch(branch);
         branch.add(c, a, b);
         None
     }

@@ -123,7 +123,7 @@ impl State {
         &self.queue
     }
 
-    pub fn draw<D>(&self, target: Target, draw: D)
+    pub fn draw<D>(&self, target: Target<'_>, draw: D)
     where
         D: Draw,
     {
@@ -282,17 +282,17 @@ impl From<Rgba> for Options {
 }
 
 /// The frame type for drawing and copying operations.
-pub struct Frame<'v, 'e> {
-    target: Target<'v>,
-    encoder: &'e mut wgpu::CommandEncoder,
+pub struct Frame<'view, 'enc> {
+    target: Target<'view>,
+    encoder: &'enc mut wgpu::CommandEncoder,
 }
 
 impl Frame<'_, '_> {
-    pub fn set_layer<'p, V, I, S, O>(
-        &'p mut self,
-        layer: &'p Layer<Input<V, I, S>>,
+    pub fn set_layer<'ren, V, I, S, O>(
+        &'ren mut self,
+        layer: &'ren Layer<Input<V, I, S>>,
         opts: O,
-    ) -> SetLayer<'p, (V, I), S>
+    ) -> SetLayer<'ren, (V, I), S>
     where
         O: Into<Options>,
     {
@@ -355,14 +355,14 @@ impl Frame<'_, '_> {
 
 /// A target for current frame.
 #[derive(Clone, Copy)]
-pub struct Target<'v> {
+pub struct Target<'view> {
     format: Format,
-    colorv: &'v wgpu::TextureView,
-    depthv: Option<&'v wgpu::TextureView>,
+    colorv: &'view wgpu::TextureView,
+    depthv: Option<&'view wgpu::TextureView>,
 }
 
-impl<'v> Target<'v> {
-    pub(crate) fn new(format: Format, colorv: &'v wgpu::TextureView) -> Self {
+impl<'view> Target<'view> {
+    pub(crate) fn new(format: Format, colorv: &'view wgpu::TextureView) -> Self {
         Self {
             format,
             colorv,
@@ -373,14 +373,14 @@ impl<'v> Target<'v> {
 
 /// Something that contains a [target](Target).
 pub trait AsTarget {
-    fn as_target(&self) -> Target;
+    fn as_target(&self) -> Target<'_>;
 }
 
 impl<T> AsTarget for T
 where
     T: DrawTexture,
 {
-    fn as_target(&self) -> Target {
+    fn as_target(&self) -> Target<'_> {
         let texture = self.draw_texture();
         Target::new(texture.format(), texture.view())
     }
@@ -391,7 +391,7 @@ where
     T: DrawTexture,
     D: DrawTexture,
 {
-    fn as_target(&self) -> Target {
+    fn as_target(&self) -> Target<'_> {
         let mut target = self.color.as_target();
         target.depthv = Some(self.depth.draw_texture().view());
         target

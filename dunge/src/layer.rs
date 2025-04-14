@@ -13,15 +13,15 @@ use {
     std::{iter, marker::PhantomData},
 };
 
-pub struct SetLayer<'p, D, S> {
+pub struct SetLayer<'ren, D, S> {
     slots: SlotNumbers,
-    pass: wgpu::RenderPass<'p>,
+    pass: wgpu::RenderPass<'ren>,
     ty: PhantomData<(D, S)>,
 }
 
-impl<'p, V, I, S> SetLayer<'p, (V, I), S> {
+impl<'ren, V, I, S> SetLayer<'ren, (V, I), S> {
     #[inline]
-    pub fn with<B>(&mut self, bind: &'p B) -> SetBinding<'_, 'p, (V, I)>
+    pub fn with<B>(&mut self, bind: &'ren B) -> SetBinding<'_, 'ren, (V, I)>
     where
         B: Bind<S>,
     {
@@ -34,21 +34,21 @@ impl<'p, V, I, S> SetLayer<'p, (V, I), S> {
     }
 }
 
-impl<'p, V, I> SetLayer<'p, (V, I), ()> {
+impl<'ren, V, I> SetLayer<'ren, (V, I), ()> {
     #[inline]
-    pub fn bind_empty(&mut self) -> SetBinding<'_, 'p, (V, I)> {
+    pub fn bind_empty(&mut self) -> SetBinding<'_, 'ren, (V, I)> {
         SetBinding::new(self.slots, &mut self.pass)
     }
 }
 
-pub struct SetBinding<'s, 'p, D> {
+pub struct SetBinding<'bind, 'ren, D> {
     slots: SlotNumbers,
-    pass: &'s mut wgpu::RenderPass<'p>,
+    pass: &'bind mut wgpu::RenderPass<'ren>,
     ty: PhantomData<D>,
 }
 
-impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
-    fn new(slots: SlotNumbers, pass: &'s mut wgpu::RenderPass<'p>) -> Self {
+impl<'bind, 'ren, V, I> SetBinding<'bind, 'ren, (V, I)> {
+    fn new(slots: SlotNumbers, pass: &'bind mut wgpu::RenderPass<'ren>) -> Self {
         Self {
             slots,
             pass,
@@ -57,7 +57,7 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
     }
 
     #[inline]
-    pub fn instance(&'s mut self, instance: &'p I) -> SetInstance<'s, 'p, V>
+    pub fn instance(&'bind mut self, instance: &'ren I) -> SetInstance<'bind, 'ren, V>
     where
         I: Set,
     {
@@ -76,9 +76,9 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
     }
 }
 
-impl<'p, V> SetBinding<'_, 'p, (V, ())> {
+impl<'ren, V> SetBinding<'_, 'ren, (V, ())> {
     #[inline]
-    pub fn draw(&mut self, mesh: &'p Mesh<V>) {
+    pub fn draw(&mut self, mesh: &'ren Mesh<V>) {
         mesh.draw(self.pass, self.slots.vertex, 1);
     }
 }
@@ -90,16 +90,16 @@ impl SetBinding<'_, '_, ((), ())> {
     }
 }
 
-pub struct SetInstance<'s, 'p, V> {
+pub struct SetInstance<'bind, 'ren, V> {
     len: u32,
     slots: SlotNumbers,
-    pass: &'s mut wgpu::RenderPass<'p>,
+    pass: &'bind mut wgpu::RenderPass<'ren>,
     ty: PhantomData<V>,
 }
 
-impl<'p, V> SetInstance<'_, 'p, V> {
+impl<'ren, V> SetInstance<'_, 'ren, V> {
     #[inline]
-    pub fn draw(&mut self, mesh: &'p Mesh<V>) {
+    pub fn draw(&mut self, mesh: &'ren Mesh<V>) {
         mesh.draw(self.pass, self.slots.vertex, self.len);
     }
 }
@@ -256,7 +256,10 @@ impl<I> Layer<I> {
 }
 
 impl<V, I, S> Layer<Input<V, I, S>> {
-    pub(crate) fn _set<'p>(&'p self, mut pass: wgpu::RenderPass<'p>) -> SetLayer<'p, (V, I), S> {
+    pub(crate) fn _set<'ren>(
+        &'ren self,
+        mut pass: wgpu::RenderPass<'ren>,
+    ) -> SetLayer<'ren, (V, I), S> {
         pass.set_pipeline(&self.render);
         SetLayer {
             slots: self.slots,

@@ -99,7 +99,7 @@ pub fn update<U, F, D>(mut upd: U, draw: D) -> impl Update<Flow = F, Event = ()>
 where
     U: FnMut(&Control) -> F,
     F: Flow,
-    D: Fn(Frame),
+    D: Fn(Frame<'_, '_>),
 {
     update_with_event(
         (),
@@ -115,7 +115,7 @@ pub fn update_with_state<S, U, F, D>(state: S, upd: U, draw: D) -> impl Update<F
 where
     U: FnMut(&mut S, &Control) -> F,
     F: Flow,
-    D: Fn(&S, Frame),
+    D: Fn(&S, Frame<'_, '_>),
 {
     update_with_event(state, upd, |_, ()| {}, draw)
 }
@@ -133,7 +133,7 @@ where
     E: FnMut(&mut S, V),
     V: 'static,
     F: Flow,
-    D: Fn(&S, Frame),
+    D: Fn(&S, Frame<'_, '_>),
 {
     use std::marker::PhantomData;
 
@@ -147,9 +147,9 @@ where
 
     impl<S, U, E, V, D> Draw for Func<S, U, E, V, D>
     where
-        D: Fn(&S, Frame),
+        D: Fn(&S, Frame<'_, '_>),
     {
-        fn draw(&self, frame: Frame) {
+        fn draw(&self, frame: Frame<'_, '_>) {
             (self.draw)(&self.state, frame);
         }
     }
@@ -160,7 +160,7 @@ where
         E: FnMut(&mut S, V),
         V: 'static,
         F: Flow,
-        D: Fn(&S, Frame),
+        D: Fn(&S, Frame<'_, '_>),
     {
         type Flow = F;
         type Event = V;

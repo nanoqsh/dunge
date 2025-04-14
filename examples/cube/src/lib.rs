@@ -17,9 +17,9 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     }
 
     #[derive(Group)]
-    struct Transform<'a>(&'a Uniform<Mat4>);
+    struct Transform<'uni>(&'uni Uniform<Mat4>);
 
-    let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform>| Render {
+    let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform<'_>>| Render {
         place: tr.0 * sl::vec4_with(vert.pos, 1.),
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
@@ -119,7 +119,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             Then::Run
         };
 
-        let draw = move |mut frame: Frame| {
+        let draw = move |mut frame: Frame<'_, '_>| {
             let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
             frame
                 .set_layer(&layer, opts)

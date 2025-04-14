@@ -86,7 +86,7 @@ impl Context {
         Workload::new(&self.0, shader.data())
     }
 
-    pub fn make_mesh<V>(&self, data: &mesh::MeshData<V>) -> Mesh<V>
+    pub fn make_mesh<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
     where
         V: Vertex,
     {
@@ -115,7 +115,12 @@ impl Context {
         CopyBuffer::new(&self.0, size)
     }
 
-    pub async fn map_view<'a, S, R>(&self, view: CopyBufferView<'a>, tx: S, rx: R) -> Mapped<'a>
+    pub async fn map_view<'slice, S, R>(
+        &self,
+        view: CopyBufferView<'slice>,
+        tx: S,
+        rx: R,
+    ) -> Mapped<'slice>
     where
         S: FnOnce(MapResult) + wgpu::WasmNotSend + 'static,
         R: IntoFuture<Output = MapResult>,
@@ -159,7 +164,7 @@ pub enum FailedMakeContext {
 }
 
 impl fmt::Display for FailedMakeContext {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::BackendSelection(e) => write!(f, "failed to select backend: {e}"),
             Self::RequestDevice(e) => write!(f, "failed to get device: {e}"),

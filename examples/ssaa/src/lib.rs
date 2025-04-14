@@ -16,9 +16,9 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     const SCREEN_FACTOR: u32 = 2;
 
     #[derive(Group)]
-    struct Offset<'a>(&'a Uniform<f32>);
+    struct Offset<'uni>(&'uni Uniform<f32>);
 
-    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
+    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset<'_>>| {
         use std::f32::consts;
 
         let color = Vec4::new(1., 0.4, 0.8, 1.);
@@ -36,13 +36,13 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     struct Screen(Vec2, Vec2);
 
     #[derive(Group)]
-    struct Map<'a> {
-        tex: BoundTexture<'a>,
-        sam: &'a Sampler,
-        stp: &'a Uniform<Vec2>,
+    struct Map<'map> {
+        tex: BoundTexture<'map>,
+        sam: &'map Sampler,
+        stp: &'map Uniform<Vec2>,
     }
 
-    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Render {
+    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map<'_>>| Render {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: {
             let s = sl::thunk(sl::fragment(vert.1));
@@ -157,8 +157,8 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             Then::Run
         };
 
-        let draw = move |state: &State<_, _>, mut frame: Frame| {
-            let main = |mut frame: Frame| {
+        let draw = move |state: &State<_, _>, mut frame: Frame<'_, '_>| {
+            let main = |mut frame: Frame<'_, '_>| {
                 let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
                 frame
                     .set_layer(&triangle_layer, opts)

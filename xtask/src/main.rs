@@ -169,8 +169,8 @@ fn serve(Opts { module, .. }: Opts) -> Result<(), Error> {
     let index = {
         #[derive(Template)]
         #[template(path = "index.html")]
-        struct Index<'a> {
-            module: &'a str,
+        struct Index<'str> {
+            module: &'str str,
         }
 
         Index { module: &module }

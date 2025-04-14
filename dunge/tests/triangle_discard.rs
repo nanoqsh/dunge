@@ -26,12 +26,12 @@ fn render() -> Result<(), Error> {
     }
 
     #[derive(Group)]
-    struct Map<'a> {
-        tex: BoundTexture<'a>,
-        sam: &'a Sampler,
+    struct Map<'tex> {
+        tex: BoundTexture<'tex>,
+        sam: &'tex Sampler,
     }
 
-    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| {
+    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map<'_>>| {
         let place = sl::vec4_concat(vert.pos, Vec2::new(0., 1.));
         let color = {
             let samp = sl::thunk(sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)));

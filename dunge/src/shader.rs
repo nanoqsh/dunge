@@ -248,10 +248,10 @@ impl ShaderData {
         &self.layout
     }
 
-    pub(crate) fn vertex_buffers(&self) -> Box<[wgpu::VertexBufferLayout]> {
+    pub(crate) fn vertex_buffers(&self) -> Box<[wgpu::VertexBufferLayout<'_>]> {
         use wgpu::*;
 
-        fn layout(vert: &Vertex) -> VertexBufferLayout {
+        fn layout(vert: &Vertex) -> VertexBufferLayout<'_> {
             VertexBufferLayout {
                 array_stride: vert.array_stride,
                 step_mode: vert.step_mode,

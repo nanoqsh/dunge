@@ -311,7 +311,7 @@ pub(crate) struct Output {
 }
 
 impl Output {
-    pub fn target(&self) -> Target {
+    pub fn target(&self) -> Target<'_> {
         Target::new(self.format, &self.view)
     }
 
@@ -354,7 +354,7 @@ impl From<FailedMakeContext> for Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
             ErrorKind::UnsupportedSurface => write!(f, "unsupported surface"),
             ErrorKind::EventLoop(err) => err.fmt(f),

@@ -8,14 +8,14 @@ use {
 type Face = [u16; 3];
 
 #[derive(Clone)]
-pub struct MeshData<'a, V> {
-    verts: &'a [V],
-    indxs: Option<Cow<'a, [Face]>>,
+pub struct MeshData<'data, V> {
+    verts: &'data [V],
+    indxs: Option<Cow<'data, [Face]>>,
 }
 
-impl<'a, V> MeshData<'a, V> {
+impl<'data, V> MeshData<'data, V> {
     /// Creates a [mesh data](crate::mesh::MeshData) from given vertices.
-    pub const fn from_verts(verts: &'a [V]) -> Self {
+    pub const fn from_verts(verts: &'data [V]) -> Self {
         Self { verts, indxs: None }
     }
 
@@ -23,7 +23,7 @@ impl<'a, V> MeshData<'a, V> {
     ///
     /// # Errors
     /// Returns an [error](crate::mesh::Error) if the passed data is incorrect.
-    pub fn new(verts: &'a [V], indxs: &'a [Face]) -> Result<Self, Error> {
+    pub fn new(verts: &'data [V], indxs: &'data [Face]) -> Result<Self, Error> {
         let len: u16 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
         if let Some(index) = indxs.iter().flatten().copied().find(|&i| i >= len) {
             return Err(Error::InvalidIndex { index });
@@ -37,7 +37,7 @@ impl<'a, V> MeshData<'a, V> {
     ///
     /// # Errors
     /// Returns an [error](crate::mesh::TooManyVertices) if too many vertices are passed.
-    pub fn from_quads(verts: &'a [[V; 4]]) -> Result<Self, TooManyVertices> {
+    pub fn from_quads(verts: &'data [[V; 4]]) -> Result<Self, TooManyVertices> {
         let verts = verts.as_flattened();
         let indxs = {
             let len = u16::try_from(verts.len()).map_err(|_| TooManyVertices)?;
@@ -64,7 +64,7 @@ pub enum Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TooManyVertices => write!(f, "too many vertices"),
             Self::InvalidIndex { index } => write!(f, "invalid index: {index}"),
@@ -79,7 +79,7 @@ impl error::Error for Error {}
 pub struct TooManyVertices;
 
 impl fmt::Display for TooManyVertices {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "too many vertices")
     }
 }
@@ -93,7 +93,7 @@ pub struct Mesh<V> {
 }
 
 impl<V> Mesh<V> {
-    pub(crate) fn new(state: &State, data: &MeshData<V>) -> Self
+    pub(crate) fn new(state: &State, data: &MeshData<'_, V>) -> Self
     where
         V: Vertex,
     {

@@ -966,13 +966,13 @@ impl AddType for Entry {
     }
 }
 
-pub struct Branch<'a, E> {
-    en: &'a mut E,
+pub struct Branch<'en, E> {
+    en: &'en mut E,
     expr: Expr,
 }
 
-impl<'a, E> Branch<'a, E> {
-    pub(crate) fn new(en: &'a mut E, ty: naga::Handle<naga::Type>) -> Self
+impl<'en, E> Branch<'en, E> {
+    pub(crate) fn new(en: &'en mut E, ty: naga::Handle<naga::Type>) -> Self
     where
         E: GetEntry,
     {
@@ -1088,7 +1088,7 @@ impl Statements {
     }
 }
 
-type Members<'a> = dyn ExactSizeIterator<Item = Member> + 'a;
+type Members<'iter> = dyn ExactSizeIterator<Item = Member> + 'iter;
 
 #[derive(Default)]
 struct Types(naga::UniqueArena<naga::Type>);
@@ -1118,7 +1118,7 @@ impl Compiler {
 
     fn define_input(
         &mut self,
-        new: &mut Members,
+        new: &mut Members<'_>,
         binds: &mut Bindings,
     ) -> naga::Handle<naga::Type> {
         let len = new.len();

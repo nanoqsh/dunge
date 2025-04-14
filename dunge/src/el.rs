@@ -74,7 +74,7 @@ pub enum LoopError {
 }
 
 impl fmt::Display for LoopError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Window(err) => err.fmt(f),
             Self::EventLoop(err) => err.fmt(f),

@@ -120,7 +120,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
         impl ::dunge::set::Visit for #name<#(#anon_lts),*> {
             const N_MEMBERS: ::core::primitive::usize = #n_members;
-            fn visit<'a>(&'a self, visitor: &mut ::dunge::set::Visitor<'a>) {
+            fn visit<'group>(&'group self, visitor: &mut ::dunge::set::Visitor<'group>) {
                 #(#group_visit_members);*;
             }
         }
@@ -144,41 +144,41 @@ mod tests {
     #[test]
     fn derive_group() {
         let input = quote::quote! {
-            struct Map<'a> {
-                tex: BoundTexture<'a>,
-                sam: &'a Sampler,
+            struct Map<'tex> {
+                tex: BoundTexture<'tex>,
+                sam: &'tex Sampler,
             }
         };
 
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            impl<'a> ::dunge::Group for Map<'a> {
+            impl<'tex> ::dunge::Group for Map<'tex> {
                 type Projection = MapProjection<'static>;
                 const DEF: ::dunge::sl::Define<::dunge::types::MemberData> = ::dunge::sl::Define::new(&[
-                    <BoundTexture<'a> as ::dunge::group::MemberProjection>::MEMBER,
-                    <&'a Sampler as ::dunge::group::MemberProjection>::MEMBER,
+                    <BoundTexture<'tex> as ::dunge::group::MemberProjection>::MEMBER,
+                    <&'tex Sampler as ::dunge::group::MemberProjection>::MEMBER,
                 ]);
             }
 
             impl ::dunge::set::Visit for Map<'_> {
                 const N_MEMBERS: ::core::primitive::usize = 2usize;
-                fn visit<'a>(&'a self, visitor: &mut ::dunge::set::Visitor<'a>) {
+                fn visit<'group>(&'group self, visitor: &mut ::dunge::set::Visitor<'group>) {
                     ::dunge::set::VisitMember::visit_member(self.tex, visitor);
                     ::dunge::set::VisitMember::visit_member(self.sam, visitor);
                 }
             }
 
-            pub struct MapProjection<'a> {
-                tex: <BoundTexture<'a> as ::dunge::group::MemberProjection>::Field,
-                sam: <&'a Sampler as ::dunge::group::MemberProjection>::Field,
+            pub struct MapProjection<'tex> {
+                tex: <BoundTexture<'tex> as ::dunge::group::MemberProjection>::Field,
+                sam: <&'tex Sampler as ::dunge::group::MemberProjection>::Field,
             }
 
-            impl<'a> ::dunge::group::Projection for MapProjection<'a> {
+            impl<'tex> ::dunge::group::Projection for MapProjection<'tex> {
                 fn projection(id: ::core::primitive::u32, out: ::dunge::sl::GlobalOut) -> Self {
                     Self {
-                        tex: <BoundTexture<'a> as ::dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
-                        sam: <&'a Sampler as ::dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
+                        tex: <BoundTexture<'tex> as ::dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
+                        sam: <&'tex Sampler as ::dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
                     }
                 }
             }
@@ -190,38 +190,38 @@ mod tests {
     #[test]
     fn derive_tuple_group() {
         let input = quote::quote! {
-            struct Map<'a>(BoundTexture<'a>, &'a Sampler);
+            struct Map<'tex>(BoundTexture<'tex>, &'tex Sampler);
         };
 
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            impl<'a> ::dunge::Group for Map<'a> {
+            impl<'tex> ::dunge::Group for Map<'tex> {
                 type Projection = MapProjection<'static>;
                 const DEF: ::dunge::sl::Define<::dunge::types::MemberData> = ::dunge::sl::Define::new(&[
-                    <BoundTexture<'a> as ::dunge::group::MemberProjection>::MEMBER,
-                    <&'a Sampler as ::dunge::group::MemberProjection>::MEMBER,
+                    <BoundTexture<'tex> as ::dunge::group::MemberProjection>::MEMBER,
+                    <&'tex Sampler as ::dunge::group::MemberProjection>::MEMBER,
                 ]);
             }
 
             impl ::dunge::set::Visit for Map<'_> {
                 const N_MEMBERS: ::core::primitive::usize = 2usize;
-                fn visit<'a>(&'a self, visitor: &mut ::dunge::set::Visitor<'a>) {
+                fn visit<'group>(&'group self, visitor: &mut ::dunge::set::Visitor<'group>) {
                     ::dunge::set::VisitMember::visit_member(self.0, visitor);
                     ::dunge::set::VisitMember::visit_member(self.1, visitor);
                 }
             }
 
-            pub struct MapProjection<'a>(
-                <BoundTexture<'a> as ::dunge::group::MemberProjection>::Field,
-                <&'a Sampler as ::dunge::group::MemberProjection>::Field,
+            pub struct MapProjection<'tex>(
+                <BoundTexture<'tex> as ::dunge::group::MemberProjection>::Field,
+                <&'tex Sampler as ::dunge::group::MemberProjection>::Field,
             );
 
-            impl<'a> ::dunge::group::Projection for MapProjection<'a> {
+            impl<'tex> ::dunge::group::Projection for MapProjection<'tex> {
                 fn projection(id: ::core::primitive::u32, out: ::dunge::sl::GlobalOut) -> Self {
                     Self {
-                        0: <BoundTexture<'a> as ::dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
-                        1: <&'a Sampler as ::dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
+                        0: <BoundTexture<'tex> as ::dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
+                        1: <&'tex Sampler as ::dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
                     }
                 }
             }

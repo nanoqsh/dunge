@@ -6,13 +6,13 @@ use {
 };
 
 #[derive(Clone, Copy)]
-pub struct TextureData<'a> {
-    data: &'a [u8],
+pub struct TextureData<'data> {
+    data: &'data [u8],
     size: (u32, u32),
     format: Format,
 }
 
-impl<'a> TextureData<'a> {
+impl<'data> TextureData<'data> {
     pub const fn empty(size: (u32, u32), format: Format) -> Result<Self, ZeroSized> {
         let (width, height) = size;
         if width == 0 || height == 0 {
@@ -26,7 +26,7 @@ impl<'a> TextureData<'a> {
         })
     }
 
-    pub const fn new(data: &'a [u8], size: (u32, u32), format: Format) -> Result<Self, Error> {
+    pub const fn new(data: &'data [u8], size: (u32, u32), format: Format) -> Result<Self, Error> {
         let Ok(empty) = Self::empty(size, format) else {
             return Err(Error::ZeroSized);
         };
@@ -70,7 +70,7 @@ pub enum Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ZeroSized => write!(f, "zero sized data"),
             Self::InvalidLen => write!(f, "invalid data length"),
@@ -85,7 +85,7 @@ impl error::Error for Error {}
 pub struct ZeroSized;
 
 impl fmt::Display for ZeroSized {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "zero sized data")
     }
 }
@@ -98,7 +98,7 @@ pub struct Texture2d {
 }
 
 impl Texture2d {
-    fn new(state: &State, mut usage: wgpu::TextureUsages, data: TextureData) -> Self {
+    fn new(state: &State, mut usage: wgpu::TextureUsages, data: TextureData<'_>) -> Self {
         let (width, height) = data.size;
         let size = wgpu::Extent3d {
             width,
@@ -273,7 +273,7 @@ impl CopyBuffer {
         );
     }
 
-    pub fn view(&self) -> CopyBufferView {
+    pub fn view(&self) -> CopyBufferView<'_> {
         CopyBufferView(self.buf.slice(..))
     }
 
@@ -292,10 +292,10 @@ impl Drop for CopyBuffer {
 pub type MapResult = Result<(), wgpu::BufferAsyncError>;
 
 #[derive(Clone, Copy)]
-pub struct CopyBufferView<'a>(wgpu::BufferSlice<'a>);
+pub struct CopyBufferView<'slice>(wgpu::BufferSlice<'slice>);
 
-impl<'a> CopyBufferView<'a> {
-    pub(crate) async fn map<S, R>(self, state: &State, tx: S, rx: R) -> Mapped<'a>
+impl<'slice> CopyBufferView<'slice> {
+    pub(crate) async fn map<S, R>(self, state: &State, tx: S, rx: R) -> Mapped<'slice>
     where
         S: FnOnce(MapResult) + wgpu::WasmNotSend + 'static,
         R: IntoFuture<Output = MapResult>,
@@ -312,7 +312,7 @@ impl<'a> CopyBufferView<'a> {
     }
 }
 
-pub struct Mapped<'a>(wgpu::BufferView<'a>);
+pub struct Mapped<'slice>(wgpu::BufferView<'slice>);
 
 impl Mapped<'_> {
     pub fn data(&self) -> &[[u8; 4]] {
@@ -434,14 +434,14 @@ where
     }
 }
 
-pub struct Maker<'a> {
-    state: &'a State,
+pub struct Maker<'state> {
+    state: &'state State,
     usage: wgpu::TextureUsages,
 }
 
 pub trait Make: private::Sealed {
     type Out;
-    fn make(self, maker: Maker) -> Self::Out;
+    fn make(self, maker: Maker<'_>) -> Self::Out;
 }
 
 impl private::Sealed for TextureData<'_> {}
@@ -449,7 +449,7 @@ impl private::Sealed for TextureData<'_> {}
 impl Make for TextureData<'_> {
     type Out = Texture2d;
 
-    fn make(self, Maker { state, usage }: Maker) -> Self::Out {
+    fn make(self, Maker { state, usage }: Maker<'_>) -> Self::Out {
         Texture2d::new(state, usage, self)
     }
 }
@@ -483,7 +483,7 @@ where
 {
     type Out = Bind<M::Out>;
 
-    fn make(self, mut maker: Maker) -> Self::Out {
+    fn make(self, mut maker: Maker<'_>) -> Self::Out {
         maker.usage |= wgpu::TextureUsages::TEXTURE_BINDING;
         Bind(self.0.make(maker))
     }
@@ -518,7 +518,7 @@ where
 {
     type Out = Draw<M::Out>;
 
-    fn make(self, mut maker: Maker) -> Self::Out {
+    fn make(self, mut maker: Maker<'_>) -> Self::Out {
         maker.usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
         Draw(self.0.make(maker))
     }
@@ -553,7 +553,7 @@ where
 {
     type Out = Copy<M::Out>;
 
-    fn make(self, mut maker: Maker) -> Self::Out {
+    fn make(self, mut maker: Maker<'_>) -> Self::Out {
         maker.usage |= wgpu::TextureUsages::COPY_SRC;
         Copy(self.0.make(maker))
     }

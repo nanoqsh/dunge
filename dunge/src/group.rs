@@ -12,10 +12,10 @@ use crate::{
 pub use dunge_shader::group::{Projection, Take};
 
 #[derive(Clone, Copy)]
-pub struct BoundTexture<'a>(pub(crate) &'a Texture2d);
+pub struct BoundTexture<'tex>(pub(crate) &'tex Texture2d);
 
-impl<'a> BoundTexture<'a> {
-    pub fn new<T>(texture: &'a T) -> Self
+impl<'tex> BoundTexture<'tex> {
+    pub fn new<T>(texture: &'tex T) -> Self
     where
         T: BindTexture,
     {

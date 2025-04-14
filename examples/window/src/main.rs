@@ -84,7 +84,7 @@ async fn run() -> Result<(), Error> {
         let layer = cx.make_layer(&shader, view.format());
 
         // Describe the `Draw` handler
-        let draw = move |mut frame: Frame| {
+        let draw = move |mut frame: Frame<'_, '_>| {
             use dunge::color::Rgba;
 
             // Create a black RGBA background

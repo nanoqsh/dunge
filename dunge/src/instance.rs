@@ -162,7 +162,7 @@ impl<U> Row<U> {
 pub struct UpdateError;
 
 impl fmt::Display for UpdateError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "update error: the data size is invalid")
     }
 }

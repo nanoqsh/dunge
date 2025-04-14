@@ -178,7 +178,7 @@ impl<S> UniqueSet<S> {
 }
 
 impl<S> Bind<S> for UniqueSet<S> {
-    fn bind(&self) -> Bindings {
+    fn bind(&self) -> Bindings<'_> {
         self.0.bind()
     }
 }
@@ -190,7 +190,7 @@ pub struct SharedSet<S> {
 }
 
 impl<S> Bind<S> for SharedSet<S> {
-    fn bind(&self) -> Bindings {
+    fn bind(&self) -> Bindings<'_> {
         Bindings {
             bind_groups: &self.bind_groups,
         }

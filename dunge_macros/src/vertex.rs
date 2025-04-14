@@ -108,7 +108,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 }
 
 fn is_repr_c(attr: &Attribute) -> bool {
-    let parse_meta = |meta: ParseNestedMeta| {
+    let parse_meta = |meta: ParseNestedMeta<'_>| {
         if meta.path.is_ident("C") {
             Ok(())
         } else {

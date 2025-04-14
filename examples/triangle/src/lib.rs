@@ -10,9 +10,9 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     };
 
     #[derive(Group)]
-    struct Offset<'a>(&'a Uniform<f32>);
+    struct Offset<'uni>(&'uni Uniform<f32>);
 
-    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
+    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset<'_>>| {
         use std::f32::consts;
 
         let color = Vec4::new(1., 0.4, 0.8, 1.);
@@ -47,7 +47,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             Then::Run
         };
 
-        let draw = move |mut frame: Frame| {
+        let draw = move |mut frame: Frame<'_, '_>| {
             let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
             frame.set_layer(&layer, opts).with(&set).draw_points(3);
         };
