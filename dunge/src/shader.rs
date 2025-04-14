@@ -11,7 +11,7 @@ use {
     },
 };
 
-pub type RenderShader<D, S> = Shader<RenderInput<D>, S>;
+pub type RenderShader<V, I, S> = Shader<RenderInput<V, I>, S>;
 pub type ComputeShader<S> = Shader<ComputeInput, S>;
 
 /// The shader type.

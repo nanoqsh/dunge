@@ -32,7 +32,7 @@ pub trait IntoModule<A, K> {
 }
 
 pub enum RenderKind {}
-pub struct RenderInput<D>(PhantomData<D>);
+pub struct RenderInput<V, I>(PhantomData<(V, I)>);
 
 impl<M, P, C> IntoModule<(), RenderKind> for M
 where
@@ -40,7 +40,7 @@ where
     P: VsOut,
     C: FsOut,
 {
-    type Input = RenderInput<((), ())>;
+    type Input = RenderInput<(), ()>;
     type Set = ();
 
     fn into_module(self) -> Module {
@@ -63,7 +63,7 @@ macro_rules! impl_into_render_module {
             )*
             tuple!($($t::Set),*): TakeSet,
         {
-            type Input = RenderInput<(A::Vertex, A::Instance)>;
+            type Input = RenderInput<A::Vertex, A::Instance>;
             type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
 
             fn into_module(self) -> Module {

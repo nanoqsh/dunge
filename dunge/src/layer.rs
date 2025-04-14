@@ -3,8 +3,9 @@
 use {
     crate::{
         format::Format,
-        instance::{Set, Setter},
+        instance::Set,
         mesh::Mesh,
+        render::Input,
         set::Bind,
         shader::{ShaderData, SlotNumbers},
         state::State,
@@ -14,9 +15,6 @@ use {
 };
 
 pub struct SetLayer<'p, D, S> {
-    // TODO: remove
-    no_bindings: bool,
-    only_indexed_mesh: bool,
     slots: SlotNumbers,
     pass: RenderPass<'p>,
     ty: PhantomData<(D, S)>,
@@ -33,29 +31,26 @@ impl<'p, V, I, S> SetLayer<'p, (V, I), S> {
             self.pass.set_bind_group(id, group, &[]);
         }
 
-        SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
+        SetBinding::new(self.slots, &mut self.pass)
     }
 }
 
 impl<'p, V, I> SetLayer<'p, (V, I), ()> {
     #[inline]
     pub fn bind_empty(&mut self) -> SetBinding<'_, 'p, (V, I)> {
-        assert!(self.no_bindings, "ths shader has any bindings");
-        SetBinding::new(self.only_indexed_mesh, self.slots, &mut self.pass)
+        SetBinding::new(self.slots, &mut self.pass)
     }
 }
 
 pub struct SetBinding<'s, 'p, D> {
-    only_indexed_mesh: bool,
     slots: SlotNumbers,
     pass: &'s mut RenderPass<'p>,
     ty: PhantomData<D>,
 }
 
 impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
-    fn new(only_indexed_mesh: bool, slots: SlotNumbers, pass: &'s mut RenderPass<'p>) -> Self {
+    fn new(slots: SlotNumbers, pass: &'s mut RenderPass<'p>) -> Self {
         Self {
-            only_indexed_mesh,
             slots,
             pass,
             ty: PhantomData,
@@ -67,11 +62,14 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
     where
         I: Set,
     {
-        let mut setter = Setter::new(self.slots.instance, self.pass);
-        instance.set(&mut setter);
+        let len = crate::instance::set(
+            crate::render::VertexSetter::_new(self.pass),
+            self.slots.instance,
+            instance,
+        );
+
         SetInstance {
-            only_indexed_mesh: self.only_indexed_mesh,
-            len: setter.len(),
+            len,
             slots: self.slots,
             pass: self.pass,
             ty: PhantomData,
@@ -82,10 +80,10 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
 impl<'p, V> SetBinding<'_, 'p, (V, ())> {
     #[inline]
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
-        assert!(
-            !self.only_indexed_mesh || mesh.is_indexed(),
-            "only an indexed mesh can be drawn on this layer",
-        );
+        // assert!(
+        //     !self.only_indexed_mesh || mesh.is_indexed(),
+        //     "only an indexed mesh can be drawn on this layer",
+        // );
 
         mesh.draw(self.pass, self.slots.vertex, 1);
     }
@@ -94,17 +92,16 @@ impl<'p, V> SetBinding<'_, 'p, (V, ())> {
 impl SetBinding<'_, '_, ((), ())> {
     #[inline]
     pub fn draw_points(&mut self, n: u32) {
-        assert!(
-            !self.only_indexed_mesh,
-            "only an indexed mesh can be drawn on this layer",
-        );
+        // assert!(
+        //     !self.only_indexed_mesh,
+        //     "only an indexed mesh can be drawn on this layer",
+        // );
 
         self.pass.draw(0..n, 0..1);
     }
 }
 
 pub struct SetInstance<'s, 'p, V> {
-    only_indexed_mesh: bool,
     len: u32,
     slots: SlotNumbers,
     pass: &'s mut RenderPass<'p>,
@@ -114,10 +111,10 @@ pub struct SetInstance<'s, 'p, V> {
 impl<'p, V> SetInstance<'_, 'p, V> {
     #[inline]
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
-        assert!(
-            !self.only_indexed_mesh || mesh.is_indexed(),
-            "only an indexed mesh can be drawn on this layer",
-        );
+        // assert!(
+        //     !self.only_indexed_mesh || mesh.is_indexed(),
+        //     "only an indexed mesh can be drawn on this layer",
+        // );
 
         mesh.draw(self.pass, self.slots.vertex, self.len);
     }
@@ -126,10 +123,10 @@ impl<'p, V> SetInstance<'_, 'p, V> {
 impl SetInstance<'_, '_, ()> {
     #[inline]
     pub fn draw_points(&mut self, n: u32) {
-        assert!(
-            !self.only_indexed_mesh,
-            "only an indexed mesh can be drawn on this layer",
-        );
+        // assert!(
+        //     !self.only_indexed_mesh,
+        //     "only an indexed mesh can be drawn on this layer",
+        // );
 
         self.pass.draw(0..n, 0..self.len);
     }
@@ -180,7 +177,6 @@ pub struct Config {
     pub format: Format,
     pub blend: Blend,
     pub topology: Topology,
-    pub indexed_mesh: bool,
     pub depth: bool,
 }
 
@@ -193,17 +189,15 @@ impl From<Format> for Config {
     }
 }
 
-pub struct Layer<D, S> {
-    no_bindings: bool,
-    only_indexed_mesh: bool,
+pub struct Layer<I> {
     slots: SlotNumbers,
     depth: bool,
     format: Format,
     render: RenderPipeline,
-    ty: PhantomData<(D, S)>,
+    inp: PhantomData<I>,
 }
 
-impl<D, S> Layer<D, S> {
+impl<I> Layer<I> {
     pub(crate) fn new(state: &State, shader: &ShaderData, conf: &Config) -> Self {
         use wgpu::*;
 
@@ -211,7 +205,6 @@ impl<D, S> Layer<D, S> {
             format,
             blend,
             topology,
-            indexed_mesh,
             depth,
         } = conf;
 
@@ -224,7 +217,6 @@ impl<D, S> Layer<D, S> {
         let module = shader.module();
         let buffers = shader.vertex_buffers();
         let topology = topology.wgpu();
-        let only_indexed_mesh = *indexed_mesh && topology.is_strip();
         let desc = RenderPipelineDescriptor {
             label: None,
             layout: Some(shader.layout()),
@@ -236,7 +228,7 @@ impl<D, S> Layer<D, S> {
             },
             primitive: PrimitiveState {
                 topology,
-                strip_index_format: only_indexed_mesh.then_some(IndexFormat::Uint16),
+                strip_index_format: topology.is_strip().then_some(IndexFormat::Uint16),
                 cull_mode: Some(Face::Back),
                 ..Default::default()
             },
@@ -261,14 +253,16 @@ impl<D, S> Layer<D, S> {
         let render = state.device().create_render_pipeline(&desc);
 
         Self {
-            no_bindings: shader.groups().is_empty(),
-            only_indexed_mesh,
             slots: shader.slots(),
             depth: *depth,
             format: *format,
             render,
-            ty: PhantomData,
+            inp: PhantomData,
         }
+    }
+
+    pub(crate) fn slots(&self) -> SlotNumbers {
+        self.slots
     }
 
     pub fn depth(&self) -> bool {
@@ -282,12 +276,12 @@ impl<D, S> Layer<D, S> {
     pub(crate) fn render(&self) -> &wgpu::RenderPipeline {
         &self.render
     }
+}
 
-    pub(crate) fn set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, D, S> {
+impl<V, I, S> Layer<Input<V, I, S>> {
+    pub(crate) fn _set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, (V, I), S> {
         pass.set_pipeline(&self.render);
         SetLayer {
-            no_bindings: self.no_bindings,
-            only_indexed_mesh: self.only_indexed_mesh,
             slots: self.slots,
             pass,
             ty: PhantomData,

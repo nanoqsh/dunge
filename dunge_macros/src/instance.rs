@@ -86,7 +86,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         }
 
         impl ::dunge::instance::Set for #name {
-            fn set<'p>(&'p self, setter: &mut ::dunge::instance::Setter<'_, 'p>) {
+            fn set(&self, setter: &mut ::dunge::instance::Setter<'_, '_>) {
                 #(#instance_set_members);*;
             }
         }
@@ -128,7 +128,7 @@ mod tests {
             }
 
             impl ::dunge::instance::Set for Transform {
-                fn set<'p>(&'p self, setter: &mut ::dunge::instance::Setter<'_, 'p>) {
+                fn set(&self, setter: &mut ::dunge::instance::Setter<'_, '_>) {
                     ::dunge::instance::SetMember::set_member(&self.pos, setter);
                     ::dunge::instance::SetMember::set_member(&self.col, setter);
                 }
@@ -170,7 +170,7 @@ mod tests {
             }
 
             impl ::dunge::instance::Set for Transform {
-                fn set<'p>(&'p self, setter: &mut ::dunge::instance::Setter<'_, 'p>) {
+                fn set(&self, setter: &mut ::dunge::instance::Setter<'_, '_>) {
                     ::dunge::instance::SetMember::set_member(&self.0, setter);
                     ::dunge::instance::SetMember::set_member(&self.1, setter);
                 }

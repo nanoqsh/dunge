@@ -2,7 +2,7 @@ type Error = Box<dyn std::error::Error>;
 
 fn main() {
     env_logger::init();
-    if let Err(err) = helpers::block_on(run()) {
+    if let Err(err) = dunge::block_on(run()) {
         eprintln!("error: {err}");
     }
 }

@@ -5,53 +5,59 @@ use {
         draw::Draw,
         format::Format,
         layer::{Layer, SetLayer},
+        render::{Input, Render},
+        runtime::{self, Worker},
         texture::{CopyBuffer, CopyTexture, DrawTexture},
     },
+    std::{
+        future,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex,
+        },
+        task::{Poll, Waker},
+    },
     wgpu::{
-        Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags, Queue,
-        TextureView,
+        Adapter, Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags,
+        Queue, TextureView,
     },
 };
 
-#[cfg(feature = "winit")]
-use wgpu::Adapter;
+const DEFAULT_BACKEND: wgpu::Backends = {
+    #[cfg(all(target_family = "unix", not(target_os = "macos")))]
+    {
+        Backends::VULKAN
+    }
+
+    #[cfg(target_family = "windows")]
+    {
+        Backends::VULKAN
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Backends::METAL
+    }
+
+    #[cfg(target_family = "wasm")]
+    {
+        Backends::BROWSER_WEBGPU
+    }
+};
 
 pub(crate) struct State {
-    #[cfg(feature = "winit")]
     instance: Instance,
-    #[cfg(feature = "winit")]
     adapter: Adapter,
     device: Device,
     queue: Queue,
+    worker: Worker,
 }
 
 impl State {
     pub async fn new() -> Result<Self, FailedMakeContext> {
-        let backends;
-
-        #[cfg(all(target_family = "unix", not(target_os = "macos")))]
-        {
-            backends = Backends::VULKAN;
-        }
-
-        #[cfg(target_family = "windows")]
-        {
-            backends = Backends::VULKAN;
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-            backends = Backends::METAL;
-        }
-
-        #[cfg(target_family = "wasm")]
-        {
-            backends = Backends::BROWSER_WEBGPU;
-        }
-
         let instance = {
             let desc = InstanceDescriptor {
-                backends,
+                backends: DEFAULT_BACKEND,
                 flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
                 ..Default::default()
             };
@@ -81,7 +87,7 @@ impl State {
 
             let desc = DeviceDescriptor {
                 required_limits: Limits {
-                    ..if cfg!(target_arch = "wasm32") {
+                    ..if cfg!(target_family = "wasm") {
                         Limits::downlevel_defaults()
                     } else {
                         Limits::default()
@@ -96,22 +102,21 @@ impl State {
                 .map_err(FailedMakeContext::RequestDevice)?
         };
 
+        let worker = runtime::poll_in_background(instance.clone());
+
         Ok(Self {
-            #[cfg(feature = "winit")]
             instance,
-            #[cfg(feature = "winit")]
             adapter,
             device,
             queue,
+            worker,
         })
     }
 
-    #[cfg(feature = "winit")]
     pub fn instance(&self) -> &Instance {
         &self.instance
     }
 
-    #[cfg(feature = "winit")]
     pub fn adapter(&self) -> &Adapter {
         &self.adapter
     }
@@ -143,18 +148,75 @@ impl State {
 
         self.queue.submit([encoder.finish()]);
     }
-}
 
-pub struct Scheduler<'shed> {
-    encoder: &'shed mut CommandEncoder,
-}
-
-impl<'shed> Scheduler<'shed> {
-    pub fn render<O>(&'shed mut self, target: Target<'_>, opts: O) -> Render<'shed>
+    pub async fn run<F>(&self, f: F)
     where
+        F: FnOnce(Scheduler<'_>),
+    {
+        let mut encoder = {
+            let desc = wgpu::CommandEncoderDescriptor::default();
+            self.device.create_command_encoder(&desc)
+        };
+
+        f(Scheduler(&mut encoder));
+
+        self.queue.submit([encoder.finish()]);
+        self.worker.work();
+
+        struct Notify {
+            done: AtomicBool,
+            waker: Mutex<Waker>,
+        }
+
+        let notify = Arc::new(Notify {
+            done: AtomicBool::new(false),
+            waker: Mutex::new(Waker::noop().clone()),
+        });
+
+        self.queue.on_submitted_work_done({
+            let notify = notify.clone();
+            move || {
+                notify.done.store(true, Ordering::Release);
+                notify.waker.lock().expect("lock waker").wake_by_ref();
+            }
+        });
+
+        let fu = future::poll_fn(|cx| {
+            if notify.done.load(Ordering::Acquire) {
+                Poll::Ready(())
+            } else {
+                *notify.waker.lock().expect("lock waker") = cx.waker().clone();
+                Poll::Pending
+            }
+        });
+
+        fu.await;
+    }
+}
+
+pub struct Scheduler<'shed>(&'shed mut CommandEncoder);
+
+impl Scheduler<'_> {
+    #[inline]
+    pub fn compute(&mut self) -> Compute<'_> {
+        let desc = wgpu::ComputePassDescriptor {
+            label: None,
+            timestamp_writes: None,
+        };
+
+        let pass = self.0.begin_compute_pass(&desc);
+        Compute(pass)
+    }
+
+    #[inline]
+    pub fn render<T, O>(&mut self, target: T, opts: O) -> Render<'_>
+    where
+        T: AsTarget,
         O: Into<Options>,
     {
+        let target = target.as_target();
         let opts = opts.into();
+
         let color_attachment = wgpu::RenderPassColorAttachment {
             view: target.colorv,
             resolve_target: None,
@@ -188,39 +250,17 @@ impl<'shed> Scheduler<'shed> {
             ..Default::default()
         };
 
-        let pass = self.encoder.begin_render_pass(&desc);
-        Render { pass }
-    }
-}
-
-pub struct Render<'shed> {
-    pass: wgpu::RenderPass<'shed>,
-}
-
-impl<'shed> Render<'shed> {
-    pub fn on<'on, D, S>(&'on mut self, layer: &Layer<D, S>) -> OnLayer<'shed, 'on> {
-        self.pass.set_pipeline(layer.render());
-
-        OnLayer {
-            pass: &mut self.pass,
-        }
-    }
-}
-
-pub struct OnLayer<'shed, 'on> {
-    #[expect(dead_code)]
-    pass: &'on mut wgpu::RenderPass<'shed>,
-}
-
-impl OnLayer<'_, '_> {
-    pub fn bind(&mut self, _binding: ()) {
-        todo!()
+        let pass = self.0.begin_render_pass(&desc);
+        Render(pass)
     }
 
-    pub fn bind_empty(&mut self) {
+    #[inline]
+    pub fn copy(&self, _from: (), _to: ()) {
         todo!()
     }
 }
+
+pub struct Compute<'com>(#[expect(dead_code)] wgpu::ComputePass<'com>);
 
 /// Current layer options.
 #[derive(Clone, Copy, Default)]
@@ -256,11 +296,11 @@ pub struct Frame<'v, 'e> {
 }
 
 impl Frame<'_, '_> {
-    pub fn set_layer<'p, D, S, O>(
+    pub fn set_layer<'p, V, I, S, O>(
         &'p mut self,
-        layer: &'p Layer<D, S>,
+        layer: &'p Layer<Input<V, I, S>>,
         opts: O,
-    ) -> SetLayer<'p, D, S>
+    ) -> SetLayer<'p, (V, I), S>
     where
         O: Into<Options>,
     {
@@ -310,7 +350,7 @@ impl Frame<'_, '_> {
         };
 
         let pass = self.encoder.begin_render_pass(&desc);
-        layer.set(pass)
+        layer._set(pass)
     }
 
     pub fn copy_texture<T>(&mut self, buffer: &CopyBuffer, texture: &T)

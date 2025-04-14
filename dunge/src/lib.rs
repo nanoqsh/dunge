@@ -6,6 +6,8 @@ pub mod group;
 pub mod instance;
 pub mod layer;
 pub mod mesh;
+pub mod render;
+mod runtime;
 pub mod set;
 mod shader;
 mod state;
@@ -55,10 +57,13 @@ pub use {
     glam,
 };
 
-#[cfg(all(feature = "winit", not(target_arch = "wasm32")))]
+#[cfg(not(target_family = "wasm"))]
+pub use crate::runtime::block_on;
+
+#[cfg(all(feature = "winit", not(target_family = "wasm")))]
 pub use crate::window::window;
 
-#[cfg(all(feature = "winit", target_arch = "wasm32"))]
+#[cfg(all(feature = "winit", target_family = "wasm"))]
 pub use crate::window::from_element;
 
 #[cfg(feature = "winit")]

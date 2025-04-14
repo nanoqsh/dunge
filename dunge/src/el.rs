@@ -31,18 +31,18 @@ pub(crate) fn run<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(
 where
     U: IntoUpdate + 'static,
 {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(target_family = "wasm"))]
     {
         run_local(ws, cx, upd)
     }
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_family = "wasm")]
     {
         spawn(ws, cx, upd)
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub(crate) fn run_local<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
     U: IntoUpdate,
@@ -53,7 +53,7 @@ where
     out.or(handler.out)
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(target_family = "wasm")]
 fn spawn<U>(ws: WindowState<U::Event>, cx: Context, upd: U) -> Result<(), LoopError>
 where
     U: IntoUpdate + 'static,

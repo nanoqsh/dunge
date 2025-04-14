@@ -4,6 +4,7 @@ use {
         instance::Row,
         layer::{Config, Layer},
         mesh::{self, Mesh},
+        render::Input,
         set::{self, Data, GroupHandler, UniqueSet, Visit},
         shader::{ComputeShader, RenderShader, Shader},
         sl,
@@ -69,7 +70,11 @@ impl Context {
         Storage::new(&self.0, val.storage_value())
     }
 
-    pub fn make_layer<D, S, O>(&self, shader: &RenderShader<D, S>, opts: O) -> Layer<D, S>
+    pub fn make_layer<V, I, S, O>(
+        &self,
+        shader: &RenderShader<V, I, S>,
+        opts: O,
+    ) -> Layer<Input<V, I, S>>
     where
         O: Into<Config>,
     {
@@ -138,10 +143,11 @@ impl Context {
         self.0.draw(target, draw);
     }
 
-    pub async fn shed<F, O>(_f: F)
+    pub async fn shed<F>(&self, f: F)
     where
         F: FnOnce(Scheduler<'_>),
     {
+        self.0.run(f).await;
     }
 }
 

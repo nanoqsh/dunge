@@ -25,7 +25,7 @@ fn render() -> Result<(), Error> {
         color: sl::vec4_with(sl::fragment(vert.1), 1.),
     };
 
-    let cx = helpers::block_on(dunge::context())?;
+    let cx = dunge::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_vertex.wgsl"));
 
@@ -59,7 +59,7 @@ fn render() -> Result<(), Error> {
     });
 
     cx.draw_to(&view, draw);
-    let mapped = helpers::block_on({
+    let mapped = dunge::block_on({
         let (tx, rx) = helpers::oneshot();
         cx.map_view(buffer.view(), tx, rx)
     });

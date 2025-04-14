@@ -3,6 +3,7 @@
 use {
     crate::{
         context::Context,
+        render::VertexSetter,
         sl::{ReadInstance, Ret},
         state::State,
         types::{self, ValueType, VectorType},
@@ -10,7 +11,6 @@ use {
         Instance,
     },
     std::{error, fmt, marker::PhantomData},
-    wgpu::{Buffer, RenderPass},
 };
 
 pub use dunge_shader::instance::Projection;
@@ -58,25 +58,27 @@ impl MemberProjection for Row<glam::Vec4> {
 }
 
 pub trait Set: Instance {
-    fn set<'p>(&'p self, setter: &mut Setter<'_, 'p>);
+    fn set(&self, setter: &mut Setter<'_, '_>);
 }
 
-pub struct Setter<'s, 'p> {
+pub(crate) fn set<I>(vs: VertexSetter<'_, '_>, slot: u32, instance: &I) -> u32
+where
+    I: Set,
+{
+    let len = None;
+    let mut setter = Setter { len, slot, vs };
+    instance.set(&mut setter);
+    setter.len()
+}
+
+pub struct Setter<'ren, 'layer> {
     len: Option<u32>,
     slot: u32,
-    pass: &'s mut RenderPass<'p>,
+    vs: VertexSetter<'ren, 'layer>,
 }
 
-impl<'s, 'p> Setter<'s, 'p> {
-    pub(crate) fn new(slot: u32, pass: &'s mut RenderPass<'p>) -> Self {
-        Self {
-            len: None,
-            slot,
-            pass,
-        }
-    }
-
-    pub(crate) fn len(&self) -> u32 {
+impl Setter<'_, '_> {
+    fn len(&self) -> u32 {
         self.len.unwrap_or_default()
     }
 
@@ -92,21 +94,20 @@ impl<'s, 'p> Setter<'s, 'p> {
     }
 }
 
-pub trait SetMember<'p> {
-    fn set_member(&'p self, setter: &mut Setter<'_, 'p>);
+pub trait SetMember {
+    fn set_member(&self, setter: &mut Setter<'_, '_>);
 }
 
-impl<'p, U> SetMember<'p> for Row<U> {
-    fn set_member(&'p self, setter: &mut Setter<'_, 'p>) {
+impl<U> SetMember for Row<U> {
+    fn set_member(&self, setter: &mut Setter<'_, '_>) {
         setter.update_len(self.len);
         let slot = setter.next_slot();
-        let slice = self.buf.slice(..);
-        setter.pass.set_vertex_buffer(slot, slice);
+        setter.vs.set(&self.buf, slot);
     }
 }
 
 pub struct Row<U> {
-    buf: Buffer,
+    buf: wgpu::Buffer,
     len: u32,
     ty: PhantomData<U>,
 }

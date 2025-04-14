@@ -3,7 +3,7 @@
 use {dunge::Context, std::sync::LazyLock};
 
 static CONTEXT: LazyLock<Context> =
-    LazyLock::new(|| helpers::block_on(dunge::context()).expect("failed to create dunge context"));
+    LazyLock::new(|| dunge::block_on(dunge::context()).expect("failed to create dunge context"));
 
 type Error = Box<dyn std::error::Error>;
 
