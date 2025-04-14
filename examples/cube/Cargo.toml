@@ -10,8 +10,8 @@ path = "src/main.rs"
 
 [dependencies]
 dunge = { workspace = true, features = ["winit"] }
-env_logger = { workspace = true }
-helpers = { path = "../../helpers" }
+env_logger.workspace = true
+helpers.path = "../../helpers"
 
 [lints]
 workspace = true

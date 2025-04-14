@@ -4,17 +4,6 @@ version = "0.1.0"
 edition.workspace = true
 publish = false
 
-[dependencies]
-async-channel = "2.1"
-async-executor = { version = "1.8", optional = true }
-async-net = { version = "2.0", optional = true }
-bytemuck.workspace = true
-futures-lite = "2.1"
-http-body-util = { version = "0.1", optional = true }
-hyper = { version = "1", features = ["http1", "server"], optional = true }
-png = { version = "0.17", optional = true }
-smol-hyper = { version = "0.1", optional = true }
-
 [features]
 png = ["dep:png"]
 serv = [
@@ -24,6 +13,17 @@ serv = [
     "dep:hyper",
     "dep:smol-hyper",
 ]
+
+[dependencies]
+async-channel.workspace = true
+async-executor = { workspace = true, optional = true }
+async-net = { workspace = true, optional = true }
+bytemuck.workspace = true
+futures-lite.workspace = true
+http-body-util = { workspace = true, optional = true }
+hyper = { workspace = true, features = ["http1", "server"], optional = true }
+png = { workspace = true, optional = true }
+smol-hyper = { workspace = true, optional = true }
 
 [lints]
 workspace = true

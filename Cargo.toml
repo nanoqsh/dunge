@@ -4,11 +4,7 @@ members = [
     "dunge",
     "dunge_macros",
     "dunge_shader",
-    "examples/cube",
-    "examples/ssaa",
-    "examples/triangle",
-    "examples/wasm",
-    "examples/window",
+    "examples/*",
     "helpers",
     "xtask",
 ]
@@ -28,10 +24,31 @@ rust-version = "1.80"
 dunge = { version = "=0.3.3", path = "dunge" }
 dunge_macros = { version = "=0.3.3", path = "dunge_macros" }
 dunge_shader = { version = "=0.3.3", path = "dunge_shader" }
+askama = { version = "0.13", default-features = false }
+async-channel = "2.1"
+async-executor = "1.8"
+async-net = "2.0"
 bytemuck = "1.13"
-glam = { version = "0.30", features = ["bytemuck"] }
+console_error_panic_hook = "0.1"
 env_logger = "0.11"
+futures-lite = "2.1"
+glam = "0.30"
+http-body-util = "0.1"
+hyper = "1"
+instant = "0.1"
 log = "0.4"
+naga = "25.0"
+parking = "2.2"
+png = "0.17"
+proc-macro2 = "1.0"
+quote = "1.0"
+smol-hyper = "0.1"
+syn = { version = "2.0", default-features = false }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+wgpu = { version = "25.0", default-features = false }
+web-sys = "0.3"
+winit = { version = "0.30", default-features = false }
 
 [workspace.lints.rust]
 elided-lifetimes-in-paths = "deny"

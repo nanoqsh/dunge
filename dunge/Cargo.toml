@@ -11,51 +11,45 @@ readme.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+winit = ["dep:instant", "dep:winit"]
+wgsl = ["dunge_shader/wgsl"]
+
 [dependencies]
 dunge_macros.workspace = true
 dunge_shader.workspace = true
 bytemuck.workspace = true
-glam.workspace = true
-instant = { version = "0.1", optional = true }
+glam = { workspace = true, features = ["bytemuck"] }
+instant = { workspace = true, optional = true }
 log.workspace = true
-wgpu = { version = "25.0", default-features = false, features = ["naga-ir"] }
-
-[dependencies.winit]
-version = "0.30"
-default-features = false
-features = ["rwh_06", "x11"]
-optional = true
+wgpu = { workspace = true, features = ["naga-ir"] }
+winit = { workspace = true, features = ["rwh_06", "x11"], optional = true }
 
 [target.'cfg(all(target_family = "unix", not(target_os = "macos")))'.dependencies]
-wgpu = { version = "25.0", default-features = false, features = ["vulkan"] }
+wgpu = { workspace = true, features = ["vulkan"] }
 
 [target.'cfg(target_family = "windows")'.dependencies]
-wgpu = { version = "25.0", default-features = false, features = ["vulkan"] }
+wgpu = { workspace = true, features = ["vulkan"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-wgpu = { version = "25.0", default-features = false, features = ["metal"] }
+wgpu = { workspace = true, features = ["metal"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
-wgpu = { version = "25.0", default-features = false, features = ["webgpu"] }
-web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
+instant = { workspace = true, features = ["wasm-bindgen"], optional = true }
+wgpu = { workspace = true, features = ["webgpu"] }
+web-sys = { workspace = true, features = ["Document", "Window", "Element"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-parking = "2.2"
+parking.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies.winit]
-version = "0.30"
-default-features = false
+workspace = true
 features = ["android-native-activity"]
 optional = true
 
 [dev-dependencies]
 dunge_shader = { workspace = true, features = ["wgsl"] }
 helpers = { path = "../helpers", features = ["png"] }
-
-[features]
-winit = ["dep:instant", "dep:winit"]
-wgsl = ["dunge_shader/wgsl"]
 
 [lints]
 workspace = true
