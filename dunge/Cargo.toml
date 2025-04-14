@@ -40,6 +40,9 @@ instant = { version = "0.1", features = ["wasm-bindgen"], optional = true }
 wgpu = { version = "25.0", default-features = false, features = ["webgpu"] }
 web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
 
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+parking = "2.2"
+
 [target.'cfg(target_os = "android")'.dependencies.winit]
 version = "0.30"
 default-features = false

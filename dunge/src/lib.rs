@@ -57,6 +57,9 @@ pub use {
     glam,
 };
 
+#[cfg(not(target_family = "wasm"))]
+pub use crate::runtime::block_on;
+
 #[cfg(all(feature = "winit", not(target_family = "wasm")))]
 pub use crate::window::window;
 
