@@ -17,59 +17,53 @@ use {
         },
         task::{Poll, Waker},
     },
-    wgpu::{
-        Adapter, Backends, CommandEncoder, Device, Instance, InstanceDescriptor, InstanceFlags,
-        Queue, TextureView,
-    },
 };
 
 const DEFAULT_BACKEND: wgpu::Backends = {
     #[cfg(all(target_family = "unix", not(target_os = "macos")))]
     {
-        Backends::VULKAN
+        wgpu::Backends::VULKAN
     }
 
     #[cfg(target_family = "windows")]
     {
-        Backends::VULKAN
+        wgpu::Backends::VULKAN
     }
 
     #[cfg(target_os = "macos")]
     {
-        Backends::METAL
+        wgpu::Backends::METAL
     }
 
     #[cfg(target_family = "wasm")]
     {
-        Backends::BROWSER_WEBGPU
+        wgpu::Backends::BROWSER_WEBGPU
     }
 };
 
 pub(crate) struct State {
-    instance: Instance,
-    adapter: Adapter,
-    device: Device,
-    queue: Queue,
+    instance: wgpu::Instance,
+    adapter: wgpu::Adapter,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
     worker: Worker,
 }
 
 impl State {
     pub async fn new() -> Result<Self, FailedMakeContext> {
         let instance = {
-            let desc = InstanceDescriptor {
+            let desc = wgpu::InstanceDescriptor {
                 backends: DEFAULT_BACKEND,
-                flags: InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
+                flags: wgpu::InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
                 ..Default::default()
             };
 
-            Instance::new(&desc)
+            wgpu::Instance::new(&desc)
         };
 
         let adapter = {
-            use wgpu::{PowerPreference, RequestAdapterOptions};
-
-            let options = RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
+            let options = wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
                 ..Default::default()
             };
 
@@ -83,14 +77,12 @@ impl State {
         log::info!("selected backend: {backend:?}");
 
         let (device, queue) = {
-            use wgpu::{DeviceDescriptor, Limits};
-
-            let desc = DeviceDescriptor {
-                required_limits: Limits {
+            let desc = wgpu::DeviceDescriptor {
+                required_limits: wgpu::Limits {
                     ..if cfg!(target_family = "wasm") {
-                        Limits::downlevel_defaults()
+                        wgpu::Limits::downlevel_defaults()
                     } else {
-                        Limits::default()
+                        wgpu::Limits::default()
                     }
                 },
                 ..Default::default()
@@ -113,19 +105,21 @@ impl State {
         })
     }
 
-    pub fn instance(&self) -> &Instance {
+    #[allow(dead_code)]
+    pub fn instance(&self) -> &wgpu::Instance {
         &self.instance
     }
 
-    pub fn adapter(&self) -> &Adapter {
+    #[allow(dead_code)]
+    pub fn adapter(&self) -> &wgpu::Adapter {
         &self.adapter
     }
 
-    pub fn device(&self) -> &Device {
+    pub fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
-    pub fn queue(&self) -> &Queue {
+    pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 
@@ -133,11 +127,9 @@ impl State {
     where
         D: Draw,
     {
-        use wgpu::CommandEncoderDescriptor;
-
         self.queue.submit([]);
         let mut encoder = {
-            let desc = CommandEncoderDescriptor::default();
+            let desc = wgpu::CommandEncoderDescriptor::default();
             self.device.create_command_encoder(&desc)
         };
 
@@ -194,7 +186,7 @@ impl State {
     }
 }
 
-pub struct Scheduler<'shed>(&'shed mut CommandEncoder);
+pub struct Scheduler<'shed>(&'shed mut wgpu::CommandEncoder);
 
 impl Scheduler<'_> {
     #[inline]
@@ -292,7 +284,7 @@ impl From<Rgba> for Options {
 /// The frame type for drawing and copying operations.
 pub struct Frame<'v, 'e> {
     target: Target<'v>,
-    encoder: &'e mut CommandEncoder,
+    encoder: &'e mut wgpu::CommandEncoder,
 }
 
 impl Frame<'_, '_> {
@@ -304,8 +296,6 @@ impl Frame<'_, '_> {
     where
         O: Into<Options>,
     {
-        use wgpu::*;
-
         assert_eq!(
             self.target.format,
             layer.format(),
@@ -318,32 +308,34 @@ impl Frame<'_, '_> {
         );
 
         let opts = opts.into();
-        let color_attachment = RenderPassColorAttachment {
+        let color_attachment = wgpu::RenderPassColorAttachment {
             view: self.target.colorv,
             resolve_target: None,
-            ops: Operations {
+            ops: wgpu::Operations {
                 load: opts
                     .clear_color
                     .map(Rgba::wgpu)
-                    .map_or(LoadOp::Load, LoadOp::Clear),
-                store: StoreOp::Store,
+                    .map_or(wgpu::LoadOp::Load, wgpu::LoadOp::Clear),
+                store: wgpu::StoreOp::Store,
             },
         };
 
         let depth_attachment = |view| {
-            let ops = Operations {
-                load: opts.clear_depth.map_or(LoadOp::Load, LoadOp::Clear),
-                store: StoreOp::Store,
+            let ops = wgpu::Operations {
+                load: opts
+                    .clear_depth
+                    .map_or(wgpu::LoadOp::Load, wgpu::LoadOp::Clear),
+                store: wgpu::StoreOp::Store,
             };
 
-            RenderPassDepthStencilAttachment {
+            wgpu::RenderPassDepthStencilAttachment {
                 view,
                 depth_ops: Some(ops),
                 stencil_ops: None,
             }
         };
 
-        let desc = RenderPassDescriptor {
+        let desc = wgpu::RenderPassDescriptor {
             color_attachments: &[Some(color_attachment)],
             depth_stencil_attachment: self.target.depthv.map(depth_attachment),
             ..Default::default()
@@ -365,12 +357,12 @@ impl Frame<'_, '_> {
 #[derive(Clone, Copy)]
 pub struct Target<'v> {
     format: Format,
-    colorv: &'v TextureView,
-    depthv: Option<&'v TextureView>,
+    colorv: &'v wgpu::TextureView,
+    depthv: Option<&'v wgpu::TextureView>,
 }
 
 impl<'v> Target<'v> {
-    pub(crate) fn new(format: Format, colorv: &'v TextureView) -> Self {
+    pub(crate) fn new(format: Format, colorv: &'v wgpu::TextureView) -> Self {
         Self {
             format,
             colorv,

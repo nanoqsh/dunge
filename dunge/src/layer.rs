@@ -11,12 +11,11 @@ use {
         state::State,
     },
     std::{iter, marker::PhantomData},
-    wgpu::{BlendState, PrimitiveTopology, RenderPass, RenderPipeline},
 };
 
 pub struct SetLayer<'p, D, S> {
     slots: SlotNumbers,
-    pass: RenderPass<'p>,
+    pass: wgpu::RenderPass<'p>,
     ty: PhantomData<(D, S)>,
 }
 
@@ -44,12 +43,12 @@ impl<'p, V, I> SetLayer<'p, (V, I), ()> {
 
 pub struct SetBinding<'s, 'p, D> {
     slots: SlotNumbers,
-    pass: &'s mut RenderPass<'p>,
+    pass: &'s mut wgpu::RenderPass<'p>,
     ty: PhantomData<D>,
 }
 
 impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
-    fn new(slots: SlotNumbers, pass: &'s mut RenderPass<'p>) -> Self {
+    fn new(slots: SlotNumbers, pass: &'s mut wgpu::RenderPass<'p>) -> Self {
         Self {
             slots,
             pass,
@@ -80,11 +79,6 @@ impl<'s, 'p, V, I> SetBinding<'s, 'p, (V, I)> {
 impl<'p, V> SetBinding<'_, 'p, (V, ())> {
     #[inline]
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
-        // assert!(
-        //     !self.only_indexed_mesh || mesh.is_indexed(),
-        //     "only an indexed mesh can be drawn on this layer",
-        // );
-
         mesh.draw(self.pass, self.slots.vertex, 1);
     }
 }
@@ -92,11 +86,6 @@ impl<'p, V> SetBinding<'_, 'p, (V, ())> {
 impl SetBinding<'_, '_, ((), ())> {
     #[inline]
     pub fn draw_points(&mut self, n: u32) {
-        // assert!(
-        //     !self.only_indexed_mesh,
-        //     "only an indexed mesh can be drawn on this layer",
-        // );
-
         self.pass.draw(0..n, 0..1);
     }
 }
@@ -104,18 +93,13 @@ impl SetBinding<'_, '_, ((), ())> {
 pub struct SetInstance<'s, 'p, V> {
     len: u32,
     slots: SlotNumbers,
-    pass: &'s mut RenderPass<'p>,
+    pass: &'s mut wgpu::RenderPass<'p>,
     ty: PhantomData<V>,
 }
 
 impl<'p, V> SetInstance<'_, 'p, V> {
     #[inline]
     pub fn draw(&mut self, mesh: &'p Mesh<V>) {
-        // assert!(
-        //     !self.only_indexed_mesh || mesh.is_indexed(),
-        //     "only an indexed mesh can be drawn on this layer",
-        // );
-
         mesh.draw(self.pass, self.slots.vertex, self.len);
     }
 }
@@ -123,11 +107,6 @@ impl<'p, V> SetInstance<'_, 'p, V> {
 impl SetInstance<'_, '_, ()> {
     #[inline]
     pub fn draw_points(&mut self, n: u32) {
-        // assert!(
-        //     !self.only_indexed_mesh,
-        //     "only an indexed mesh can be drawn on this layer",
-        // );
-
         self.pass.draw(0..n, 0..self.len);
     }
 }
@@ -141,11 +120,11 @@ pub enum Blend {
 }
 
 impl Blend {
-    fn wgpu(self) -> Option<BlendState> {
+    fn wgpu(self) -> Option<wgpu::BlendState> {
         match self {
             Self::None => None,
-            Self::Replace => Some(BlendState::REPLACE),
-            Self::Alpha => Some(BlendState::ALPHA_BLENDING),
+            Self::Replace => Some(wgpu::BlendState::REPLACE),
+            Self::Alpha => Some(wgpu::BlendState::ALPHA_BLENDING),
         }
     }
 }
@@ -161,13 +140,13 @@ pub enum Topology {
 }
 
 impl Topology {
-    fn wgpu(self) -> PrimitiveTopology {
+    fn wgpu(self) -> wgpu::PrimitiveTopology {
         match self {
-            Self::PointList => PrimitiveTopology::PointList,
-            Self::LineList => PrimitiveTopology::LineList,
-            Self::LineStrip => PrimitiveTopology::LineStrip,
-            Self::TriangleList => PrimitiveTopology::TriangleList,
-            Self::TriangleStrip => PrimitiveTopology::TriangleStrip,
+            Self::PointList => wgpu::PrimitiveTopology::PointList,
+            Self::LineList => wgpu::PrimitiveTopology::LineList,
+            Self::LineStrip => wgpu::PrimitiveTopology::LineStrip,
+            Self::TriangleList => wgpu::PrimitiveTopology::TriangleList,
+            Self::TriangleStrip => wgpu::PrimitiveTopology::TriangleStrip,
         }
     }
 }
@@ -193,14 +172,12 @@ pub struct Layer<I> {
     slots: SlotNumbers,
     depth: bool,
     format: Format,
-    render: RenderPipeline,
+    render: wgpu::RenderPipeline,
     inp: PhantomData<I>,
 }
 
 impl<I> Layer<I> {
     pub(crate) fn new(state: &State, shader: &ShaderData, conf: &Config) -> Self {
-        use wgpu::*;
-
         let Config {
             format,
             blend,
@@ -208,42 +185,42 @@ impl<I> Layer<I> {
             depth,
         } = conf;
 
-        let targets = [Some(ColorTargetState {
+        let targets = [Some(wgpu::ColorTargetState {
             format: format.wgpu(),
             blend: blend.wgpu(),
-            write_mask: ColorWrites::ALL,
+            write_mask: wgpu::ColorWrites::ALL,
         })];
 
         let module = shader.module();
         let buffers = shader.vertex_buffers();
         let topology = topology.wgpu();
-        let desc = RenderPipelineDescriptor {
+        let desc = wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(shader.layout()),
-            vertex: VertexState {
+            vertex: wgpu::VertexState {
                 module,
                 entry_point: Some("vs"),
-                compilation_options: PipelineCompilationOptions::default(),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
                 buffers: &buffers,
             },
-            primitive: PrimitiveState {
+            primitive: wgpu::PrimitiveState {
                 topology,
-                strip_index_format: topology.is_strip().then_some(IndexFormat::Uint16),
-                cull_mode: Some(Face::Back),
+                strip_index_format: topology.is_strip().then_some(wgpu::IndexFormat::Uint16),
+                cull_mode: Some(wgpu::Face::Back),
                 ..Default::default()
             },
-            depth_stencil: depth.then_some(DepthStencilState {
+            depth_stencil: depth.then_some(wgpu::DepthStencilState {
                 format: Format::Depth.wgpu(),
                 depth_write_enabled: true,
-                depth_compare: CompareFunction::LessEqual,
-                stencil: StencilState::default(),
-                bias: DepthBiasState::default(),
+                depth_compare: wgpu::CompareFunction::LessEqual,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
             }),
-            multisample: MultisampleState::default(),
-            fragment: Some(FragmentState {
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
                 module,
                 entry_point: Some("fs"),
-                compilation_options: PipelineCompilationOptions::default(),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
                 targets: &targets,
             }),
             multiview: None,
@@ -279,7 +256,7 @@ impl<I> Layer<I> {
 }
 
 impl<V, I, S> Layer<Input<V, I, S>> {
-    pub(crate) fn _set<'p>(&'p self, mut pass: RenderPass<'p>) -> SetLayer<'p, (V, I), S> {
+    pub(crate) fn _set<'p>(&'p self, mut pass: wgpu::RenderPass<'p>) -> SetLayer<'p, (V, I), S> {
         pass.set_pipeline(&self.render);
         SetLayer {
             slots: self.slots,

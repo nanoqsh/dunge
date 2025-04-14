@@ -2,7 +2,7 @@ use crate::{define::Define, eval::GlobalOut, types::MemberData};
 
 /// The group type description.
 pub trait Group {
-    type Projection: Projection + 'static;
+    type Projection: Projection;
     const DEF: Define<MemberData>;
 }
 

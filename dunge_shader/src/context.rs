@@ -9,13 +9,11 @@ use {
         types::{self, MemberData, ValueType, VectorType},
         vertex::{self, Vertex},
     },
-    std::{any::TypeId, ops},
+    std::ops,
 };
 
 #[derive(Clone, Copy)]
 pub struct GroupInfo {
-    // TODO: remove
-    pub tyid: TypeId,
     pub def: Define<MemberData>,
     pub stages: Stages,
 }
@@ -60,7 +58,6 @@ pub struct InstInfo {
 }
 
 pub(crate) struct GroupEntry {
-    tyid: TypeId,
     def: Define<MemberData>,
     out: GlobalOut,
 }
@@ -143,10 +140,9 @@ impl Context {
         countdown(&mut self.limits.group, "too many groups in the shader");
     }
 
-    fn add_group(&mut self, tyid: TypeId, def: Define<MemberData>) -> (u32, GlobalOut) {
+    fn add_group(&mut self, def: Define<MemberData>) -> (u32, GlobalOut) {
         let out = GlobalOut::default();
         let en = GroupEntry {
-            tyid,
             def,
             out: out.clone(),
         };
@@ -172,7 +168,6 @@ impl Context {
     #[doc(hidden)]
     pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
         self.groups.iter().map(|entry| GroupInfo {
-            tyid: entry.tyid,
             def: entry.def,
             stages: entry.out.get(),
         })
@@ -323,7 +318,7 @@ where
 
     fn from_context(cx: &mut Context) -> Self::Projection {
         cx.add_group_set();
-        let (id, out) = cx.add_group(TypeId::of::<A::Projection>(), A::DEF);
+        let (id, out) = cx.add_group(A::DEF);
         group::Projection::projection(id, out)
     }
 }
@@ -344,7 +339,7 @@ macro_rules! impl_projection_from_context {
 
                 (
                     $({
-                        let (id, out) = cx.add_group(TypeId::of::<$t::Projection>(), $t::DEF);
+                        let (id, out) = cx.add_group($t::DEF);
                         group::Projection::projection(id, out)
                     }),*,
                 )

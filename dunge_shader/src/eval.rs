@@ -8,11 +8,6 @@ use {
         texture::Sampled,
         types::{self, AddType, MemberData, ScalarType, ValueType, VectorType},
     },
-    naga::{
-        AddressSpace, Arena, Binding, BuiltIn, EntryPoint, Expression, Function, FunctionArgument,
-        FunctionResult, GlobalVariable, Handle, Literal, LocalVariable, Range, ResourceBinding,
-        ShaderStage, Span, Statement, StructMember, Type, TypeInner, UniqueArena,
-    },
     std::{
         cell::{Cell, RefCell},
         collections::HashMap,
@@ -126,7 +121,7 @@ where
 }
 
 fn make_input(cx: &Context, compl: &mut Compiler) -> Vec<Argument> {
-    let mut binds = Bindings::default();
+    let mut binds = Bindings(0);
     let make = |info: &InputInfo| match info {
         InputInfo::Vert(VertInfo { def, .. }) => {
             let mut new = def.into_iter().map(Member::from_vecty);
@@ -142,11 +137,11 @@ fn make_input(cx: &Context, compl: &mut Compiler) -> Vec<Argument> {
         },
         InputInfo::Index => Argument {
             ty: compl.define_index(),
-            binding: Some(Binding::BuiltIn(BuiltIn::VertexIndex)),
+            binding: Some(naga::Binding::BuiltIn(naga::BuiltIn::VertexIndex)),
         },
         InputInfo::GlobalInvocationId => Argument {
             ty: compl.define_global_invocation_id(),
-            binding: Some(Binding::BuiltIn(BuiltIn::GlobalInvocationId)),
+            binding: Some(naga::Binding::BuiltIn(naga::BuiltIn::GlobalInvocationId)),
         },
     };
 
@@ -154,15 +149,15 @@ fn make_input(cx: &Context, compl: &mut Compiler) -> Vec<Argument> {
 }
 
 #[derive(Clone, Copy)]
-pub struct Expr(Handle<Expression>);
+pub struct Expr(naga::Handle<naga::Expression>);
 
 impl Expr {
-    pub(crate) fn get(self) -> Handle<Expression> {
+    pub(crate) fn get(self) -> naga::Handle<naga::Expression> {
         self.0
     }
 }
 
-pub(crate) struct Exprs(pub Vec<Handle<Expression>>);
+pub(crate) struct Exprs(pub Vec<naga::Handle<naga::Expression>>);
 
 impl FromIterator<Expr> for Exprs {
     fn from_iter<T>(iter: T) -> Self
@@ -186,7 +181,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        en.get_entry().literal(Literal::F32(self))
+        en.get_entry().literal(naga::Literal::F32(self))
     }
 }
 
@@ -197,7 +192,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        en.get_entry().literal(Literal::I32(self))
+        en.get_entry().literal(naga::Literal::I32(self))
     }
 }
 
@@ -208,7 +203,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        en.get_entry().literal(Literal::U32(self))
+        en.get_entry().literal(naga::Literal::U32(self))
     }
 }
 
@@ -219,7 +214,7 @@ where
     type Out = Self;
 
     fn eval(self, en: &mut E) -> Expr {
-        en.get_entry().literal(Literal::Bool(self))
+        en.get_entry().literal(naga::Literal::Bool(self))
     }
 }
 
@@ -375,7 +370,7 @@ where
 
         out.with_stage(E::STAGE);
         let en = en.get_entry();
-        let res = ResourceBinding { group: id, binding };
+        let res = naga::ResourceBinding { group: id, binding };
         let var = en.compl.globs.get(res);
         let global = en.global(var);
 
@@ -592,11 +587,11 @@ impl Stage {
         }
     }
 
-    fn shader_stage(self) -> ShaderStage {
+    fn shader_stage(self) -> naga::ShaderStage {
         match self {
-            Self::Vertex => ShaderStage::Vertex,
-            Self::Fragment => ShaderStage::Fragment,
-            Self::Compute => ShaderStage::Compute,
+            Self::Vertex => naga::ShaderStage::Vertex,
+            Self::Fragment => naga::ShaderStage::Fragment,
+            Self::Compute => naga::ShaderStage::Compute,
         }
     }
 }
@@ -624,7 +619,7 @@ impl GetEntry for Vs {
 
 struct Member {
     vecty: VectorType,
-    built: Option<BuiltIn>,
+    built: Option<naga::BuiltIn>,
 }
 
 impl Member {
@@ -673,17 +668,17 @@ impl Fs {
         index as u32
     }
 
-    fn define_fragment_ty(&mut self) -> Handle<Type> {
+    fn define_fragment_ty(&mut self) -> naga::Handle<naga::Type> {
         let member = |req: &Required| match req.evalf {
             EvalFunction::Position => Member {
                 vecty: req.vecty,
-                built: Some(BuiltIn::Position { invariant: false }),
+                built: Some(naga::BuiltIn::Position { invariant: false }),
             },
             EvalFunction::Fn(_) => Member::from_vecty(req.vecty),
         };
 
         let mut members = self.required.iter().map(member);
-        let mut binds = Bindings::default();
+        let mut binds = Bindings(0);
         self.inner.compl.define_input(&mut members, &mut binds)
     }
 }
@@ -714,28 +709,28 @@ impl GetEntry for Cs {
 
 struct Built {
     compl: Compiler,
-    point: EntryPoint,
+    point: naga::EntryPoint,
 }
 
 #[derive(Clone, Copy)]
 enum Return {
-    Ty(Handle<Type>),
+    Ty(naga::Handle<naga::Type>),
     Color,
     Unit,
 }
 
 struct Argument {
-    ty: Handle<Type>,
-    binding: Option<Binding>,
+    ty: naga::Handle<naga::Type>,
+    binding: Option<naga::Binding>,
 }
 
 impl Argument {
-    fn from_type(ty: Handle<Type>) -> Self {
+    fn from_type(ty: naga::Handle<naga::Type>) -> Self {
         Self { ty, binding: None }
     }
 
-    fn into_function(self) -> FunctionArgument {
-        FunctionArgument {
+    fn into_function(self) -> naga::FunctionArgument {
+        naga::FunctionArgument {
             name: None,
             ty: self.ty,
             binding: self.binding,
@@ -746,10 +741,10 @@ impl Argument {
 pub struct Entry {
     compl: Compiler,
     stack: Stack,
-    locls: Arena<LocalVariable>,
-    exprs: Arena<Expression>,
-    cached_glob: HashMap<Handle<GlobalVariable>, Expr>,
-    cached_locl: HashMap<Handle<LocalVariable>, Expr>,
+    locls: naga::Arena<naga::LocalVariable>,
+    exprs: naga::Arena<naga::Expression>,
+    cached_glob: HashMap<naga::Handle<naga::GlobalVariable>, Expr>,
+    cached_locl: HashMap<naga::Handle<naga::LocalVariable>, Expr>,
     cached_args: HashMap<u32, Expr>,
 }
 
@@ -758,8 +753,8 @@ impl Entry {
         Self {
             compl,
             stack: Stack(vec![Statements::default()]),
-            locls: Arena::default(),
-            exprs: Arena::default(),
+            locls: naga::Arena::default(),
+            exprs: naga::Arena::default(),
             cached_glob: HashMap::default(),
             cached_locl: HashMap::default(),
             cached_args: HashMap::default(),
@@ -776,55 +771,55 @@ impl Entry {
         self.stack.pop()
     }
 
-    fn add_local(&mut self, ty: Handle<Type>) -> Handle<LocalVariable> {
-        let local = LocalVariable {
+    fn add_local(&mut self, ty: naga::Handle<naga::Type>) -> naga::Handle<naga::LocalVariable> {
+        let local = naga::LocalVariable {
             name: None,
             ty,
             init: None,
         };
 
-        self.locls.append(local, Span::UNDEFINED)
+        self.locls.append(local, naga::Span::UNDEFINED)
     }
 
-    fn literal(&mut self, literal: Literal) -> Expr {
-        let ex = Expression::Literal(literal);
-        Expr(self.exprs.append(ex, Span::UNDEFINED))
+    fn literal(&mut self, literal: naga::Literal) -> Expr {
+        let ex = naga::Expression::Literal(literal);
+        Expr(self.exprs.append(ex, naga::Span::UNDEFINED))
     }
 
-    pub(crate) fn zero_value(&mut self, ty: Handle<Type>) -> Expr {
-        let ex = Expression::ZeroValue(ty);
-        Expr(self.exprs.append(ex, Span::UNDEFINED))
+    pub(crate) fn zero_value(&mut self, ty: naga::Handle<naga::Type>) -> Expr {
+        let ex = naga::Expression::ZeroValue(ty);
+        Expr(self.exprs.append(ex, naga::Span::UNDEFINED))
     }
 
     fn argument(&mut self, n: u32) -> Expr {
         *self.cached_args.entry(n).or_insert_with(|| {
-            let ex = Expression::FunctionArgument(n);
-            Expr(self.exprs.append(ex, Span::UNDEFINED))
+            let ex = naga::Expression::FunctionArgument(n);
+            Expr(self.exprs.append(ex, naga::Span::UNDEFINED))
         })
     }
 
-    fn global(&mut self, v: Handle<GlobalVariable>) -> Expr {
+    fn global(&mut self, v: naga::Handle<naga::GlobalVariable>) -> Expr {
         *self.cached_glob.entry(v).or_insert_with(|| {
-            let ex = Expression::GlobalVariable(v);
-            Expr(self.exprs.append(ex, Span::UNDEFINED))
+            let ex = naga::Expression::GlobalVariable(v);
+            Expr(self.exprs.append(ex, naga::Span::UNDEFINED))
         })
     }
 
-    fn local(&mut self, v: Handle<LocalVariable>) -> Expr {
+    fn local(&mut self, v: naga::Handle<naga::LocalVariable>) -> Expr {
         *self.cached_locl.entry(v).or_insert_with(|| {
-            let ex = Expression::LocalVariable(v);
-            Expr(self.exprs.append(ex, Span::UNDEFINED))
+            let ex = naga::Expression::LocalVariable(v);
+            Expr(self.exprs.append(ex, naga::Span::UNDEFINED))
         })
     }
 
     pub(crate) fn load(&mut self, ptr: Expr) -> Expr {
-        let ex = Expression::Load { pointer: ptr.0 };
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let ex = naga::Expression::Load { pointer: ptr.0 };
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn store(&mut self, ptr: Expr, val: Expr) {
-        let st = Statement::Store {
+        let st = naga::Statement::Store {
             pointer: ptr.0,
             value: val.0,
         };
@@ -833,92 +828,92 @@ impl Entry {
     }
 
     pub(crate) fn access(&mut self, base: Expr, index: Expr) -> Expr {
-        let ex = Expression::Access {
+        let ex = naga::Expression::Access {
             base: base.0,
             index: index.0,
         };
 
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn access_index(&mut self, base: Expr, index: u32) -> Expr {
-        let ex = Expression::AccessIndex {
+        let ex = naga::Expression::AccessIndex {
             base: base.0,
             index,
         };
 
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn convert(&mut self, expr: Expr, ty: ScalarType) -> Expr {
         let (kind, width) = ty.inner();
-        let ex = Expression::As {
+        let ex = naga::Expression::As {
             expr: expr.0,
             kind,
             convert: Some(width),
         };
 
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn unary(&mut self, op: Un, a: Expr) -> Expr {
-        let ex = Expression::Unary {
+        let ex = naga::Expression::Unary {
             op: op.operator(),
             expr: a.0,
         };
 
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn binary(&mut self, op: Bi, a: Expr, b: Expr) -> Expr {
-        let ex = Expression::Binary {
+        let ex = naga::Expression::Binary {
             op: op.operator(),
             left: a.0,
             right: b.0,
         };
 
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn math(&mut self, f: Func, exprs: Evaluated) -> Expr {
         let ex = f.expr(exprs);
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
-    pub(crate) fn compose(&mut self, ty: Handle<Type>, exprs: Exprs) -> Expr {
-        let ex = Expression::Compose {
+    pub(crate) fn compose(&mut self, ty: naga::Handle<naga::Type>, exprs: Exprs) -> Expr {
+        let ex = naga::Expression::Compose {
             ty,
             components: exprs.0,
         };
 
-        let handle = self.exprs.append(ex, Span::UNDEFINED);
+        let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn sample(&mut self, ex: Sampled) -> Expr {
-        let handle = self.exprs.append(ex.expr(), Span::UNDEFINED);
+        let handle = self.exprs.append(ex.expr(), naga::Span::UNDEFINED);
         self.emit(handle)
     }
 
     pub(crate) fn kill(&mut self) {
-        let st = Statement::Kill;
+        let st = naga::Statement::Kill;
         self.stack.insert(st, &self.exprs);
     }
 
-    fn emit(&mut self, handle: Handle<Expression>) -> Expr {
-        let st = Statement::Emit(Range::new_from_bounds(handle, handle));
+    fn emit(&mut self, handle: naga::Handle<naga::Expression>) -> Expr {
+        let st = naga::Statement::Emit(naga::Range::new_from_bounds(handle, handle));
         self.stack.insert(st, &self.exprs);
         Expr(handle)
     }
 
     fn ret(&mut self, e: Expr) {
-        let st = Statement::Return { value: Some(e.0) };
+        let st = naga::Statement::Return { value: Some(e.0) };
         self.stack.insert(st, &self.exprs);
     }
 
@@ -930,11 +925,11 @@ impl Entry {
         workgroup_size: [u32; 3],
     ) -> Built {
         let result = match ret {
-            Return::Ty(ty) => Some(FunctionResult { ty, binding: None }),
+            Return::Ty(ty) => Some(naga::FunctionResult { ty, binding: None }),
             Return::Color => {
                 let color_type = VectorType::Vec4f;
-                let mut binds = Bindings::default();
-                Some(FunctionResult {
+                let mut binds = Bindings(0);
+                Some(naga::FunctionResult {
                     ty: color_type.ty(&mut self),
                     binding: Some(binds.next(&color_type.naga())),
                 })
@@ -942,13 +937,13 @@ impl Entry {
             Return::Unit => None,
         };
 
-        let point = EntryPoint {
+        let point = naga::EntryPoint {
             name: stage.name().to_owned(),
             stage: stage.shader_stage(),
             early_depth_test: None,
             workgroup_size,
             workgroup_size_overrides: None,
-            function: Function {
+            function: naga::Function {
                 arguments: args.map(Argument::into_function).collect(),
                 result,
                 local_variables: self.locls,
@@ -966,7 +961,7 @@ impl Entry {
 }
 
 impl AddType for Entry {
-    fn add_type(&mut self, ty: Type) -> Handle<Type> {
+    fn add_type(&mut self, ty: naga::Type) -> naga::Handle<naga::Type> {
         self.compl.types.add_type(ty)
     }
 }
@@ -977,7 +972,7 @@ pub struct Branch<'a, E> {
 }
 
 impl<'a, E> Branch<'a, E> {
-    pub(crate) fn new(en: &'a mut E, ty: Handle<Type>) -> Self
+    pub(crate) fn new(en: &'a mut E, ty: naga::Handle<naga::Type>) -> Self
     where
         E: GetEntry,
     {
@@ -1012,7 +1007,7 @@ impl<'a, E> Branch<'a, E> {
             let a = a(self.entry());
             let en = self.en.get_entry();
             let mut s = en.pop(pop);
-            let st = Statement::Store {
+            let st = naga::Statement::Store {
                 pointer: self.expr.0,
                 value: a.0,
             };
@@ -1027,7 +1022,7 @@ impl<'a, E> Branch<'a, E> {
             let en = self.en.get_entry();
             let mut s = en.pop(pop);
             if let Some(b) = b {
-                let st = Statement::Store {
+                let st = naga::Statement::Store {
                     pointer: self.expr.0,
                     value: b.0,
                 };
@@ -1038,7 +1033,7 @@ impl<'a, E> Branch<'a, E> {
             s
         };
 
-        let st = Statement::If {
+        let st = naga::Statement::If {
             condition: c.0,
             accept: a_branch.0.into(),
             reject: b_branch.0.into(),
@@ -1052,7 +1047,7 @@ impl<'a, E> Branch<'a, E> {
 struct Stack(Vec<Statements>);
 
 impl Stack {
-    fn insert(&mut self, st: Statement, exprs: &Arena<Expression>) {
+    fn insert(&mut self, st: naga::Statement, exprs: &naga::Arena<naga::Expression>) {
         self.0
             .last_mut()
             .expect("shouldn't be empty")
@@ -1069,18 +1064,18 @@ impl Stack {
 }
 
 #[derive(Default)]
-struct Statements(Vec<Statement>);
+struct Statements(Vec<naga::Statement>);
 
 impl Statements {
-    fn insert(&mut self, st: Statement, exprs: &Arena<Expression>) {
+    fn insert(&mut self, st: naga::Statement, exprs: &naga::Arena<naga::Expression>) {
         match self.0.last_mut() {
-            Some(Statement::Emit(top)) => {
-                if let Statement::Emit(new) = &st {
+            Some(naga::Statement::Emit(top)) => {
+                if let naga::Statement::Emit(new) = &st {
                     let top_range = top.index_range();
                     let new_range = new.index_range();
                     if top_range.end == new_range.start {
                         let merged = top_range.start..new_range.end;
-                        *top = Range::from_index_range(merged, exprs);
+                        *top = naga::Range::from_index_range(merged, exprs);
                         return;
                     }
                 }
@@ -1096,11 +1091,11 @@ impl Statements {
 type Members<'a> = dyn ExactSizeIterator<Item = Member> + 'a;
 
 #[derive(Default)]
-struct Types(UniqueArena<Type>);
+struct Types(naga::UniqueArena<naga::Type>);
 
 impl AddType for Types {
-    fn add_type(&mut self, ty: Type) -> Handle<Type> {
-        self.0.insert(ty, Span::UNDEFINED)
+    fn add_type(&mut self, ty: naga::Type) -> naga::Handle<naga::Type> {
+        self.0.insert(ty, naga::Span::UNDEFINED)
     }
 }
 
@@ -1113,26 +1108,30 @@ struct Compiler {
 impl Compiler {
     const VECTOR_SIZE: u32 = size_of::<f32>() as u32 * 4;
 
-    fn define_index(&mut self) -> Handle<Type> {
+    fn define_index(&mut self) -> naga::Handle<naga::Type> {
         ScalarType::Uint.ty(&mut self.types)
     }
 
-    fn define_global_invocation_id(&mut self) -> Handle<Type> {
+    fn define_global_invocation_id(&mut self) -> naga::Handle<naga::Type> {
         VectorType::Vec3u.ty(&mut self.types)
     }
 
-    fn define_input(&mut self, new: &mut Members, binds: &mut Bindings) -> Handle<Type> {
+    fn define_input(
+        &mut self,
+        new: &mut Members,
+        binds: &mut Bindings,
+    ) -> naga::Handle<naga::Type> {
         let len = new.len();
         let mut members = Vec::with_capacity(len);
         for (idx, Member { vecty, built }) in iter::zip(0.., new) {
             let ty = vecty.ty(&mut self.types);
             let binding = match built {
-                Some(bi @ BuiltIn::Position { .. }) => Binding::BuiltIn(bi),
+                Some(bi @ naga::BuiltIn::Position { .. }) => naga::Binding::BuiltIn(bi),
                 None => binds.next(&vecty.naga()),
                 _ => unimplemented!(),
             };
 
-            members.push(StructMember {
+            members.push(naga::StructMember {
                 name: None,
                 ty,
                 binding: Some(binding),
@@ -1140,9 +1139,9 @@ impl Compiler {
             });
         }
 
-        let ty = Type {
+        let ty = naga::Type {
             name: None,
-            inner: TypeInner::Struct {
+            inner: naga::TypeInner::Struct {
                 members,
                 span: len as u32 * Self::VECTOR_SIZE,
             },
@@ -1151,7 +1150,7 @@ impl Compiler {
         self.types.add_type(ty)
     }
 
-    fn define_instance(&mut self, ty: ValueType, binds: &mut Bindings) -> Handle<Type> {
+    fn define_instance(&mut self, ty: ValueType, binds: &mut Bindings) -> naga::Handle<naga::Type> {
         match ty {
             ValueType::Scalar(_) | ValueType::Vector(_) => ty.ty(&mut self.types),
             ValueType::Matrix(mat) => {
@@ -1161,7 +1160,7 @@ impl Compiler {
                     let vecty = mat.vector_type();
                     let ty = vecty.ty(&mut self.types);
                     let binding = binds.next(&vecty.naga());
-                    members.push(StructMember {
+                    members.push(naga::StructMember {
                         name: None,
                         ty,
                         binding: Some(binding),
@@ -1169,9 +1168,9 @@ impl Compiler {
                     });
                 }
 
-                self.types.add_type(Type {
+                self.types.add_type(naga::Type {
                     name: None,
-                    inner: TypeInner::Struct {
+                    inner: naga::TypeInner::Struct {
                         members,
                         span: len * Self::VECTOR_SIZE,
                     },
@@ -1185,7 +1184,7 @@ impl Compiler {
         for (binding, member) in iter::zip(0.., def) {
             let space = member.ty.address_space(member.mutable);
             let ty = member.ty.ty(&mut self.types);
-            let res = ResourceBinding { group, binding };
+            let res = naga::ResourceBinding { group, binding };
             self.globs.add(space, ty, res);
         }
     }
@@ -1193,14 +1192,19 @@ impl Compiler {
 
 #[derive(Default)]
 struct Globals {
-    vars: Arena<GlobalVariable>,
-    handles: HashMap<ResourceBinding, Handle<GlobalVariable>>,
+    vars: naga::Arena<naga::GlobalVariable>,
+    handles: HashMap<naga::ResourceBinding, naga::Handle<naga::GlobalVariable>>,
 }
 
 impl Globals {
-    fn add(&mut self, space: AddressSpace, ty: Handle<Type>, res: ResourceBinding) {
+    fn add(
+        &mut self,
+        space: naga::AddressSpace,
+        ty: naga::Handle<naga::Type>,
+        res: naga::ResourceBinding,
+    ) {
         self.handles.entry(res).or_insert_with(|| {
-            let var = GlobalVariable {
+            let var = naga::GlobalVariable {
                 name: None,
                 space,
                 binding: Some(res),
@@ -1208,21 +1212,20 @@ impl Globals {
                 init: None,
             };
 
-            self.vars.append(var, Span::UNDEFINED)
+            self.vars.append(var, naga::Span::UNDEFINED)
         });
     }
 
-    fn get(&self, res: ResourceBinding) -> Handle<GlobalVariable> {
+    fn get(&self, res: naga::ResourceBinding) -> naga::Handle<naga::GlobalVariable> {
         self.handles[&res]
     }
 }
 
-#[derive(Default)]
 struct Bindings(u32);
 
 impl Bindings {
-    fn next(&mut self, ty: &Type) -> Binding {
-        let mut binding = Binding::Location {
+    fn next(&mut self, ty: &naga::Type) -> naga::Binding {
+        let mut binding = naga::Binding::Location {
             location: self.0,
             interpolation: None,
             sampling: None,

@@ -7,7 +7,6 @@ use {
         window::{self, View, WindowState},
     },
     std::{cell::Cell, error, fmt, ops, time::Duration},
-    wgpu::SurfaceError,
     winit::{
         application::ApplicationHandler,
         error::EventLoopError,
@@ -315,17 +314,17 @@ where
                         self.cx.state().draw(target, &*upd);
                         output.present();
                     }
-                    Err(SurfaceError::Timeout) => log::info!("suface error: timeout"),
-                    Err(SurfaceError::Outdated) => log::info!("suface error: outdated"),
-                    Err(SurfaceError::Lost) => {
+                    Err(wgpu::SurfaceError::Timeout) => log::info!("suface error: timeout"),
+                    Err(wgpu::SurfaceError::Outdated) => log::info!("suface error: outdated"),
+                    Err(wgpu::SurfaceError::Lost) => {
                         log::info!("suface error: lost");
                         self.ctrl.resize(self.cx.state());
                     }
-                    Err(SurfaceError::OutOfMemory) => {
+                    Err(wgpu::SurfaceError::OutOfMemory) => {
                         log::error!("suface error: out of memory");
                         el.exit();
                     }
-                    Err(SurfaceError::Other) => {
+                    Err(wgpu::SurfaceError::Other) => {
                         log::error!("suface error: other error");
                         el.exit();
                     }

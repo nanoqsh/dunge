@@ -11,7 +11,6 @@ use {
         Group,
     },
     std::{marker::PhantomData, sync::Arc},
-    wgpu::{BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindingResource},
 };
 
 pub trait Visit: Group {
@@ -43,9 +42,9 @@ impl<'group> Visitor<'group> {
 }
 
 impl<'group> Visitor<'group> {
-    fn push(&mut self, resource: BindingResource<'group>) {
+    fn push(&mut self, resource: wgpu::BindingResource<'group>) {
         let binding = self.0.len() as u32;
-        self.0.push(BindGroupEntry { binding, resource });
+        self.0.push(wgpu::BindGroupEntry { binding, resource });
     }
 }
 
@@ -59,32 +58,32 @@ where
 {
     fn visit_member(self, visitor: &mut Visitor<'group>) {
         let binding = self.buffer().as_entire_buffer_binding();
-        visitor.push(BindingResource::Buffer(binding));
+        visitor.push(wgpu::BindingResource::Buffer(binding));
     }
 }
 
 impl<'group, V> VisitMember<'group> for &'group Uniform<V> {
     fn visit_member(self, visitor: &mut Visitor<'group>) {
         let binding = self.buffer().as_entire_buffer_binding();
-        visitor.push(BindingResource::Buffer(binding));
+        visitor.push(wgpu::BindingResource::Buffer(binding));
     }
 }
 
 impl<'group> VisitMember<'group> for BoundTexture<'group> {
     fn visit_member(self, visitor: &mut Visitor<'group>) {
-        visitor.push(BindingResource::TextureView(self.0.view()));
+        visitor.push(wgpu::BindingResource::TextureView(self.0.view()));
     }
 }
 
 impl<'group> VisitMember<'group> for &'group Sampler {
     fn visit_member(self, visitor: &mut Visitor<'group>) {
-        visitor.push(BindingResource::Sampler(self.inner()));
+        visitor.push(wgpu::BindingResource::Sampler(self.inner()));
     }
 }
 
 pub struct GroupHandler<S, P> {
     id: usize,
-    layout: Arc<BindGroupLayout>,
+    layout: Arc<wgpu::BindGroupLayout>,
     ty: PhantomData<(S, P)>,
 }
 
@@ -93,7 +92,7 @@ pub trait Bind<S> {
 }
 
 pub struct Bindings<'group> {
-    pub(crate) bind_groups: &'group [BindGroup],
+    pub(crate) bind_groups: &'group [wgpu::BindGroup],
 }
 
 pub(crate) fn update<S, G>(
@@ -107,7 +106,7 @@ pub(crate) fn update<S, G>(
     let device = state.device();
     group.set(|_, visitor| {
         let entries = visitor.entries();
-        let desc = BindGroupDescriptor {
+        let desc = wgpu::BindGroupDescriptor {
             label: None,
             layout: &handler.layout,
             entries,
@@ -133,7 +132,7 @@ impl<S> UniqueSet<S> {
         set.set(|id, visitor| {
             let layout = &groups[id];
             let entries = visitor.entries();
-            let desc = BindGroupDescriptor {
+            let desc = wgpu::BindGroupDescriptor {
                 label: None,
                 layout,
                 entries,
@@ -173,7 +172,7 @@ impl<S> UniqueSet<S> {
         }
     }
 
-    fn bind_groups(&mut self) -> &mut [BindGroup] {
+    fn bind_groups(&mut self) -> &mut [wgpu::BindGroup] {
         Arc::get_mut(&mut self.0.bind_groups).expect("uniqueness is guaranteed by the type")
     }
 }
@@ -186,7 +185,7 @@ impl<S> Bind<S> for UniqueSet<S> {
 
 #[derive(Clone)]
 pub struct SharedSet<S> {
-    bind_groups: Arc<[BindGroup]>,
+    bind_groups: Arc<[wgpu::BindGroup]>,
     ty: PhantomData<S>,
 }
 

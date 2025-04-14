@@ -3,7 +3,6 @@ use {
         eval::{Eval, Expr, GetEntry, Vs},
         types::{Number, Scalar},
     },
-    naga::{BinaryOperator, UnaryOperator},
     std::{marker::PhantomData, ops},
 };
 
@@ -265,10 +264,10 @@ pub(crate) enum Un {
 }
 
 impl Un {
-    pub fn operator(self) -> UnaryOperator {
+    pub fn operator(self) -> naga::UnaryOperator {
         match self {
-            Self::Neg => UnaryOperator::Negate,
-            Self::Not => UnaryOperator::LogicalNot,
+            Self::Neg => naga::UnaryOperator::Negate,
+            Self::Not => naga::UnaryOperator::LogicalNot,
         }
     }
 }
@@ -293,24 +292,24 @@ pub(crate) enum Bi {
 }
 
 impl Bi {
-    pub fn operator(self) -> BinaryOperator {
+    pub fn operator(self) -> naga::BinaryOperator {
         match self {
-            Self::Add => BinaryOperator::Add,
-            Self::Sub => BinaryOperator::Subtract,
-            Self::Mul => BinaryOperator::Multiply,
-            Self::Div => BinaryOperator::Divide,
-            Self::Rem => BinaryOperator::Modulo,
-            Self::Shl => BinaryOperator::ShiftLeft,
-            Self::Shr => BinaryOperator::ShiftRight,
-            Self::And => BinaryOperator::LogicalAnd,
-            Self::Or => BinaryOperator::LogicalOr,
-            Self::BitXor => BinaryOperator::ExclusiveOr,
-            Self::Eq => BinaryOperator::Equal,
-            Self::Ne => BinaryOperator::NotEqual,
-            Self::Lt => BinaryOperator::Less,
-            Self::Le => BinaryOperator::LessEqual,
-            Self::Gt => BinaryOperator::Greater,
-            Self::Ge => BinaryOperator::GreaterEqual,
+            Self::Add => naga::BinaryOperator::Add,
+            Self::Sub => naga::BinaryOperator::Subtract,
+            Self::Mul => naga::BinaryOperator::Multiply,
+            Self::Div => naga::BinaryOperator::Divide,
+            Self::Rem => naga::BinaryOperator::Modulo,
+            Self::Shl => naga::BinaryOperator::ShiftLeft,
+            Self::Shr => naga::BinaryOperator::ShiftRight,
+            Self::And => naga::BinaryOperator::LogicalAnd,
+            Self::Or => naga::BinaryOperator::LogicalOr,
+            Self::BitXor => naga::BinaryOperator::ExclusiveOr,
+            Self::Eq => naga::BinaryOperator::Equal,
+            Self::Ne => naga::BinaryOperator::NotEqual,
+            Self::Lt => naga::BinaryOperator::Less,
+            Self::Le => naga::BinaryOperator::LessEqual,
+            Self::Gt => naga::BinaryOperator::Greater,
+            Self::Ge => naga::BinaryOperator::GreaterEqual,
         }
     }
 }

@@ -3,29 +3,25 @@
 use {
     crate::{context::Context, state::State, value::Value},
     std::marker::PhantomData,
-    wgpu::Buffer,
 };
 
 /// Uniform shader data.
 ///
 /// Can be created using the context's [`make_uniform`](crate::Context::make_uniform) function.
 pub struct Uniform<V> {
-    buf: Buffer,
+    buf: wgpu::Buffer,
     ty: PhantomData<V>,
 }
 
 impl<V> Uniform<V> {
     pub(crate) fn new(state: &State, contents: &[u8]) -> Self {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            BufferUsages,
-        };
+        use wgpu::util::{self, DeviceExt};
 
         let buf = {
-            let desc = BufferInitDescriptor {
+            let desc = util::BufferInitDescriptor {
                 label: None,
                 contents,
-                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             };
 
             state.device().create_buffer_init(&desc)
@@ -46,7 +42,7 @@ impl<V> Uniform<V> {
         queue.write_buffer(&self.buf, 0, val.value());
     }
 
-    pub(crate) fn buffer(&self) -> &Buffer {
+    pub(crate) fn buffer(&self) -> &wgpu::Buffer {
         &self.buf
     }
 }

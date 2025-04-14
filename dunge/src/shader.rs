@@ -4,11 +4,7 @@ use {
         state::State,
         types::{MemberType, ScalarType, ValueType, VectorType},
     },
-    std::{cell::Cell, marker::PhantomData, mem, sync::Arc},
-    wgpu::{
-        BufferAddress, PipelineLayout, ShaderModule, VertexAttribute, VertexBufferLayout,
-        VertexFormat, VertexStepMode,
-    },
+    std::{borrow::Cow, cell::Cell, iter, marker::PhantomData, mem, sync::Arc},
 };
 
 pub type RenderShader<V, I, S> = Shader<RenderInput<V, I>, S>;
@@ -50,9 +46,9 @@ impl<I, S> Shader<I, S> {
 }
 
 struct Vertex {
-    array_stride: BufferAddress,
-    step_mode: VertexStepMode,
-    attributes: Box<[VertexAttribute]>,
+    array_stride: wgpu::BufferAddress,
+    step_mode: wgpu::VertexStepMode,
+    attributes: Box<[wgpu::VertexAttribute]>,
 }
 
 #[derive(Clone, Copy)]
@@ -62,8 +58,8 @@ pub(crate) struct SlotNumbers {
 }
 
 pub(crate) struct ShaderData {
-    module: ShaderModule,
-    layout: PipelineLayout,
+    module: wgpu::ShaderModule,
+    layout: wgpu::PipelineLayout,
     vertex: Box<[Vertex]>,
     slots: SlotNumbers,
     groups: Box<[Arc<wgpu::BindGroupLayout>]>,
@@ -71,25 +67,20 @@ pub(crate) struct ShaderData {
 
 impl ShaderData {
     fn new(state: &State, Module { cx, nm, .. }: Module) -> Self {
-        use {
-            std::{borrow::Cow, iter},
-            wgpu::*,
-        };
-
         let module = {
-            let desc = ShaderModuleDescriptor {
+            let desc = wgpu::ShaderModuleDescriptor {
                 label: None,
-                source: ShaderSource::Naga(Cow::Owned(nm)),
+                source: wgpu::ShaderSource::Naga(Cow::Owned(nm)),
             };
 
             state.device().create_shader_module(desc)
         };
 
         let visibility = |stages: Stages| {
-            let mut out = ShaderStages::empty();
-            out.set(ShaderStages::VERTEX, stages.vs);
-            out.set(ShaderStages::FRAGMENT, stages.fs);
-            out.set(ShaderStages::COMPUTE, stages.cs);
+            let mut out = wgpu::ShaderStages::empty();
+            out.set(wgpu::ShaderStages::VERTEX, stages.vs);
+            out.set(wgpu::ShaderStages::FRAGMENT, stages.fs);
+            out.set(wgpu::ShaderStages::COMPUTE, stages.cs);
             out
         };
 
@@ -100,11 +91,11 @@ impl ShaderData {
             for (binding, member) in iter::zip(0.., info.def) {
                 let entry = match member.ty {
                     MemberType::Scalar(_) | MemberType::Vector(_) | MemberType::Matrix(_) => {
-                        BindGroupLayoutEntry {
+                        wgpu::BindGroupLayoutEntry {
                             binding,
                             visibility: visibility(info.stages),
-                            ty: BindingType::Buffer {
-                                ty: BufferBindingType::Uniform,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
                                 has_dynamic_offset: false,
                                 min_binding_size: None,
                             },
@@ -112,11 +103,11 @@ impl ShaderData {
                         }
                     }
                     MemberType::Array(_) | MemberType::DynamicArrayType(_) => {
-                        BindGroupLayoutEntry {
+                        wgpu::BindGroupLayoutEntry {
                             binding,
                             visibility: visibility(info.stages),
-                            ty: BindingType::Buffer {
-                                ty: BufferBindingType::Storage {
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage {
                                     read_only: !member.mutable,
                                 },
                                 has_dynamic_offset: false,
@@ -125,20 +116,20 @@ impl ShaderData {
                             count: None,
                         }
                     }
-                    MemberType::Tx2df => BindGroupLayoutEntry {
+                    MemberType::Tx2df => wgpu::BindGroupLayoutEntry {
                         binding,
                         visibility: visibility(info.stages),
-                        ty: BindingType::Texture {
-                            sample_type: TextureSampleType::Float { filterable: true },
-                            view_dimension: TextureViewDimension::D2,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
                             multisampled: false,
                         },
                         count: None,
                     },
-                    MemberType::Sampl => BindGroupLayoutEntry {
+                    MemberType::Sampl => wgpu::BindGroupLayoutEntry {
                         binding,
                         visibility: visibility(info.stages),
-                        ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     },
                 };
@@ -146,7 +137,7 @@ impl ShaderData {
                 entries.push(entry);
             }
 
-            let desc = BindGroupLayoutDescriptor {
+            let desc = wgpu::BindGroupLayoutDescriptor {
                 label: None,
                 entries: &entries,
             };
@@ -158,7 +149,7 @@ impl ShaderData {
         let groups = groups.into_boxed_slice();
         let layout = {
             let groups: Vec<_> = groups.iter().map(|g| g.as_ref()).collect();
-            let desc = PipelineLayoutDescriptor {
+            let desc = wgpu::PipelineLayoutDescriptor {
                 bind_group_layouts: &groups,
                 ..Default::default()
             };
@@ -177,7 +168,7 @@ impl ShaderData {
             let mut offset = 0;
             move |ty, attrs: &mut Vec<_>| {
                 let mut f = |format| {
-                    let attr = VertexAttribute {
+                    let attr = wgpu::VertexAttribute {
                         format,
                         offset,
                         shader_location: next_location(),
@@ -211,8 +202,8 @@ impl ShaderData {
                         }
 
                         Vertex {
-                            array_stride: v.size as BufferAddress,
-                            step_mode: VertexStepMode::Vertex,
+                            array_stride: v.size as wgpu::BufferAddress,
+                            step_mode: wgpu::VertexStepMode::Vertex,
                             attributes: attrs.into(),
                         }
                     };
@@ -230,7 +221,7 @@ impl ShaderData {
                     attr(i.ty, &mut attrs);
                     let vert = Vertex {
                         array_stride: attrs.iter().map(|attr| attr.format.size()).sum(),
-                        step_mode: VertexStepMode::Instance,
+                        step_mode: wgpu::VertexStepMode::Instance,
                         attributes: attrs.into(),
                     };
 
@@ -249,15 +240,15 @@ impl ShaderData {
         }
     }
 
-    pub(crate) fn module(&self) -> &ShaderModule {
+    pub(crate) fn module(&self) -> &wgpu::ShaderModule {
         &self.module
     }
 
-    pub(crate) fn layout(&self) -> &PipelineLayout {
+    pub(crate) fn layout(&self) -> &wgpu::PipelineLayout {
         &self.layout
     }
 
-    pub(crate) fn vertex_buffers(&self) -> Box<[VertexBufferLayout]> {
+    pub(crate) fn vertex_buffers(&self) -> Box<[wgpu::VertexBufferLayout]> {
         use wgpu::*;
 
         fn layout(vert: &Vertex) -> VertexBufferLayout {
@@ -282,28 +273,28 @@ impl ShaderData {
 
 fn to_format<F>(ty: ValueType, f: &mut F)
 where
-    F: FnMut(VertexFormat),
+    F: FnMut(wgpu::VertexFormat),
 {
     match ty {
-        ValueType::Scalar(ScalarType::Float) => f(VertexFormat::Float32),
-        ValueType::Scalar(ScalarType::Sint) => f(VertexFormat::Sint32),
+        ValueType::Scalar(ScalarType::Float) => f(wgpu::VertexFormat::Float32),
+        ValueType::Scalar(ScalarType::Sint) => f(wgpu::VertexFormat::Sint32),
         ValueType::Scalar(ScalarType::Uint) | ValueType::Scalar(ScalarType::Bool) => {
-            f(VertexFormat::Uint32);
+            f(wgpu::VertexFormat::Uint32);
         }
-        ValueType::Vector(VectorType::Vec2f) => f(VertexFormat::Float32x2),
-        ValueType::Vector(VectorType::Vec3f) => f(VertexFormat::Float32x3),
-        ValueType::Vector(VectorType::Vec4f) => f(VertexFormat::Float32x4),
-        ValueType::Vector(VectorType::Vec2u) => f(VertexFormat::Uint32x2),
-        ValueType::Vector(VectorType::Vec3u) => f(VertexFormat::Uint32x3),
-        ValueType::Vector(VectorType::Vec4u) => f(VertexFormat::Uint32x4),
-        ValueType::Vector(VectorType::Vec2i) => f(VertexFormat::Sint32x2),
-        ValueType::Vector(VectorType::Vec3i) => f(VertexFormat::Sint32x3),
-        ValueType::Vector(VectorType::Vec4i) => f(VertexFormat::Sint32x4),
+        ValueType::Vector(VectorType::Vec2f) => f(wgpu::VertexFormat::Float32x2),
+        ValueType::Vector(VectorType::Vec3f) => f(wgpu::VertexFormat::Float32x3),
+        ValueType::Vector(VectorType::Vec4f) => f(wgpu::VertexFormat::Float32x4),
+        ValueType::Vector(VectorType::Vec2u) => f(wgpu::VertexFormat::Uint32x2),
+        ValueType::Vector(VectorType::Vec3u) => f(wgpu::VertexFormat::Uint32x3),
+        ValueType::Vector(VectorType::Vec4u) => f(wgpu::VertexFormat::Uint32x4),
+        ValueType::Vector(VectorType::Vec2i) => f(wgpu::VertexFormat::Sint32x2),
+        ValueType::Vector(VectorType::Vec3i) => f(wgpu::VertexFormat::Sint32x3),
+        ValueType::Vector(VectorType::Vec4i) => f(wgpu::VertexFormat::Sint32x4),
         ValueType::Matrix(mat) => {
             for _ in 0..mat.dims() {
                 to_format(ValueType::Vector(mat.vector_type()), f);
             }
         }
-        ValueType::Array(_) => todo!(),
+        ValueType::Array(_) => unreachable!(),
     }
 }

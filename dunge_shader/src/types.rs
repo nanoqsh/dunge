@@ -1,15 +1,9 @@
 //! Shader types.
 
-use {
-    naga::{
-        AddressSpace, ArraySize, Handle, ImageClass, ImageDimension, ScalarKind, StorageAccess,
-        Type, TypeInner, VectorSize,
-    },
-    std::{marker::PhantomData, num::NonZeroU32},
-};
+use std::{marker::PhantomData, num::NonZeroU32};
 
 pub(crate) trait AddType {
-    fn add_type(&mut self, ty: Type) -> Handle<Type>;
+    fn add_type(&mut self, ty: naga::Type) -> naga::Handle<naga::Type>;
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -21,7 +15,7 @@ pub enum ValueType {
 }
 
 impl ValueType {
-    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
@@ -111,27 +105,25 @@ pub enum ScalarType {
 }
 
 impl ScalarType {
-    pub(crate) fn inner(self) -> (ScalarKind, u8) {
+    pub(crate) fn inner(self) -> (naga::ScalarKind, u8) {
         match self {
-            Self::Float => (ScalarKind::Float, 4),
-            Self::Sint => (ScalarKind::Sint, 4),
-            Self::Uint => (ScalarKind::Uint, 4),
-            Self::Bool => (ScalarKind::Bool, 1),
+            Self::Float => (naga::ScalarKind::Float, 4),
+            Self::Sint => (naga::ScalarKind::Sint, 4),
+            Self::Uint => (naga::ScalarKind::Uint, 4),
+            Self::Bool => (naga::ScalarKind::Bool, 1),
         }
     }
 
-    pub(crate) fn naga(self) -> Type {
-        use naga::Scalar;
-
+    pub(crate) fn naga(self) -> naga::Type {
         let (kind, width) = self.inner();
 
-        Type {
+        naga::Type {
             name: None,
-            inner: TypeInner::Scalar(Scalar { kind, width }),
+            inner: naga::TypeInner::Scalar(naga::Scalar { kind, width }),
         }
     }
 
-    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
@@ -172,33 +164,31 @@ impl VectorType {
         }
     }
 
-    pub(crate) fn naga(self) -> Type {
-        const fn new(size: VectorSize, kind: ScalarKind) -> Type {
-            use naga::Scalar;
-
-            Type {
+    pub(crate) fn naga(self) -> naga::Type {
+        const fn new(size: naga::VectorSize, kind: naga::ScalarKind) -> naga::Type {
+            naga::Type {
                 name: None,
-                inner: TypeInner::Vector {
+                inner: naga::TypeInner::Vector {
                     size,
-                    scalar: Scalar { kind, width: 4 },
+                    scalar: naga::Scalar { kind, width: 4 },
                 },
             }
         }
 
         match self {
-            Self::Vec2f => const { new(VectorSize::Bi, ScalarKind::Float) },
-            Self::Vec3f => const { new(VectorSize::Tri, ScalarKind::Float) },
-            Self::Vec4f => const { new(VectorSize::Quad, ScalarKind::Float) },
-            Self::Vec2u => const { new(VectorSize::Bi, ScalarKind::Uint) },
-            Self::Vec3u => const { new(VectorSize::Tri, ScalarKind::Uint) },
-            Self::Vec4u => const { new(VectorSize::Quad, ScalarKind::Uint) },
-            Self::Vec2i => const { new(VectorSize::Bi, ScalarKind::Sint) },
-            Self::Vec3i => const { new(VectorSize::Tri, ScalarKind::Sint) },
-            Self::Vec4i => const { new(VectorSize::Quad, ScalarKind::Sint) },
+            Self::Vec2f => const { new(naga::VectorSize::Bi, naga::ScalarKind::Float) },
+            Self::Vec3f => const { new(naga::VectorSize::Tri, naga::ScalarKind::Float) },
+            Self::Vec4f => const { new(naga::VectorSize::Quad, naga::ScalarKind::Float) },
+            Self::Vec2u => const { new(naga::VectorSize::Bi, naga::ScalarKind::Uint) },
+            Self::Vec3u => const { new(naga::VectorSize::Tri, naga::ScalarKind::Uint) },
+            Self::Vec4u => const { new(naga::VectorSize::Quad, naga::ScalarKind::Uint) },
+            Self::Vec2i => const { new(naga::VectorSize::Bi, naga::ScalarKind::Sint) },
+            Self::Vec3i => const { new(naga::VectorSize::Tri, naga::ScalarKind::Sint) },
+            Self::Vec4i => const { new(naga::VectorSize::Quad, naga::ScalarKind::Sint) },
         }
     }
 
-    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
@@ -308,31 +298,29 @@ impl MatrixType {
         }
     }
 
-    pub(crate) fn naga(self) -> Type {
-        const fn new(size: VectorSize) -> Type {
-            use naga::Scalar;
-
-            Type {
+    pub(crate) fn naga(self) -> naga::Type {
+        const fn new(size: naga::VectorSize) -> naga::Type {
+            naga::Type {
                 name: None,
-                inner: TypeInner::Matrix {
+                inner: naga::TypeInner::Matrix {
                     columns: size,
                     rows: size,
-                    scalar: Scalar {
+                    scalar: naga::Scalar {
                         width: 4,
-                        kind: ScalarKind::Float,
+                        kind: naga::ScalarKind::Float,
                     },
                 },
             }
         }
 
         match self {
-            Self::Mat2 => const { new(VectorSize::Bi) },
-            Self::Mat3 => const { new(VectorSize::Tri) },
-            Self::Mat4 => const { new(VectorSize::Quad) },
+            Self::Mat2 => const { new(naga::VectorSize::Bi) },
+            Self::Mat3 => const { new(naga::VectorSize::Tri) },
+            Self::Mat4 => const { new(naga::VectorSize::Quad) },
         }
     }
 
-    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
@@ -393,16 +381,16 @@ pub struct ArrayType {
 }
 
 impl ArrayType {
-    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
         let base = self.base.ty(add);
-        let ty = Type {
+        let ty = naga::Type {
             name: None,
-            inner: TypeInner::Array {
+            inner: naga::TypeInner::Array {
                 base,
-                size: ArraySize::Constant(self.size),
+                size: naga::ArraySize::Constant(self.size),
                 stride: self.base.stride(),
             },
         };
@@ -443,16 +431,16 @@ pub struct DynamicArrayType {
 }
 
 impl DynamicArrayType {
-    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
         let base = self.base.ty(add);
-        let ty = Type {
+        let ty = naga::Type {
             name: None,
-            inner: TypeInner::Array {
+            inner: naga::TypeInner::Array {
                 base,
-                size: ArraySize::Dynamic,
+                size: naga::ArraySize::Dynamic,
                 stride: self.base.stride(),
             },
         };
@@ -494,17 +482,17 @@ impl MemberType {
         }
     }
 
-    pub(crate) fn ty<A>(self, add: &mut A) -> Handle<Type>
+    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
-        const fn texture(dim: ImageDimension, kind: ScalarKind) -> Type {
-            Type {
+        const fn texture(dim: naga::ImageDimension, kind: naga::ScalarKind) -> naga::Type {
+            naga::Type {
                 name: None,
-                inner: TypeInner::Image {
+                inner: naga::TypeInner::Image {
                     dim,
                     arrayed: false,
-                    class: ImageClass::Sampled { kind, multi: false },
+                    class: naga::ImageClass::Sampled { kind, multi: false },
                 },
             }
         }
@@ -515,27 +503,29 @@ impl MemberType {
             Self::Matrix(v) => v.ty(add),
             Self::Array(v) => v.ty(add),
             Self::DynamicArrayType(v) => v.ty(add),
-            Self::Tx2df => add.add_type(const { texture(ImageDimension::D2, ScalarKind::Float) }),
+            Self::Tx2df => {
+                add.add_type(const { texture(naga::ImageDimension::D2, naga::ScalarKind::Float) })
+            }
             Self::Sampl => add.add_type(
                 const {
-                    Type {
+                    naga::Type {
                         name: None,
-                        inner: TypeInner::Sampler { comparison: false },
+                        inner: naga::TypeInner::Sampler { comparison: false },
                     }
                 },
             ),
         }
     }
 
-    pub(crate) fn address_space(self, mutable: bool) -> AddressSpace {
+    pub(crate) fn address_space(self, mutable: bool) -> naga::AddressSpace {
         match self {
-            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => AddressSpace::Uniform,
+            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => naga::AddressSpace::Uniform,
             Self::Array(_) | Self::DynamicArrayType(_) => {
-                let mut access = StorageAccess::LOAD;
-                access.set(StorageAccess::STORE, mutable);
-                AddressSpace::Storage { access }
+                let mut access = naga::StorageAccess::LOAD;
+                access.set(naga::StorageAccess::STORE, mutable);
+                naga::AddressSpace::Storage { access }
             }
-            Self::Tx2df | Self::Sampl => AddressSpace::Handle,
+            Self::Tx2df | Self::Sampl => naga::AddressSpace::Handle,
         }
     }
 }

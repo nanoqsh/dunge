@@ -1,10 +1,7 @@
-use {
-    crate::{
-        eval::{Eval, Expr, Fs, GetEntry},
-        op::Ret,
-        types,
-    },
-    naga::{Expression, SampleLevel},
+use crate::{
+    eval::{Eval, Expr, Fs, GetEntry},
+    op::Ret,
+    types,
 };
 
 type Tex<T, S, C, O> = Ret<Samp<T, S, C>, types::Vec4<O>>;
@@ -52,15 +49,15 @@ pub(crate) struct Sampled {
 }
 
 impl Sampled {
-    pub fn expr(self) -> Expression {
-        Expression::ImageSample {
+    pub fn expr(self) -> naga::Expression {
+        naga::Expression::ImageSample {
             image: self.tex.get(),
             sampler: self.sam.get(),
             gather: None,
             coordinate: self.crd.get(),
             array_index: None,
             offset: None,
-            level: SampleLevel::Auto,
+            level: naga::SampleLevel::Auto,
             depth_ref: None,
         }
     }

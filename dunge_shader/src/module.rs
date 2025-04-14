@@ -155,9 +155,11 @@ impl Module {
 
         #[cfg(any(debug_assertions, feature = "wgsl"))]
         {
-            use naga::valid::{Capabilities, ValidationFlags, Validator};
+            use naga::valid;
 
-            let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
+            let mut validator =
+                valid::Validator::new(valid::ValidationFlags::all(), valid::Capabilities::empty());
+
             let info = match validator.validate(&nm) {
                 Ok(info) => info,
                 Err(err) => {
@@ -168,9 +170,9 @@ impl Module {
 
             #[cfg(feature = "wgsl")]
             {
-                use naga::back::wgsl::{self, WriterFlags};
+                use naga::back::wgsl;
 
-                wgsl = match wgsl::write_string(&nm, &info, WriterFlags::all()) {
+                wgsl = match wgsl::write_string(&nm, &info, wgsl::WriterFlags::all()) {
                     Ok(wgsl) => wgsl,
                     Err(err) => panic!("wgsl writer error: {err}"),
                 };

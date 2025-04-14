@@ -10,10 +10,6 @@ use {
         update::IntoUpdate,
     },
     std::{error, fmt, sync::Arc},
-    wgpu::{
-        CreateSurfaceError, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture,
-        TextureView,
-    },
     winit::{
         error::{EventLoopError, OsError},
         event_loop::{ActiveEventLoop, EventLoop, EventLoopClosed, EventLoopProxy},
@@ -214,14 +210,12 @@ impl View {
         self.init.get().window.request_redraw();
     }
 
-    pub(crate) fn output(&self) -> Result<Output, SurfaceError> {
-        use wgpu::TextureViewDescriptor;
-
+    pub(crate) fn output(&self) -> Result<Output, wgpu::SurfaceError> {
         let inner = self.init.get();
         let format = inner.format();
         let output = inner.surface.get_current_texture()?;
         let view = {
-            let desc = TextureViewDescriptor::default();
+            let desc = wgpu::TextureViewDescriptor::default();
             output.texture.create_view(&desc)
         };
 
@@ -250,15 +244,13 @@ impl View {
 }
 
 struct Inner {
-    conf: SurfaceConfiguration,
-    surface: Surface<'static>,
+    conf: wgpu::SurfaceConfiguration,
+    surface: wgpu::Surface<'static>,
     window: Arc<window::Window>,
 }
 
 impl Inner {
     fn new(state: &State, window: window::Window) -> Result<Self, Error> {
-        use wgpu::*;
-
         let supported_formats = const {
             [
                 Format::SrgbAlpha,
@@ -283,14 +275,14 @@ impl Inner {
             };
 
             let size = window.inner_size();
-            SurfaceConfiguration {
-                usage: TextureUsages::RENDER_ATTACHMENT,
+            wgpu::SurfaceConfiguration {
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                 format,
                 width: size.width.max(1),
                 height: size.height.max(1),
-                present_mode: PresentMode::default(),
+                present_mode: wgpu::PresentMode::default(),
                 desired_maximum_frame_latency: 2,
-                alpha_mode: CompositeAlphaMode::default(),
+                alpha_mode: wgpu::CompositeAlphaMode::default(),
                 view_formats: vec![],
             }
         };
@@ -313,9 +305,9 @@ impl Inner {
 }
 
 pub(crate) struct Output {
-    view: TextureView,
+    view: wgpu::TextureView,
     format: Format,
-    output: SurfaceTexture,
+    output: wgpu::SurfaceTexture,
 }
 
 impl Output {
@@ -349,8 +341,8 @@ impl From<OsError> for Error {
     }
 }
 
-impl From<CreateSurfaceError> for Error {
-    fn from(v: CreateSurfaceError) -> Self {
+impl From<wgpu::CreateSurfaceError> for Error {
+    fn from(v: wgpu::CreateSurfaceError) -> Self {
         Self(ErrorKind::Surface(v))
     }
 }
@@ -390,6 +382,6 @@ enum ErrorKind {
     UnsupportedSurface,
     EventLoop(EventLoopError),
     Os(OsError),
-    Surface(CreateSurfaceError),
+    Surface(wgpu::CreateSurfaceError),
     Context(FailedMakeContext),
 }

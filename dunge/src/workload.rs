@@ -1,29 +1,24 @@
 //! Workload types.
 
-use {
-    crate::{shader::ShaderData, state::State},
-    wgpu::ComputePipeline,
-};
+use crate::{shader::ShaderData, state::State};
 
 pub struct Workload {
-    compute: ComputePipeline,
+    compute: wgpu::ComputePipeline,
 }
 
 impl Workload {
     pub(crate) fn new(state: &State, shader: &ShaderData) -> Self {
-        use wgpu::*;
-
-        let desc = ComputePipelineDescriptor {
+        let desc = wgpu::ComputePipelineDescriptor {
             label: None,
             layout: Some(shader.layout()),
             module: shader.module(),
             entry_point: Some("cs"),
-            compilation_options: PipelineCompilationOptions {
+            compilation_options: wgpu::PipelineCompilationOptions {
                 // dunge guarantees that the memory of all
                 // buffers passed to shaders is initialized,
                 // so there is no need to zero initialize memory
                 zero_initialize_workgroup_memory: false,
-                ..PipelineCompilationOptions::default()
+                ..wgpu::PipelineCompilationOptions::default()
             },
             cache: None,
         };

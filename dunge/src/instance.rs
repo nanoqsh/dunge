@@ -118,16 +118,13 @@ impl<U> Row<U> {
         // TODO: remove NoUninit
         U: Value + bytemuck::NoUninit,
     {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            BufferUsages,
-        };
+        use wgpu::util::{self, DeviceExt};
 
         let buf = {
-            let desc = BufferInitDescriptor {
+            let desc = util::BufferInitDescriptor {
                 label: None,
                 contents: bytemuck::cast_slice(data),
-                usage: BufferUsages::VERTEX,
+                usage: wgpu::BufferUsages::VERTEX,
             };
 
             state.device().create_buffer_init(&desc)

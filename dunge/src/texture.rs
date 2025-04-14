@@ -3,10 +3,6 @@
 use {
     crate::{format::Format, state::State},
     std::{error, fmt, future::IntoFuture},
-    wgpu::{
-        Buffer, BufferAsyncError, BufferSlice, BufferView, CommandEncoder, FilterMode,
-        TextureUsages, TextureView, WasmNotSend,
-    },
 };
 
 #[derive(Clone, Copy)]
@@ -98,15 +94,13 @@ impl error::Error for ZeroSized {}
 
 pub struct Texture2d {
     inner: wgpu::Texture,
-    view: TextureView,
+    view: wgpu::TextureView,
 }
 
 impl Texture2d {
-    fn new(state: &State, mut usage: TextureUsages, data: TextureData) -> Self {
-        use wgpu::*;
-
+    fn new(state: &State, mut usage: wgpu::TextureUsages, data: TextureData) -> Self {
         let (width, height) = data.size;
-        let size = Extent3d {
+        let size = wgpu::Extent3d {
             width,
             height,
             depth_or_array_layers: 1,
@@ -114,13 +108,13 @@ impl Texture2d {
 
         let copy_data = !data.data.is_empty();
         let inner = {
-            usage.set(TextureUsages::COPY_DST, copy_data);
-            let desc = TextureDescriptor {
+            usage.set(wgpu::TextureUsages::COPY_DST, copy_data);
+            let desc = wgpu::TextureDescriptor {
                 label: None,
                 size,
                 mip_level_count: 1,
                 sample_count: 1,
-                dimension: TextureDimension::D2,
+                dimension: wgpu::TextureDimension::D2,
                 format: data.format.wgpu(),
                 usage,
                 view_formats: &[],
@@ -131,14 +125,14 @@ impl Texture2d {
 
         if copy_data {
             state.queue().write_texture(
-                TexelCopyTextureInfo {
+                wgpu::TexelCopyTextureInfo {
                     texture: &inner,
                     mip_level: 0,
-                    origin: Origin3d::ZERO,
-                    aspect: TextureAspect::All,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
                 },
                 data.data,
-                TexelCopyBufferLayout {
+                wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(width * data.format.bytes()),
                     rows_per_image: Some(height),
@@ -148,7 +142,7 @@ impl Texture2d {
         }
 
         let view = {
-            let desc = TextureViewDescriptor::default();
+            let desc = wgpu::TextureViewDescriptor::default();
             inner.create_view(&desc)
         };
 
@@ -163,7 +157,7 @@ impl Texture2d {
         Format::from_wgpu(self.inner.format())
     }
 
-    pub(crate) fn view(&self) -> &TextureView {
+    pub(crate) fn view(&self) -> &wgpu::TextureView {
         &self.view
     }
 }
@@ -174,7 +168,7 @@ where
 {
     data.make(Maker {
         state,
-        usage: TextureUsages::empty(),
+        usage: wgpu::TextureUsages::empty(),
     })
 }
 
@@ -185,10 +179,10 @@ pub enum Filter {
 }
 
 impl Filter {
-    pub(crate) const fn wgpu(self) -> FilterMode {
+    pub(crate) const fn wgpu(self) -> wgpu::FilterMode {
         match self {
-            Self::Nearest => FilterMode::Nearest,
-            Self::Linear => FilterMode::Linear,
+            Self::Nearest => wgpu::FilterMode::Nearest,
+            Self::Linear => wgpu::FilterMode::Linear,
         }
     }
 }
@@ -197,11 +191,9 @@ pub struct Sampler(wgpu::Sampler);
 
 impl Sampler {
     pub(crate) fn new(state: &State, filter: Filter) -> Self {
-        use wgpu::*;
-
         let inner = {
             let filter = filter.wgpu();
-            let desc = SamplerDescriptor {
+            let desc = wgpu::SamplerDescriptor {
                 mag_filter: filter,
                 min_filter: filter,
                 ..Default::default()
@@ -219,14 +211,14 @@ impl Sampler {
 }
 
 pub struct CopyBuffer {
-    buf: Buffer,
+    buf: wgpu::Buffer,
     size: (u32, u32),
     pixel_size: u32,
 }
 
 impl CopyBuffer {
     pub(crate) fn new(state: &State, (width, height): (u32, u32)) -> Self {
-        use wgpu::*;
+        use wgpu::util;
 
         let (pixel_size, alignment) = const {
             let pixel_size = size_of::<u32>() as u32;
@@ -236,10 +228,10 @@ impl CopyBuffer {
 
         let actual_width = util::align_to(width, alignment);
         let buf = {
-            let desc = BufferDescriptor {
+            let desc = wgpu::BufferDescriptor {
                 label: None,
-                size: BufferAddress::from(actual_width * height * pixel_size),
-                usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+                size: wgpu::BufferAddress::from(actual_width * height * pixel_size),
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             };
 
@@ -253,9 +245,7 @@ impl CopyBuffer {
         }
     }
 
-    pub(crate) fn copy_texture(&self, texture: &Texture2d, encoder: &mut CommandEncoder) {
-        use wgpu::*;
-
+    pub(crate) fn copy_texture(&self, texture: &Texture2d, encoder: &mut wgpu::CommandEncoder) {
         let texture = &texture.inner;
         let (width, height) = self.size;
 
@@ -265,15 +255,15 @@ impl CopyBuffer {
         );
 
         encoder.copy_texture_to_buffer(
-            TexelCopyTextureInfo {
+            wgpu::TexelCopyTextureInfo {
                 texture,
                 mip_level: 0,
-                origin: Origin3d::ZERO,
-                aspect: TextureAspect::All,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
-            TexelCopyBufferInfo {
+            wgpu::TexelCopyBufferInfo {
                 buffer: &self.buf,
-                layout: TexelCopyBufferLayout {
+                layout: wgpu::TexelCopyBufferLayout {
                     bytes_per_row: Some(width * self.pixel_size),
                     rows_per_image: Some(height),
                     ..Default::default()
@@ -299,15 +289,15 @@ impl Drop for CopyBuffer {
     }
 }
 
-pub type MapResult = Result<(), BufferAsyncError>;
+pub type MapResult = Result<(), wgpu::BufferAsyncError>;
 
 #[derive(Clone, Copy)]
-pub struct CopyBufferView<'a>(BufferSlice<'a>);
+pub struct CopyBufferView<'a>(wgpu::BufferSlice<'a>);
 
 impl<'a> CopyBufferView<'a> {
     pub(crate) async fn map<S, R>(self, state: &State, tx: S, rx: R) -> Mapped<'a>
     where
-        S: FnOnce(MapResult) + WasmNotSend + 'static,
+        S: FnOnce(MapResult) + wgpu::WasmNotSend + 'static,
         R: IntoFuture<Output = MapResult>,
     {
         use wgpu::*;
@@ -322,7 +312,7 @@ impl<'a> CopyBufferView<'a> {
     }
 }
 
-pub struct Mapped<'a>(BufferView<'a>);
+pub struct Mapped<'a>(wgpu::BufferView<'a>);
 
 impl Mapped<'_> {
     pub fn data(&self) -> &[[u8; 4]] {
@@ -446,7 +436,7 @@ where
 
 pub struct Maker<'a> {
     state: &'a State,
-    usage: TextureUsages,
+    usage: wgpu::TextureUsages,
 }
 
 pub trait Make: private::Sealed {
@@ -494,7 +484,7 @@ where
     type Out = Bind<M::Out>;
 
     fn make(self, mut maker: Maker) -> Self::Out {
-        maker.usage |= TextureUsages::TEXTURE_BINDING;
+        maker.usage |= wgpu::TextureUsages::TEXTURE_BINDING;
         Bind(self.0.make(maker))
     }
 }
@@ -529,7 +519,7 @@ where
     type Out = Draw<M::Out>;
 
     fn make(self, mut maker: Maker) -> Self::Out {
-        maker.usage |= TextureUsages::RENDER_ATTACHMENT;
+        maker.usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
         Draw(self.0.make(maker))
     }
 }
@@ -564,7 +554,7 @@ where
     type Out = Copy<M::Out>;
 
     fn make(self, mut maker: Maker) -> Self::Out {
-        maker.usage |= TextureUsages::COPY_SRC;
+        maker.usage |= wgpu::TextureUsages::COPY_SRC;
         Copy(self.0.make(maker))
     }
 }

@@ -4,7 +4,6 @@
 use {
     crate::{context::Context, state::State, types, value::Value},
     std::{error, fmt, marker::PhantomData},
-    wgpu::Buffer,
 };
 
 pub trait StorageValue {
@@ -38,7 +37,7 @@ pub struct Storage<V, M = types::Immutable>
 where
     V: ?Sized,
 {
-    buf: Buffer,
+    buf: wgpu::Buffer,
     size: usize,
     ty: PhantomData<V>,
     mu: PhantomData<M>,
@@ -49,16 +48,13 @@ where
     V: ?Sized,
 {
     pub(crate) fn new(state: &State, contents: &[u8]) -> Self {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            BufferUsages,
-        };
+        use wgpu::util::{self, DeviceExt};
 
         let buf = {
-            let desc = BufferInitDescriptor {
+            let desc = util::BufferInitDescriptor {
                 label: None,
                 contents,
-                usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             };
 
             state.device().create_buffer_init(&desc)
@@ -88,7 +84,7 @@ where
         Ok(())
     }
 
-    pub(crate) fn buffer(&self) -> &Buffer {
+    pub(crate) fn buffer(&self) -> &wgpu::Buffer {
         &self.buf
     }
 }

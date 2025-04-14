@@ -1,5 +1,3 @@
-use wgpu::TextureFormat;
-
 /// The texture format type.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Format {
@@ -20,25 +18,25 @@ impl Format {
         }
     }
 
-    pub(crate) const fn wgpu(self) -> TextureFormat {
+    pub(crate) const fn wgpu(self) -> wgpu::TextureFormat {
         match self {
-            Self::SrgbAlpha => TextureFormat::Rgba8UnormSrgb,
-            Self::SbgrAlpha => TextureFormat::Bgra8UnormSrgb,
-            Self::RgbAlpha => TextureFormat::Rgba8Unorm,
-            Self::BgrAlpha => TextureFormat::Bgra8Unorm,
-            Self::Depth => TextureFormat::Depth32Float,
-            Self::Byte => TextureFormat::R8Uint,
+            Self::SrgbAlpha => wgpu::TextureFormat::Rgba8UnormSrgb,
+            Self::SbgrAlpha => wgpu::TextureFormat::Bgra8UnormSrgb,
+            Self::RgbAlpha => wgpu::TextureFormat::Rgba8Unorm,
+            Self::BgrAlpha => wgpu::TextureFormat::Bgra8Unorm,
+            Self::Depth => wgpu::TextureFormat::Depth32Float,
+            Self::Byte => wgpu::TextureFormat::R8Uint,
         }
     }
 
-    pub(crate) const fn from_wgpu(format: TextureFormat) -> Self {
+    pub(crate) const fn from_wgpu(format: wgpu::TextureFormat) -> Self {
         match format {
-            TextureFormat::Rgba8UnormSrgb => Self::SrgbAlpha,
-            TextureFormat::Bgra8UnormSrgb => Self::SbgrAlpha,
-            TextureFormat::Rgba8Unorm => Self::RgbAlpha,
-            TextureFormat::Bgra8Unorm => Self::BgrAlpha,
-            TextureFormat::Depth32Float => Self::Depth,
-            TextureFormat::R8Uint => Self::Byte,
+            wgpu::TextureFormat::Rgba8UnormSrgb => Self::SrgbAlpha,
+            wgpu::TextureFormat::Bgra8UnormSrgb => Self::SbgrAlpha,
+            wgpu::TextureFormat::Rgba8Unorm => Self::RgbAlpha,
+            wgpu::TextureFormat::Bgra8Unorm => Self::BgrAlpha,
+            wgpu::TextureFormat::Depth32Float => Self::Depth,
+            wgpu::TextureFormat::R8Uint => Self::Byte,
             _ => panic!("unsupported format"),
         }
     }

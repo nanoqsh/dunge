@@ -3,7 +3,6 @@
 use {
     crate::{state::State, vertex, Vertex},
     std::{borrow::Cow, error, fmt, marker::PhantomData},
-    wgpu::{Buffer, RenderPass},
 };
 
 type Face = [u16; 3];
@@ -88,8 +87,8 @@ impl fmt::Display for TooManyVertices {
 impl error::Error for TooManyVertices {}
 
 pub struct Mesh<V> {
-    verts: Buffer,
-    indxs: Option<Buffer>,
+    verts: wgpu::Buffer,
+    indxs: Option<wgpu::Buffer>,
     ty: PhantomData<V>,
 }
 
@@ -98,27 +97,24 @@ impl<V> Mesh<V> {
     where
         V: Vertex,
     {
-        use wgpu::{
-            util::{BufferInitDescriptor, DeviceExt},
-            BufferUsages,
-        };
+        use wgpu::util::{self, DeviceExt};
 
         let device = state.device();
         let verts = {
-            let desc = BufferInitDescriptor {
+            let desc = util::BufferInitDescriptor {
                 label: None,
                 contents: vertex::verts_as_bytes(data.verts),
-                usage: BufferUsages::VERTEX,
+                usage: wgpu::BufferUsages::VERTEX,
             };
 
             device.create_buffer_init(&desc)
         };
 
         let indxs = data.indxs.as_deref().map(|indxs| {
-            let desc = BufferInitDescriptor {
+            let desc = util::BufferInitDescriptor {
                 label: None,
                 contents: bytemuck::cast_slice(indxs),
-                usage: BufferUsages::INDEX,
+                usage: wgpu::BufferUsages::INDEX,
             };
 
             device.create_buffer_init(&desc)
@@ -131,13 +127,11 @@ impl<V> Mesh<V> {
         }
     }
 
-    pub(crate) fn draw(&self, pass: &mut RenderPass<'_>, slot: u32, count: u32) {
-        use wgpu::IndexFormat;
-
+    pub(crate) fn draw(&self, pass: &mut wgpu::RenderPass<'_>, slot: u32, count: u32) {
         pass.set_vertex_buffer(slot, self.verts.slice(..));
         match &self.indxs {
             Some(indxs) => {
-                pass.set_index_buffer(indxs.slice(..), IndexFormat::Uint16);
+                pass.set_index_buffer(indxs.slice(..), wgpu::IndexFormat::Uint16);
                 let len = indxs.size() as u32 / size_of::<u16>() as u32;
                 pass.draw_indexed(0..len, 0, 0..count);
             }
