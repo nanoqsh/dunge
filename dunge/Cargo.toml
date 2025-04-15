@@ -1,13 +1,13 @@
 [package]
 name = "dunge"
 description = "Simple and portable 3d render library"
+readme = "README.md"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 keywords.workspace = true
 documentation.workspace = true
-readme.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 

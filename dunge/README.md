@@ -1,7 +1,7 @@
 <div align="center">
-    <h1>Dunge</h1>
+    <h1>dunge</h1>
     <p>
-        Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">WGPU</a>
+        Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">wgpu</a>
     </p>
     <p>
         <a href="https://crates.io/crates/dunge"><img src="https://img.shields.io/crates/v/dunge.svg"></img></a>
@@ -11,6 +11,7 @@
 </div>
 
 ## Features
+
 * Simple and flexible API
 * Customizable vertices, groups and instances
 * Shader code described as a single rust function
@@ -19,16 +20,21 @@
 * Optional built-in window and event loop
 
 ## Application area
+
 Currently the library is for personal use only. Although, over time I plan to stabilize API so that someone could use it for their tasks.
 
 ## Getting Started
+
 To start using the library add it to your project:
+
 ```sh
 cargo add dunge -F winit
 ```
+
 Specify the `winit` feature if you need to create a windowed application. Although this is not necessary, for example, you can simply draw a scene directly to the image in RAM.
 
 So what if you want to draw something on the screen? Let's say you want to draw a simple colored triangle. Then start by creating a vertex type. To do this, derive the `Vertex` trait for your struct:
+
 ```rust
 use dunge::{
     glam::{Vec2, Vec3},
@@ -45,6 +51,7 @@ struct Vert {
 ```
 
 To render something on GPU you need to program a shader. In dunge you can do this via a normal (almost) rust function:
+
 ```rust
 // Create a shader program
 let triangle = |vert: sl::InVertex<Vert>| {
@@ -73,6 +80,7 @@ As you can see from the snippet, the shader requires you to provide two things: 
 That's because this function doesn't actually compute anything. It is needed only to describe the method for computing what we need on GPU. During shader instantiation, this function is used to compile an actual shader. However, this saves us from having to write the shader in wgsl and allows to typecheck at compile time. For example, dunge checks that a vertex type in a shader matches with a mesh used during rendering. It also checks types inside the shader itself.
 
 Now let's create the dunge context and other necessary things:
+
 ```rust
 // Create the dunge context
 let cx = dunge::context().await?;
@@ -85,6 +93,7 @@ let shader = cx.make_shader(triangle);
 You may notice the context creation requires async. This is WGPU specific, so you will have to add your favorite async runtime in the project.
 
 Also create a triangle mesh that we're going to draw:
+
 ```rust
 // Create a mesh from vertices
 let mesh = {
@@ -101,6 +110,7 @@ let mesh = {
 ```
 
 Now to run the application we need two last things: handlers. One `Update` that is called every time before rendering and is used to control the render objects and manage the main [event loop](https://en.wikipedia.org/wiki/Event_loop):
+
 ```rust
 // Describe the `Update` handler
 let upd = |ctrl: &Control| {
@@ -115,9 +125,11 @@ let upd = |ctrl: &Control| {
     Then::Run
 };
 ```
+
 We don't do anything special here, we just check is <kbd>Esc</kbd> pressed and end the main loop if necessary. Note that this handler is only needed to use a window with the `winit` feature.
 
 Second `Draw` is used directly to draw something in the final frame:
+
 ```rust
 // Create a layer for drawing a mesh on it
 let layer = cx.make_layer(&shader, view.format());
@@ -142,6 +154,7 @@ let draw = move |mut frame: Frame<'_, '_>| {
 > **Note:** To create a layer we need to know the window format. It would be possible to guess it, but it is better to get it directly from a view object. You can get the view from a special `make` helper, which will call a closure when the handler is initialized and passes the necessary data to it.
 
 Now you can join two steps in one hander and run the application and see the window:
+
 ```rust
 let make_handler = |cx: &Context, view: &View| {
     let upd = |ctrl: &Control| {/***/};
@@ -154,7 +167,7 @@ dunge::window().run_local(cx, dunge::make(make_handler))?;
 ```
 
 <div align="center">
-    <img src="examples/window/s.png">
+    <img src="https://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/examples/window/s.png">
 </div>
 
 You can see full code from this example [here](https://github.com/nanoqsh/dunge/tree/main/examples/window) and run it using:

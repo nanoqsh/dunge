@@ -16,7 +16,6 @@ license = "MIT"
 authors = ["nanoqsh"]
 keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
-readme = "README.md"
 repository = "https://github.com/nanoqsh/dunge"
 rust-version = "1.80"
 

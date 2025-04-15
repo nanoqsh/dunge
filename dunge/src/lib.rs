@@ -1,3 +1,5 @@
+#![cfg_attr(all(doc, not(doctest)), doc = include_str!("../README.md"))]
+
 pub mod color;
 mod context;
 mod draw;
