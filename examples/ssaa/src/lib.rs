@@ -2,6 +2,7 @@ type Error = Box<dyn std::error::Error>;
 
 pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     use dunge::{
+        Format,
         color::Rgba,
         glam::{Vec2, Vec4},
         group::BoundTexture,
@@ -10,7 +11,6 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         sl::{Groups, InVertex, Index, Render},
         texture::{DrawTexture, Filter, Sampler},
         uniform::Uniform,
-        Format,
     };
 
     const SCREEN_FACTOR: u32 = 2;

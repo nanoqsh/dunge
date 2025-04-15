@@ -2,13 +2,13 @@
 
 use {
     crate::{
+        Instance,
         context::Context,
         render::VertexSetter,
         sl::{ReadInstance, Ret},
         state::State,
         types::{self, ValueType, VectorType},
         value::Value,
-        Instance,
     },
     std::{error, fmt, marker::PhantomData},
 };

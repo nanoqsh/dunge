@@ -1,7 +1,7 @@
 //! The mesh and mesh data types.
 
 use {
-    crate::{state::State, vertex, Vertex},
+    crate::{Vertex, state::State, vertex},
     std::{borrow::Cow, error, fmt, marker::PhantomData},
 };
 

@@ -2,7 +2,7 @@ use {
     crate::member,
     proc_macro2::TokenStream,
     syn::{
-        meta::ParseNestedMeta, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Fields,
+        Attribute, Data, DataStruct, DeriveInput, Fields, meta::ParseNestedMeta, spanned::Spanned,
     },
 };
 
@@ -21,7 +21,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         Fields::Unit => {
             return quote::quote_spanned! { input.ident.span() =>
                 ::std::compile_error!("the vertex type cannot be a unit struct");
-            }
+            };
         }
     };
 

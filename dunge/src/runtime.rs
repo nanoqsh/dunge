@@ -2,7 +2,6 @@ use {
     parking::Parker,
     std::{
         cell::RefCell,
-        future::{Future, IntoFuture},
         pin,
         sync::mpsc,
         task::{Context, Poll, Waker},
@@ -63,9 +62,11 @@ where
 pub(crate) fn poll_in_background(instance: wgpu::Instance) -> Worker {
     let (s, r) = pair();
 
-    thread::spawn(move || loop {
-        instance.poll_all(true);
-        r.recv();
+    thread::spawn(move || {
+        loop {
+            instance.poll_all(true);
+            r.recv();
+        }
     });
 
     Worker(s)

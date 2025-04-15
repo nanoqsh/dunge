@@ -12,8 +12,8 @@ use {
     std::{
         future,
         sync::{
-            atomic::{AtomicBool, Ordering},
             Arc, Mutex,
+            atomic::{AtomicBool, Ordering},
         },
         task::{Poll, Waker},
     },

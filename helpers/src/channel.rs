@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin};
+use std::pin::Pin;
 
 type Sender<T> = Box<dyn FnOnce(T) + Send>;
 type Receiver<T> = Pin<Box<dyn Future<Output = T>>>;

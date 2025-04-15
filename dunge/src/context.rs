@@ -1,5 +1,6 @@
 use {
     crate::{
+        Vertex,
         draw::Draw,
         instance::Row,
         layer::{Config, Layer},
@@ -14,9 +15,8 @@ use {
         uniform::Uniform,
         value::Value,
         workload::Workload,
-        Vertex,
     },
-    std::{error, fmt, future::IntoFuture, sync::Arc},
+    std::{error, fmt, sync::Arc},
 };
 
 /// Creates the context instance.

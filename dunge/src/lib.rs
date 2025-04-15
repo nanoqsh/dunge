@@ -35,8 +35,8 @@ pub mod prelude {
     //! The dunge prelude.
 
     pub use crate::{
-        context::Context, mesh::MeshData, sl, texture::TextureData, types, Format, Frame, Group,
-        Instance, Options, Vertex,
+        Format, Frame, Group, Instance, Options, Vertex, context::Context, mesh::MeshData, sl,
+        texture::TextureData, types,
     };
 
     #[cfg(feature = "winit")]
@@ -48,8 +48,8 @@ pub mod prelude {
 
 pub use {
     crate::{
-        context::{context, Context, FailedMakeContext},
-        draw::{draw, Draw},
+        context::{Context, FailedMakeContext, context},
+        draw::{Draw, draw},
         format::Format,
         shader::{ComputeShader, RenderShader, Shader},
         state::{AsTarget, Frame, Options, RenderBuffer, Scheduler, Target},
@@ -71,5 +71,5 @@ pub use crate::window::from_element;
 #[cfg(feature = "winit")]
 pub use crate::{
     el::{Buttons, Control, Flow, Key, KeyCode, LoopError, Mouse, MouseButton, SmolStr, Then},
-    update::{make, update, update_with_event, update_with_state, IntoUpdate, Update},
+    update::{IntoUpdate, Update, make, update, update_with_event, update_with_state},
 };

@@ -5,8 +5,8 @@ pub fn run(routes: &[Route]) {
         futures_lite::future,
         http_body_util::Full,
         hyper::{
-            header, http::HeaderValue, server::conn::http1, service, Method, Request, Response,
-            StatusCode,
+            Method, Request, Response, StatusCode, header, http::HeaderValue, server::conn::http1,
+            service,
         },
         smol_hyper::rt::FuturesIo,
         std::{
@@ -57,15 +57,12 @@ pub fn run(routes: &[Route]) {
                 Err(err) => return err,
             };
 
-            let serve = service::service_fn({
-                let page = page.clone();
-                move |req| {
-                    let res = page(req).unwrap_or_else(no_found);
-                    async { Ok::<_, Infallible>(res) }
-                }
+            let serve = service::service_fn(async |req| {
+                let res = page(req).unwrap_or_else(no_found);
+                Ok::<_, Infallible>(res)
             });
 
-            let task = async {
+            let task = async move {
                 if let Err(err) = http1::Builder::new().serve_connection(stream, serve).await {
                     eprintln!("connection error: {err}");
                 }

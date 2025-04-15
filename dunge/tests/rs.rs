@@ -175,9 +175,9 @@ fn rs_reentrant() {
 #[test]
 fn rs_storage() -> Result<(), Error> {
     use dunge::{
+        Group,
         sl::{self, Groups, Index, Render},
         storage::Storage,
-        Group,
     };
 
     #[derive(Group)]

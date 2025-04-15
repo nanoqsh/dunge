@@ -1,7 +1,7 @@
 use {
     crate::member,
     proc_macro2::TokenStream,
-    syn::{spanned::Spanned, Data, DataStruct, DeriveInput, Fields},
+    syn::{Data, DataStruct, DeriveInput, Fields, spanned::Spanned},
 };
 
 pub(crate) fn derive(input: DeriveInput) -> TokenStream {
@@ -19,7 +19,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         Fields::Unit => {
             return quote::quote_spanned! { input.ident.span() =>
                 ::std::compile_error!("the instance type cannot be a unit struct");
-            }
+            };
         }
     };
 

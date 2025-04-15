@@ -2,7 +2,7 @@
 
 use {
     crate::{format::Format, state::State},
-    std::{error, fmt, future::IntoFuture},
+    std::{error, fmt},
 };
 
 #[derive(Clone, Copy)]

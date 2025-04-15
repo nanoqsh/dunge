@@ -2,13 +2,13 @@
 
 use {
     crate::{
+        Group,
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
         storage::Storage,
         texture::Sampler,
         uniform::Uniform,
-        Group,
     },
     std::{marker::PhantomData, sync::Arc},
 };

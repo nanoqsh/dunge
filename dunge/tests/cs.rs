@@ -10,9 +10,9 @@ type Error = Box<dyn std::error::Error>;
 #[test]
 fn cs_array() -> Result<(), Error> {
     use dunge::{
+        Group,
         sl::{Compute, Groups},
         storage::Storage,
-        Group,
     };
 
     #[derive(Group)]
@@ -33,9 +33,9 @@ fn cs_array() -> Result<(), Error> {
 #[test]
 fn cs_array_rw() -> Result<(), Error> {
     use dunge::{
+        Group,
         sl::{Compute, Groups},
         storage::RwStorage,
-        Group,
     };
 
     #[derive(Group)]
@@ -56,9 +56,9 @@ fn cs_array_rw() -> Result<(), Error> {
 #[test]
 fn cs_dynamic_array() -> Result<(), Error> {
     use dunge::{
+        Group,
         sl::{Compute, Groups},
         storage::Storage,
-        Group,
     };
 
     #[derive(Group)]
@@ -79,9 +79,9 @@ fn cs_dynamic_array() -> Result<(), Error> {
 #[test]
 fn cs_dynamic_array_rw() -> Result<(), Error> {
     use dunge::{
+        Group,
         sl::{Compute, Groups},
         storage::RwStorage,
-        Group,
     };
 
     #[derive(Group)]
@@ -106,9 +106,9 @@ fn cs_dynamic_array_rw() -> Result<(), Error> {
 #[test]
 fn cs_array2d() -> Result<(), Error> {
     use dunge::{
+        Group,
         sl::{Compute, Groups},
         storage::Storage,
-        Group,
     };
 
     #[derive(Group)]

@@ -6,10 +6,10 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
+            Format,
             color::Rgba,
             prelude::*,
             sl::{self, InVertex, Render},
-            Format,
         },
         glam::{Vec2, Vec3},
         helpers::image::Image,

@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "dunge",
     "dunge_macros",
@@ -11,13 +11,13 @@ members = [
 
 [workspace.package]
 version = "0.3.3"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 authors = ["nanoqsh"]
 keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
 repository = "https://github.com/nanoqsh/dunge"
-rust-version = "1.80"
+rust-version = "1.86"
 
 [workspace.dependencies]
 dunge = { version = "=0.3.3", path = "dunge" }
@@ -66,7 +66,6 @@ unwrap-used = "deny"
 [profile.dev]
 opt-level = 1
 panic = "abort"
-split-debuginfo = "unpacked"
 
 [profile.dev.package."*"]
 opt-level = 3

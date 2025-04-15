@@ -161,12 +161,12 @@ impl Context {
     }
 
     #[doc(hidden)]
-    pub fn input(&self) -> impl Iterator<Item = InputInfo> + '_ {
+    pub fn input(&self) -> impl Iterator<Item = InputInfo> {
         self.inputs.iter().copied()
     }
 
     #[doc(hidden)]
-    pub fn groups(&self) -> impl Iterator<Item = GroupInfo> + '_ {
+    pub fn groups(&self) -> impl Iterator<Item = GroupInfo> {
         self.groups.iter().map(|entry| GroupInfo {
             def: entry.def,
             stages: entry.out.get(),
