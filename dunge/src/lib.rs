@@ -16,6 +16,7 @@ mod state;
 pub mod storage;
 pub mod texture;
 pub mod uniform;
+pub mod usage;
 pub mod value;
 pub mod vertex;
 pub mod workload;
