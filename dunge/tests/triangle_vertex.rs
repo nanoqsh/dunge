@@ -6,10 +6,10 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
-            Format,
             color::Rgba,
             prelude::*,
             sl::{self, InVertex, Render},
+            texture::Size,
         },
         glam::{Vec2, Vec3},
         helpers::image::Image,
@@ -32,7 +32,8 @@ fn render() -> Result<(), Error> {
     let size = (300, 300);
     let layer = cx.make_layer(&shader, Format::SrgbAlpha);
     let view = {
-        let data = TextureData::empty(size, Format::SrgbAlpha)?
+        let size = Size::try_from(size)?;
+        let data = TextureData::empty(size, Format::SrgbAlpha)
             .with_draw()
             .with_copy();
 

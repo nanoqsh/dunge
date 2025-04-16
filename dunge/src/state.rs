@@ -3,11 +3,10 @@ use {
         color::Rgba,
         context::FailedMakeContext,
         draw::Draw,
-        format::Format,
         layer::{Layer, SetLayer},
         render::{Input, Render},
         runtime::{self, Worker},
-        texture::{CopyBuffer, CopyTexture, DrawTexture},
+        texture::{CopyBuffer, CopyTexture, DrawTexture, Format},
     },
     std::{
         future,

@@ -3,7 +3,6 @@
 pub mod color;
 mod context;
 mod draw;
-mod format;
 pub mod group;
 pub mod instance;
 pub mod layer;
@@ -36,8 +35,12 @@ pub mod prelude {
     //! The dunge prelude.
 
     pub use crate::{
-        Format, Frame, Group, Instance, Options, Vertex, context::Context, mesh::MeshData, sl,
-        texture::TextureData, types,
+        Frame, Group, Instance, Options, Vertex,
+        context::Context,
+        mesh::MeshData,
+        sl,
+        texture::{Format, TextureData},
+        types,
     };
 
     #[cfg(feature = "winit")]
@@ -51,7 +54,6 @@ pub use {
     crate::{
         context::{Context, FailedMakeContext, context},
         draw::{Draw, draw},
-        format::Format,
         shader::{ComputeShader, RenderShader, Shader},
         state::{AsTarget, Frame, Options, RenderBuffer, Scheduler, Target},
     },

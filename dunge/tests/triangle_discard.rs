@@ -6,12 +6,11 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
-            Format,
             color::Rgba,
             group::BoundTexture,
             prelude::*,
             sl::{self, Groups, InVertex, Render},
-            texture::{Filter, Sampler},
+            texture::{Filter, Sampler, Size},
         },
         glam::Vec2,
         helpers::image::Image,
@@ -49,7 +48,8 @@ fn render() -> Result<(), Error> {
     let map = {
         let texture = {
             let alpha = Image::decode(include_bytes!("alpha.png"));
-            let data = TextureData::new(&alpha.data, alpha.size, Format::SrgbAlpha)?.with_bind();
+            let size = Size::try_from(alpha.size)?;
+            let data = TextureData::new(size, Format::SrgbAlpha, &alpha.data)?.with_bind();
             cx.make_texture(data)
         };
 
@@ -66,7 +66,8 @@ fn render() -> Result<(), Error> {
     let size = (300, 300);
     let layer = cx.make_layer(&shader, Format::SrgbAlpha);
     let view = {
-        let data = TextureData::empty(size, Format::SrgbAlpha)?
+        let size = Size::try_from(size)?;
+        let data = TextureData::empty(size, Format::SrgbAlpha)
             .with_draw()
             .with_copy();
 

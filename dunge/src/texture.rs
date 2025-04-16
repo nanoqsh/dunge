@@ -1,46 +1,156 @@
 //! The texture module.
 
 use {
-    crate::{format::Format, state::State},
-    std::{error, fmt},
+    crate::state::State,
+    std::{error, fmt, num::NonZeroU32},
 };
+
+/// The texture format type.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Format {
+    #[default]
+    SrgbAlpha,
+    SbgrAlpha,
+    RgbAlpha,
+    BgrAlpha,
+    Depth,
+    Byte,
+}
+
+impl Format {
+    pub(crate) const fn bytes(self) -> u32 {
+        match self {
+            Self::SrgbAlpha | Self::SbgrAlpha | Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
+            Self::Byte => 1,
+        }
+    }
+
+    pub(crate) const fn wgpu(self) -> wgpu::TextureFormat {
+        match self {
+            Self::SrgbAlpha => wgpu::TextureFormat::Rgba8UnormSrgb,
+            Self::SbgrAlpha => wgpu::TextureFormat::Bgra8UnormSrgb,
+            Self::RgbAlpha => wgpu::TextureFormat::Rgba8Unorm,
+            Self::BgrAlpha => wgpu::TextureFormat::Bgra8Unorm,
+            Self::Depth => wgpu::TextureFormat::Depth32Float,
+            Self::Byte => wgpu::TextureFormat::R8Uint,
+        }
+    }
+
+    pub(crate) const fn from_wgpu(format: wgpu::TextureFormat) -> Self {
+        match format {
+            wgpu::TextureFormat::Rgba8UnormSrgb => Self::SrgbAlpha,
+            wgpu::TextureFormat::Bgra8UnormSrgb => Self::SbgrAlpha,
+            wgpu::TextureFormat::Rgba8Unorm => Self::RgbAlpha,
+            wgpu::TextureFormat::Bgra8Unorm => Self::BgrAlpha,
+            wgpu::TextureFormat::Depth32Float => Self::Depth,
+            wgpu::TextureFormat::R8Uint => Self::Byte,
+            _ => panic!("unsupported format"),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Size {
+    pub width: NonZeroU32,
+    pub height: NonZeroU32,
+    pub depth: NonZeroU32,
+}
+
+impl Size {
+    fn volume(self) -> usize {
+        let width = self.width.get() as usize;
+        let height = self.height.get() as usize;
+        let depth = self.depth.get() as usize;
+        width * height * depth
+    }
+
+    fn wgpu(self) -> wgpu::Extent3d {
+        wgpu::Extent3d {
+            width: self.width.get(),
+            height: self.height.get(),
+            depth_or_array_layers: self.depth.get(),
+        }
+    }
+}
+
+impl TryFrom<u32> for Size {
+    type Error = ZeroSized;
+
+    fn try_from(width: u32) -> Result<Self, Self::Error> {
+        let width = NonZeroU32::new(width).ok_or(ZeroSized)?;
+        Ok(Self::from(width))
+    }
+}
+
+impl From<NonZeroU32> for Size {
+    fn from(width: NonZeroU32) -> Self {
+        Self {
+            width,
+            height: NonZeroU32::MIN,
+            depth: NonZeroU32::MIN,
+        }
+    }
+}
+
+impl TryFrom<(u32, u32)> for Size {
+    type Error = ZeroSized;
+
+    fn try_from((width, height): (u32, u32)) -> Result<Self, Self::Error> {
+        let width = NonZeroU32::new(width).ok_or(ZeroSized)?;
+        let height = NonZeroU32::new(height).ok_or(ZeroSized)?;
+        Ok(Self::from((width, height)))
+    }
+}
+
+impl From<(NonZeroU32, NonZeroU32)> for Size {
+    fn from((width, height): (NonZeroU32, NonZeroU32)) -> Self {
+        Self {
+            width,
+            height,
+            depth: NonZeroU32::MIN,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ZeroSized;
+
+impl fmt::Display for ZeroSized {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "zero sized data")
+    }
+}
+
+impl error::Error for ZeroSized {}
 
 #[derive(Clone, Copy)]
 pub struct TextureData<'data> {
-    data: &'data [u8],
-    size: (u32, u32),
+    size: Size,
     format: Format,
+    data: &'data [u8],
 }
 
 impl<'data> TextureData<'data> {
-    pub const fn empty(size: (u32, u32), format: Format) -> Result<Self, ZeroSized> {
-        let (width, height) = size;
-        if width == 0 || height == 0 {
-            return Err(ZeroSized);
-        }
-
-        Ok(Self {
-            data: &[],
-            size,
-            format,
-        })
+    pub fn empty<S>(size: S, format: Format) -> Self
+    where
+        S: Into<Size>,
+    {
+        let size = size.into();
+        let data = &[];
+        Self { size, format, data }
     }
 
-    pub const fn new(data: &'data [u8], size: (u32, u32), format: Format) -> Result<Self, Error> {
-        let Ok(empty) = Self::empty(size, format) else {
-            return Err(Error::ZeroSized);
-        };
-
-        let len = {
-            let (width, height) = size;
-            width as usize * height as usize * format.bytes() as usize
-        };
-
-        if data.len() != len {
-            return Err(Error::InvalidLen);
+    pub fn new<S>(size: S, format: Format, data: &'data [u8]) -> Result<Self, InvalidLen>
+    where
+        S: Into<Size>,
+    {
+        let empty = Self::empty(size, format);
+        let len = empty.size.volume() * format.bytes() as usize;
+        if data.len() == len {
+            Ok(Self { data, ..empty })
+        } else {
+            Err(InvalidLen)
         }
-
-        Ok(Self { data, ..empty })
     }
 
     /// Allow to use a texture in the shader.
@@ -54,43 +164,22 @@ impl<'data> TextureData<'data> {
     }
 
     /// Allow to copy data from the texture.
-    pub fn with_copy(self) -> Copy<Self> {
-        Copy(self)
+    pub fn with_copy(self) -> _Copy<Self> {
+        _Copy(self)
     }
 }
 
-/// The [texture data](crate::texture::TextureData) error.
+/// The texture data length doesn't match with size and format.
 #[derive(Debug)]
-pub enum Error {
-    /// The texture data is zero sized.
-    ZeroSized,
+pub struct InvalidLen;
 
-    /// The texture data length doesn't match with size and format.
-    InvalidLen,
-}
-
-impl fmt::Display for Error {
+impl fmt::Display for InvalidLen {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::ZeroSized => write!(f, "zero sized data"),
-            Self::InvalidLen => write!(f, "invalid data length"),
-        }
+        write!(f, "invalid data length")
     }
 }
 
-impl error::Error for Error {}
-
-/// The [texture data](crate::texture::TextureData) is zero sized.
-#[derive(Debug)]
-pub struct ZeroSized;
-
-impl fmt::Display for ZeroSized {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "zero sized data")
-    }
-}
-
-impl error::Error for ZeroSized {}
+impl error::Error for InvalidLen {}
 
 pub struct Texture2d {
     inner: wgpu::Texture,
@@ -99,16 +188,14 @@ pub struct Texture2d {
 
 impl Texture2d {
     fn new(state: &State, mut usage: wgpu::TextureUsages, data: TextureData<'_>) -> Self {
-        let (width, height) = data.size;
-        let size = wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        };
-
+        let size = data.size.wgpu();
         let copy_data = !data.data.is_empty();
+
+        if copy_data {
+            usage |= wgpu::TextureUsages::COPY_DST;
+        }
+
         let inner = {
-            usage.set(wgpu::TextureUsages::COPY_DST, copy_data);
             let desc = wgpu::TextureDescriptor {
                 label: None,
                 size,
@@ -134,8 +221,8 @@ impl Texture2d {
                 data.data,
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(width * data.format.bytes()),
-                    rows_per_image: Some(height),
+                    bytes_per_row: Some(size.width * data.format.bytes()),
+                    rows_per_image: Some(size.height),
                 },
                 size,
             );
@@ -352,7 +439,7 @@ where
     }
 }
 
-impl<M> BindTexture for Copy<M>
+impl<M> BindTexture for _Copy<M>
 where
     M: BindTexture,
 {
@@ -394,7 +481,7 @@ where
     }
 }
 
-impl<M> DrawTexture for Copy<M>
+impl<M> DrawTexture for _Copy<M>
 where
     M: DrawTexture,
 {
@@ -425,7 +512,7 @@ where
     }
 }
 
-impl<M> CopyTexture for Copy<M>
+impl<M> CopyTexture for _Copy<M>
 where
     M: Get,
 {
@@ -461,8 +548,8 @@ impl<M> Bind<M> {
         Draw(self)
     }
 
-    pub fn with_copy(self) -> Copy<Self> {
-        Copy(self)
+    pub fn with_copy(self) -> _Copy<Self> {
+        _Copy(self)
     }
 }
 
@@ -496,8 +583,8 @@ impl<M> Draw<M> {
         Bind(self)
     }
 
-    pub fn with_copy(self) -> Copy<Self> {
-        Copy(self)
+    pub fn with_copy(self) -> _Copy<Self> {
+        _Copy(self)
     }
 }
 
@@ -524,9 +611,9 @@ where
     }
 }
 
-pub struct Copy<M>(M);
+pub struct _Copy<M>(M);
 
-impl<M> Copy<M> {
+impl<M> _Copy<M> {
     pub fn with_bind(self) -> Bind<Self> {
         Bind(self)
     }
@@ -536,7 +623,7 @@ impl<M> Copy<M> {
     }
 }
 
-impl<M> Get for Copy<M>
+impl<M> Get for _Copy<M>
 where
     M: Get,
 {
@@ -545,17 +632,17 @@ where
     }
 }
 
-impl<M> private::Sealed for Copy<M> {}
+impl<M> private::Sealed for _Copy<M> {}
 
-impl<M> Make for Copy<M>
+impl<M> Make for _Copy<M>
 where
     M: Make,
 {
-    type Out = Copy<M::Out>;
+    type Out = _Copy<M::Out>;
 
     fn make(self, mut maker: Maker<'_>) -> Self::Out {
         maker.usage |= wgpu::TextureUsages::COPY_SRC;
-        Copy(self.0.make(maker))
+        _Copy(self.0.make(maker))
     }
 }
 
