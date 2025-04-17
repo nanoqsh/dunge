@@ -1,10 +1,13 @@
 #[cfg(not(target_family = "wasm"))]
-use std::{
-    cell::RefCell,
-    pin,
-    sync::mpsc,
-    task::{Context, Poll, Waker},
-    thread,
+use {
+    parking::Parker,
+    std::{
+        cell::RefCell,
+        pin,
+        sync::mpsc,
+        task::{Context, Poll, Waker},
+        thread,
+    },
 };
 
 /// Blocks on a future until it's completed.
@@ -27,8 +30,6 @@ pub fn block_on<F>(f: F) -> F::Output
 where
     F: IntoFuture,
 {
-    use parking::Parker;
-
     let mut fu = pin::pin!(f.into_future());
 
     fn make() -> (Parker, Waker) {

@@ -71,7 +71,7 @@ impl<'group, V> VisitMember<'group> for &'group Uniform<V> {
 
 impl<'group> VisitMember<'group> for BoundTexture<'group> {
     fn visit_member(self, visitor: &mut Visitor<'group>) {
-        visitor.push(wgpu::BindingResource::TextureView(self.0.view()));
+        visitor.push(wgpu::BindingResource::TextureView(self.0));
     }
 }
 

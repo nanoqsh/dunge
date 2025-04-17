@@ -43,7 +43,7 @@ fn render() -> Result<(), Error> {
         let texture = {
             let gradient = Image::decode(include_bytes!("gradient.png"));
             let size = Size::try_from(gradient.size)?;
-            let data = TextureData::new(size, Format::SrgbAlpha, &gradient.data)?.with_bind();
+            let data = TextureData::new(size, Format::SrgbAlpha, &gradient.data)?.bind();
 
             cx.make_texture(data)
         };
@@ -63,8 +63,8 @@ fn render() -> Result<(), Error> {
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, Format::SrgbAlpha)
-            .with_draw()
-            .with_copy();
+            .render()
+            .copy_from();
 
         cx.make_texture(data)
     };

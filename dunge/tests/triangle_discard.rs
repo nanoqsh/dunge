@@ -49,7 +49,7 @@ fn render() -> Result<(), Error> {
         let texture = {
             let alpha = Image::decode(include_bytes!("alpha.png"));
             let size = Size::try_from(alpha.size)?;
-            let data = TextureData::new(size, Format::SrgbAlpha, &alpha.data)?.with_bind();
+            let data = TextureData::new(size, Format::SrgbAlpha, &alpha.data)?.bind();
             cx.make_texture(data)
         };
 
@@ -68,8 +68,8 @@ fn render() -> Result<(), Error> {
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, Format::SrgbAlpha)
-            .with_draw()
-            .with_copy();
+            .render()
+            .copy_from();
 
         cx.make_texture(data)
     };

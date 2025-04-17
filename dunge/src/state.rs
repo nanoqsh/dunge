@@ -6,7 +6,8 @@ use {
         layer::{Layer, SetLayer},
         render::{Input, Render},
         runtime::{self, Worker},
-        texture::{CopyBuffer, CopyTexture, DrawTexture, Format},
+        texture::{CopyBuffer, Format, Size, Texture2d},
+        usage::u,
     },
     std::{
         future,
@@ -344,11 +345,11 @@ impl Frame<'_, '_> {
         layer._set(pass)
     }
 
-    pub fn copy_texture<T>(&mut self, buffer: &CopyBuffer, texture: &T)
+    pub fn copy_texture<U>(&mut self, buffer: &CopyBuffer, texture: &Texture2d<U>)
     where
-        T: CopyTexture,
+        U: u::CopyFrom,
     {
-        buffer.copy_texture(texture.copy_texture(), self.encoder);
+        buffer.copy_texture(texture, self.encoder);
     }
 }
 
@@ -375,70 +376,63 @@ pub trait AsTarget {
     fn as_target(&self) -> Target<'_>;
 }
 
-impl<T> AsTarget for T
+impl<U> AsTarget for Texture2d<U>
 where
-    T: DrawTexture,
+    U: u::Render,
 {
     fn as_target(&self) -> Target<'_> {
-        let texture = self.draw_texture();
-        Target::new(texture.format(), texture.view())
+        Target::new(self.format(), self.view())
     }
 }
 
-impl<T, D> AsTarget for RenderBuffer<T, D>
+impl<U, V> AsTarget for RenderBuffer<U, V>
 where
-    T: DrawTexture,
-    D: DrawTexture,
+    U: u::Render,
+    V: u::Render,
 {
     fn as_target(&self) -> Target<'_> {
         let mut target = self.color.as_target();
-        target.depthv = Some(self.depth.draw_texture().view());
+        target.depthv = Some(self.depth.view());
         target
     }
 }
 
 /// Pair of color and depth buffer.
-#[derive(Clone, Copy)]
-pub struct RenderBuffer<T, D> {
-    color: T,
-    depth: D,
+pub struct RenderBuffer<U, V> {
+    color: Texture2d<U>,
+    depth: Texture2d<V>,
 }
 
-impl<T, D> RenderBuffer<T, D> {
-    pub fn new(color: T, depth: D) -> Self
+impl<U, V> RenderBuffer<U, V> {
+    pub fn new(color: Texture2d<U>, depth: Texture2d<V>) -> Self
     where
-        T: DrawTexture,
-        D: DrawTexture,
+        U: u::Render,
+        V: u::Render,
     {
-        let color_texture = color.draw_texture();
-        let depth_texture = depth.draw_texture();
         assert_eq!(
-            depth_texture.format(),
+            depth.format(),
             Format::Depth,
             "the depth texture must have the depth format",
         );
 
         assert_eq!(
-            color_texture.size(),
-            depth_texture.size(),
+            color.size(),
+            depth.size(),
             "color and depth textures must be the same size",
         );
 
         Self { color, depth }
     }
 
-    pub fn size(&self) -> (u32, u32)
-    where
-        T: DrawTexture,
-    {
-        self.color.draw_texture().size()
+    pub fn size(&self) -> Size {
+        self.color.size()
     }
 
-    pub fn color(&self) -> &T {
+    pub fn color(&self) -> &Texture2d<U> {
         &self.color
     }
 
-    pub fn depth(&self) -> &D {
+    pub fn depth(&self) -> &Texture2d<V> {
         &self.depth
     }
 }

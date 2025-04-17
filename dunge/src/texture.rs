@@ -1,8 +1,11 @@
 //! The texture module.
 
 use {
-    crate::state::State,
-    std::{error, fmt, num::NonZeroU32},
+    crate::{
+        state::State,
+        usage::{TextureNoUsages, Use, u},
+    },
+    std::{error, fmt, marker::PhantomData, num::NonZeroU32},
 };
 
 /// The texture format type.
@@ -18,6 +21,7 @@ pub enum Format {
 }
 
 impl Format {
+    #[inline]
     pub(crate) const fn bytes(self) -> u32 {
         match self {
             Self::SrgbAlpha | Self::SbgrAlpha | Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
@@ -25,6 +29,7 @@ impl Format {
         }
     }
 
+    #[inline]
     pub(crate) const fn wgpu(self) -> wgpu::TextureFormat {
         match self {
             Self::SrgbAlpha => wgpu::TextureFormat::Rgba8UnormSrgb,
@@ -36,6 +41,7 @@ impl Format {
         }
     }
 
+    #[inline]
     pub(crate) const fn from_wgpu(format: wgpu::TextureFormat) -> Self {
         match format {
             wgpu::TextureFormat::Rgba8UnormSrgb => Self::SrgbAlpha,
@@ -49,7 +55,7 @@ impl Format {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Size {
     pub width: NonZeroU32,
     pub height: NonZeroU32,
@@ -57,6 +63,7 @@ pub struct Size {
 }
 
 impl Size {
+    #[inline]
     fn volume(self) -> usize {
         let width = self.width.get() as usize;
         let height = self.height.get() as usize;
@@ -64,6 +71,7 @@ impl Size {
         width * height * depth
     }
 
+    #[inline]
     fn wgpu(self) -> wgpu::Extent3d {
         wgpu::Extent3d {
             width: self.width.get(),
@@ -71,11 +79,25 @@ impl Size {
             depth_or_array_layers: self.depth.get(),
         }
     }
+
+    #[inline]
+    fn from_wgpu(ex: wgpu::Extent3d) -> Self {
+        let make = || {
+            Some(Self {
+                width: NonZeroU32::new(ex.width)?,
+                height: NonZeroU32::new(ex.height)?,
+                depth: NonZeroU32::new(ex.depth_or_array_layers)?,
+            })
+        };
+
+        make().expect("non zero sized")
+    }
 }
 
 impl TryFrom<u32> for Size {
     type Error = ZeroSized;
 
+    #[inline]
     fn try_from(width: u32) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(width).ok_or(ZeroSized)?;
         Ok(Self::from(width))
@@ -83,6 +105,7 @@ impl TryFrom<u32> for Size {
 }
 
 impl From<NonZeroU32> for Size {
+    #[inline]
     fn from(width: NonZeroU32) -> Self {
         Self {
             width,
@@ -95,6 +118,7 @@ impl From<NonZeroU32> for Size {
 impl TryFrom<(u32, u32)> for Size {
     type Error = ZeroSized;
 
+    #[inline]
     fn try_from((width, height): (u32, u32)) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(width).ok_or(ZeroSized)?;
         let height = NonZeroU32::new(height).ok_or(ZeroSized)?;
@@ -103,6 +127,7 @@ impl TryFrom<(u32, u32)> for Size {
 }
 
 impl From<(NonZeroU32, NonZeroU32)> for Size {
+    #[inline]
     fn from((width, height): (NonZeroU32, NonZeroU32)) -> Self {
         Self {
             width,
@@ -116,6 +141,7 @@ impl From<(NonZeroU32, NonZeroU32)> for Size {
 pub struct ZeroSized;
 
 impl fmt::Display for ZeroSized {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "zero sized data")
     }
@@ -124,22 +150,28 @@ impl fmt::Display for ZeroSized {
 impl error::Error for ZeroSized {}
 
 #[derive(Clone, Copy)]
-pub struct TextureData<'data> {
+pub struct TextureData<'data, U> {
+    data: &'data [u8],
     size: Size,
     format: Format,
-    data: &'data [u8],
+    usage: PhantomData<U>,
 }
 
-impl<'data> TextureData<'data> {
+impl<'data> TextureData<'data, TextureNoUsages> {
+    #[inline]
     pub fn empty<S>(size: S, format: Format) -> Self
     where
         S: Into<Size>,
     {
-        let size = size.into();
-        let data = &[];
-        Self { size, format, data }
+        Self {
+            data: &[],
+            size: size.into(),
+            format,
+            usage: PhantomData,
+        }
     }
 
+    #[inline]
     pub fn new<S>(size: S, format: Format, data: &'data [u8]) -> Result<Self, InvalidLen>
     where
         S: Into<Size>,
@@ -152,20 +184,69 @@ impl<'data> TextureData<'data> {
             Err(InvalidLen)
         }
     }
+}
 
-    /// Allow to use a texture in the shader.
-    pub fn with_bind(self) -> Bind<Self> {
-        Bind(self)
+impl<'data, U> TextureData<'data, U> {
+    #[inline]
+    fn to<T>(self) -> TextureData<'data, U::Out>
+    where
+        T: ?Sized,
+        U: Use<T>,
+    {
+        TextureData {
+            data: self.data,
+            size: self.size,
+            format: self.format,
+            usage: PhantomData,
+        }
     }
 
-    /// Allow to use a texture as render attachment.
-    pub fn with_draw(self) -> Draw<Self> {
-        Draw(self)
+    #[inline]
+    pub fn read(self) -> TextureData<'data, U::Out>
+    where
+        U: Use<dyn u::Read>,
+    {
+        self.to()
     }
 
-    /// Allow to copy data from the texture.
-    pub fn with_copy(self) -> _Copy<Self> {
-        _Copy(self)
+    #[inline]
+    pub fn write(self) -> TextureData<'data, U::Out>
+    where
+        U: Use<dyn u::Write>,
+    {
+        self.to()
+    }
+
+    #[inline]
+    pub fn copy_from(self) -> TextureData<'data, U::Out>
+    where
+        U: Use<dyn u::CopyFrom>,
+    {
+        self.to()
+    }
+
+    #[inline]
+    pub fn copy_to(self) -> TextureData<'data, U::Out>
+    where
+        U: Use<dyn u::CopyTo>,
+    {
+        self.to()
+    }
+
+    #[inline]
+    pub fn bind(self) -> TextureData<'data, U::Out>
+    where
+        U: Use<dyn u::Bind>,
+    {
+        self.to()
+    }
+
+    #[inline]
+    pub fn render(self) -> TextureData<'data, U::Out>
+    where
+        U: Use<dyn u::Render>,
+    {
+        self.to()
     }
 }
 
@@ -174,6 +255,7 @@ impl<'data> TextureData<'data> {
 pub struct InvalidLen;
 
 impl fmt::Display for InvalidLen {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "invalid data length")
     }
@@ -181,28 +263,107 @@ impl fmt::Display for InvalidLen {
 
 impl error::Error for InvalidLen {}
 
-pub struct Texture2d {
-    inner: wgpu::Texture,
+pub enum DimensionsNumber {
+    D1,
+    D2,
+    D3,
+}
+
+impl DimensionsNumber {
+    #[inline]
+    fn wgpu(self) -> wgpu::TextureDimension {
+        match self {
+            Self::D1 => wgpu::TextureDimension::D1,
+            Self::D2 => wgpu::TextureDimension::D2,
+            Self::D3 => wgpu::TextureDimension::D3,
+        }
+    }
+}
+
+pub trait Dimension {
+    const N: DimensionsNumber;
+}
+
+pub enum D2 {}
+
+impl Dimension for D2 {
+    const N: DimensionsNumber = DimensionsNumber::D2;
+}
+
+pub type Texture2d<U> = Texture<D2, U>;
+
+pub struct Texture<D, U> {
+    inner: Inner,
+    ty: PhantomData<(D, U)>,
+}
+
+impl<D, U> Texture<D, U> {
+    #[inline]
+    pub(crate) fn new(state: &State, data: TextureData<'_, U>) -> Self
+    where
+        D: Dimension,
+        U: u::TextureUsages,
+    {
+        let new = NewTexture {
+            data: data.data,
+            size: data.size,
+            format: data.format,
+            dimension: D::N,
+            usage: U::usages(),
+        };
+
+        Self {
+            inner: Inner::new(state, new),
+            ty: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn size(&self) -> Size {
+        Size::from_wgpu(self.inner.texture.size())
+    }
+
+    #[inline]
+    pub fn format(&self) -> Format {
+        Format::from_wgpu(self.inner.texture.format())
+    }
+
+    #[inline]
+    pub(crate) fn view(&self) -> &wgpu::TextureView {
+        &self.inner.view
+    }
+}
+
+struct Inner {
+    texture: wgpu::Texture,
     view: wgpu::TextureView,
 }
 
-impl Texture2d {
-    fn new(state: &State, mut usage: wgpu::TextureUsages, data: TextureData<'_>) -> Self {
-        let size = data.size.wgpu();
-        let copy_data = !data.data.is_empty();
+impl Inner {
+    fn new(state: &State, new: NewTexture<'_>) -> Self {
+        let NewTexture {
+            size,
+            data,
+            format,
+            dimension,
+            mut usage,
+        } = new;
 
-        if copy_data {
-            usage |= wgpu::TextureUsages::COPY_DST;
-        }
+        let size = size.wgpu();
+        let copy_data = !data.is_empty();
 
-        let inner = {
+        let texture = {
+            if copy_data {
+                usage |= wgpu::TextureUsages::COPY_DST;
+            }
+
             let desc = wgpu::TextureDescriptor {
                 label: None,
                 size,
                 mip_level_count: 1,
                 sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: data.format.wgpu(),
+                dimension: dimension.wgpu(),
+                format: format.wgpu(),
                 usage,
                 view_formats: &[],
             };
@@ -213,15 +374,15 @@ impl Texture2d {
         if copy_data {
             state.queue().write_texture(
                 wgpu::TexelCopyTextureInfo {
-                    texture: &inner,
+                    texture: &texture,
                     mip_level: 0,
                     origin: wgpu::Origin3d::ZERO,
                     aspect: wgpu::TextureAspect::All,
                 },
-                data.data,
+                data,
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(size.width * data.format.bytes()),
+                    bytes_per_row: Some(size.width * format.bytes()),
                     rows_per_image: Some(size.height),
                 },
                 size,
@@ -230,33 +391,19 @@ impl Texture2d {
 
         let view = {
             let desc = wgpu::TextureViewDescriptor::default();
-            inner.create_view(&desc)
+            texture.create_view(&desc)
         };
 
-        Self { inner, view }
-    }
-
-    pub fn size(&self) -> (u32, u32) {
-        (self.inner.width(), self.inner.height())
-    }
-
-    pub fn format(&self) -> Format {
-        Format::from_wgpu(self.inner.format())
-    }
-
-    pub(crate) fn view(&self) -> &wgpu::TextureView {
-        &self.view
+        Self { texture, view }
     }
 }
 
-pub(crate) fn make<M>(state: &State, data: M) -> M::Out
-where
-    M: Make,
-{
-    data.make(Maker {
-        state,
-        usage: wgpu::TextureUsages::empty(),
-    })
+struct NewTexture<'data> {
+    data: &'data [u8],
+    size: Size,
+    format: Format,
+    dimension: DimensionsNumber,
+    usage: wgpu::TextureUsages,
 }
 
 #[derive(Clone, Copy)]
@@ -332,8 +479,12 @@ impl CopyBuffer {
         }
     }
 
-    pub(crate) fn copy_texture(&self, texture: &Texture2d, encoder: &mut wgpu::CommandEncoder) {
-        let texture = &texture.inner;
+    pub(crate) fn copy_texture<U>(
+        &self,
+        texture: &Texture2d<U>,
+        encoder: &mut wgpu::CommandEncoder,
+    ) {
+        let texture = &texture.inner.texture;
         let (width, height) = self.size;
 
         assert!(
@@ -405,247 +556,4 @@ impl Mapped<'_> {
     pub fn data(&self) -> &[[u8; 4]] {
         bytemuck::cast_slice(&self.0)
     }
-}
-
-trait Get {
-    fn get(&self) -> &Texture2d;
-}
-
-impl Get for Texture2d {
-    fn get(&self) -> &Texture2d {
-        self
-    }
-}
-
-pub trait BindTexture: private::Sealed {
-    fn bind_texture(&self) -> &Texture2d;
-}
-
-impl<M> BindTexture for Bind<M>
-where
-    M: Get,
-{
-    fn bind_texture(&self) -> &Texture2d {
-        self.0.get()
-    }
-}
-
-impl<M> BindTexture for Draw<M>
-where
-    M: BindTexture,
-{
-    fn bind_texture(&self) -> &Texture2d {
-        self.0.bind_texture()
-    }
-}
-
-impl<M> BindTexture for _Copy<M>
-where
-    M: BindTexture,
-{
-    fn bind_texture(&self) -> &Texture2d {
-        self.0.bind_texture()
-    }
-}
-
-pub trait DrawTexture: private::Sealed {
-    fn draw_texture(&self) -> &Texture2d;
-}
-
-impl<D> private::Sealed for &D {}
-
-impl<D> DrawTexture for &D
-where
-    D: DrawTexture,
-{
-    fn draw_texture(&self) -> &Texture2d {
-        (**self).draw_texture()
-    }
-}
-
-impl<M> DrawTexture for Bind<M>
-where
-    M: DrawTexture,
-{
-    fn draw_texture(&self) -> &Texture2d {
-        self.0.draw_texture()
-    }
-}
-
-impl<M> DrawTexture for Draw<M>
-where
-    M: Get,
-{
-    fn draw_texture(&self) -> &Texture2d {
-        self.0.get()
-    }
-}
-
-impl<M> DrawTexture for _Copy<M>
-where
-    M: DrawTexture,
-{
-    fn draw_texture(&self) -> &Texture2d {
-        self.0.draw_texture()
-    }
-}
-
-pub trait CopyTexture: private::Sealed {
-    fn copy_texture(&self) -> &Texture2d;
-}
-
-impl<M> CopyTexture for Bind<M>
-where
-    M: CopyTexture,
-{
-    fn copy_texture(&self) -> &Texture2d {
-        self.0.copy_texture()
-    }
-}
-
-impl<M> CopyTexture for Draw<M>
-where
-    M: CopyTexture,
-{
-    fn copy_texture(&self) -> &Texture2d {
-        self.0.copy_texture()
-    }
-}
-
-impl<M> CopyTexture for _Copy<M>
-where
-    M: Get,
-{
-    fn copy_texture(&self) -> &Texture2d {
-        self.0.get()
-    }
-}
-
-pub struct Maker<'state> {
-    state: &'state State,
-    usage: wgpu::TextureUsages,
-}
-
-pub trait Make: private::Sealed {
-    type Out;
-    fn make(self, maker: Maker<'_>) -> Self::Out;
-}
-
-impl private::Sealed for TextureData<'_> {}
-
-impl Make for TextureData<'_> {
-    type Out = Texture2d;
-
-    fn make(self, Maker { state, usage }: Maker<'_>) -> Self::Out {
-        Texture2d::new(state, usage, self)
-    }
-}
-
-pub struct Bind<M>(M);
-
-impl<M> Bind<M> {
-    pub fn with_draw(self) -> Draw<Self> {
-        Draw(self)
-    }
-
-    pub fn with_copy(self) -> _Copy<Self> {
-        _Copy(self)
-    }
-}
-
-impl<M> Get for Bind<M>
-where
-    M: Get,
-{
-    fn get(&self) -> &Texture2d {
-        self.0.get()
-    }
-}
-
-impl<M> private::Sealed for Bind<M> {}
-
-impl<M> Make for Bind<M>
-where
-    M: Make,
-{
-    type Out = Bind<M::Out>;
-
-    fn make(self, mut maker: Maker<'_>) -> Self::Out {
-        maker.usage |= wgpu::TextureUsages::TEXTURE_BINDING;
-        Bind(self.0.make(maker))
-    }
-}
-
-pub struct Draw<M>(M);
-
-impl<M> Draw<M> {
-    pub fn with_bind(self) -> Bind<Self> {
-        Bind(self)
-    }
-
-    pub fn with_copy(self) -> _Copy<Self> {
-        _Copy(self)
-    }
-}
-
-impl<M> Get for Draw<M>
-where
-    M: Get,
-{
-    fn get(&self) -> &Texture2d {
-        self.0.get()
-    }
-}
-
-impl<M> private::Sealed for Draw<M> {}
-
-impl<M> Make for Draw<M>
-where
-    M: Make,
-{
-    type Out = Draw<M::Out>;
-
-    fn make(self, mut maker: Maker<'_>) -> Self::Out {
-        maker.usage |= wgpu::TextureUsages::RENDER_ATTACHMENT;
-        Draw(self.0.make(maker))
-    }
-}
-
-pub struct _Copy<M>(M);
-
-impl<M> _Copy<M> {
-    pub fn with_bind(self) -> Bind<Self> {
-        Bind(self)
-    }
-
-    pub fn with_draw(self) -> Draw<Self> {
-        Draw(self)
-    }
-}
-
-impl<M> Get for _Copy<M>
-where
-    M: Get,
-{
-    fn get(&self) -> &Texture2d {
-        self.0.get()
-    }
-}
-
-impl<M> private::Sealed for _Copy<M> {}
-
-impl<M> Make for _Copy<M>
-where
-    M: Make,
-{
-    type Out = _Copy<M::Out>;
-
-    fn make(self, mut maker: Maker<'_>) -> Self::Out {
-        maker.usage |= wgpu::TextureUsages::COPY_SRC;
-        _Copy(self.0.make(maker))
-    }
-}
-
-mod private {
-    pub trait Sealed {}
 }

@@ -8,7 +8,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         prelude::*,
         set::UniqueSet,
         sl::{Groups, InVertex, Index, Render},
-        texture::{DrawTexture, Filter, Sampler, Size},
+        texture::{Filter, Sampler, Size},
         uniform::Uniform,
     };
 
@@ -74,9 +74,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
         );
 
         let size = Size::try_from(size).expect("non-zero size");
-        let data = TextureData::empty(size, Format::SrgbAlpha)
-            .with_draw()
-            .with_bind();
+        let data = TextureData::empty(size, Format::SrgbAlpha).render().bind();
 
         cx.make_texture(data)
     };
@@ -84,12 +82,15 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let render_buf = make_render_buf(&cx, (1, 1));
     let sam = cx.make_sampler(Filter::Nearest);
 
-    let make_stp = |(width, height)| {
+    let make_stp = |Size { width, height, .. }: Size| {
         let screen_inv = const { 1. / SCREEN_FACTOR as f32 };
-        Vec2::new(screen_inv / width as f32, screen_inv / height as f32)
+        Vec2::new(
+            screen_inv / width.get() as f32,
+            screen_inv / height.get() as f32,
+        )
     };
 
-    let buf_size = render_buf.draw_texture().size();
+    let buf_size = render_buf.size();
     let stp = cx.make_uniform(&make_stp(buf_size));
     let (map_set, handler) = {
         let map = Map {
@@ -140,7 +141,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
 
             if let Some(size) = ctrl.resized() {
                 state.render_buf = make_render_buf(&state.cx, size);
-                let buf_size = state.render_buf.draw_texture().size();
+                let buf_size = state.render_buf.size();
                 stp.update(&state.cx, &make_stp(buf_size));
                 let map = Map {
                     tex: BoundTexture::new(&state.render_buf),

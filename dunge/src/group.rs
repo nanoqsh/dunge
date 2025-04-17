@@ -3,23 +3,27 @@
 use crate::{
     sl::{Global, GlobalOut, Ret},
     storage::Storage,
-    texture::{BindTexture, Sampler, Texture2d},
+    texture::{Sampler, Texture2d},
     types::{self, MemberData, MemberType},
     uniform::Uniform,
+    usage::u,
     value::Value,
 };
 
 pub use dunge_shader::group::{Projection, Take};
 
 #[derive(Clone, Copy)]
-pub struct BoundTexture<'tex>(pub(crate) &'tex Texture2d);
+pub struct BoundTexture<'tex>(
+    // TODO: replace wgpu type
+    pub(crate) &'tex wgpu::TextureView,
+);
 
 impl<'tex> BoundTexture<'tex> {
-    pub fn new<T>(texture: &'tex T) -> Self
+    pub fn new<U>(texture: &'tex Texture2d<U>) -> Self
     where
-        T: BindTexture,
+        U: u::Bind,
     {
-        Self(texture.bind_texture())
+        Self(texture.view())
     }
 }
 

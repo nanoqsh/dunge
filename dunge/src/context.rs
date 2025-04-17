@@ -11,8 +11,12 @@ use {
         sl,
         state::{AsTarget, Scheduler, State},
         storage::{Storage, StorageValue},
-        texture::{self, CopyBuffer, CopyBufferView, Filter, Make, MapResult, Mapped, Sampler},
+        texture::{
+            CopyBuffer, CopyBufferView, Filter, MapResult, Mapped, Sampler, Texture, Texture2d,
+            TextureData,
+        },
         uniform::Uniform,
+        usage::u,
         value::Value,
         workload::Workload,
     },
@@ -100,11 +104,11 @@ impl Context {
         Row::new(&self.0, data)
     }
 
-    pub fn make_texture<M>(&self, data: M) -> M::Out
+    pub fn make_texture<U>(&self, data: TextureData<'_, U>) -> Texture2d<U>
     where
-        M: Make,
+        U: u::TextureUsages,
     {
-        texture::make(&self.0, data)
+        Texture::new(&self.0, data)
     }
 
     pub fn make_sampler(&self, filter: Filter) -> Sampler {
