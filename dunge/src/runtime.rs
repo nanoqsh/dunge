@@ -1,12 +1,10 @@
-use {
-    parking::Parker,
-    std::{
-        cell::RefCell,
-        pin,
-        sync::mpsc,
-        task::{Context, Poll, Waker},
-        thread,
-    },
+#[cfg(not(target_family = "wasm"))]
+use std::{
+    cell::RefCell,
+    pin,
+    sync::mpsc,
+    task::{Context, Poll, Waker},
+    thread,
 };
 
 /// Blocks on a future until it's completed.
@@ -29,6 +27,8 @@ pub fn block_on<F>(f: F) -> F::Output
 where
     F: IntoFuture,
 {
+    use parking::Parker;
+
     let mut fu = pin::pin!(f.into_future());
 
     fn make() -> (Parker, Waker) {
@@ -62,10 +62,16 @@ where
 pub(crate) fn poll_in_background(instance: wgpu::Instance) -> Worker {
     let (s, r) = pair();
 
+    #[cfg(target_family = "wasm")]
+    {
+        _ = instance;
+        _ = r;
+    }
+
+    #[cfg(not(target_family = "wasm"))]
     thread::spawn(move || {
-        loop {
+        while r.recv() {
             instance.poll_all(true);
-            r.recv();
         }
     });
 
@@ -81,21 +87,21 @@ impl Worker {
 }
 
 fn pair() -> (Sender, Receiver) {
+    #[cfg(target_family = "wasm")]
+    {
+        (Sender(()), Receiver(()))
+    }
+
     #[cfg(not(target_family = "wasm"))]
     {
         let (s, r) = mpsc::channel();
         (Sender(s), Receiver(r))
     }
-
-    #[cfg(target_family = "wasm")]
-    {
-        (Sender(()), Receiver(()))
-    }
 }
 
 struct Sender(
-    #[cfg(not(target_family = "wasm"))] mpsc::Sender<()>,
     #[cfg(target_family = "wasm")] (),
+    #[cfg(not(target_family = "wasm"))] mpsc::Sender<()>,
 );
 
 impl Sender {
@@ -108,15 +114,13 @@ impl Sender {
 }
 
 struct Receiver(
-    #[cfg(not(target_family = "wasm"))] mpsc::Receiver<()>,
     #[cfg(target_family = "wasm")] (),
+    #[cfg(not(target_family = "wasm"))] mpsc::Receiver<()>,
 );
 
 impl Receiver {
-    fn recv(&self) {
-        #[cfg(not(target_family = "wasm"))]
-        {
-            _ = self.0.recv();
-        }
+    #[cfg(not(target_family = "wasm"))]
+    fn recv(&self) -> bool {
+        self.0.recv().is_ok()
     }
 }
