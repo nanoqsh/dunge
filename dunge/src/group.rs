@@ -3,29 +3,13 @@
 use crate::{
     sl::{Global, GlobalOut, Ret},
     storage::Storage,
-    texture::{Sampler, Texture2d},
+    texture::Sampler,
     types::{self, MemberData, MemberType},
     uniform::Uniform,
-    usage::u,
     value::Value,
 };
 
 pub use dunge_shader::group::{Projection, Take};
-
-#[derive(Clone, Copy)]
-pub struct BoundTexture<'tex>(
-    // TODO: replace wgpu type
-    pub(crate) &'tex wgpu::TextureView,
-);
-
-impl<'tex> BoundTexture<'tex> {
-    pub fn new<U>(texture: &'tex Texture2d<U>) -> Self
-    where
-        U: u::Bind,
-    {
-        Self(texture.view())
-    }
-}
 
 /// Describes a group member type projection.
 ///
@@ -93,6 +77,9 @@ where
         Global::new(id, binding, out)
     }
 }
+
+#[derive(Clone, Copy)]
+pub struct BoundTexture<'tx>(pub(crate) &'tx wgpu::TextureView);
 
 impl private::Sealed for BoundTexture<'_> {}
 

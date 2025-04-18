@@ -94,7 +94,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     let stp = cx.make_uniform(&make_stp(buf_size));
     let (map_set, handler) = {
         let map = Map {
-            tex: BoundTexture::new(&render_buf),
+            tex: render_buf.bind(),
             sam: &sam,
             stp: &stp,
         };
@@ -144,7 +144,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
                 let buf_size = state.render_buf.size();
                 stp.update(&state.cx, &make_stp(buf_size));
                 let map = Map {
-                    tex: BoundTexture::new(&state.render_buf),
+                    tex: state.render_buf.bind(),
                     sam: &sam,
                     stp: &stp,
                 };

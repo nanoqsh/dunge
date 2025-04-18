@@ -25,9 +25,9 @@ fn render() -> Result<(), Error> {
     }
 
     #[derive(Group)]
-    struct Map<'tex> {
-        tex: BoundTexture<'tex>,
-        sam: &'tex Sampler,
+    struct Map<'tx> {
+        tex: BoundTexture<'tx>,
+        sam: &'tx Sampler,
     }
 
     let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map<'_>>| Render {
@@ -51,7 +51,7 @@ fn render() -> Result<(), Error> {
         let sampler = cx.make_sampler(Filter::Nearest);
 
         let map = Map {
-            tex: BoundTexture::new(&texture),
+            tex: texture.bind(),
             sam: &sampler,
         };
 

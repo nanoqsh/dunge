@@ -2,6 +2,7 @@
 
 use {
     crate::{
+        group::BoundTexture,
         state::State,
         usage::{TextureNoUsages, Use, u},
     },
@@ -290,8 +291,6 @@ impl Dimension for D2 {
     const N: DimensionsNumber = DimensionsNumber::D2;
 }
 
-pub type Texture2d<U> = Texture<D2, U>;
-
 pub struct Texture<D, U> {
     inner: Inner,
     ty: PhantomData<(D, U)>,
@@ -331,6 +330,18 @@ impl<D, U> Texture<D, U> {
     #[inline]
     pub(crate) fn view(&self) -> &wgpu::TextureView {
         &self.inner.view
+    }
+}
+
+pub type Texture2d<U> = Texture<D2, U>;
+
+impl<U> Texture2d<U> {
+    #[inline]
+    pub fn bind(&self) -> BoundTexture<'_>
+    where
+        U: u::Bind,
+    {
+        BoundTexture(self.view())
     }
 }
 
