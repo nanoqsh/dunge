@@ -1,9 +1,9 @@
 //! Shader group types and traits.
 
 use crate::{
+    buffer::Sampler,
     sl::{Global, GlobalOut, Ret},
     storage::Storage,
-    texture::Sampler,
     types::{self, MemberData, MemberType},
     uniform::Uniform,
     value::Value,

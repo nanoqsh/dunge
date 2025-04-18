@@ -2,13 +2,13 @@ type Error = Box<dyn std::error::Error>;
 
 pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     use dunge::{
+        buffer::{Filter, Sampler, Size},
         color::Rgba,
         glam::{Vec2, Vec4},
         group::BoundTexture,
         prelude::*,
         set::UniqueSet,
         sl::{Groups, InVertex, Index, Render},
-        texture::{Filter, Sampler, Size},
         uniform::Uniform,
     };
 

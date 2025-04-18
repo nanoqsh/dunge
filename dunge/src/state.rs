@@ -1,12 +1,12 @@
 use {
     crate::{
+        buffer::{self, _CopyBuffer, Destination, Format, Size, Source, Texture2d},
         color::Rgba,
         context::FailedMakeContext,
         draw::Draw,
         layer::{Layer, SetLayer},
         render::{Input, Render},
         runtime::{self, Ticket, Worker},
-        texture::{self, _CopyBuffer, Destination, Format, Size, Source, Texture2d},
         usage::u,
     },
     std::sync::Arc,
@@ -120,7 +120,7 @@ impl State {
         self.worker.work();
     }
 
-    pub fn draw<D>(&self, target: Target<'_>, draw: D)
+    pub fn _draw<D>(&self, target: Target<'_>, draw: D)
     where
         D: Draw,
     {
@@ -138,6 +138,7 @@ impl State {
         self.queue.submit([encoder.finish()]);
     }
 
+    #[inline]
     pub async fn run<F>(&self, f: F)
     where
         F: FnOnce(Scheduler<'_>),
@@ -229,7 +230,18 @@ impl Scheduler<'_> {
         S: Source,
         D: Destination,
     {
-        texture::copy(from, to, self.0);
+        if let Err(e) = buffer::try_copy(from, to, self.0) {
+            panic!("{e}");
+        }
+    }
+
+    #[inline]
+    pub fn try_copy<S, D>(&mut self, from: S, to: D) -> Result<(), buffer::SizeError>
+    where
+        S: Source,
+        D: Destination,
+    {
+        buffer::try_copy(from, to, self.0)
     }
 }
 

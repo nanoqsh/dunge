@@ -1,5 +1,6 @@
 #![cfg_attr(all(doc, not(doctest)), doc = include_str!("../README.md"))]
 
+pub mod buffer;
 pub mod color;
 mod context;
 mod draw;
@@ -13,7 +14,6 @@ pub mod set;
 mod shader;
 mod state;
 pub mod storage;
-pub mod texture;
 pub mod uniform;
 pub mod usage;
 pub mod value;
@@ -36,11 +36,10 @@ pub mod prelude {
 
     pub use crate::{
         Frame, Group, Instance, Options, Vertex,
+        buffer::{Format, TextureData},
         context::Context,
         mesh::MeshData,
-        sl,
-        texture::{Format, TextureData},
-        types,
+        sl, types,
     };
 
     #[cfg(feature = "winit")]

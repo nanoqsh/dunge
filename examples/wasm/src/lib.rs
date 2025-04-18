@@ -25,7 +25,7 @@ pub async fn start() {
     }
 
     let ws = dunge::from_element("root");
-    if let Err(err) = run(ws).await {
-        panic!("error: {err}");
+    if let Err(e) = run(ws).await {
+        panic!("error: {e}");
     }
 }

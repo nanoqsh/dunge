@@ -1,4 +1,5 @@
-//! Storage type representing a typed array that can be read by a shader
+//! Storage type representing a typed array that can be read by a shader.
+//!
 //! Must be used with data that can be directly casted to the GPU buffer.
 
 use {

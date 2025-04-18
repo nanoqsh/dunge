@@ -579,7 +579,7 @@ impl<U> Buffer<U> {
     }
 
     #[inline]
-    pub(crate) async fn read(&self, state: &State) -> Result<Read<'_>, ReadFailed>
+    pub(crate) async fn read(&mut self, state: &State) -> Result<Read<'_>, ReadFailed>
     where
         U: u::Read,
     {
@@ -625,7 +625,7 @@ impl BufferInner {
         Self(buf)
     }
 
-    async fn read(&self, state: &State) -> Result<Read<'_>, ReadFailed> {
+    async fn read(&mut self, state: &State) -> Result<Read<'_>, ReadFailed> {
         let ticket = Arc::new(Ticket::new());
 
         self.0.map_async(wgpu::MapMode::Read, .., {
@@ -827,7 +827,7 @@ impl<D, U> Destination for Texture<D, U> where U: u::CopyTo {}
 impl<U> Destination for Buffer<U> where U: u::CopyTo {}
 
 #[inline]
-pub(crate) fn copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder)
+pub(crate) fn try_copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder) -> Result<(), SizeError>
 where
     S: Source,
     D: Destination,
@@ -843,10 +843,35 @@ where
     }
 }
 
-fn copy_texture_to_buffer(from: &TextureInner, to: &BufferInner, en: &mut wgpu::CommandEncoder) {
-    // TODO: check size
+#[derive(Debug)]
+pub struct SizeError {
+    pub from_size: u64,
+    pub to_size: u64,
+}
 
+impl fmt::Display for SizeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self { from_size, to_size } = self;
+        write!(f, "can't copy from size {from_size} to size {to_size}")
+    }
+}
+
+impl error::Error for SizeError {}
+
+fn copy_texture_to_buffer(
+    from: &TextureInner,
+    to: &BufferInner,
+    en: &mut wgpu::CommandEncoder,
+) -> Result<(), SizeError> {
     let size = from.texture.size();
+    let from_size = u64::from(from.bytes_per_row_aligned)
+        * u64::from(size.height)
+        * u64::from(size.depth_or_array_layers);
+
+    let to_size = to.0.size();
+    if from_size != to_size {
+        return Err(SizeError { from_size, to_size });
+    }
 
     en.copy_texture_to_buffer(
         from.texture.as_image_copy(),
@@ -860,12 +885,23 @@ fn copy_texture_to_buffer(from: &TextureInner, to: &BufferInner, en: &mut wgpu::
         },
         size,
     );
+
+    Ok(())
 }
 
-fn copy_buffer_to_buffer(from: &BufferInner, to: &BufferInner, en: &mut wgpu::CommandEncoder) {
-    // TODO: check size
+fn copy_buffer_to_buffer(
+    from: &BufferInner,
+    to: &BufferInner,
+    en: &mut wgpu::CommandEncoder,
+) -> Result<(), SizeError> {
+    let from_size = from.0.size();
+    let to_size = to.0.size();
+    if from_size != to_size {
+        return Err(SizeError { from_size, to_size });
+    }
 
     en.copy_buffer_to_buffer(&from.0, 0, &to.0, 0, from.0.size());
+    Ok(())
 }
 
 pub struct _CopyBuffer {
@@ -966,8 +1002,8 @@ impl<'slice> _CopyBufferView<'slice> {
 
         self.0.map_async(MapMode::Read, tx);
         _ = state.device().poll(PollType::Wait);
-        if let Err(err) = rx.await {
-            panic!("failed to copy texture: {err}");
+        if let Err(e) = rx.await {
+            panic!("failed to copy texture: {e}");
         }
 
         _Mapped(self.0.get_mapped_range())

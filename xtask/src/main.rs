@@ -10,16 +10,16 @@ type Error = Box<dyn error::Error>;
 fn main() -> ExitCode {
     let (opts, mode) = match parse() {
         Ok(ok) => ok,
-        Err(err) => {
-            eprintln!("args error: {err}");
+        Err(e) => {
+            eprintln!("args error: {e}");
             return ExitCode::FAILURE;
         }
     };
 
     match start(opts, mode) {
         Ok(()) => ExitCode::SUCCESS,
-        Err(err) => {
-            eprintln!("error: {err}");
+        Err(e) => {
+            eprintln!("error: {e}");
             ExitCode::FAILURE
         }
     }
@@ -133,8 +133,8 @@ fn run(cmd: &mut Command, name: &str) -> Run {
     match cmd.status() {
         Ok(status) if status.success() => Run::Ok,
         Ok(_) => Run::Failed(format!("execution of {name} failed")),
-        Err(err) if err.kind() == ErrorKind::NotFound => Run::NotFound,
-        Err(err) => Run::Failed(format!("failed to run {name}: {err}")),
+        Err(e) if e.kind() == ErrorKind::NotFound => Run::NotFound,
+        Err(e) => Run::Failed(format!("failed to run {name}: {e}")),
     }
 }
 
@@ -150,7 +150,7 @@ fn install(name: &str) -> Result<(), Error> {
         ])
         .arg(name)
         .status()
-        .map_err(|err| format!("failed to run cargo: {err}"))?;
+        .map_err(|e| format!("failed to run cargo: {e}"))?;
 
     if status.success() {
         Ok(())

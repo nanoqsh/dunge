@@ -46,7 +46,7 @@ pub fn run(routes: &[Route]) {
         let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 3000));
         let listener = match TcpListener::bind(addr).await {
             Ok(listener) => listener,
-            Err(err) => return err,
+            Err(e) => return e,
         };
 
         println!("server listens on http://{addr}");
@@ -54,7 +54,7 @@ pub fn run(routes: &[Route]) {
         loop {
             let stream = match listener.accept().await {
                 Ok((stream, _)) => FuturesIo::new(stream),
-                Err(err) => return err,
+                Err(e) => return e,
             };
 
             let serve = service::service_fn(async |req| {
@@ -63,8 +63,8 @@ pub fn run(routes: &[Route]) {
             });
 
             let task = async move {
-                if let Err(err) = http1::Builder::new().serve_connection(stream, serve).await {
-                    eprintln!("connection error: {err}");
+                if let Err(e) = http1::Builder::new().serve_connection(stream, serve).await {
+                    eprintln!("connection error: {e}");
                 }
             };
 
@@ -72,8 +72,8 @@ pub fn run(routes: &[Route]) {
         }
     };
 
-    let err = future::block_on(ex.run(run));
-    eprintln!("io error: {err}");
+    let e = future::block_on(ex.run(run));
+    eprintln!("io error: {e}");
 }
 
 type Route = (&'static str, Page);

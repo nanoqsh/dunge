@@ -1,6 +1,10 @@
 use {
     crate::{
         Vertex,
+        buffer::{
+            _CopyBuffer, _CopyBufferView, _MapResult, _Mapped, Buffer, BufferData, Filter, Read,
+            ReadFailed, Sampler, Texture, Texture2d, TextureData, Write, WriteFailed,
+        },
         draw::Draw,
         instance::Row,
         layer::{Config, Layer},
@@ -11,10 +15,6 @@ use {
         sl,
         state::{AsTarget, Scheduler, State},
         storage::{Storage, StorageValue},
-        texture::{
-            _CopyBuffer, _CopyBufferView, _MapResult, _Mapped, Buffer, BufferData, Filter, Read,
-            ReadFailed, Sampler, Texture, Texture2d, TextureData, Write, WriteFailed,
-        },
         uniform::Uniform,
         usage::u,
         value::Value,
@@ -111,6 +111,10 @@ impl Context {
         Texture::new(&self.0, data)
     }
 
+    pub fn make_sampler(&self, filter: Filter) -> Sampler {
+        Sampler::new(&self.0, filter)
+    }
+
     pub fn make_buffer<U>(&self, data: BufferData<'_, U>) -> Buffer<U>
     where
         U: u::BufferUsages,
@@ -118,15 +122,11 @@ impl Context {
         Buffer::new(&self.0, data)
     }
 
-    pub fn make_sampler(&self, filter: Filter) -> Sampler {
-        Sampler::new(&self.0, filter)
-    }
-
     pub fn _make_copy_buffer(&self, size: (u32, u32)) -> _CopyBuffer {
         _CopyBuffer::new(&self.0, size)
     }
 
-    pub async fn read<'buf, U>(&self, buf: &'buf Buffer<U>) -> Result<Read<'buf>, ReadFailed>
+    pub async fn read<'buf, U>(&self, buf: &'buf mut Buffer<U>) -> Result<Read<'buf>, ReadFailed>
     where
         U: u::Read,
     {
@@ -170,7 +170,7 @@ impl Context {
         D: Draw,
     {
         let target = target.as_target();
-        self.0.draw(target, draw);
+        self.0._draw(target, draw);
     }
 
     pub async fn shed<F>(&self, f: F)

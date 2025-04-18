@@ -162,9 +162,9 @@ impl Module {
 
             let info = match validator.validate(&nm) {
                 Ok(info) => info,
-                Err(err) => {
+                Err(e) => {
                     log::error!("{nm:#?}");
-                    panic!("shader error: {err}\n{val:#?}", val = err.as_inner());
+                    panic!("shader error: {e}\n{val:#?}", val = e.as_inner());
                 }
             };
 
@@ -174,7 +174,7 @@ impl Module {
 
                 wgsl = match wgsl::write_string(&nm, &info, wgsl::WriterFlags::all()) {
                     Ok(wgsl) => wgsl,
-                    Err(err) => panic!("wgsl writer error: {err}"),
+                    Err(e) => panic!("wgsl writer error: {e}"),
                 };
             }
 

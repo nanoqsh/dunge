@@ -2,11 +2,11 @@
 
 use {
     crate::{
+        buffer::Format,
         context::{Context, FailedMakeContext},
         el::{self, LoopError},
         element::Element,
         state::{State, Target},
-        texture::Format,
         update::IntoUpdate,
     },
     std::{error, fmt, sync::Arc},
@@ -357,10 +357,10 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
             ErrorKind::UnsupportedSurface => write!(f, "unsupported surface"),
-            ErrorKind::EventLoop(err) => err.fmt(f),
-            ErrorKind::Os(err) => err.fmt(f),
-            ErrorKind::Surface(err) => err.fmt(f),
-            ErrorKind::Context(err) => err.fmt(f),
+            ErrorKind::EventLoop(e) => e.fmt(f),
+            ErrorKind::Os(e) => e.fmt(f),
+            ErrorKind::Surface(e) => e.fmt(f),
+            ErrorKind::Context(e) => e.fmt(f),
         }
     }
 }
@@ -369,10 +369,10 @@ impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match &self.0 {
             ErrorKind::UnsupportedSurface => None,
-            ErrorKind::EventLoop(err) => Some(err),
-            ErrorKind::Os(err) => Some(err),
-            ErrorKind::Surface(err) => Some(err),
-            ErrorKind::Context(err) => Some(err),
+            ErrorKind::EventLoop(e) => Some(e),
+            ErrorKind::Os(e) => Some(e),
+            ErrorKind::Surface(e) => Some(e),
+            ErrorKind::Context(e) => Some(e),
         }
     }
 }

@@ -3,11 +3,11 @@
 use {
     crate::{
         Group,
+        buffer::Sampler,
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
         storage::Storage,
-        texture::Sampler,
         uniform::Uniform,
     },
     std::{marker::PhantomData, sync::Arc},

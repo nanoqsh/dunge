@@ -6,10 +6,10 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
+            buffer::Size,
             color::Rgba,
             prelude::*,
             sl::{self, InVertex, Render},
-            texture::Size,
         },
         glam::{Vec2, Vec3},
         helpers::image::Image,
@@ -52,7 +52,7 @@ fn render() -> Result<(), Error> {
         cx.make_mesh(&DATA)
     };
 
-    let buf = {
+    let mut buf = {
         let data = view.copy_buffer_data().read();
         cx.make_buffer(data)
     };
@@ -65,7 +65,7 @@ fn render() -> Result<(), Error> {
         })
         .await;
 
-        cx.read(&buf).await
+        cx.read(&mut buf).await
     })?;
 
     let data = bytemuck::cast_slice(&read);

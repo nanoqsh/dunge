@@ -2,13 +2,13 @@
 
 use {
     crate::{
+        buffer::Format,
         instance::Set,
         mesh::Mesh,
         render::Input,
         set::Bind,
         shader::{ShaderData, SlotNumbers},
         state::State,
-        texture::Format,
     },
     std::{iter, marker::PhantomData},
 };

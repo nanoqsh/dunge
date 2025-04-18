@@ -76,9 +76,9 @@ pub enum LoopError {
 impl fmt::Display for LoopError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Window(err) => err.fmt(f),
-            Self::EventLoop(err) => err.fmt(f),
-            Self::Failed(err) => err.fmt(f),
+            Self::Window(e) => e.fmt(f),
+            Self::EventLoop(e) => e.fmt(f),
+            Self::Failed(e) => e.fmt(f),
         }
     }
 }
@@ -86,9 +86,9 @@ impl fmt::Display for LoopError {
 impl error::Error for LoopError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            Self::Window(err) => Some(err),
-            Self::EventLoop(err) => Some(err),
-            Self::Failed(err) => Some(err.as_ref()),
+            Self::Window(e) => Some(e),
+            Self::EventLoop(e) => Some(e),
+            Self::Failed(e) => Some(e.as_ref()),
         }
     }
 }
@@ -299,9 +299,9 @@ where
                         el.exit();
                         return;
                     }
-                    Then::Fail(err) => {
-                        log::error!("failed: {err:?}");
-                        self.out = Err(LoopError::Failed(err));
+                    Then::Fail(e) => {
+                        log::error!("failed: {e:?}");
+                        self.out = Err(LoopError::Failed(e));
                         el.exit();
                         return;
                     }
@@ -311,7 +311,7 @@ where
                 match self.ctrl.view.output() {
                     Ok(output) => {
                         let target = output.target();
-                        self.cx.state().draw(target, &*upd);
+                        self.cx.state()._draw(target, &*upd);
                         output.present();
                     }
                     Err(wgpu::SurfaceError::Timeout) => log::info!("suface error: timeout"),
