@@ -14,13 +14,13 @@ pub use dunge_shader::group::{Projection, Take};
 /// Describes a group member type projection.
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
-pub trait MemberProjection: private::Sealed {
+pub trait MemberProjection: s::Sealed {
     const MEMBER: MemberData;
     type Field;
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field;
 }
 
-impl<V> private::Sealed for &Uniform<V> where V: Value {}
+impl<V> s::Sealed for &Uniform<V> where V: Value {}
 
 impl<V> MemberProjection for &Uniform<V>
 where
@@ -38,7 +38,7 @@ where
     }
 }
 
-impl<V, M> private::Sealed for &Storage<V, M> where V: Value {}
+impl<V, M> s::Sealed for &Storage<V, M> where V: Value {}
 
 impl<V, M> MemberProjection for &Storage<V, M>
 where
@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<V, M> private::Sealed for &Storage<[V], M> where V: Value {}
+impl<V, M> s::Sealed for &Storage<[V], M> where V: Value {}
 
 impl<V, M> MemberProjection for &Storage<[V], M>
 where
@@ -81,7 +81,7 @@ where
 #[derive(Clone, Copy)]
 pub struct BoundTexture<'tx>(pub(crate) &'tx wgpu::TextureView);
 
-impl private::Sealed for BoundTexture<'_> {}
+impl s::Sealed for BoundTexture<'_> {}
 
 impl MemberProjection for BoundTexture<'_> {
     const MEMBER: MemberData = MemberData {
@@ -96,7 +96,7 @@ impl MemberProjection for BoundTexture<'_> {
     }
 }
 
-impl private::Sealed for &Sampler {}
+impl s::Sealed for &Sampler {}
 
 impl MemberProjection for &Sampler {
     const MEMBER: MemberData = MemberData {
@@ -111,6 +111,6 @@ impl MemberProjection for &Sampler {
     }
 }
 
-mod private {
+mod s {
     pub trait Sealed {}
 }

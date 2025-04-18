@@ -12,8 +12,8 @@ use {
         state::{AsTarget, Scheduler, State},
         storage::{Storage, StorageValue},
         texture::{
-            CopyBuffer, CopyBufferView, Filter, MapResult, Mapped, Sampler, Texture, Texture2d,
-            TextureData,
+            _CopyBuffer, _CopyBufferView, _MapResult, _Mapped, Buffer, BufferData, Filter, Read,
+            ReadFailed, Sampler, Texture, Texture2d, TextureData, Write, WriteFailed,
         },
         uniform::Uniform,
         usage::u,
@@ -111,23 +111,44 @@ impl Context {
         Texture::new(&self.0, data)
     }
 
+    pub fn make_buffer<U>(&self, data: BufferData<'_, U>) -> Buffer<U>
+    where
+        U: u::BufferUsages,
+    {
+        Buffer::new(&self.0, data)
+    }
+
     pub fn make_sampler(&self, filter: Filter) -> Sampler {
         Sampler::new(&self.0, filter)
     }
 
-    pub fn make_copy_buffer(&self, size: (u32, u32)) -> CopyBuffer {
-        CopyBuffer::new(&self.0, size)
+    pub fn _make_copy_buffer(&self, size: (u32, u32)) -> _CopyBuffer {
+        _CopyBuffer::new(&self.0, size)
     }
 
-    pub async fn map_view<'slice, S, R>(
+    pub async fn read<'buf, U>(&self, buf: &'buf Buffer<U>) -> Result<Read<'buf>, ReadFailed>
+    where
+        U: u::Read,
+    {
+        buf.read(&self.0).await
+    }
+
+    pub async fn write<'buf, U>(&self, buf: &'buf mut Buffer<U>) -> Result<Write<'buf>, WriteFailed>
+    where
+        U: u::Write,
+    {
+        buf.write(&self.0).await
+    }
+
+    pub async fn _map_view<'slice, S, R>(
         &self,
-        view: CopyBufferView<'slice>,
+        view: _CopyBufferView<'slice>,
         tx: S,
         rx: R,
-    ) -> Mapped<'slice>
+    ) -> _Mapped<'slice>
     where
-        S: FnOnce(MapResult) + wgpu::WasmNotSend + 'static,
-        R: IntoFuture<Output = MapResult>,
+        S: FnOnce(_MapResult) + wgpu::WasmNotSend + 'static,
+        R: IntoFuture<Output = _MapResult>,
     {
         view.map(&self.0, tx, rx).await
     }
@@ -143,7 +164,7 @@ impl Context {
         set::update(&self.0, set, handler, group);
     }
 
-    pub fn draw_to<T, D>(&self, target: &T, draw: D)
+    pub fn _draw_to<T, D>(&self, target: &T, draw: D)
     where
         T: AsTarget,
         D: Draw,

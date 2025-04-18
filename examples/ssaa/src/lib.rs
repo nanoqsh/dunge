@@ -166,7 +166,7 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
                     .draw_points(3);
             };
 
-            state.cx.draw_to(&state.render_buf, dunge::draw(main));
+            state.cx._draw_to(&state.render_buf, dunge::draw(main));
 
             frame
                 .set_layer(&screen_layer, Options::default())

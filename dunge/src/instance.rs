@@ -18,13 +18,13 @@ pub use dunge_shader::instance::Projection;
 /// Describes an instance member type projection.
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
-pub trait MemberProjection: private::Sealed {
+pub trait MemberProjection: s::Sealed {
     const TYPE: ValueType;
     type Field;
     fn member_projection(id: u32) -> Self::Field;
 }
 
-impl private::Sealed for Row<glam::Vec2> {}
+impl s::Sealed for Row<glam::Vec2> {}
 
 impl MemberProjection for Row<glam::Vec2> {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
@@ -35,7 +35,7 @@ impl MemberProjection for Row<glam::Vec2> {
     }
 }
 
-impl private::Sealed for Row<glam::Vec3> {}
+impl s::Sealed for Row<glam::Vec3> {}
 
 impl MemberProjection for Row<glam::Vec3> {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
@@ -46,7 +46,7 @@ impl MemberProjection for Row<glam::Vec3> {
     }
 }
 
-impl private::Sealed for Row<glam::Vec4> {}
+impl s::Sealed for Row<glam::Vec4> {}
 
 impl MemberProjection for Row<glam::Vec4> {
     const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
@@ -169,6 +169,6 @@ impl fmt::Display for UpdateError {
 
 impl error::Error for UpdateError {}
 
-mod private {
+mod s {
     pub trait Sealed {}
 }

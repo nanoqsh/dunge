@@ -10,13 +10,13 @@ pub use dunge_shader::vertex::{Projection, verts_as_bytes};
 /// Describes an input type projection.
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
-pub trait InputProjection: private::F32Aligned {
+pub trait InputProjection: f::F32Aligned {
     const TYPE: VectorType;
     type Field;
     fn input_projection(id: u32, index: u32) -> Self::Field;
 }
 
-impl private::F32Aligned for [f32; 2] {}
+impl f::F32Aligned for [f32; 2] {}
 
 impl InputProjection for [f32; 2] {
     const TYPE: VectorType = VectorType::Vec2f;
@@ -27,7 +27,7 @@ impl InputProjection for [f32; 2] {
     }
 }
 
-impl private::F32Aligned for [f32; 3] {}
+impl f::F32Aligned for [f32; 3] {}
 
 impl InputProjection for [f32; 3] {
     const TYPE: VectorType = VectorType::Vec3f;
@@ -38,7 +38,7 @@ impl InputProjection for [f32; 3] {
     }
 }
 
-impl private::F32Aligned for [f32; 4] {}
+impl f::F32Aligned for [f32; 4] {}
 
 impl InputProjection for [f32; 4] {
     const TYPE: VectorType = VectorType::Vec4f;
@@ -49,7 +49,7 @@ impl InputProjection for [f32; 4] {
     }
 }
 
-impl private::F32Aligned for glam::Vec2 {}
+impl f::F32Aligned for glam::Vec2 {}
 
 impl InputProjection for glam::Vec2 {
     const TYPE: VectorType = VectorType::Vec2f;
@@ -60,7 +60,7 @@ impl InputProjection for glam::Vec2 {
     }
 }
 
-impl private::F32Aligned for glam::Vec3 {}
+impl f::F32Aligned for glam::Vec3 {}
 
 impl InputProjection for glam::Vec3 {
     const TYPE: VectorType = VectorType::Vec3f;
@@ -79,7 +79,7 @@ mod ignore {
 
 pub const fn check_projection_type<P>()
 where
-    P: private::F32Aligned,
+    P: f::F32Aligned,
 {
     assert!(
         align_of::<P>() == align_of::<f32>(),
@@ -87,6 +87,6 @@ where
     );
 }
 
-mod private {
+mod f {
     pub trait F32Aligned {}
 }

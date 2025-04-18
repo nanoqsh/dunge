@@ -3,7 +3,7 @@ use std::pin::Pin;
 type Sender<T> = Box<dyn FnOnce(T) + Send>;
 type Receiver<T> = Pin<Box<dyn Future<Output = T>>>;
 
-pub fn oneshot<T>() -> (Sender<T>, Receiver<T>)
+pub fn _oneshot<T>() -> (Sender<T>, Receiver<T>)
 where
     T: Send + 'static,
 {

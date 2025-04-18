@@ -5,18 +5,11 @@ use {
         draw::Draw,
         layer::{Layer, SetLayer},
         render::{Input, Render},
-        runtime::{self, Worker},
-        texture::{CopyBuffer, Format, Size, Texture2d},
+        runtime::{self, Ticket, Worker},
+        texture::{self, _CopyBuffer, Destination, Format, Size, Source, Texture2d},
         usage::u,
     },
-    std::{
-        future,
-        sync::{
-            Arc, Mutex,
-            atomic::{AtomicBool, Ordering},
-        },
-        task::{Poll, Waker},
-    },
+    std::sync::Arc,
 };
 
 const DEFAULT_BACKEND: wgpu::Backends = {
@@ -123,6 +116,10 @@ impl State {
         &self.queue
     }
 
+    pub fn work(&self) {
+        self.worker.work();
+    }
+
     pub fn draw<D>(&self, target: Target<'_>, draw: D)
     where
         D: Draw,
@@ -153,36 +150,16 @@ impl State {
         f(Scheduler(&mut encoder));
 
         self.queue.submit([encoder.finish()]);
-        self.worker.work();
+        self.work();
 
-        struct Notify {
-            done: AtomicBool,
-            waker: Mutex<Waker>,
-        }
-
-        let notify = Arc::new(Notify {
-            done: AtomicBool::new(false),
-            waker: Mutex::new(Waker::noop().clone()),
-        });
+        let ticket = Arc::new(Ticket::new());
 
         self.queue.on_submitted_work_done({
-            let notify = notify.clone();
-            move || {
-                notify.done.store(true, Ordering::Release);
-                notify.waker.lock().expect("lock waker").wake_by_ref();
-            }
+            let notify = ticket.clone();
+            move || notify.done()
         });
 
-        let fu = future::poll_fn(|cx| {
-            if notify.done.load(Ordering::Acquire) {
-                Poll::Ready(())
-            } else {
-                *notify.waker.lock().expect("lock waker") = cx.waker().clone();
-                Poll::Pending
-            }
-        });
-
-        fu.await;
+        ticket.wait().await;
     }
 }
 
@@ -247,8 +224,12 @@ impl Scheduler<'_> {
     }
 
     #[inline]
-    pub fn copy(&self, _from: (), _to: ()) {
-        todo!()
+    pub fn copy<S, D>(&mut self, from: S, to: D)
+    where
+        S: Source,
+        D: Destination,
+    {
+        texture::copy(from, to, self.0);
     }
 }
 
@@ -345,7 +326,7 @@ impl Frame<'_, '_> {
         layer._set(pass)
     }
 
-    pub fn copy_texture<U>(&mut self, buffer: &CopyBuffer, texture: &Texture2d<U>)
+    pub fn copy_texture<U>(&mut self, buffer: &_CopyBuffer, texture: &Texture2d<U>)
     where
         U: u::CopyFrom,
     {
@@ -374,6 +355,15 @@ impl<'view> Target<'view> {
 /// Something that contains a [target](Target).
 pub trait AsTarget {
     fn as_target(&self) -> Target<'_>;
+}
+
+impl<A> AsTarget for &A
+where
+    A: AsTarget,
+{
+    fn as_target(&self) -> Target<'_> {
+        (**self).as_target()
+    }
 }
 
 impl<U> AsTarget for Texture2d<U>

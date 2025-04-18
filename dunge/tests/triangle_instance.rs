@@ -64,7 +64,7 @@ fn render() -> Result<(), Error> {
         Transform(cx.make_row(&POSS), cx.make_row(&COLS))
     };
 
-    let buffer = cx.make_copy_buffer(size);
+    let buffer = cx._make_copy_buffer(size);
     let opts = Rgba::from_standard([0., 0., 0., 1.]);
     let draw = dunge::draw(|mut frame| {
         frame
@@ -76,10 +76,10 @@ fn render() -> Result<(), Error> {
         frame.copy_texture(&buffer, &view);
     });
 
-    cx.draw_to(&view, draw);
+    cx._draw_to(&view, draw);
     let mapped = dunge::block_on({
-        let (tx, rx) = helpers::oneshot();
-        cx.map_view(buffer.view(), tx, rx)
+        let (tx, rx) = helpers::_oneshot();
+        cx._map_view(buffer.view(), tx, rx)
     });
 
     let data = mapped.data();

@@ -34,7 +34,6 @@ where
 pub(crate) mod u {
     use super::*;
 
-    #[expect(dead_code)]
     pub trait BufferUsages {
         fn usages() -> wgpu::BufferUsages;
     }

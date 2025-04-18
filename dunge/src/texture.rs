@@ -3,10 +3,11 @@
 use {
     crate::{
         group::BoundTexture,
+        runtime::Ticket,
         state::State,
-        usage::{TextureNoUsages, Use, u},
+        usage::{BufferNoUsages, TextureNoUsages, Use, u},
     },
-    std::{error, fmt, marker::PhantomData, num::NonZeroU32},
+    std::{error, fmt, marker::PhantomData, num::NonZeroU32, ops, sync::Arc},
 };
 
 /// The texture format type.
@@ -23,7 +24,7 @@ pub enum Format {
 
 impl Format {
     #[inline]
-    pub(crate) const fn bytes(self) -> u32 {
+    pub const fn bytes(self) -> u32 {
         match self {
             Self::SrgbAlpha | Self::SbgrAlpha | Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
             Self::Byte => 1,
@@ -292,7 +293,7 @@ impl Dimension for D2 {
 }
 
 pub struct Texture<D, U> {
-    inner: Inner,
+    inner: TextureInner,
     ty: PhantomData<(D, U)>,
 }
 
@@ -312,7 +313,7 @@ impl<D, U> Texture<D, U> {
         };
 
         Self {
-            inner: Inner::new(state, new),
+            inner: TextureInner::new(state, new),
             ty: PhantomData,
         }
     }
@@ -328,10 +329,24 @@ impl<D, U> Texture<D, U> {
     }
 
     #[inline]
+    pub fn bytes_per_row_aligned(&self) -> u32 {
+        self.inner.bytes_per_row_aligned
+    }
+
+    #[inline]
     pub(crate) fn view(&self) -> &wgpu::TextureView {
         &self.inner.view
     }
+
+    #[inline]
+    pub fn copy_buffer_data<'data>(&self) -> BufferData<'data, BufferCopyTo> {
+        let size = self.inner.texture.size();
+        let size = self.inner.bytes_per_row_aligned * size.height * size.depth_or_array_layers;
+        BufferData::empty(size).copy_to()
+    }
 }
+
+type BufferCopyTo = <BufferNoUsages as Use<dyn u::CopyTo>>::Out;
 
 pub type Texture2d<U> = Texture<D2, U>;
 
@@ -345,13 +360,16 @@ impl<U> Texture2d<U> {
     }
 }
 
-struct Inner {
+struct TextureInner {
     texture: wgpu::Texture,
     view: wgpu::TextureView,
+    bytes_per_row_aligned: u32,
 }
 
-impl Inner {
+impl TextureInner {
     fn new(state: &State, new: NewTexture<'_>) -> Self {
+        use wgpu::util;
+
         let NewTexture {
             size,
             data,
@@ -382,6 +400,10 @@ impl Inner {
             state.device().create_texture(&desc)
         };
 
+        let bytes_per_row = size.width * format.bytes();
+        let bytes_per_row_aligned =
+            util::align_to(bytes_per_row, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+
         if copy_data {
             state.queue().write_texture(
                 wgpu::TexelCopyTextureInfo {
@@ -393,7 +415,7 @@ impl Inner {
                 data,
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(size.width * format.bytes()),
+                    bytes_per_row: Some(bytes_per_row),
                     rows_per_image: Some(size.height),
                 },
                 size,
@@ -405,7 +427,11 @@ impl Inner {
             texture.create_view(&desc)
         };
 
-        Self { texture, view }
+        Self {
+            texture,
+            view,
+            bytes_per_row_aligned,
+        }
     }
 }
 
@@ -455,13 +481,400 @@ impl Sampler {
     }
 }
 
-pub struct CopyBuffer {
+pub struct BufferData<'data, U> {
+    data: &'data [u8],
+    size: u32,
+    usage: PhantomData<U>,
+}
+
+impl<'data> BufferData<'data, BufferNoUsages> {
+    #[inline]
+    pub fn empty(size: u32) -> Self {
+        Self {
+            data: &[],
+            size,
+            usage: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn new(data: &'data [u8]) -> Self {
+        let Ok(size) = data.len().try_into() else {
+            panic!("the buffer size doesn't fit into u32");
+        };
+
+        let empty = Self::empty(size);
+        Self { data, ..empty }
+    }
+}
+
+impl<'data, U> BufferData<'data, U> {
+    #[inline]
+    fn to<T>(self) -> BufferData<'data, U::Out>
+    where
+        T: ?Sized,
+        U: Use<T>,
+    {
+        BufferData {
+            data: self.data,
+            size: self.size,
+            usage: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn read(self) -> BufferData<'data, U::Out>
+    where
+        U: Use<dyn u::Read>,
+    {
+        self.to()
+    }
+
+    #[inline]
+    pub fn write(self) -> BufferData<'data, U::Out>
+    where
+        U: Use<dyn u::Write>,
+    {
+        self.to()
+    }
+
+    #[inline]
+    pub fn copy_from(self) -> BufferData<'data, U::Out>
+    where
+        U: Use<dyn u::CopyFrom>,
+    {
+        self.to()
+    }
+
+    #[inline]
+    pub fn copy_to(self) -> BufferData<'data, U::Out>
+    where
+        U: Use<dyn u::CopyTo>,
+    {
+        self.to()
+    }
+}
+
+pub struct Buffer<U> {
+    inner: BufferInner,
+    ty: PhantomData<U>,
+}
+
+impl<U> Buffer<U> {
+    #[inline]
+    pub(crate) fn new(state: &State, data: BufferData<'_, U>) -> Self
+    where
+        U: u::BufferUsages,
+    {
+        let new = NewBuffer {
+            data: data.data,
+            size: data.size,
+            usage: U::usages(),
+        };
+
+        Self {
+            inner: BufferInner::new(state, new),
+            ty: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub(crate) async fn read(&self, state: &State) -> Result<Read<'_>, ReadFailed>
+    where
+        U: u::Read,
+    {
+        self.inner.read(state).await
+    }
+
+    #[inline]
+    pub(crate) async fn write(&mut self, state: &State) -> Result<Write<'_>, WriteFailed>
+    where
+        U: u::Write,
+    {
+        self.inner.write(state).await
+    }
+}
+
+struct BufferInner(wgpu::Buffer);
+
+impl BufferInner {
+    fn new(state: &State, new: NewBuffer<'_>) -> Self {
+        use wgpu::util::{self, DeviceExt};
+
+        let NewBuffer { size, data, usage } = new;
+
+        let buf = if data.is_empty() {
+            let desc = wgpu::BufferDescriptor {
+                label: None,
+                size: u64::from(size),
+                usage,
+                mapped_at_creation: false,
+            };
+
+            state.device().create_buffer(&desc)
+        } else {
+            let desc = util::BufferInitDescriptor {
+                label: None,
+                contents: data,
+                usage,
+            };
+
+            state.device().create_buffer_init(&desc)
+        };
+
+        Self(buf)
+    }
+
+    async fn read(&self, state: &State) -> Result<Read<'_>, ReadFailed> {
+        let ticket = Arc::new(Ticket::new());
+
+        self.0.map_async(wgpu::MapMode::Read, .., {
+            let ticket = ticket.clone();
+            move |res| {
+                if res.is_ok() {
+                    ticket.done();
+                } else {
+                    ticket.fail();
+                }
+            }
+        });
+
+        state.work();
+        if ticket.wait().await {
+            let view = self.0.get_mapped_range(..);
+
+            Ok(Read {
+                view,
+                _unmap: Unmap(&self.0),
+            })
+        } else {
+            Err(ReadFailed)
+        }
+    }
+
+    async fn write(&mut self, state: &State) -> Result<Write<'_>, WriteFailed> {
+        let ticket = Arc::new(Ticket::new());
+
+        self.0.map_async(wgpu::MapMode::Write, .., {
+            let ticket = ticket.clone();
+            move |res| {
+                if res.is_ok() {
+                    ticket.done();
+                } else {
+                    ticket.fail();
+                }
+            }
+        });
+
+        state.work();
+        if ticket.wait().await {
+            let view = self.0.get_mapped_range_mut(..);
+
+            Ok(Write {
+                view,
+                _unmap: Unmap(&self.0),
+            })
+        } else {
+            Err(WriteFailed)
+        }
+    }
+}
+
+struct NewBuffer<'data> {
+    data: &'data [u8],
+    size: u32,
+    usage: wgpu::BufferUsages,
+}
+
+struct Unmap<'buf>(&'buf wgpu::Buffer);
+
+impl Drop for Unmap<'_> {
+    fn drop(&mut self) {
+        self.0.unmap();
+    }
+}
+
+pub struct Read<'buf> {
+    view: wgpu::BufferView<'buf>,
+
+    // drop order is important here!
+    // `Unmap` unmaps the view in drop
+    // while it should be already dropped
+    _unmap: Unmap<'buf>,
+}
+
+impl ops::Deref for Read<'_> {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.view
+    }
+}
+
+impl AsRef<[u8]> for Read<'_> {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &self.view
+    }
+}
+
+#[derive(Debug)]
+pub struct ReadFailed;
+
+impl fmt::Display for ReadFailed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("failed to read buffer")
+    }
+}
+
+impl error::Error for ReadFailed {}
+
+pub struct Write<'buf> {
+    view: wgpu::BufferViewMut<'buf>,
+
+    // drop order is important here!
+    // `Unmap` unmaps the view in drop
+    // while it should be already dropped
+    _unmap: Unmap<'buf>,
+}
+
+impl ops::Deref for Write<'_> {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.view
+    }
+}
+
+impl ops::DerefMut for Write<'_> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.view
+    }
+}
+
+impl AsRef<[u8]> for Write<'_> {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &self.view
+    }
+}
+
+impl AsMut<[u8]> for Write<'_> {
+    #[inline]
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.view
+    }
+}
+
+#[derive(Debug)]
+pub struct WriteFailed;
+
+impl fmt::Display for WriteFailed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("failed to write buffer")
+    }
+}
+
+impl error::Error for WriteFailed {}
+
+enum Inner<'inner> {
+    Texture(&'inner TextureInner),
+    Buffer(&'inner BufferInner),
+}
+
+mod i {
+    pub struct Wrap<'inner>(pub(super) super::Inner<'inner>);
+
+    pub trait AsInner {
+        fn as_inner(&self) -> Wrap<'_>;
+    }
+}
+
+impl<I> i::AsInner for &I
+where
+    I: i::AsInner,
+{
+    fn as_inner(&self) -> i::Wrap<'_> {
+        (**self).as_inner()
+    }
+}
+
+impl<D, U> i::AsInner for Texture<D, U> {
+    fn as_inner(&self) -> i::Wrap<'_> {
+        i::Wrap(Inner::Texture(&self.inner))
+    }
+}
+
+impl<U> i::AsInner for Buffer<U> {
+    fn as_inner(&self) -> i::Wrap<'_> {
+        i::Wrap(Inner::Buffer(&self.inner))
+    }
+}
+
+pub trait Source: i::AsInner {}
+
+impl<S> Source for &S where S: Source {}
+impl<D, U> Source for Texture<D, U> where U: u::CopyFrom {}
+impl<U> Source for Buffer<U> where U: u::CopyFrom {}
+
+pub trait Destination: i::AsInner {}
+
+impl<D> Destination for &D where D: Destination {}
+impl<D, U> Destination for Texture<D, U> where U: u::CopyTo {}
+impl<U> Destination for Buffer<U> where U: u::CopyTo {}
+
+#[inline]
+pub(crate) fn copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder)
+where
+    S: Source,
+    D: Destination,
+{
+    let i::Wrap(from) = from.as_inner();
+    let i::Wrap(to) = to.as_inner();
+
+    match (from, to) {
+        (Inner::Texture(_from), Inner::Texture(_to)) => todo!(),
+        (Inner::Texture(from), Inner::Buffer(to)) => copy_texture_to_buffer(from, to, en),
+        (Inner::Buffer(_from), Inner::Texture(_to)) => todo!(),
+        (Inner::Buffer(from), Inner::Buffer(to)) => copy_buffer_to_buffer(from, to, en),
+    }
+}
+
+fn copy_texture_to_buffer(from: &TextureInner, to: &BufferInner, en: &mut wgpu::CommandEncoder) {
+    // TODO: check size
+
+    let size = from.texture.size();
+
+    en.copy_texture_to_buffer(
+        from.texture.as_image_copy(),
+        wgpu::TexelCopyBufferInfo {
+            buffer: &to.0,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(from.bytes_per_row_aligned),
+                rows_per_image: Some(size.height),
+            },
+        },
+        size,
+    );
+}
+
+fn copy_buffer_to_buffer(from: &BufferInner, to: &BufferInner, en: &mut wgpu::CommandEncoder) {
+    // TODO: check size
+
+    en.copy_buffer_to_buffer(&from.0, 0, &to.0, 0, from.0.size());
+}
+
+pub struct _CopyBuffer {
     buf: wgpu::Buffer,
     size: (u32, u32),
     pixel_size: u32,
 }
 
-impl CopyBuffer {
+impl _CopyBuffer {
     pub(crate) fn new(state: &State, (width, height): (u32, u32)) -> Self {
         use wgpu::util;
 
@@ -522,8 +935,8 @@ impl CopyBuffer {
         );
     }
 
-    pub fn view(&self) -> CopyBufferView<'_> {
-        CopyBufferView(self.buf.slice(..))
+    pub fn view(&self) -> _CopyBufferView<'_> {
+        _CopyBufferView(self.buf.slice(..))
     }
 
     pub fn size(&self) -> (u32, u32) {
@@ -531,23 +944,23 @@ impl CopyBuffer {
     }
 }
 
-impl Drop for CopyBuffer {
+impl Drop for _CopyBuffer {
     fn drop(&mut self) {
         self.buf.unmap();
         self.buf.destroy();
     }
 }
 
-pub type MapResult = Result<(), wgpu::BufferAsyncError>;
+pub type _MapResult = Result<(), wgpu::BufferAsyncError>;
 
 #[derive(Clone, Copy)]
-pub struct CopyBufferView<'slice>(wgpu::BufferSlice<'slice>);
+pub struct _CopyBufferView<'slice>(wgpu::BufferSlice<'slice>);
 
-impl<'slice> CopyBufferView<'slice> {
-    pub(crate) async fn map<S, R>(self, state: &State, tx: S, rx: R) -> Mapped<'slice>
+impl<'slice> _CopyBufferView<'slice> {
+    pub(crate) async fn map<S, R>(self, state: &State, tx: S, rx: R) -> _Mapped<'slice>
     where
-        S: FnOnce(MapResult) + wgpu::WasmNotSend + 'static,
-        R: IntoFuture<Output = MapResult>,
+        S: FnOnce(_MapResult) + wgpu::WasmNotSend + 'static,
+        R: IntoFuture<Output = _MapResult>,
     {
         use wgpu::*;
 
@@ -557,13 +970,13 @@ impl<'slice> CopyBufferView<'slice> {
             panic!("failed to copy texture: {err}");
         }
 
-        Mapped(self.0.get_mapped_range())
+        _Mapped(self.0.get_mapped_range())
     }
 }
 
-pub struct Mapped<'slice>(wgpu::BufferView<'slice>);
+pub struct _Mapped<'slice>(wgpu::BufferView<'slice>);
 
-impl Mapped<'_> {
+impl _Mapped<'_> {
     pub fn data(&self) -> &[[u8; 4]] {
         bytemuck::cast_slice(&self.0)
     }

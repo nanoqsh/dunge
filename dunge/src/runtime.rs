@@ -1,14 +1,63 @@
+use std::{
+    future,
+    sync::{
+        Mutex,
+        atomic::{AtomicU8, Ordering},
+    },
+    task::{Context, Poll, Waker},
+};
+
 #[cfg(not(target_family = "wasm"))]
 use {
     parking::Parker,
-    std::{
-        cell::RefCell,
-        pin,
-        sync::mpsc,
-        task::{Context, Poll, Waker},
-        thread,
-    },
+    std::{cell::RefCell, pin, sync::mpsc, thread},
 };
+
+const WAIT: u8 = 0;
+const DONE: u8 = 1;
+const FAIL: u8 = 2;
+
+pub(crate) struct Ticket {
+    state: AtomicU8,
+    waker: Mutex<Waker>,
+}
+
+impl Ticket {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            state: AtomicU8::new(WAIT),
+            waker: Mutex::new(Waker::noop().clone()),
+        }
+    }
+
+    #[inline]
+    pub fn done(&self) {
+        self.state.store(DONE, Ordering::Release);
+        self.waker.lock().expect("lock waker").wake_by_ref();
+    }
+
+    #[inline]
+    pub fn fail(&self) {
+        self.state.store(FAIL, Ordering::Release);
+        self.waker.lock().expect("lock waker").wake_by_ref();
+    }
+
+    #[inline]
+    pub async fn wait(&self) -> bool {
+        let fu = future::poll_fn(|cx| match self.state.load(Ordering::Acquire) {
+            0 => {
+                *self.waker.lock().expect("lock waker") = cx.waker().clone();
+                Poll::Pending
+            }
+            1 => Poll::Ready(true),
+            2 => Poll::Ready(false),
+            _ => unreachable!(),
+        });
+
+        fu.await
+    }
+}
 
 /// Blocks on a future until it's completed.
 ///
@@ -26,6 +75,7 @@ use {
 /// ```
 ///
 #[cfg(not(target_family = "wasm"))]
+#[inline]
 pub fn block_on<F>(f: F) -> F::Output
 where
     F: IntoFuture,
