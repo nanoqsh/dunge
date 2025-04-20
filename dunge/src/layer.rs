@@ -21,7 +21,7 @@ pub struct SetLayer<'ren, D, S> {
 
 impl<'ren, V, I, S> SetLayer<'ren, (V, I), S> {
     #[inline]
-    pub fn with<B>(&mut self, bind: &'ren B) -> SetBinding<'_, 'ren, (V, I)>
+    pub fn _bind<B>(&mut self, bind: &'ren B) -> SetBinding<'_, 'ren, (V, I)>
     where
         B: Bind<S>,
     {
@@ -36,7 +36,7 @@ impl<'ren, V, I, S> SetLayer<'ren, (V, I), S> {
 
 impl<'ren, V, I> SetLayer<'ren, (V, I), ()> {
     #[inline]
-    pub fn bind_empty(&mut self) -> SetBinding<'_, 'ren, (V, I)> {
+    pub fn _bind_empty(&mut self) -> SetBinding<'_, 'ren, (V, I)> {
         SetBinding::new(self.slots, &mut self.pass)
     }
 }
@@ -57,7 +57,7 @@ impl<'bind, 'ren, V, I> SetBinding<'bind, 'ren, (V, I)> {
     }
 
     #[inline]
-    pub fn instance(&'bind mut self, instance: &'ren I) -> SetInstance<'bind, 'ren, V>
+    pub fn _instance(&'bind mut self, instance: &'ren I) -> SetInstance<'bind, 'ren, V>
     where
         I: Set,
     {
@@ -78,14 +78,14 @@ impl<'bind, 'ren, V, I> SetBinding<'bind, 'ren, (V, I)> {
 
 impl<'ren, V> SetBinding<'_, 'ren, (V, ())> {
     #[inline]
-    pub fn draw(&mut self, mesh: &'ren Mesh<V>) {
+    pub fn _draw(&mut self, mesh: &'ren Mesh<V>) {
         mesh.draw(self.pass, self.slots.vertex, 1);
     }
 }
 
 impl SetBinding<'_, '_, ((), ())> {
     #[inline]
-    pub fn draw_points(&mut self, n: u32) {
+    pub fn _draw_points(&mut self, n: u32) {
         self.pass.draw(0..n, 0..1);
     }
 }
@@ -99,14 +99,14 @@ pub struct SetInstance<'bind, 'ren, V> {
 
 impl<'ren, V> SetInstance<'_, 'ren, V> {
     #[inline]
-    pub fn draw(&mut self, mesh: &'ren Mesh<V>) {
+    pub fn _draw(&mut self, mesh: &'ren Mesh<V>) {
         mesh.draw(self.pass, self.slots.vertex, self.len);
     }
 }
 
 impl SetInstance<'_, '_, ()> {
     #[inline]
-    pub fn draw_points(&mut self, n: u32) {
+    pub fn _draw_points(&mut self, n: u32) {
         self.pass.draw(0..n, 0..self.len);
     }
 }

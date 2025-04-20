@@ -626,7 +626,7 @@ impl BufferInner {
     }
 
     async fn read(&mut self, state: &State) -> Result<Read<'_>, ReadFailed> {
-        let ticket = Arc::new(Ticket::new());
+        let ticket = Arc::new(const { Ticket::new() });
 
         self.0.map_async(wgpu::MapMode::Read, .., {
             let ticket = ticket.clone();
@@ -653,7 +653,7 @@ impl BufferInner {
     }
 
     async fn write(&mut self, state: &State) -> Result<Write<'_>, WriteFailed> {
-        let ticket = Arc::new(Ticket::new());
+        let ticket = Arc::new(const { Ticket::new() });
 
         self.0.map_async(wgpu::MapMode::Write, .., {
             let ticket = ticket.clone();

@@ -31,6 +31,7 @@ impl<'ren> Render<'ren> {
         let mut on = On::new(Runner {
             pass: &mut self.0,
             slots: layer.slots(),
+            count: 1,
         });
 
         on.run.layer(layer.render());
@@ -77,6 +78,7 @@ impl<I, S> To<state::DrawPoints, state::DrawPoints> for Input<(), I, S> {}
 struct Runner<'ren, 'layer> {
     pass: &'layer mut wgpu::RenderPass<'ren>,
     slots: SlotNumbers,
+    count: u32,
 }
 
 impl Runner<'_, '_> {
@@ -98,17 +100,17 @@ impl Runner<'_, '_> {
         S: Set,
     {
         let vs = VertexSetter(self.pass);
-        instance::set(vs, self.slots.instance, instance);
+        self.count = instance::set(vs, self.slots.instance, instance);
     }
 
     #[inline]
     fn draw<V>(&mut self, mesh: &Mesh<V>) {
-        mesh.draw(self.pass, self.slots.vertex, 1);
+        mesh.draw(self.pass, self.slots.vertex, self.count);
     }
 
     #[inline]
     fn draw_points(&mut self, n: u32) {
-        self.pass.draw(0..n, 0..1);
+        self.pass.draw(0..n, 0..self.count);
     }
 }
 

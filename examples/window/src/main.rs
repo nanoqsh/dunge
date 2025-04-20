@@ -84,19 +84,19 @@ async fn run() -> Result<(), Error> {
         let layer = cx.make_layer(&shader, view.format());
 
         // Describe the `Draw` handler
-        let draw = move |mut frame: Frame<'_, '_>| {
-            use dunge::color::Rgba;
+        let draw = move |mut frame: _Frame<'_, '_>| {
+            use dunge::color::Rgb;
 
             // Create a black RGBA background
-            let bg = Rgba::from_bytes([0, 0, 0, !0]);
+            let bg = Rgb::from_bytes([0; 3]);
 
             frame
                 // Select a layer to draw on it
-                .set_layer(&layer, bg)
+                ._set_layer(&layer, bg)
                 // The shader has no bindings, so call empty bind
-                .bind_empty()
+                ._bind_empty()
                 // And finally draw the mesh
-                .draw(&mesh);
+                ._draw(&mesh);
         };
 
         dunge::update(upd, draw)

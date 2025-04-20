@@ -7,7 +7,7 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             buffer::{Filter, Sampler, Size},
-            color::Rgba,
+            color::Rgb,
             group::BoundTexture,
             prelude::*,
             sl::{self, Groups, InVertex, Render},
@@ -95,23 +95,26 @@ fn render() -> Result<(), Error> {
         cx.make_mesh(&DATA)
     };
 
-    let buffer = cx._make_copy_buffer(size);
-    let opts = Rgba::from_standard([1., 0., 0., 1.]);
-    let draw = dunge::draw(|mut frame| {
-        frame.set_layer(&layer, opts).with(&map).draw(&mesh);
-        frame.copy_texture(&buffer, &view);
-    });
+    let mut buf = {
+        let data = view.copy_buffer_data().read();
+        cx.make_buffer(data)
+    };
 
-    cx._draw_to(&view, draw);
-    let mapped = dunge::block_on({
-        let (tx, rx) = helpers::_oneshot();
-        cx._map_view(buffer.view(), tx, rx)
-    });
+    let read = dunge::block_on(async {
+        let bg = Rgb::from_bytes([!0, 0, 0]);
+        cx.shed(|mut s| {
+            s.render(&view, bg).layer(&layer).set(&map).draw(&mesh);
+            s.copy(&view, &buf);
+        })
+        .await;
 
-    let data = mapped.data();
+        cx.read(&mut buf).await
+    })?;
+
+    let data = bytemuck::cast_slice(&read);
+    let row = view.bytes_per_row_aligned() / view.format().bytes();
     let image = Image::from_fn(size, |x, y| {
-        let (width, _) = buffer.size();
-        let idx = x + y * width;
+        let idx = x + y * row;
         data[idx as usize]
     });
 

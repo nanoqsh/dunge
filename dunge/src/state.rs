@@ -1,7 +1,7 @@
 use {
     crate::{
         buffer::{self, _CopyBuffer, Destination, Format, Size, Source, Texture2d},
-        color::Rgba,
+        color::{Color, Rgb, Rgba},
         context::FailedMakeContext,
         draw::Draw,
         layer::{Layer, SetLayer},
@@ -130,7 +130,7 @@ impl State {
             self.device.create_command_encoder(&desc)
         };
 
-        draw.draw(Frame {
+        draw.draw(_Frame {
             target,
             encoder: &mut encoder,
         });
@@ -153,11 +153,11 @@ impl State {
         self.queue.submit([encoder.finish()]);
         self.work();
 
-        let ticket = Arc::new(Ticket::new());
+        let ticket = Arc::new(const { Ticket::new() });
 
         self.queue.on_submitted_work_done({
-            let notify = ticket.clone();
-            move || notify.done()
+            let ticket = ticket.clone();
+            move || ticket.done()
         });
 
         ticket.wait().await;
@@ -274,14 +274,20 @@ impl From<Rgba> for Options {
     }
 }
 
+impl From<Rgb> for Options {
+    fn from(Color([r, g, b]): Rgb) -> Self {
+        Self::default().clear_color(Color([r, g, b, 1.]))
+    }
+}
+
 /// The frame type for drawing and copying operations.
-pub struct Frame<'view, 'enc> {
+pub struct _Frame<'view, 'enc> {
     target: Target<'view>,
     encoder: &'enc mut wgpu::CommandEncoder,
 }
 
-impl Frame<'_, '_> {
-    pub fn set_layer<'ren, V, I, S, O>(
+impl _Frame<'_, '_> {
+    pub fn _set_layer<'ren, V, I, S, O>(
         &'ren mut self,
         layer: &'ren Layer<Input<V, I, S>>,
         opts: O,
@@ -338,7 +344,7 @@ impl Frame<'_, '_> {
         layer._set(pass)
     }
 
-    pub fn copy_texture<U>(&mut self, buffer: &_CopyBuffer, texture: &Texture2d<U>)
+    pub fn _copy_texture<U>(&mut self, buffer: &_CopyBuffer, texture: &Texture2d<U>)
     where
         U: u::CopyFrom,
     {

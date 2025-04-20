@@ -2,7 +2,7 @@ type Error = Box<dyn std::error::Error>;
 
 pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     use dunge::{
-        color::Rgba,
+        color::Rgb,
         glam::Vec4,
         prelude::*,
         sl::{Groups, Index, Render},
@@ -47,9 +47,9 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             Then::Run
         };
 
-        let draw = move |mut frame: Frame<'_, '_>| {
-            let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
-            frame.set_layer(&layer, opts).with(&set).draw_points(3);
+        let draw = move |mut frame: _Frame<'_, '_>| {
+            let opts = Rgb::from_standard([0.1, 0.05, 0.15]);
+            frame._set_layer(&layer, opts)._bind(&set)._draw_points(3);
         };
 
         dunge::update(upd, draw)

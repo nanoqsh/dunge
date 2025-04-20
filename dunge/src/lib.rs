@@ -35,7 +35,7 @@ pub mod prelude {
     //! The dunge prelude.
 
     pub use crate::{
-        Frame, Group, Instance, Options, Vertex,
+        _Frame, Group, Instance, Options, Vertex,
         buffer::{Format, TextureData},
         context::Context,
         mesh::MeshData,
@@ -54,7 +54,7 @@ pub use {
         context::{Context, FailedMakeContext, context},
         draw::{Draw, draw},
         shader::{ComputeShader, RenderShader, Shader},
-        state::{AsTarget, Frame, Options, RenderBuffer, Scheduler, Target},
+        state::{_Frame, AsTarget, Options, RenderBuffer, Scheduler, Target},
     },
     dunge_macros::{Group, Instance, Vertex},
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},

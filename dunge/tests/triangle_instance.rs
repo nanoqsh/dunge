@@ -7,7 +7,7 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             buffer::Size,
-            color::Rgba,
+            color::Rgb,
             instance::Row,
             prelude::*,
             sl::{self, InInstance, Index, Render},
@@ -64,28 +64,30 @@ fn render() -> Result<(), Error> {
         Transform(cx.make_row(&POSS), cx.make_row(&COLS))
     };
 
-    let buffer = cx._make_copy_buffer(size);
-    let opts = Rgba::from_standard([0., 0., 0., 1.]);
-    let draw = dunge::draw(|mut frame| {
-        frame
-            .set_layer(&layer, opts)
-            .bind_empty()
-            .instance(&transform)
-            .draw_points(3);
+    let mut buf = {
+        let data = view.copy_buffer_data().read();
+        cx.make_buffer(data)
+    };
 
-        frame.copy_texture(&buffer, &view);
-    });
+    let read = dunge::block_on(async {
+        let bg = Rgb::from_bytes([0; 3]);
+        cx.shed(|mut s| {
+            s.render(&view, bg)
+                .layer(&layer)
+                .instance(&transform)
+                .draw_points(3);
 
-    cx._draw_to(&view, draw);
-    let mapped = dunge::block_on({
-        let (tx, rx) = helpers::_oneshot();
-        cx._map_view(buffer.view(), tx, rx)
-    });
+            s.copy(&view, &buf);
+        })
+        .await;
 
-    let data = mapped.data();
+        cx.read(&mut buf).await
+    })?;
+
+    let data = bytemuck::cast_slice(&read);
+    let row = view.bytes_per_row_aligned() / view.format().bytes();
     let image = Image::from_fn(size, |x, y| {
-        let (width, _) = buffer.size();
-        let idx = x + y * width;
+        let idx = x + y * row;
         data[idx as usize]
     });
 

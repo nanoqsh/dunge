@@ -19,43 +19,45 @@ const FAIL: u8 = 2;
 
 pub(crate) struct Ticket {
     state: AtomicU8,
-    waker: Mutex<Waker>,
+    waker: Mutex<Option<Waker>>,
 }
 
 impl Ticket {
     #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             state: AtomicU8::new(WAIT),
-            waker: Mutex::new(Waker::noop().clone()),
+            waker: Mutex::new(None),
         }
     }
 
     #[inline]
     pub fn done(&self) {
         self.state.store(DONE, Ordering::Release);
-        self.waker.lock().expect("lock waker").wake_by_ref();
+        if let Some(waker) = self.waker.lock().expect("lock waker").as_ref() {
+            waker.wake_by_ref();
+        }
     }
 
     #[inline]
     pub fn fail(&self) {
         self.state.store(FAIL, Ordering::Release);
-        self.waker.lock().expect("lock waker").wake_by_ref();
+        if let Some(waker) = self.waker.lock().expect("lock waker").as_ref() {
+            waker.wake_by_ref();
+        }
     }
 
     #[inline]
-    pub async fn wait(&self) -> bool {
-        let fu = future::poll_fn(|cx| match self.state.load(Ordering::Acquire) {
-            0 => {
-                *self.waker.lock().expect("lock waker") = cx.waker().clone();
+    pub fn wait(&self) -> impl Future<Output = bool> {
+        future::poll_fn(|cx| match self.state.load(Ordering::Acquire) {
+            WAIT => {
+                *self.waker.lock().expect("lock waker") = Some(cx.waker().clone());
                 Poll::Pending
             }
-            1 => Poll::Ready(true),
-            2 => Poll::Ready(false),
+            DONE => Poll::Ready(true),
+            FAIL => Poll::Ready(false),
             _ => unreachable!(),
-        });
-
-        fu.await
+        })
     }
 }
 

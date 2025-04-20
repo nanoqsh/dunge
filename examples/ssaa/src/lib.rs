@@ -3,7 +3,7 @@ type Error = Box<dyn std::error::Error>;
 pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
     use dunge::{
         buffer::{Filter, Sampler, Size},
-        color::Rgba,
+        color::Rgb,
         glam::{Vec2, Vec4},
         group::BoundTexture,
         prelude::*,
@@ -157,21 +157,21 @@ pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
             Then::Run
         };
 
-        let draw = move |state: &State<_, _>, mut frame: Frame<'_, '_>| {
-            let main = |mut frame: Frame<'_, '_>| {
-                let opts = Rgba::from_standard([0.1, 0.05, 0.15, 1.]);
+        let draw = move |state: &State<_, _>, mut frame: _Frame<'_, '_>| {
+            let main = |mut frame: _Frame<'_, '_>| {
+                let bg = Rgb::from_standard([0.1, 0.05, 0.15]);
                 frame
-                    .set_layer(&triangle_layer, opts)
-                    .with(&set)
-                    .draw_points(3);
+                    ._set_layer(&triangle_layer, bg)
+                    ._bind(&set)
+                    ._draw_points(3);
             };
 
             state.cx._draw_to(&state.render_buf, dunge::draw(main));
 
             frame
-                .set_layer(&screen_layer, Options::default())
-                .with(&state.map_set)
-                .draw(&screen_mesh);
+                ._set_layer(&screen_layer, Options::default())
+                ._bind(&state.map_set)
+                ._draw(&screen_mesh);
         };
 
         dunge::update_with_state(state, upd, draw)

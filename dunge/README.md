@@ -136,10 +136,10 @@ let layer = cx.make_layer(&shader, view.format());
 
 // Describe the `Draw` handler
 let draw = move |mut frame: Frame<'_, '_>| {
-    use dunge::color::Rgba;
+    use dunge::color::Rgb;
 
-    // Create a black RGBA background
-    let bg = Rgba::from_bytes([0, 0, 0, !0]);
+    // Create a black RGB background
+    let bg = Rgb::from_bytes([0, 0, 0]);
 
     frame
         // Set a layer to draw on it

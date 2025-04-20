@@ -1,4 +1,4 @@
-use crate::state::Frame;
+use crate::state::_Frame;
 
 /// The draw stage.
 ///
@@ -41,14 +41,14 @@ use crate::state::Frame;
 /// }
 /// ```
 pub trait Draw {
-    fn draw(&self, frame: Frame<'_, '_>);
+    fn draw(&self, frame: _Frame<'_, '_>);
 }
 
 impl<D> Draw for &D
 where
     D: Draw + ?Sized,
 {
-    fn draw(&self, frame: Frame<'_, '_>) {
+    fn draw(&self, frame: _Frame<'_, '_>) {
         (**self).draw(frame);
     }
 }
@@ -57,15 +57,15 @@ where
 /// implementer from a function.
 pub fn draw<D>(draw: D) -> impl Draw
 where
-    D: Fn(Frame<'_, '_>),
+    D: Fn(_Frame<'_, '_>),
 {
     struct Func<D>(D);
 
     impl<D> Draw for Func<D>
     where
-        D: Fn(Frame<'_, '_>),
+        D: Fn(_Frame<'_, '_>),
     {
-        fn draw(&self, frame: Frame<'_, '_>) {
+        fn draw(&self, frame: _Frame<'_, '_>) {
             (self.0)(frame);
         }
     }

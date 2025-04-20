@@ -7,7 +7,7 @@ fn render() -> Result<(), Error> {
     use {
         dunge::{
             buffer::Size,
-            color::Rgba,
+            color::Rgb,
             prelude::*,
             sl::{self, InVertex, Render},
         },
@@ -58,9 +58,9 @@ fn render() -> Result<(), Error> {
     };
 
     let read = dunge::block_on(async {
-        let opts = Rgba::from_bytes([0, 0, 0, !0]);
+        let bg = Rgb::from_bytes([0; 3]);
         cx.shed(|mut s| {
-            s.render(&view, opts).layer(&layer).draw(&mesh);
+            s.render(&view, bg).layer(&layer).draw(&mesh);
             s.copy(&view, &buf);
         })
         .await;
@@ -69,8 +69,8 @@ fn render() -> Result<(), Error> {
     })?;
 
     let data = bytemuck::cast_slice(&read);
+    let row = view.bytes_per_row_aligned() / view.format().bytes();
     let image = Image::from_fn(size, |x, y| {
-        let row = view.bytes_per_row_aligned() / view.format().bytes();
         let idx = x + y * row;
         data[idx as usize]
     });
