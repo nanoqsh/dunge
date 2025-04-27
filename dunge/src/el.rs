@@ -1,10 +1,10 @@
 use {
     crate::{
+        _window::{self, View, WindowState},
         context::Context,
         state::State,
         time::{Fps, Time},
         update::{IntoUpdate, Update},
-        window::{self, View, WindowState},
     },
     std::{cell::Cell, error, fmt, ops, time::Duration},
     winit::{
@@ -68,7 +68,7 @@ where
 /// The event loop error.
 #[derive(Debug)]
 pub enum LoopError {
-    Window(window::Error),
+    Window(_window::Error),
     EventLoop(EventLoopError),
     Failed(Box<dyn error::Error>),
 }

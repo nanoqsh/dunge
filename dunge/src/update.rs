@@ -1,9 +1,9 @@
 use crate::{
+    _window::View,
     context::Context,
     draw::Draw,
     el::{Control, Flow},
     state::_Frame,
-    window::View,
 };
 
 /// The update stage.
@@ -14,12 +14,12 @@ use crate::{
 ///
 /// # Example
 /// ```rust
-/// use dunge::{Draw, Control, Frame, KeyCode, Then, Update};
+/// use dunge::{Draw, Control, _Frame, KeyCode, Then, Update};
 ///
 /// struct App {/***/}
 ///
 /// impl Draw for App {
-///     fn draw(&self, mut frame: Frame) {/***/}
+///     fn draw(&self, mut frame: _Frame) {/***/}
 /// }
 ///
 /// impl Update for App {
@@ -43,10 +43,10 @@ use crate::{
 /// Instead of manually implementing the trait, you can use an [helper](update)
 /// function that will make an implementation from a closure:
 /// ```rust
-/// use dunge::{Control, Frame, KeyCode, Then, Update};
+/// use dunge::{Control, _Frame, KeyCode, Then, Update};
 ///
 /// fn make_update() -> impl Update {
-///     let draw = |frame: Frame| {/***/};
+///     let draw = |frame: _Frame| {/***/};
 ///     let upd = |ctrl: &Control| -> Then {
 ///         for key in ctrl.pressed_keys() {
 ///             if key.code == KeyCode::Escape {
@@ -66,12 +66,12 @@ use crate::{
 /// This is not a problem to implement traits manually for some type.
 /// However, to be able to use helpers, dunge has the [`update_with_state`] function.
 /// ```rust
-/// use dunge::{Control, Frame, Update};
+/// use dunge::{Control, _Frame, Update};
 ///
 /// struct State { counter: usize }
 ///
 /// fn make_update() -> impl Update {
-///     let draw = |state: &State, frame: Frame| {
+///     let draw = |state: &State, frame: _Frame| {
 ///         dbg!(state.counter);
 ///     };
 ///

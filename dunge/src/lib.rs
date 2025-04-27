@@ -14,12 +14,16 @@ pub mod set;
 mod shader;
 mod state;
 pub mod storage;
+#[doc(hidden)]
+pub mod surface;
 pub mod uniform;
 pub mod usage;
 pub mod value;
 pub mod vertex;
 pub mod workload;
 
+#[cfg(feature = "winit")]
+pub mod _window;
 #[cfg(feature = "winit")]
 mod el;
 #[cfg(feature = "winit")]
@@ -28,8 +32,6 @@ mod element;
 mod time;
 #[cfg(feature = "winit")]
 mod update;
-#[cfg(feature = "winit")]
-pub mod window;
 
 pub mod prelude {
     //! The dunge prelude.
@@ -44,8 +46,8 @@ pub mod prelude {
 
     #[cfg(feature = "winit")]
     pub use crate::{
+        _window::View,
         el::{Control, KeyCode, Then},
-        window::View,
     };
 }
 
@@ -65,10 +67,10 @@ pub use {
 pub use crate::runtime::block_on;
 
 #[cfg(all(feature = "winit", not(target_family = "wasm")))]
-pub use crate::window::window;
+pub use crate::_window::window;
 
 #[cfg(all(feature = "winit", target_family = "wasm"))]
-pub use crate::window::from_element;
+pub use crate::_window::from_element;
 
 #[cfg(feature = "winit")]
 pub use crate::{

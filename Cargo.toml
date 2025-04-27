@@ -4,6 +4,7 @@ members = [
     "dunge",
     "dunge_macros",
     "dunge_shader",
+    "dunge_winit",
     "examples/*",
     "helpers",
     "xtask",
@@ -23,6 +24,7 @@ rust-version = "1.86"
 dunge = { version = "=0.3.3", path = "dunge" }
 dunge_macros = { version = "=0.3.3", path = "dunge_macros" }
 dunge_shader = { version = "=0.3.3", path = "dunge_shader" }
+dunge_winit = { version = "=0.3.3", path = "dunge_winit" }
 askama = { version = "0.13", default-features = false }
 async-channel = "2.1"
 async-executor = "1.8"

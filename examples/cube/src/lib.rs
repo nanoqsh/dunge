@@ -1,6 +1,6 @@
 type Error = Box<dyn std::error::Error>;
 
-pub async fn run(ws: dunge::window::WindowState) -> Result<(), Error> {
+pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
     use dunge::{
         color::Rgb,
         glam::{Mat4, Quat, Vec3},

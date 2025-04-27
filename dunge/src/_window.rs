@@ -251,20 +251,18 @@ struct Inner {
 
 impl Inner {
     fn new(state: &State, window: window::Window) -> Result<Self, Error> {
-        let supported_formats = const {
-            [
-                Format::SrgbAlpha,
-                Format::SbgrAlpha,
-                Format::RgbAlpha,
-                Format::BgrAlpha,
-            ]
-        };
+        const SUPPORTED_FORMATS: [Format; 4] = [
+            Format::SrgbAlpha,
+            Format::SbgrAlpha,
+            Format::RgbAlpha,
+            Format::BgrAlpha,
+        ];
 
         let window = Arc::new(window);
         let surface = state.instance().create_surface(Arc::clone(&window))?;
         let conf = {
             let caps = surface.get_capabilities(state.adapter());
-            let format = supported_formats.into_iter().find_map(|format| {
+            let format = SUPPORTED_FORMATS.into_iter().find_map(|format| {
                 let format = format.wgpu();
                 caps.formats.contains(&format).then_some(format)
             });

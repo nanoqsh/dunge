@@ -6,7 +6,7 @@ use crate::state::_Frame;
 ///
 /// # Example
 /// ```rust
-/// use dunge::{Draw, Frame, layer::Layer, render::Input, color::Rgba};
+/// use dunge::{Draw, _Frame, layer::Layer, render::Input, color::Rgba};
 ///
 /// struct App {
 ///     bg: Rgba,
@@ -14,14 +14,14 @@ use crate::state::_Frame;
 /// }
 ///
 /// impl Draw for App {
-///     fn draw(&self, mut frame: Frame) {
+///     fn draw(&self, mut frame: _Frame) {
 ///         frame
 ///             // set a layer
-///             .set_layer(&self.layer, self.bg)
+///             ._set_layer(&self.layer, self.bg)
 ///             // without any binding
-///             .bind_empty()
+///             ._bind_empty()
 ///             // draw some triangle
-///             .draw_points(3);
+///             ._draw_points(3);
 ///     }
 /// }
 /// ```
@@ -29,14 +29,14 @@ use crate::state::_Frame;
 /// Instead of manually implementing the trait, you can use an [helper](draw)
 /// function that will make an implementation from a closure:
 /// ```rust
-/// use dunge::{Draw, Frame, layer::Layer, render::Input, color::Rgba};
+/// use dunge::{Draw, _Frame, layer::Layer, render::Input, color::Rgba};
 ///
 /// fn make_draw(bg: Rgba, layer: Layer<Input<(), (), ()>>) -> impl Draw {
-///     dunge::draw(move |mut frame: Frame| {
+///     dunge::draw(move |mut frame: _Frame| {
 ///         frame
-///             .set_layer(&layer, bg)
-///             .bind_empty()
-///             .draw_points(3);
+///             ._set_layer(&layer, bg)
+///             ._bind_empty()
+///             ._draw_points(3);
 ///     })
 /// }
 /// ```
