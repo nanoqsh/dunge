@@ -1,11 +1,12 @@
 use {
     dunge::{
         Context, FailedMakeContext,
-        surface::{Surface, SurfaceError, WindowOps},
+        buffer::Format,
+        surface::{Action, CreateSurfaceError, Output, Surface, SurfaceError, WindowOps},
     },
     std::{
-        cell::{Cell, OnceCell},
-        collections::HashMap,
+        cell::{Cell, OnceCell, RefCell},
+        collections::{HashMap, hash_map::Entry},
         error, fmt, future,
         pin::{self, Pin},
         rc::Rc,
@@ -19,6 +20,7 @@ struct App<'app, F> {
     proxy: event_loop::EventLoopProxy<Request>,
     lifecycle: &'app Lifecycle,
     windows: HashMap<window::WindowId, Window>,
+    res: Result<(), Error>,
     need_to_poll: bool,
     fu: F,
 }
@@ -43,6 +45,14 @@ impl<F> App<'_, Pin<&mut F>> {
 
         self.need_to_poll = false;
     }
+
+    fn exit_with_error(&mut self, el: &event_loop::ActiveEventLoop, e: Error)
+    where
+        F: Future,
+    {
+        self.res = Err(e);
+        el.exit();
+    }
 }
 
 enum Request {
@@ -51,6 +61,8 @@ enum Request {
         attr: Box<Attributes>,
     },
     RemoveWindow(window::WindowId),
+    RecreateSurface(window::WindowId),
+    Exit(Box<Error>),
 }
 
 impl<F> ApplicationHandler<Request> for App<'_, Pin<&mut F>>
@@ -59,6 +71,11 @@ where
 {
     fn resumed(&mut self, _: &event_loop::ActiveEventLoop) {
         self.lifecycle.set(LifecycleState::Resumed);
+
+        for window in self.windows.values() {
+            window.inner.surface.window().request_redraw();
+        }
+
         self.schedule();
     }
 
@@ -72,13 +89,20 @@ where
             Request::MakeWindow { out, attr } => {
                 let res = Window::new(&self.cx, self.proxy.clone(), el, attr.winit());
                 if let Ok(window) = &res {
-                    self.windows.insert(window.id, window.clone());
+                    let id = window.inner.surface.window().id();
+                    self.windows.insert(id, window.clone());
+                    window.inner.surface.window().request_redraw();
                 }
 
                 _ = out.set(res);
                 self.schedule();
             }
             Request::RemoveWindow(id) => _ = self.windows.remove(&id),
+            Request::RecreateSurface(id) => {
+                todo!("recreate surface {id:?}");
+                // self.schedule();
+            }
+            Request::Exit(e) => self.exit_with_error(el, *e),
         }
     }
 
@@ -94,11 +118,11 @@ where
 
         match event {
             event::WindowEvent::Resized(size) => {
-                let (width, height) = size.into();
-                log::debug!("resized {id:?}: {width}, {height}");
+                let (width, height): (u32, u32) = size.into();
+                log::debug!("resized {id:?}: {width} {height}");
 
                 window.inner.surface.resize(&self.cx);
-                window.inner.resize.set((width, height));
+                window.inner.resize.set();
                 self.schedule();
             }
             event::WindowEvent::CloseRequested => {
@@ -111,6 +135,7 @@ where
                     event::KeyEvent {
                         physical_key,
                         state,
+                        repeat: false,
                         ..
                     },
                 is_synthetic: false,
@@ -118,19 +143,26 @@ where
             } => {
                 let code = match physical_key {
                     keyboard::PhysicalKey::Code(code) => {
-                        log::debug!("keyboard input: {code:?}");
+                        log::debug!("keyboard input {state:?}: {code:?}");
                         code
                     }
                     keyboard::PhysicalKey::Unidentified(code) => {
-                        log::debug!("keyboard input: (unidentified) {code:?}");
+                        log::debug!("keyboard input {state:?}: (unidentified) {code:?}");
                         return;
                     }
                 };
 
                 match state {
-                    event::ElementState::Pressed => todo!("{code:?} pressed"),
-                    event::ElementState::Released => todo!("{code:?} released"),
+                    event::ElementState::Pressed => window.inner.press_keys.active(code),
+                    event::ElementState::Released => window.inner.release_keys.active(code),
                 }
+
+                self.schedule();
+            }
+            event::WindowEvent::RedrawRequested => {
+                log::debug!("redraw requested");
+                window.inner.redraw.set();
+                self.schedule();
             }
             _ => {}
         }
@@ -166,6 +198,7 @@ where
         proxy: el.create_proxy(),
         lifecycle: &lifecycle,
         windows: HashMap::new(),
+        res: Ok(()),
         need_to_poll: true, // an initial poll
         fu: pin::pin!(async {
             let out = f(ctrl).await;
@@ -174,6 +207,7 @@ where
     };
 
     el.run_app(&mut app).map_err(Error::EventLoop)?;
+    app.res?;
     Ok(res.take().expect("take result of async function"))
 }
 
@@ -182,6 +216,7 @@ pub enum Error {
     Context(FailedMakeContext),
     EventLoop(winit::error::EventLoopError),
     Os(winit::error::OsError),
+    CreateSurface(CreateSurfaceError),
     Surface(SurfaceError),
 }
 
@@ -191,6 +226,7 @@ impl fmt::Display for Error {
             Self::Context(e) => e.fmt(f),
             Self::EventLoop(e) => e.fmt(f),
             Self::Os(e) => e.fmt(f),
+            Self::CreateSurface(e) => e.fmt(f),
             Self::Surface(e) => e.fmt(f),
         }
     }
@@ -202,6 +238,7 @@ impl error::Error for Error {
             Self::Context(e) => Some(e),
             Self::EventLoop(e) => Some(e),
             Self::Os(e) => Some(e),
+            Self::CreateSurface(e) => Some(e),
             Self::Surface(e) => Some(e),
         }
     }
@@ -300,36 +337,9 @@ impl Attributes {
     }
 }
 
-struct Resize(Cell<Option<(u32, u32)>>);
+struct Event(Cell<bool>);
 
-impl Resize {
-    #[inline]
-    const fn new() -> Self {
-        Self(Cell::new(None))
-    }
-
-    #[inline]
-    fn set(&self, size: (u32, u32)) {
-        self.0.set(Some(size));
-    }
-
-    #[inline]
-    fn active_poll(&self) -> Poll<(u32, u32)> {
-        self.0.take().map_or(Poll::Pending, Poll::Ready)
-    }
-}
-
-struct Keys {}
-
-impl Keys {
-    const fn new() -> Self {
-        Self {}
-    }
-}
-
-struct Close(Cell<bool>);
-
-impl Close {
+impl Event {
     #[inline]
     const fn new() -> Self {
         Self(Cell::new(false))
@@ -342,7 +352,7 @@ impl Close {
 
     #[inline]
     fn active_poll(&self) -> Poll<()> {
-        if self.0.get() {
+        if self.0.take() {
             Poll::Ready(())
         } else {
             Poll::Pending
@@ -350,17 +360,55 @@ impl Close {
     }
 }
 
+enum KeyState {
+    Wait,
+    Active,
+}
+
+struct Keys(RefCell<HashMap<keyboard::KeyCode, KeyState>>);
+
+impl Keys {
+    #[inline]
+    fn new() -> Self {
+        Self(RefCell::new(HashMap::new()))
+    }
+
+    #[inline]
+    fn wait(&self, code: keyboard::KeyCode) {
+        self.0.borrow_mut().insert(code, KeyState::Wait);
+    }
+
+    #[inline]
+    fn active(&self, code: keyboard::KeyCode) {
+        if let Some(state @ KeyState::Wait) = self.0.borrow_mut().get_mut(&code) {
+            *state = KeyState::Active;
+        }
+    }
+
+    #[inline]
+    fn active_poll(&self, code: keyboard::KeyCode) -> Poll<()> {
+        if let Entry::Occupied(en) = self.0.borrow_mut().entry(code) {
+            if let KeyState::Active = en.get() {
+                en.remove();
+                return Poll::Ready(());
+            }
+        }
+
+        Poll::Pending
+    }
+}
+
 struct Inner {
     surface: Surface<window::Window, Ops>,
-    resize: Resize,
-    #[expect(dead_code)]
-    keys: Keys,
-    close: Close,
+    press_keys: Keys,
+    release_keys: Keys,
+    resize: Event,
+    redraw: Event,
+    close: Event,
 }
 
 #[derive(Clone)]
 pub struct Window {
-    id: window::WindowId,
     inner: Rc<Inner>,
     proxy: event_loop::EventLoopProxy<Request>,
 }
@@ -374,20 +422,68 @@ impl Window {
         attr: window::WindowAttributes,
     ) -> Result<Self, Error> {
         let window = el.create_window(attr).map_err(Error::Os)?;
-        let id = window.id();
         let inner = Rc::new(Inner {
-            surface: Surface::new(cx, window).map_err(Error::Surface)?,
-            resize: const { Resize::new() },
-            keys: const { Keys::new() },
-            close: const { Close::new() },
+            surface: Surface::new(cx, window).map_err(Error::CreateSurface)?,
+            press_keys: Keys::new(),
+            release_keys: Keys::new(),
+            resize: const { Event::new() },
+            redraw: const { Event::new() },
+            close: const { Event::new() },
         });
 
-        Ok(Self { id, inner, proxy })
+        Ok(Self { inner, proxy })
+    }
+
+    #[inline]
+    pub fn format(&self) -> Format {
+        self.inner.surface.format()
+    }
+
+    #[inline]
+    pub fn size(&self) -> (u32, u32) {
+        self.inner.surface.size()
+    }
+
+    #[inline]
+    pub async fn pressed(&self, code: keyboard::KeyCode) {
+        self.inner.press_keys.wait(code);
+        future::poll_fn(|_| self.inner.press_keys.active_poll(code)).await;
+    }
+
+    #[inline]
+    pub async fn released(&self, code: keyboard::KeyCode) {
+        self.inner.release_keys.wait(code);
+        future::poll_fn(|_| self.inner.release_keys.active_poll(code)).await;
     }
 
     #[inline]
     pub async fn resized(&self) -> (u32, u32) {
-        future::poll_fn(|_| self.inner.resize.active_poll()).await
+        future::poll_fn(|_| self.inner.resize.active_poll()).await;
+        self.inner.surface.size()
+    }
+
+    #[inline]
+    pub async fn redraw(&self) -> Output<'_> {
+        loop {
+            future::poll_fn(|_| self.inner.redraw.active_poll()).await;
+            let e = match self.inner.surface.output() {
+                Ok(out) => break out,
+                Err(e) => e,
+            };
+
+            log::warn!("surface error: {e}");
+            match e.action() {
+                Action::Run => {}
+                Action::Recreate => {
+                    let id = self.inner.surface.window().id();
+                    _ = self.proxy.send_event(Request::RecreateSurface(id));
+                }
+                Action::Exit => {
+                    let e = Box::new(Error::Surface(e));
+                    _ = self.proxy.send_event(Request::Exit(e));
+                }
+            }
+        }
     }
 
     #[inline]
@@ -399,7 +495,8 @@ impl Window {
 impl Drop for Window {
     #[inline]
     fn drop(&mut self) {
-        _ = self.proxy.send_event(Request::RemoveWindow(self.id));
+        let id = self.inner.surface.window().id();
+        _ = self.proxy.send_event(Request::RemoveWindow(id));
     }
 }
 

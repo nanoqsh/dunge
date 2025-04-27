@@ -4,4 +4,4 @@ pub mod prelude {
     pub use dunge::prelude::*;
 }
 
-pub use winit;
+pub use {dunge::*, winit};

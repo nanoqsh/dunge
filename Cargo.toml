@@ -32,6 +32,7 @@ async-net = "2.0"
 bytemuck = "1.13"
 console_error_panic_hook = "0.1"
 env_logger = "0.11"
+futures-concurrency = "7.6"
 futures-lite = "2.1"
 glam = "0.30"
 http-body-util = "0.1"
@@ -50,7 +51,6 @@ wasm-bindgen-futures = "0.4"
 wgpu = { version = "25.0", default-features = false }
 web-sys = "0.3"
 winit = { version = "0.30", default-features = false }
-
 [workspace.lints.rust]
 elided-lifetimes-in-paths = "deny"
 

@@ -11,8 +11,8 @@ fn main() {
 
 async fn run(ctrl: Control<'_>) -> Result<(), Error> {
     use {
-        dunge_winit::{prelude::*, runtime::Attributes},
-        futures_lite::future,
+        dunge_winit::{color::Rgb, prelude::*, runtime::Attributes, winit::keyboard::KeyCode},
+        futures_concurrency::prelude::*,
     };
 
     #[repr(C)]
@@ -30,9 +30,9 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
     };
 
     let cx = ctrl.context();
-    let _shader = cx.make_shader(triangle);
+    let shader = cx.make_shader(triangle);
 
-    let _mesh = {
+    let mesh = {
         let verts = const {
             MeshData::from_verts(&[
                 Vert {
@@ -54,23 +54,32 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
     };
 
     let window = ctrl.make_window(Attributes::default()).await?;
+    let layer = cx.make_layer(&shader, window.format());
 
-    loop {
-        let resize = async {
+    let render = async {
+        loop {
+            let out = window.redraw().await;
+            cx.shed(|mut s| {
+                let bg = Rgb::from_bytes([0; 3]);
+                s.render(&out, bg).layer(&layer).draw(&mesh);
+            })
+            .await;
+
+            out.present();
+        }
+    };
+
+    let resize = async {
+        loop {
             let (width, height) = window.resized().await;
             println!("resized: {width} {height}");
-            false
-        };
-
-        let close = async {
-            window.close_requested().await;
-            true
-        };
-
-        if future::or(resize, close).await {
-            break;
         }
-    }
+    };
+
+    let close = window.close_requested();
+    let esc_pressed = window.pressed(KeyCode::Escape);
+
+    (render, resize, close, esc_pressed).race().await;
 
     Ok(())
 }

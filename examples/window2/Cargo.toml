@@ -8,7 +8,7 @@ publish = false
 dunge.workspace = true
 dunge_winit.workspace = true
 env_logger.workspace = true
-futures-lite.workspace = true
+futures-concurrency.workspace = true
 helpers.path = "../../helpers"
 
 [lints]
