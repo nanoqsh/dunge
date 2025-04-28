@@ -51,11 +51,13 @@ wasm-bindgen-futures = "0.4"
 wgpu = { version = "25.0", default-features = false }
 web-sys = "0.3"
 winit = { version = "0.30", default-features = false }
+
 [workspace.lints.rust]
 elided-lifetimes-in-paths = "deny"
 
 [workspace.lints.clippy]
 cast-lossless = "deny"
+explicit-iter-loop = "deny"
 flat-map-option = "deny"
 manual-assert = "deny"
 match-wildcard-for-single-variants = "deny"

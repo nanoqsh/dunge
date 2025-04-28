@@ -6,6 +6,7 @@ use {
         surface::{Action, CreateSurfaceError, Output, Surface, SurfaceError, WindowOps},
     },
     std::{
+        borrow::Cow,
         cell::{Cell, OnceCell, RefCell},
         collections::{HashMap, hash_map::Entry},
         convert::Infallible,
@@ -30,11 +31,16 @@ enum Request {
     Exit(Box<Error>),
 }
 
+struct AppWindow {
+    shared: Rc<Shared>,
+    time: Time,
+}
+
 struct App<'app, F> {
     cx: Context,
     proxy: event_loop::EventLoopProxy<Request>,
     lifecycle: &'app Lifecycle,
-    windows: HashMap<window::WindowId, Window>,
+    windows: HashMap<window::WindowId, AppWindow>,
     res: Result<(), Error>,
     need_to_poll: bool,
     fu: F,
@@ -82,7 +88,7 @@ where
                 log::debug!("resume time reached");
 
                 for window in self.windows.values() {
-                    window.inner.surface.window().request_redraw();
+                    window.shared.surface.window().request_redraw();
                 }
             }
             event::StartCause::WaitCancelled {
@@ -106,7 +112,7 @@ where
         self.lifecycle.set(LifecycleState::Active);
 
         for window in self.windows.values() {
-            window.inner.surface.window().request_redraw();
+            window.shared.surface.window().request_redraw();
         }
 
         self.schedule();
@@ -124,9 +130,16 @@ where
                 log::debug!("make window");
                 let res = Window::new(&self.cx, self.proxy.clone(), el, attr.winit());
                 if let Ok(window) = &res {
-                    let id = window.inner.surface.window().id();
-                    self.windows.insert(id, window.clone());
-                    window.inner.surface.window().request_redraw();
+                    let id = window.shared.surface.window().id();
+                    self.windows.insert(
+                        id,
+                        AppWindow {
+                            shared: window.shared.clone(),
+                            time: Time::now(),
+                        },
+                    );
+
+                    window.shared.surface.window().request_redraw();
                 }
 
                 _ = out.set(res);
@@ -142,7 +155,7 @@ where
                     return;
                 };
 
-                window.inner.surface.resize(&self.cx);
+                window.shared.surface.resize(&self.cx);
                 self.schedule();
             }
             Request::Exit(e) => {
@@ -158,7 +171,7 @@ where
         id: window::WindowId,
         event: event::WindowEvent,
     ) {
-        let Some(window) = self.windows.get(&id) else {
+        let Some(window) = self.windows.get_mut(&id) else {
             return;
         };
 
@@ -167,19 +180,19 @@ where
                 let (width, height): (u32, u32) = size.into();
                 log::debug!("resized {id:?}: {width} {height}");
 
-                window.inner.surface.resize(&self.cx);
-                window.inner.resize.set();
+                window.shared.surface.resize(&self.cx);
+                window.shared.resize.set();
                 self.schedule();
             }
             event::WindowEvent::CloseRequested => {
                 log::debug!("close requested {id:?}");
-                window.inner.close.set();
+                window.shared.close.set();
                 self.schedule();
             }
             event::WindowEvent::Focused(focused) => {
                 if focused {
                     log::debug!("focused {id:?}");
-                    window.inner.surface.window().request_redraw();
+                    window.shared.surface.window().request_redraw();
                     self.schedule();
                 } else {
                     log::debug!("unfocused {id:?}");
@@ -208,8 +221,8 @@ where
                 };
 
                 match state {
-                    event::ElementState::Pressed => window.inner.press_keys.active(code),
-                    event::ElementState::Released => window.inner.release_keys.active(code),
+                    event::ElementState::Pressed => window.shared.press_keys.active(code),
+                    event::ElementState::Released => window.shared.release_keys.active(code),
                 }
 
                 self.schedule();
@@ -225,16 +238,16 @@ where
                     return;
                 }
 
-                let delta_time = window.inner.time.borrow_mut().delta();
-                let min_delta_time = window.inner.min_delta_time.get();
+                let delta_time = window.time.delta();
+                let min_delta_time = window.shared.min_delta_time.get();
                 if delta_time < min_delta_time {
                     let wait = min_delta_time - delta_time;
                     el.set_control_flow(event_loop::ControlFlow::wait_duration(wait));
                     return;
                 }
 
-                window.inner.time.borrow_mut().reset();
-                window.inner.redraw.set_value(delta_time);
+                window.time.reset();
+                window.shared.redraw.set_value(delta_time);
                 self.schedule();
             }
             _ => {}
@@ -246,6 +259,7 @@ where
     }
 }
 
+#[inline]
 pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
 where
     F: AsyncFnMut(Control<'_>) -> R,
@@ -284,6 +298,7 @@ where
     Ok(res.take().expect("take result of async function"))
 }
 
+#[inline]
 pub fn try_block_on<F, R, U>(f: F) -> Result<R, Error<U>>
 where
     F: AsyncFnMut(Control<'_>) -> Result<R, U>,
@@ -425,18 +440,24 @@ impl Control<'_> {
     }
 }
 
-#[derive(Default)]
 pub struct Attributes {
-    title: String,
+    title: Cow<'static, str>,
 }
 
 impl Attributes {
+    #[inline]
+    pub const fn new() -> Self {
+        Self {
+            title: Cow::Borrowed("dunge"),
+        }
+    }
+
     #[inline]
     pub fn with_title<S>(mut self, title: S) -> Self
     where
         S: Into<String>,
     {
-        self.title = title.into();
+        self.title = Cow::Owned(title.into());
         self
     }
 
@@ -528,9 +549,8 @@ impl Keys {
     }
 }
 
-struct Inner {
+struct Shared {
     surface: Surface<window::Window, Ops>,
-    time: RefCell<Time>,
     min_delta_time: Cell<Duration>,
     press_keys: Keys,
     release_keys: Keys,
@@ -541,7 +561,7 @@ struct Inner {
 
 #[derive(Clone)]
 pub struct Window {
-    inner: Rc<Inner>,
+    shared: Rc<Shared>,
     proxy: event_loop::EventLoopProxy<Request>,
 }
 
@@ -556,8 +576,7 @@ impl Window {
         attr: window::WindowAttributes,
     ) -> Result<Self, Error> {
         let window = el.create_window(attr).map_err(Error::Os)?;
-        let inner = Rc::new(Inner {
-            time: RefCell::new(Time::now()),
+        let shared = Rc::new(Shared {
             min_delta_time: Cell::new(Duration::from_secs_f32(1. / Self::DEFAULT_FPS as f32)),
             surface: Surface::new(cx, window).map_err(Error::CreateSurface)?,
             press_keys: Keys::new(),
@@ -567,54 +586,54 @@ impl Window {
             close: Event::new(),
         });
 
-        Ok(Self { inner, proxy })
+        Ok(Self { shared, proxy })
     }
 
     #[inline]
     pub fn winit(&self) -> &Arc<window::Window> {
-        self.inner.surface.window()
+        self.shared.surface.window()
     }
 
     #[inline]
     pub fn format(&self) -> Format {
-        self.inner.surface.format()
+        self.shared.surface.format()
     }
 
     #[inline]
     pub fn size(&self) -> (u32, u32) {
-        self.inner.surface.size()
+        self.shared.surface.size()
     }
 
     #[inline]
     pub fn set_fps(&self, fps: NonZeroU32) {
-        self.inner
+        self.shared
             .min_delta_time
             .set(Duration::from_secs_f32(1. / fps.get() as f32));
     }
 
     #[inline]
     pub async fn pressed(&self, code: keyboard::KeyCode) {
-        self.inner.press_keys.wait(code);
-        future::poll_fn(|_| self.inner.press_keys.active_poll(code)).await;
+        self.shared.press_keys.wait(code);
+        future::poll_fn(|_| self.shared.press_keys.active_poll(code)).await;
     }
 
     #[inline]
     pub async fn released(&self, code: keyboard::KeyCode) {
-        self.inner.release_keys.wait(code);
-        future::poll_fn(|_| self.inner.release_keys.active_poll(code)).await;
+        self.shared.release_keys.wait(code);
+        future::poll_fn(|_| self.shared.release_keys.active_poll(code)).await;
     }
 
     #[inline]
     pub async fn resized(&self) -> (u32, u32) {
-        future::poll_fn(|_| self.inner.resize.active_poll()).await;
-        self.inner.surface.size()
+        future::poll_fn(|_| self.shared.resize.active_poll()).await;
+        self.shared.surface.size()
     }
 
     #[inline]
     pub async fn redraw(&self) -> Redraw<'_> {
         loop {
-            let delta_time = future::poll_fn(|_| self.inner.redraw.active_poll_value()).await;
-            let e = match self.inner.surface.output() {
+            let delta_time = future::poll_fn(|_| self.shared.redraw.active_poll_value()).await;
+            let e = match self.shared.surface.output() {
                 Ok(output) => break Redraw { output, delta_time },
                 Err(e) => e,
             };
@@ -623,7 +642,7 @@ impl Window {
             match e.action() {
                 Action::Run => {}
                 Action::Recreate => {
-                    let id = self.inner.surface.window().id();
+                    let id = self.shared.surface.window().id();
                     _ = self.proxy.send_event(Request::RecreateSurface(id));
                 }
                 Action::Exit => {
@@ -636,14 +655,14 @@ impl Window {
 
     #[inline]
     pub async fn close_requested(&self) {
-        future::poll_fn(|_| self.inner.close.active_poll()).await;
+        future::poll_fn(|_| self.shared.close.active_poll()).await;
     }
 }
 
 impl Drop for Window {
     #[inline]
     fn drop(&mut self) {
-        let id = self.inner.surface.window().id();
+        let id = self.shared.surface.window().id();
         _ = self.proxy.send_event(Request::RemoveWindow(id));
     }
 }

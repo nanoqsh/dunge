@@ -61,7 +61,7 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
         cx.make_mesh(&verts)
     };
 
-    let window = ctrl.make_window(Attributes::default()).await?;
+    let window = ctrl.make_window(Attributes::new()).await?;
     let layer = cx.make_layer(&shader, window.format());
 
     let render = async {
