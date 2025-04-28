@@ -15,13 +15,15 @@ use {
         pin::{self, Pin},
         rc::Rc,
         sync::Arc,
-        task::{self, Poll, Waker},
+        task::{self, Poll, Wake, Waker},
         time::Duration,
     },
     winit::{application::ApplicationHandler, event, event_loop, keyboard, window},
 };
 
 enum Request {
+    #[expect(dead_code)]
+    Wake,
     MakeWindow {
         out: Rc<OnceCell<Result<Window, Error>>>,
         attr: Box<Attributes>,
@@ -43,6 +45,7 @@ struct App<'app, F> {
     windows: HashMap<window::WindowId, AppWindow>,
     res: Result<(), Error>,
     need_to_poll: bool,
+    context: task::Context<'app>,
     fu: F,
 }
 
@@ -61,12 +64,17 @@ impl<F> App<'_, Pin<&mut F>> {
             return;
         }
 
-        let mut noop = const { task::Context::from_waker(Waker::noop()) };
-        if self.fu.as_mut().poll(&mut noop).is_ready() {
+        self.inert_poll(el);
+        self.need_to_poll = false;
+    }
+
+    fn inert_poll(&mut self, el: &event_loop::ActiveEventLoop)
+    where
+        F: Future,
+    {
+        if self.fu.as_mut().poll(&mut self.context).is_ready() {
             el.exit();
         }
-
-        self.need_to_poll = false;
     }
 
     fn exit_with_error(&mut self, el: &event_loop::ActiveEventLoop, e: Error)
@@ -126,6 +134,7 @@ where
 
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Request) {
         match req {
+            Request::Wake => self.inert_poll(el),
             Request::MakeWindow { out, attr } => {
                 log::debug!("make window");
                 let res = Window::new(&self.cx, self.proxy.clone(), el, attr.winit());
@@ -279,6 +288,30 @@ where
         lifecycle: &lifecycle,
     };
 
+    struct AppWaker {
+        // it doesn't work :(
+        // > cannot be sent between threads safely
+        // so I need either sendable proxy from winit
+        // or local wakers in std.
+        #[cfg(any())]
+        proxy: event_loop::EventLoopProxy<Request>,
+    }
+
+    impl Wake for AppWaker {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+
+        fn wake_by_ref(self: &Arc<Self>) {
+            #[cfg(any())]
+            {
+                _ = self.proxy.send_event(Request::Wake);
+            }
+        }
+    }
+
+    let waker = Waker::from(Arc::new(AppWaker {}));
+
     let res = Cell::new(None);
     let mut app = App {
         cx,
@@ -287,6 +320,7 @@ where
         windows: HashMap::new(),
         res: Ok(()),
         need_to_poll: true, // an initial poll
+        context: task::Context::from_waker(&waker),
         fu: pin::pin!(async {
             let out = f(ctrl).await;
             res.set(Some(out));
