@@ -9,7 +9,8 @@ dunge.workspace = true
 dunge_winit.workspace = true
 env_logger.workspace = true
 futures-concurrency.workspace = true
-helpers.path = "../../helpers"
+futures-lite.workspace = true
+smol.workspace = true
 
 [lints]
 workspace = true

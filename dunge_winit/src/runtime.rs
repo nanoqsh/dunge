@@ -446,13 +446,6 @@ pub struct Attributes {
 
 impl Attributes {
     #[inline]
-    pub const fn new() -> Self {
-        Self {
-            title: Cow::Borrowed("dunge"),
-        }
-    }
-
-    #[inline]
     pub fn with_title<S>(mut self, title: S) -> Self
     where
         S: Into<String>,
@@ -464,6 +457,14 @@ impl Attributes {
     #[inline]
     fn winit(self) -> window::WindowAttributes {
         window::WindowAttributes::default().with_title(self.title)
+    }
+}
+
+impl Default for Attributes {
+    fn default() -> Self {
+        Self {
+            title: Cow::Borrowed("dunge"),
+        }
     }
 }
 

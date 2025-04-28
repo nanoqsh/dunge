@@ -25,7 +25,7 @@ dunge = { version = "=0.3.3", path = "dunge" }
 dunge_macros = { version = "=0.3.3", path = "dunge_macros" }
 dunge_shader = { version = "=0.3.3", path = "dunge_shader" }
 dunge_winit = { version = "=0.3.3", path = "dunge_winit" }
-askama = { version = "0.13", default-features = false }
+askama = { version = "0.14", default-features = false }
 async-channel = "2.1"
 async-executor = "1.8"
 async-net = "2.0"
@@ -44,6 +44,7 @@ parking = "2.2"
 png = "0.17"
 proc-macro2 = "1.0"
 quote = "1.0"
+smol = "2.0"
 smol-hyper = "0.1"
 syn = { version = "2.0", default-features = false }
 wasm-bindgen = "0.2"

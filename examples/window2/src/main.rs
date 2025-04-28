@@ -1,4 +1,4 @@
-use dunge_winit::{runtime::Control, winit};
+use dunge_winit::runtime::Control;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -12,9 +12,15 @@ fn main() {
 async fn run(ctrl: Control<'_>) -> Result<(), Error> {
     use {
         dunge_winit::{
-            color::Rgb, prelude::*, runtime::Attributes, uniform::Uniform, winit::keyboard::KeyCode,
+            color::Rgb,
+            prelude::*,
+            runtime::Attributes,
+            uniform::Uniform,
+            winit::{self, keyboard::KeyCode},
         },
         futures_concurrency::prelude::*,
+        smol::Timer,
+        std::{cell::Cell, time::Duration},
     };
 
     #[repr(C)]
@@ -40,6 +46,13 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
     let uniform = cx.make_uniform(&0.);
     let set = cx.make_set(&shader, Delta(&uniform));
 
+    let mut t = 0.;
+    let mut update_scene = |delta_time: Duration| {
+        t += delta_time.as_secs_f32();
+        let v = f32::sin(t) * 0.5 + 0.5;
+        uniform.update(&cx, &v);
+    };
+
     let mesh = {
         let verts = const {
             MeshData::from_verts(&[
@@ -61,16 +74,37 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
         cx.make_mesh(&verts)
     };
 
-    let window = ctrl.make_window(Attributes::new()).await?;
+    let window = ctrl.make_window(Attributes::default()).await?;
     let layer = cx.make_layer(&shader, window.format());
 
+    #[derive(Default)]
+    struct Fps(Cell<u32>);
+
+    impl Fps {
+        fn inc(&self) {
+            self.0.set(self.0.get() + 1);
+        }
+
+        fn reset(&self) -> u32 {
+            let total = self.0.get();
+            self.0.set(0);
+            total
+        }
+    }
+
+    let fps = Fps::default();
+    let fps_counter = async {
+        loop {
+            Timer::after(Duration::from_secs(1)).await;
+            let total = fps.reset();
+            println!("fps: {total}");
+        }
+    };
+
     let render = async {
-        let mut t = 0.;
         loop {
             let redraw = window.redraw().await;
-            t += redraw.delta_time().as_secs_f32();
-            let v = f32::sin(t) * 0.5 + 0.5;
-            uniform.update(&cx, &v);
+            update_scene(redraw.delta_time());
 
             cx.shed(|mut s| {
                 let bg = Rgb::from_bytes([0; 3]);
@@ -79,6 +113,7 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
             .await;
 
             redraw.present();
+            fps.inc();
         }
     };
 
@@ -106,7 +141,14 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
     let close = window.close_requested();
     let esc_pressed = window.pressed(KeyCode::Escape);
 
-    (render, resize, toggle_fullscreen, close, esc_pressed)
+    (
+        fps_counter,
+        render,
+        resize,
+        toggle_fullscreen,
+        close,
+        esc_pressed,
+    )
         .race()
         .await;
 
