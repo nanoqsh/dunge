@@ -1,5 +1,5 @@
 use {
-    crate::{AsTarget, Context, Target, prelude::Format},
+    crate::{Context, Target, prelude::Format},
     std::{
         cell::{Cell, RefCell},
         error, fmt,
@@ -16,7 +16,7 @@ pub struct Surface<W, O> {
     conf: RefCell<wgpu::SurfaceConfiguration>,
     inner: wgpu::Surface<'static>,
     window: Arc<W>,
-    out: Cell<bool>,
+    output: Cell<Option<Texture>>,
     ops: PhantomData<O>,
 }
 
@@ -73,7 +73,7 @@ impl<W, O> Surface<W, O> {
             conf: RefCell::new(conf),
             inner,
             window,
-            out: Cell::new(false),
+            output: Cell::new(None),
             ops: PhantomData,
         })
     }
@@ -99,10 +99,11 @@ impl<W, O> Surface<W, O> {
     where
         O: WindowOps<W>,
     {
-        assert!(!self.out.get(), "cannot resize while present to output");
-
         let (width, height) = O::size(&self.window);
         if width > 0 && height > 0 {
+            // drop output before reconfigure surface
+            self.output.take();
+
             let mut conf = self.conf.borrow_mut();
             conf.width = width;
             conf.height = height;
@@ -120,14 +121,19 @@ impl<W, O> Surface<W, O> {
 
         let format = self.format();
 
-        self.out.set(true);
+        self.output.set(Some(Texture(surface)));
 
         Ok(Output {
-            out: &self.out,
-            surface,
-            view,
             format,
+            texture: &self.output,
+            view,
         })
+    }
+}
+
+impl<W, O> Drop for Surface<W, O> {
+    fn drop(&mut self) {
+        self.output.take();
     }
 }
 
@@ -157,25 +163,25 @@ impl error::Error for CreateSurfaceError {
     }
 }
 
+struct Texture(wgpu::SurfaceTexture);
+
 pub struct Output<'surface> {
-    out: &'surface Cell<bool>,
-    surface: wgpu::SurfaceTexture,
-    view: wgpu::TextureView,
     format: Format,
+    texture: &'surface Cell<Option<Texture>>,
+    view: wgpu::TextureView,
 }
 
 impl Output<'_> {
     #[inline]
-    pub fn present(self) {
-        self.surface.present();
-        self.out.set(false);
-    }
-}
-
-impl AsTarget for Output<'_> {
-    #[inline]
-    fn as_target(&self) -> Target<'_> {
+    pub fn as_target(&self) -> Target<'_> {
         Target::new(self.format, &self.view)
+    }
+
+    #[inline]
+    pub fn present(self) {
+        if let Some(Texture(surface)) = self.texture.take() {
+            surface.present();
+        }
     }
 }
 

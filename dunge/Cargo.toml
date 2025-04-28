@@ -20,6 +20,7 @@ dunge_macros.workspace = true
 dunge_shader.workspace = true
 bytemuck.workspace = true
 glam = { workspace = true, features = ["bytemuck"] }
+# todo: remove
 instant = { workspace = true, optional = true }
 log.workspace = true
 wgpu = { workspace = true, features = ["naga-ir"] }

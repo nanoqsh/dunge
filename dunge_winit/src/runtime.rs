@@ -1,19 +1,34 @@
 use {
+    crate::time::Time,
     dunge::{
-        Context, FailedMakeContext,
+        AsTarget, Context, FailedMakeContext, Target,
         buffer::Format,
         surface::{Action, CreateSurfaceError, Output, Surface, SurfaceError, WindowOps},
     },
     std::{
         cell::{Cell, OnceCell, RefCell},
         collections::{HashMap, hash_map::Entry},
+        convert::Infallible,
         error, fmt, future,
+        num::NonZeroU32,
         pin::{self, Pin},
         rc::Rc,
+        sync::Arc,
         task::{self, Poll, Waker},
+        time::Duration,
     },
     winit::{application::ApplicationHandler, event, event_loop, keyboard, window},
 };
+
+enum Request {
+    MakeWindow {
+        out: Rc<OnceCell<Result<Window, Error>>>,
+        attr: Box<Attributes>,
+    },
+    RemoveWindow(window::WindowId),
+    RecreateSurface(window::WindowId),
+    Exit(Box<Error>),
+}
 
 struct App<'app, F> {
     cx: Context,
@@ -26,6 +41,8 @@ struct App<'app, F> {
 }
 
 impl<F> App<'_, Pin<&mut F>> {
+    const WAIT_TIME: Duration = Duration::from_millis(100);
+
     fn schedule(&mut self) {
         self.need_to_poll = true;
     }
@@ -55,22 +72,38 @@ impl<F> App<'_, Pin<&mut F>> {
     }
 }
 
-enum Request {
-    MakeWindow {
-        out: Rc<OnceCell<Result<Window, Error>>>,
-        attr: Box<Attributes>,
-    },
-    RemoveWindow(window::WindowId),
-    RecreateSurface(window::WindowId),
-    Exit(Box<Error>),
-}
-
 impl<F> ApplicationHandler<Request> for App<'_, Pin<&mut F>>
 where
     F: Future,
 {
+    fn new_events(&mut self, el: &event_loop::ActiveEventLoop, cause: event::StartCause) {
+        match cause {
+            event::StartCause::ResumeTimeReached { .. } => {
+                log::debug!("resume time reached");
+
+                for window in self.windows.values() {
+                    window.inner.surface.window().request_redraw();
+                }
+            }
+            event::StartCause::WaitCancelled {
+                requested_resume, ..
+            } => {
+                log::debug!("wait cancelled");
+                let flow = match requested_resume {
+                    Some(resume) => event_loop::ControlFlow::WaitUntil(resume),
+                    None => event_loop::ControlFlow::wait_duration(Self::WAIT_TIME),
+                };
+
+                el.set_control_flow(flow);
+            }
+            event::StartCause::Poll => log::debug!("poll"),
+            event::StartCause::Init => log::debug!("init"),
+        }
+    }
+
     fn resumed(&mut self, _: &event_loop::ActiveEventLoop) {
-        self.lifecycle.set(LifecycleState::Resumed);
+        log::debug!("resumed");
+        self.lifecycle.set(LifecycleState::Active);
 
         for window in self.windows.values() {
             window.inner.surface.window().request_redraw();
@@ -80,13 +113,15 @@ where
     }
 
     fn suspended(&mut self, _: &event_loop::ActiveEventLoop) {
-        self.lifecycle.set(LifecycleState::Suspended);
+        log::debug!("suspended");
+        self.lifecycle.set(LifecycleState::Inactive);
         self.schedule();
     }
 
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Request) {
         match req {
             Request::MakeWindow { out, attr } => {
+                log::debug!("make window");
                 let res = Window::new(&self.cx, self.proxy.clone(), el, attr.winit());
                 if let Ok(window) = &res {
                     let id = window.inner.surface.window().id();
@@ -97,18 +132,29 @@ where
                 _ = out.set(res);
                 self.schedule();
             }
-            Request::RemoveWindow(id) => _ = self.windows.remove(&id),
-            Request::RecreateSurface(id) => {
-                todo!("recreate surface {id:?}");
-                // self.schedule();
+            Request::RemoveWindow(id) => {
+                log::debug!("remove window {id:?}");
+                _ = self.windows.remove(&id);
             }
-            Request::Exit(e) => self.exit_with_error(el, *e),
+            Request::RecreateSurface(id) => {
+                log::debug!("recreate surface {id:?}");
+                let Some(window) = self.windows.get(&id) else {
+                    return;
+                };
+
+                window.inner.surface.resize(&self.cx);
+                self.schedule();
+            }
+            Request::Exit(e) => {
+                log::debug!("exit with error: {e}");
+                self.exit_with_error(el, *e);
+            }
         }
     }
 
     fn window_event(
         &mut self,
-        _: &event_loop::ActiveEventLoop,
+        el: &event_loop::ActiveEventLoop,
         id: window::WindowId,
         event: event::WindowEvent,
     ) {
@@ -130,6 +176,15 @@ where
                 window.inner.close.set();
                 self.schedule();
             }
+            event::WindowEvent::Focused(focused) => {
+                if focused {
+                    log::debug!("focused {id:?}");
+                    window.inner.surface.window().request_redraw();
+                    self.schedule();
+                } else {
+                    log::debug!("unfocused {id:?}");
+                }
+            }
             event::WindowEvent::KeyboardInput {
                 event:
                     event::KeyEvent {
@@ -143,11 +198,11 @@ where
             } => {
                 let code = match physical_key {
                     keyboard::PhysicalKey::Code(code) => {
-                        log::debug!("keyboard input {state:?}: {code:?}");
+                        log::debug!("keyboard input {id:?}: {state:?} {code:?}");
                         code
                     }
                     keyboard::PhysicalKey::Unidentified(code) => {
-                        log::debug!("keyboard input {state:?}: (unidentified) {code:?}");
+                        log::debug!("keyboard input {id:?}: {state:?} (unidentified) {code:?}");
                         return;
                     }
                 };
@@ -160,8 +215,26 @@ where
                 self.schedule();
             }
             event::WindowEvent::RedrawRequested => {
-                log::debug!("redraw requested");
-                window.inner.redraw.set();
+                if let LifecycleState::Active = self.lifecycle.state.get() {
+                    log::debug!("redraw requested {id:?}");
+                } else {
+                    log::debug!("redraw requested {id:?} (inactive)");
+
+                    // Wait a while to become active
+                    el.set_control_flow(event_loop::ControlFlow::wait_duration(Self::WAIT_TIME));
+                    return;
+                }
+
+                let delta_time = window.inner.time.borrow_mut().delta();
+                let min_delta_time = window.inner.min_delta_time.get();
+                if delta_time < min_delta_time {
+                    let wait = min_delta_time - delta_time;
+                    el.set_control_flow(event_loop::ControlFlow::wait_duration(wait));
+                    return;
+                }
+
+                window.inner.time.borrow_mut().reset();
+                window.inner.redraw.set_value(delta_time);
                 self.schedule();
             }
             _ => {}
@@ -182,7 +255,7 @@ where
         .map_err(Error::EventLoop)?;
 
     let lifecycle = Lifecycle {
-        state: Cell::new(LifecycleState::Suspended),
+        state: Cell::new(LifecycleState::Inactive),
     };
 
     let cx = dunge::block_on(dunge::context()).map_err(Error::Context)?;
@@ -211,16 +284,47 @@ where
     Ok(res.take().expect("take result of async function"))
 }
 
+pub fn try_block_on<F, R, U>(f: F) -> Result<R, Error<U>>
+where
+    F: AsyncFnMut(Control<'_>) -> Result<R, U>,
+{
+    match block_on(f) {
+        Ok(Ok(r)) => Ok(r),
+        Ok(Err(u)) => Err(Error::Custom(u)),
+        Err(e) => Err(e.map(|never| match never {})),
+    }
+}
+
 #[derive(Debug)]
-pub enum Error {
+pub enum Error<U = Infallible> {
     Context(FailedMakeContext),
     EventLoop(winit::error::EventLoopError),
     Os(winit::error::OsError),
     CreateSurface(CreateSurfaceError),
     Surface(SurfaceError),
+    Custom(U),
 }
 
-impl fmt::Display for Error {
+impl<U> Error<U> {
+    pub fn map<F, V>(self, f: F) -> Error<V>
+    where
+        F: FnOnce(U) -> V,
+    {
+        match self {
+            Self::Context(e) => Error::Context(e),
+            Self::EventLoop(e) => Error::EventLoop(e),
+            Self::Os(e) => Error::Os(e),
+            Self::CreateSurface(e) => Error::CreateSurface(e),
+            Self::Surface(e) => Error::Surface(e),
+            Self::Custom(u) => Error::Custom(f(u)),
+        }
+    }
+}
+
+impl<U> fmt::Display for Error<U>
+where
+    U: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Context(e) => e.fmt(f),
@@ -228,11 +332,15 @@ impl fmt::Display for Error {
             Self::Os(e) => e.fmt(f),
             Self::CreateSurface(e) => e.fmt(f),
             Self::Surface(e) => e.fmt(f),
+            Self::Custom(e) => e.fmt(f),
         }
     }
 }
 
-impl error::Error for Error {
+impl<U> error::Error for Error<U>
+where
+    U: error::Error + 'static,
+{
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Self::Context(e) => Some(e),
@@ -240,14 +348,15 @@ impl error::Error for Error {
             Self::Os(e) => Some(e),
             Self::CreateSurface(e) => Some(e),
             Self::Surface(e) => Some(e),
+            Self::Custom(e) => Some(e),
         }
     }
 }
 
 #[derive(Clone, Copy)]
 enum LifecycleState {
-    Resumed,
-    Suspended,
+    Active,
+    Inactive,
 }
 
 struct Lifecycle {
@@ -260,7 +369,7 @@ impl Lifecycle {
     }
 
     fn active_poll_resumed(&self) -> Poll<()> {
-        if let LifecycleState::Resumed = self.state.get() {
+        if let LifecycleState::Active = self.state.get() {
             Poll::Ready(())
         } else {
             Poll::Pending
@@ -268,7 +377,7 @@ impl Lifecycle {
     }
 
     fn active_poll_suspended(&self) -> Poll<()> {
-        if let LifecycleState::Suspended = self.state.get() {
+        if let LifecycleState::Inactive = self.state.get() {
             Poll::Ready(())
         } else {
             Poll::Pending
@@ -306,13 +415,13 @@ impl Control<'_> {
             attr: Box::new(attr),
         });
 
-        let mut poll = || {
+        let mut active_poll = || {
             Rc::get_mut(&mut out).map_or(Poll::Pending, |out| {
                 Poll::Ready(out.take().expect("take window"))
             })
         };
 
-        future::poll_fn(|_| poll()).await
+        future::poll_fn(|_| active_poll()).await
     }
 }
 
@@ -337,14 +446,19 @@ impl Attributes {
     }
 }
 
-struct Event(Cell<bool>);
+struct Event<T = bool>(Cell<T>);
+
+impl<T> Event<T> {
+    #[inline]
+    fn new() -> Self
+    where
+        T: Default,
+    {
+        Self(Cell::new(T::default()))
+    }
+}
 
 impl Event {
-    #[inline]
-    const fn new() -> Self {
-        Self(Cell::new(false))
-    }
-
     #[inline]
     fn set(&self) {
         self.0.set(true);
@@ -354,6 +468,22 @@ impl Event {
     fn active_poll(&self) -> Poll<()> {
         if self.0.take() {
             Poll::Ready(())
+        } else {
+            Poll::Pending
+        }
+    }
+}
+
+impl<T> Event<Option<T>> {
+    #[inline]
+    fn set_value(&self, value: T) {
+        self.0.set(Some(value));
+    }
+
+    #[inline]
+    fn active_poll_value(&self) -> Poll<T> {
+        if let Some(value) = self.0.take() {
+            Poll::Ready(value)
         } else {
             Poll::Pending
         }
@@ -400,10 +530,12 @@ impl Keys {
 
 struct Inner {
     surface: Surface<window::Window, Ops>,
+    time: RefCell<Time>,
+    min_delta_time: Cell<Duration>,
     press_keys: Keys,
     release_keys: Keys,
     resize: Event,
-    redraw: Event,
+    redraw: Event<Option<Duration>>,
     close: Event,
 }
 
@@ -414,6 +546,8 @@ pub struct Window {
 }
 
 impl Window {
+    const DEFAULT_FPS: u32 = 60;
+
     #[inline]
     fn new(
         cx: &Context,
@@ -423,15 +557,22 @@ impl Window {
     ) -> Result<Self, Error> {
         let window = el.create_window(attr).map_err(Error::Os)?;
         let inner = Rc::new(Inner {
+            time: RefCell::new(Time::now()),
+            min_delta_time: Cell::new(Duration::from_secs_f32(1. / Self::DEFAULT_FPS as f32)),
             surface: Surface::new(cx, window).map_err(Error::CreateSurface)?,
             press_keys: Keys::new(),
             release_keys: Keys::new(),
-            resize: const { Event::new() },
-            redraw: const { Event::new() },
-            close: const { Event::new() },
+            resize: Event::new(),
+            redraw: Event::new(),
+            close: Event::new(),
         });
 
         Ok(Self { inner, proxy })
+    }
+
+    #[inline]
+    pub fn winit(&self) -> &Arc<window::Window> {
+        self.inner.surface.window()
     }
 
     #[inline]
@@ -442,6 +583,13 @@ impl Window {
     #[inline]
     pub fn size(&self) -> (u32, u32) {
         self.inner.surface.size()
+    }
+
+    #[inline]
+    pub fn set_fps(&self, fps: NonZeroU32) {
+        self.inner
+            .min_delta_time
+            .set(Duration::from_secs_f32(1. / fps.get() as f32));
     }
 
     #[inline]
@@ -463,11 +611,11 @@ impl Window {
     }
 
     #[inline]
-    pub async fn redraw(&self) -> Output<'_> {
+    pub async fn redraw(&self) -> Redraw<'_> {
         loop {
-            future::poll_fn(|_| self.inner.redraw.active_poll()).await;
+            let delta_time = future::poll_fn(|_| self.inner.redraw.active_poll_value()).await;
             let e = match self.inner.surface.output() {
-                Ok(out) => break out,
+                Ok(output) => break Redraw { output, delta_time },
                 Err(e) => e,
             };
 
@@ -497,6 +645,30 @@ impl Drop for Window {
     fn drop(&mut self) {
         let id = self.inner.surface.window().id();
         _ = self.proxy.send_event(Request::RemoveWindow(id));
+    }
+}
+
+pub struct Redraw<'surface> {
+    output: Output<'surface>,
+    delta_time: Duration,
+}
+
+impl Redraw<'_> {
+    #[inline]
+    pub fn delta_time(&self) -> Duration {
+        self.delta_time
+    }
+
+    #[inline]
+    pub fn present(self) {
+        self.output.present();
+    }
+}
+
+impl AsTarget for Redraw<'_> {
+    #[inline]
+    fn as_target(&self) -> Target<'_> {
+        self.output.as_target()
     }
 }
 

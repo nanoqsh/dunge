@@ -1,9 +1,9 @@
 use {
     crate::{
+        _time::{Fps, Time},
         _window::{self, View, WindowState},
         context::Context,
         state::State,
-        time::{Fps, Time},
         update::{IntoUpdate, Update},
     },
     std::{cell::Cell, error, fmt, ops, time::Duration},

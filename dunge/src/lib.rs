@@ -23,13 +23,13 @@ pub mod vertex;
 pub mod workload;
 
 #[cfg(feature = "winit")]
+mod _time;
+#[cfg(feature = "winit")]
 pub mod _window;
 #[cfg(feature = "winit")]
 mod el;
 #[cfg(feature = "winit")]
 mod element;
-#[cfg(feature = "winit")]
-mod time;
 #[cfg(feature = "winit")]
 mod update;
 
