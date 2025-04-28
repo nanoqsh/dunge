@@ -223,7 +223,7 @@ where
 pub(crate) struct Func(naga::MathFunction);
 
 impl Func {
-    pub fn expr(self, ev: Evaluated) -> naga::Expression {
+    pub(crate) fn expr(self, ev: Evaluated) -> naga::Expression {
         let mut exprs = ev.into_iter().map(Expr::get);
         naga::Expression::Math {
             fun: self.0,

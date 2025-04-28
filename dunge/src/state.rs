@@ -43,7 +43,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new() -> Result<Self, FailedMakeContext> {
+    pub(crate) async fn new() -> Result<Self, FailedMakeContext> {
         let instance = {
             let desc = wgpu::InstanceDescriptor {
                 backends: DEFAULT_BACKEND,
@@ -99,28 +99,28 @@ impl State {
     }
 
     #[allow(dead_code)]
-    pub fn instance(&self) -> &wgpu::Instance {
+    pub(crate) fn instance(&self) -> &wgpu::Instance {
         &self.instance
     }
 
     #[allow(dead_code)]
-    pub fn adapter(&self) -> &wgpu::Adapter {
+    pub(crate) fn adapter(&self) -> &wgpu::Adapter {
         &self.adapter
     }
 
-    pub fn device(&self) -> &wgpu::Device {
+    pub(crate) fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
-    pub fn queue(&self) -> &wgpu::Queue {
+    pub(crate) fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 
-    pub fn work(&self) {
+    pub(crate) fn work(&self) {
         self.worker.work();
     }
 
-    pub fn _draw<D>(&self, target: Target<'_>, draw: D)
+    pub(crate) fn _draw<D>(&self, target: Target<'_>, draw: D)
     where
         D: Draw,
     {
@@ -139,7 +139,7 @@ impl State {
     }
 
     #[inline]
-    pub async fn run<F>(&self, f: F)
+    pub(crate) async fn run<F>(&self, f: F)
     where
         F: FnOnce(Scheduler<'_>),
     {

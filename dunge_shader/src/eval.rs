@@ -538,7 +538,7 @@ impl Evaluated {
         *slot = Some(expr);
     }
 
-    pub fn into_iter(self) -> impl Iterator<Item = Expr> {
+    pub(crate) fn into_iter(self) -> impl Iterator<Item = Expr> {
         self.0.into_iter().flatten()
     }
 }

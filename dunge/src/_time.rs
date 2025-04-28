@@ -6,14 +6,14 @@ pub(crate) struct Time {
 }
 
 impl Time {
-    pub fn now() -> Self {
+    pub(crate) fn now() -> Self {
         Self {
             last: Instant::now(),
             delta: Duration::ZERO,
         }
     }
 
-    pub fn delta(&mut self) -> Duration {
+    pub(crate) fn delta(&mut self) -> Duration {
         let now = Instant::now();
         let delta = now.duration_since(self.last);
         self.last = now;
@@ -21,7 +21,7 @@ impl Time {
         self.delta
     }
 
-    pub fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.delta = Duration::ZERO;
     }
 }
@@ -33,7 +33,7 @@ pub(crate) struct Fps {
 }
 
 impl Fps {
-    pub fn count(&mut self, delta_time: Duration) -> Option<u32> {
+    pub(crate) fn count(&mut self, delta_time: Duration) -> Option<u32> {
         self.timer += delta_time;
         self.counter += 1;
         if self.timer > const { Duration::from_secs(1) } {

@@ -53,19 +53,20 @@ web-sys = "0.3"
 winit = { version = "0.30", default-features = false }
 
 [workspace.lints.rust]
-elided-lifetimes-in-paths = "deny"
+elided-lifetimes-in-paths = "warn"
+unreachable-pub = "warn"
 
 [workspace.lints.clippy]
-cast-lossless = "deny"
-explicit-iter-loop = "deny"
-flat-map-option = "deny"
-manual-assert = "deny"
-match-wildcard-for-single-variants = "deny"
-missing-assert-message = "deny"
-semicolon-if-nothing-returned = "deny"
-trivially-copy-pass-by-ref = "deny"
-use-self = "deny"
-unwrap-used = "deny"
+cast-lossless = "warn"
+explicit-iter-loop = "warn"
+flat-map-option = "warn"
+manual-assert = "warn"
+match-wildcard-for-single-variants = "warn"
+missing-assert-message = "warn"
+semicolon-if-nothing-returned = "warn"
+trivially-copy-pass-by-ref = "warn"
+use-self = "warn"
+unwrap-used = "warn"
 
 [profile.dev]
 opt-level = 1

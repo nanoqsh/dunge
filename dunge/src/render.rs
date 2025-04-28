@@ -189,12 +189,12 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
 pub(crate) struct VertexSetter<'ren, 'layer>(&'layer mut wgpu::RenderPass<'ren>);
 
 impl<'ren, 'layer> VertexSetter<'ren, 'layer> {
-    pub fn _new(pass: &'layer mut wgpu::RenderPass<'ren>) -> Self {
+    pub(crate) fn _new(pass: &'layer mut wgpu::RenderPass<'ren>) -> Self {
         Self(pass)
     }
 
     #[inline]
-    pub fn set(&mut self, buf: &wgpu::Buffer, slot: u32) {
+    pub(crate) fn set(&mut self, buf: &wgpu::Buffer, slot: u32) {
         let slice = buf.slice(..);
         self.0.set_vertex_buffer(slot, slice);
     }

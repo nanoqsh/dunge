@@ -49,7 +49,7 @@ pub(crate) struct Sampled {
 }
 
 impl Sampled {
-    pub fn expr(self) -> naga::Expression {
+    pub(crate) fn expr(self) -> naga::Expression {
         naga::Expression::ImageSample {
             image: self.tex.get(),
             sampler: self.sam.get(),

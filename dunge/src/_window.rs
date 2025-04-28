@@ -309,11 +309,11 @@ pub(crate) struct Output {
 }
 
 impl Output {
-    pub fn target(&self) -> Target<'_> {
+    pub(crate) fn target(&self) -> Target<'_> {
         Target::new(self.format, &self.view)
     }
 
-    pub fn present(self) {
+    pub(crate) fn present(self) {
         self.output.present();
     }
 }

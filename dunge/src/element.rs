@@ -9,7 +9,7 @@ type El = ();
 pub(crate) struct Element(pub El);
 
 impl Element {
-    pub fn set_canvas(&self, window: &Window) {
+    pub(crate) fn set_canvas(&self, window: &Window) {
         #[cfg(target_family = "wasm")]
         {
             use winit::platform::web::WindowExtWebSys;
@@ -25,7 +25,7 @@ impl Element {
         }
     }
 
-    pub fn set_window_size(&self, window: &Window) {
+    pub(crate) fn set_window_size(&self, window: &Window) {
         #[cfg(target_family = "wasm")]
         {
             use winit::dpi::PhysicalSize;

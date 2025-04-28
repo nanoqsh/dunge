@@ -63,7 +63,7 @@ pub(crate) struct GroupEntry {
 }
 
 impl GroupEntry {
-    pub fn def(&self) -> Define<MemberData> {
+    pub(crate) fn def(&self) -> Define<MemberData> {
         self.def
     }
 }

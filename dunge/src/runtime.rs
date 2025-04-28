@@ -24,7 +24,7 @@ pub(crate) struct Ticket {
 
 impl Ticket {
     #[inline]
-    pub const fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         Self {
             state: AtomicU8::new(WAIT),
             waker: Mutex::new(None),
@@ -32,7 +32,7 @@ impl Ticket {
     }
 
     #[inline]
-    pub fn done(&self) {
+    pub(crate) fn done(&self) {
         self.state.store(DONE, Ordering::Release);
         if let Some(waker) = self.waker.lock().expect("lock waker").as_ref() {
             waker.wake_by_ref();
@@ -40,7 +40,7 @@ impl Ticket {
     }
 
     #[inline]
-    pub fn fail(&self) {
+    pub(crate) fn fail(&self) {
         self.state.store(FAIL, Ordering::Release);
         if let Some(waker) = self.waker.lock().expect("lock waker").as_ref() {
             waker.wake_by_ref();
@@ -48,7 +48,7 @@ impl Ticket {
     }
 
     #[inline]
-    pub fn wait(&self) -> impl Future<Output = bool> {
+    pub(crate) fn wait(&self) -> impl Future<Output = bool> {
         future::poll_fn(|cx| match self.state.load(Ordering::Acquire) {
             WAIT => {
                 *self.waker.lock().expect("lock waker") = Some(cx.waker().clone());
@@ -134,7 +134,7 @@ pub(crate) fn poll_in_background(instance: wgpu::Instance) -> Worker {
 pub(crate) struct Worker(Sender);
 
 impl Worker {
-    pub fn work(&self) {
+    pub(crate) fn work(&self) {
         self.0.send();
     }
 }

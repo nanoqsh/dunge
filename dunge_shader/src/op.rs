@@ -264,7 +264,7 @@ pub(crate) enum Un {
 }
 
 impl Un {
-    pub fn operator(self) -> naga::UnaryOperator {
+    pub(crate) fn operator(self) -> naga::UnaryOperator {
         match self {
             Self::Neg => naga::UnaryOperator::Negate,
             Self::Not => naga::UnaryOperator::LogicalNot,
@@ -292,7 +292,7 @@ pub(crate) enum Bi {
 }
 
 impl Bi {
-    pub fn operator(self) -> naga::BinaryOperator {
+    pub(crate) fn operator(self) -> naga::BinaryOperator {
         match self {
             Self::Add => naga::BinaryOperator::Add,
             Self::Sub => naga::BinaryOperator::Subtract,
