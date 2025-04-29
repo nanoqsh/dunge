@@ -9,8 +9,11 @@ name = "cube_bin"
 path = "src/main.rs"
 
 [dependencies]
-dunge = { workspace = true, features = ["winit"] }
+# for derive macro
+dunge.workspace = true
+dunge_winit.workspace = true
 env_logger.workspace = true
+futures-lite.workspace = true
 
 [lints]
 workspace = true

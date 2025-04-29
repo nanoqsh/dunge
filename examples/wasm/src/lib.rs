@@ -1,12 +1,11 @@
 #![cfg(target_family = "wasm")]
 
-use wasm_bindgen::prelude::*;
+use {std::panic, wasm_bindgen::prelude::*};
 
 #[wasm_bindgen(start)]
-pub async fn start() {
-    use std::panic;
-
+async fn start() {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
+
     let run;
 
     #[cfg(feature = "cube")]
@@ -24,8 +23,7 @@ pub async fn start() {
         run = triangle::run;
     }
 
-    let ws = dunge::from_element("root");
-    if let Err(e) = run(ws).await {
+    if let Err(e) = dunge_winit::runtime::run(run).await {
         panic!("error: {e}");
     }
 }

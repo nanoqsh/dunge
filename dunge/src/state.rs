@@ -155,10 +155,18 @@ impl State {
 
         let ticket = Arc::new(const { Ticket::new() });
 
-        self.queue.on_submitted_work_done({
-            let ticket = ticket.clone();
-            move || ticket.done()
-        });
+        #[cfg(target_family = "wasm")]
+        {
+            ticket.done();
+        }
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            self.queue.on_submitted_work_done({
+                let ticket = ticket.clone();
+                move || ticket.done()
+            });
+        }
 
         ticket.wait().await;
     }

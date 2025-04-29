@@ -1,4 +1,4 @@
-use dunge_winit::runtime::Control;
+use dunge_winit::{Context, runtime::Control};
 
 type Error = Box<dyn std::error::Error>;
 
@@ -9,7 +9,7 @@ fn main() {
     }
 }
 
-async fn run(ctrl: Control<'_>) -> Result<(), Error> {
+async fn run(cx: Context, control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
             color::Rgb,
@@ -40,7 +40,6 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
         sl::Render { place, color }
     };
 
-    let cx = ctrl.context();
     let shader = cx.make_shader(triangle);
 
     let uniform = cx.make_uniform(&0.);
@@ -74,7 +73,7 @@ async fn run(ctrl: Control<'_>) -> Result<(), Error> {
         cx.make_mesh(&verts)
     };
 
-    let window = ctrl.make_window(Attributes::default()).await?;
+    let window = control.make_window(Attributes::default()).await?;
     let layer = cx.make_layer(&shader, window.format());
 
     #[derive(Default)]

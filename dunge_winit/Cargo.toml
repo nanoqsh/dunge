@@ -16,5 +16,10 @@ instant.workspace = true
 log.workspace = true
 winit = { workspace = true, features = ["rwh_06", "x11"] }
 
+[target.'cfg(target_family = "wasm")'.dependencies]
+instant = { workspace = true, features = ["wasm-bindgen"] }
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Document", "Window", "Element"] }
+
 [lints]
 workspace = true

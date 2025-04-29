@@ -12,7 +12,7 @@ use {
         convert::Infallible,
         error, fmt, future,
         num::NonZeroU32,
-        pin::{self, Pin},
+        pin::Pin,
         rc::Rc,
         sync::Arc,
         task::{self, Poll, Wake, Waker},
@@ -38,28 +38,28 @@ struct AppWindow {
     time: Time,
 }
 
-struct App<'app, F> {
+struct App<'waker, F, R> {
     cx: Context,
     proxy: event_loop::EventLoopProxy<Request>,
-    lifecycle: &'app Lifecycle,
+    lifecycle: Rc<Lifecycle>,
     windows: HashMap<window::WindowId, AppWindow>,
-    res: Result<(), Error>,
     need_to_poll: bool,
-    context: task::Context<'app>,
-    fu: F,
+    context: task::Context<'waker>,
+    fu: Pin<Box<F>>,
+    out: async_channel::Sender<Result<R, Error>>,
 }
 
-impl<F> App<'_, Pin<&mut F>> {
+impl<F> App<'_, F, F::Output>
+where
+    F: Future,
+{
     const WAIT_TIME: Duration = Duration::from_millis(100);
 
     fn schedule(&mut self) {
         self.need_to_poll = true;
     }
 
-    fn active_poll(&mut self, el: &event_loop::ActiveEventLoop)
-    where
-        F: Future,
-    {
+    fn active_poll(&mut self, el: &event_loop::ActiveEventLoop) {
         if !self.need_to_poll {
             return;
         }
@@ -68,25 +68,20 @@ impl<F> App<'_, Pin<&mut F>> {
         self.need_to_poll = false;
     }
 
-    fn inert_poll(&mut self, el: &event_loop::ActiveEventLoop)
-    where
-        F: Future,
-    {
-        if self.fu.as_mut().poll(&mut self.context).is_ready() {
+    fn inert_poll(&mut self, el: &event_loop::ActiveEventLoop) {
+        if let Poll::Ready(res) = self.fu.as_mut().poll(&mut self.context) {
+            _ = self.out.force_send(Ok(res));
             el.exit();
         }
     }
 
-    fn exit_with_error(&mut self, el: &event_loop::ActiveEventLoop, e: Error)
-    where
-        F: Future,
-    {
-        self.res = Err(e);
+    fn exit_with_error(&mut self, el: &event_loop::ActiveEventLoop, e: Error) {
+        _ = self.out.force_send(Err(e));
         el.exit();
     }
 }
 
-impl<F> ApplicationHandler<Request> for App<'_, Pin<&mut F>>
+impl<F> ApplicationHandler<Request> for App<'_, F, F::Output>
 where
     F: Future,
 {
@@ -111,7 +106,13 @@ where
                 el.set_control_flow(flow);
             }
             event::StartCause::Poll => log::debug!("poll"),
-            event::StartCause::Init => log::debug!("init"),
+            event::StartCause::Init => {
+                log::debug!("init");
+
+                // an initial poll
+                self.schedule();
+                self.active_poll(el);
+            }
         }
     }
 
@@ -268,25 +269,81 @@ where
     }
 }
 
+#[cfg(target_family = "wasm")]
+#[inline]
+pub async fn run<F, R>(mut f: F) -> Result<R, Error>
+where
+    F: AsyncFnMut(Context, Control) -> R + 'static,
+    R: 'static,
+{
+    use winit::platform::web::EventLoopExtWebSys;
+
+    let el = event_loop::EventLoop::with_user_event()
+        .build()
+        .map_err(Error::EventLoop)?;
+
+    let lifecycle = Rc::new(Lifecycle {
+        state: Cell::new(LifecycleState::Inactive),
+    });
+
+    let control = Control {
+        proxy: el.create_proxy(),
+        lifecycle: lifecycle.clone(),
+    };
+
+    let cx = dunge::context().await.map_err(Error::Context)?;
+
+    let (out, take) = async_channel::bounded(1);
+    let app = App {
+        cx: cx.clone(),
+        proxy: el.create_proxy(),
+        lifecycle,
+        windows: HashMap::new(),
+        need_to_poll: false,
+        context: task::Context::from_waker(Waker::noop()),
+        fu: Box::pin(async move { f(cx, control).await }),
+        out,
+    };
+
+    el.spawn_app(app);
+    take.recv().await.expect("take result of async function")
+}
+
+#[cfg(target_family = "wasm")]
+#[inline]
+pub async fn try_run<F, R, U>(f: F) -> Result<R, Error<U>>
+where
+    F: AsyncFnMut(Context, Control) -> Result<R, U> + 'static,
+    R: 'static,
+    U: 'static,
+{
+    match run(f).await {
+        Ok(Ok(r)) => Ok(r),
+        Ok(Err(u)) => Err(Error::Custom(u)),
+        Err(e) => Err(e.map(|never| match never {})),
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
 #[inline]
 pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
 where
-    F: AsyncFnMut(Control<'_>) -> R,
+    F: AsyncFnMut(Context, Control) -> R,
 {
     let el = event_loop::EventLoop::with_user_event()
         .build()
         .map_err(Error::EventLoop)?;
 
-    let lifecycle = Lifecycle {
+    let lifecycle = Rc::new(Lifecycle {
         state: Cell::new(LifecycleState::Inactive),
+    });
+
+    let control = Control {
+        proxy: el.create_proxy(),
+        lifecycle: lifecycle.clone(),
     };
 
     let cx = dunge::block_on(dunge::context()).map_err(Error::Context)?;
-    let ctrl = Control {
-        cx: cx.clone(),
-        proxy: el.create_proxy(),
-        lifecycle: &lifecycle,
-    };
 
     struct AppWaker {
         // it doesn't work :(
@@ -312,30 +369,27 @@ where
 
     let waker = Waker::from(Arc::new(AppWaker {}));
 
-    let res = Cell::new(None);
+    let (out, take) = async_channel::bounded(1);
     let mut app = App {
-        cx,
+        cx: cx.clone(),
         proxy: el.create_proxy(),
-        lifecycle: &lifecycle,
+        lifecycle,
         windows: HashMap::new(),
-        res: Ok(()),
-        need_to_poll: true, // an initial poll
+        need_to_poll: false,
         context: task::Context::from_waker(&waker),
-        fu: pin::pin!(async {
-            let out = f(ctrl).await;
-            res.set(Some(out));
-        }),
+        fu: Box::pin(f(cx, control)),
+        out,
     };
 
     el.run_app(&mut app).map_err(Error::EventLoop)?;
-    app.res?;
-    Ok(res.take().expect("take result of async function"))
+    take.recv_blocking().expect("take result of async function")
 }
 
+#[cfg(not(target_family = "wasm"))]
 #[inline]
 pub fn try_block_on<F, R, U>(f: F) -> Result<R, Error<U>>
 where
-    F: AsyncFnMut(Control<'_>) -> Result<R, U>,
+    F: AsyncFnMut(Context, Control) -> Result<R, U>,
 {
     match block_on(f) {
         Ok(Ok(r)) => Ok(r),
@@ -434,18 +488,12 @@ impl Lifecycle {
     }
 }
 
-pub struct Control<'app> {
-    cx: Context,
+pub struct Control {
     proxy: event_loop::EventLoopProxy<Request>,
-    lifecycle: &'app Lifecycle,
+    lifecycle: Rc<Lifecycle>,
 }
 
-impl Control<'_> {
-    #[inline]
-    pub fn context(&self) -> Context {
-        self.cx.clone()
-    }
-
+impl Control {
     #[inline]
     pub async fn resumed(&self) {
         future::poll_fn(|_| self.lifecycle.active_poll_resumed()).await;
@@ -475,6 +523,8 @@ impl Control<'_> {
 }
 
 pub struct Attributes {
+    #[allow(dead_code)]
+    id: Cow<'static, str>,
     title: Cow<'static, str>,
 }
 
@@ -490,13 +540,38 @@ impl Attributes {
 
     #[inline]
     fn winit(self) -> window::WindowAttributes {
-        window::WindowAttributes::default().with_title(self.title)
+        #[allow(unused_mut)]
+        let mut attr = window::WindowAttributes::default().with_title(self.title);
+
+        #[cfg(target_family = "wasm")]
+        {
+            use {
+                wasm_bindgen::JsCast, web_sys::Window,
+                winit::platform::web::WindowAttributesExtWebSys,
+            };
+
+            let document = web_sys::window()
+                .as_ref()
+                .and_then(Window::document)
+                .expect("get document");
+
+            let id = &self.id;
+            let Some(canvas) = document.get_element_by_id(id) else {
+                panic!("an element with id {id:?} not found");
+            };
+
+            let canvas = canvas.dyn_into().expect("cast html element into canvas");
+            attr = attr.with_canvas(Some(canvas));
+        }
+
+        attr
     }
 }
 
 impl Default for Attributes {
     fn default() -> Self {
         Self {
+            id: Cow::Borrowed("root"),
             title: Cow::Borrowed("dunge"),
         }
     }

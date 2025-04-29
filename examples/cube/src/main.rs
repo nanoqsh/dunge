@@ -1,7 +1,6 @@
 fn main() {
     env_logger::init();
-    let ws = dunge::window().with_title("Cube");
-    if let Err(e) = dunge::block_on(cube::run(ws)) {
+    if let Err(e) = dunge_winit::runtime::try_block_on(cube::run) {
         eprintln!("error: {e}");
     }
 }

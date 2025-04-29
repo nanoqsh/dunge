@@ -1,12 +1,20 @@
+use dunge_winit::{Context, runtime::Control};
+
 type Error = Box<dyn std::error::Error>;
 
-pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
-    use dunge::{
-        color::Rgb,
-        glam::{Mat4, Quat, Vec3},
-        prelude::*,
-        sl::{Groups, InVertex, Render},
-        uniform::Uniform,
+pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
+    use {
+        dunge_winit::{
+            color::Rgb,
+            glam::{Mat4, Quat, Vec3},
+            prelude::*,
+            runtime::Attributes,
+            sl::{Groups, InVertex, Render},
+            uniform::Uniform,
+            winit::keyboard::KeyCode,
+        },
+        futures_lite::future,
+        std::time::Duration,
     };
 
     #[repr(C)]
@@ -24,28 +32,28 @@ pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
 
-    let transform = |r, size| {
-        let pos = Vec3::new(0., 0., -2.);
-        let rot = Quat::from_rotation_y(r);
-        let m = Mat4::from_rotation_translation(rot, pos);
-        let p = {
-            let (width, height) = size;
+    let shader = cx.make_shader(cube);
+    let uniform = cx.make_uniform(&Mat4::IDENTITY);
+    let transform = cx.make_set(&shader, Transform(&uniform));
+
+    let mut r = 0.;
+    let mut update_scene = |(width, height), delta_time: Duration| {
+        r += delta_time.as_secs_f32() * 1.5;
+
+        let model = {
+            let pos = Vec3::new(0., 0., -2.);
+            let rot = Quat::from_axis_angle(Vec3::splat(1.).normalize(), f32::sin(r));
+            Mat4::from_rotation_translation(rot, pos)
+        };
+
+        let projection = {
             let ratio = width as f32 / height as f32;
             Mat4::perspective_rh(1.6, ratio, 0.1, 100.)
         };
 
-        p * m
+        let mat = projection * model;
+        uniform.update(&cx, &mat);
     };
-
-    let cx = dunge::context().await?;
-    let cube_shader = cx.make_shader(cube);
-    let mut r = 0.;
-    let uniform = {
-        let mat = transform(r, (1, 1));
-        cx.make_uniform(&mat)
-    };
-
-    let transform_set = cx.make_set(&cube_shader, Transform(&uniform));
 
     let mesh = {
         const VERTS: [Vert; 8] = {
@@ -87,11 +95,15 @@ pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
             ]
         };
 
-        const INDXS: [[u16; 3]; 8] = [
+        const INDXS: [[u16; 3]; 12] = [
             [0, 1, 2],
             [0, 2, 3], // -x
             [4, 5, 6],
             [4, 6, 7], // +x
+            [0, 4, 7],
+            [0, 7, 1], // -y
+            [3, 2, 6],
+            [3, 6, 5], // +y
             [0, 3, 5],
             [0, 5, 4], // -z
             [6, 2, 1],
@@ -102,34 +114,29 @@ pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let make_handler = move |cx: &Context, view: &View| {
-        let layer = cx.make_layer(&cube_shader, view.format());
+    let window = control.make_window(Attributes::default()).await?;
+    let layer = cx.make_layer(&shader, window.format());
 
-        let cx = cx.clone();
-        let upd = move |ctrl: &Control| {
-            for key in ctrl.pressed_keys() {
-                if key.code == KeyCode::Escape {
-                    return Then::Close;
-                }
-            }
+    let render = async {
+        loop {
+            let redraw = window.redraw().await;
+            update_scene(window.size(), redraw.delta_time());
 
-            r += ctrl.delta_time().as_secs_f32() * 0.5;
-            let mat = transform(r, ctrl.size());
-            uniform.update(&cx, &mat);
-            Then::Run
-        };
+            cx.shed(|mut s| {
+                let bg = Rgb::from_standard([0.1, 0.05, 0.15]);
+                s.render(&redraw, bg)
+                    .layer(&layer)
+                    .set(&transform)
+                    .draw(&mesh);
+            })
+            .await;
 
-        let draw = move |mut frame: _Frame<'_, '_>| {
-            let bg = Rgb::from_standard([0.1, 0.05, 0.15]);
-            frame
-                ._set_layer(&layer, bg)
-                ._bind(&transform_set)
-                ._draw(&mesh);
-        };
-
-        dunge::update(upd, draw)
+            redraw.present();
+        }
     };
 
-    ws.run(cx, dunge::make(make_handler))?;
+    let close = window.pressed(KeyCode::Escape);
+    future::or(render, close).await;
+
     Ok(())
 }
