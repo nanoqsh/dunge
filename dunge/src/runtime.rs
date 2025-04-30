@@ -4,13 +4,13 @@ use std::{
         Mutex,
         atomic::{AtomicU8, Ordering},
     },
-    task::{Context, Poll, Waker},
+    task::{Poll, Waker},
 };
 
 #[cfg(not(target_family = "wasm"))]
 use {
     parking::Parker,
-    std::{cell::RefCell, pin, sync::mpsc, thread},
+    std::{cell::RefCell, pin, sync::mpsc, task::Context, thread},
 };
 
 const WAIT: u8 = 0;

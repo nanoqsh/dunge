@@ -5,6 +5,7 @@ type Error = Box<dyn std::error::Error>;
 pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
+            Canvas,
             color::Rgb,
             glam::{Mat4, Quat, Vec3},
             prelude::*,
@@ -114,7 +115,10 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let window = control.make_window(Attributes::default()).await?;
+    let window = control
+        .make_window(Attributes::default().with_canvas(Canvas::by_id("root")))
+        .await?;
+
     let layer = cx.make_layer(&shader, window.format());
 
     let render = async {

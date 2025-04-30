@@ -1,5 +1,5 @@
 use {
-    crate::time::Time,
+    crate::{canvas::Canvas, time::Time},
     dunge::{
         AsTarget, Context, FailedMakeContext, Target,
         buffer::Format,
@@ -15,7 +15,7 @@ use {
         pin::Pin,
         rc::Rc,
         sync::Arc,
-        task::{self, Poll, Wake, Waker},
+        task::{self, Poll, Waker},
         time::Duration,
     },
     winit::{application::ApplicationHandler, event, event_loop, keyboard, window},
@@ -354,7 +354,7 @@ where
         proxy: event_loop::EventLoopProxy<Request>,
     }
 
-    impl Wake for AppWaker {
+    impl task::Wake for AppWaker {
         fn wake(self: Arc<Self>) {
             self.wake_by_ref();
         }
@@ -523,9 +523,8 @@ impl Control {
 }
 
 pub struct Attributes {
-    #[allow(dead_code)]
-    id: Cow<'static, str>,
     title: Cow<'static, str>,
+    canvas: Option<Canvas>,
 }
 
 impl Attributes {
@@ -539,29 +538,19 @@ impl Attributes {
     }
 
     #[inline]
-    fn winit(self) -> window::WindowAttributes {
-        #[allow(unused_mut)]
+    pub fn with_canvas<C>(mut self, canvas: C) -> Self
+    where
+        C: Into<Option<Canvas>>,
+    {
+        self.canvas = canvas.into();
+        self
+    }
+
+    #[inline]
+    fn winit(mut self) -> window::WindowAttributes {
         let mut attr = window::WindowAttributes::default().with_title(self.title);
-
-        #[cfg(target_family = "wasm")]
-        {
-            use {
-                wasm_bindgen::JsCast, web_sys::Window,
-                winit::platform::web::WindowAttributesExtWebSys,
-            };
-
-            let document = web_sys::window()
-                .as_ref()
-                .and_then(Window::document)
-                .expect("get document");
-
-            let id = &self.id;
-            let Some(canvas) = document.get_element_by_id(id) else {
-                panic!("an element with id {id:?} not found");
-            };
-
-            let canvas = canvas.dyn_into().expect("cast html element into canvas");
-            attr = attr.with_canvas(Some(canvas));
+        if let Some(canvas) = self.canvas.take() {
+            attr = canvas.set(attr);
         }
 
         attr
@@ -571,8 +560,8 @@ impl Attributes {
 impl Default for Attributes {
     fn default() -> Self {
         Self {
-            id: Cow::Borrowed("root"),
             title: Cow::Borrowed("dunge"),
+            canvas: None,
         }
     }
 }
