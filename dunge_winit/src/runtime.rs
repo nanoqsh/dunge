@@ -118,12 +118,12 @@ where
             return;
         }
 
-        self.inert_poll(el);
+        self.force_poll(el);
         self.need_to_poll = false;
     }
 
     #[inline]
-    fn inert_poll(&mut self, el: &event_loop::ActiveEventLoop) {
+    fn force_poll(&mut self, el: &event_loop::ActiveEventLoop) {
         if let Poll::Ready(res) = self.fu.as_mut().poll(&mut self.context) {
             self.ret.set(Ok(res));
             el.exit();
@@ -145,10 +145,11 @@ where
         match cause {
             event::StartCause::ResumeTimeReached { .. } => {
                 log::debug!("resume time reached");
-
                 for window in self.windows.values() {
                     window.shared.surface.window().request_redraw();
                 }
+
+                self.schedule();
             }
             event::StartCause::WaitCancelled {
                 requested_resume, ..
@@ -166,8 +167,7 @@ where
                 log::debug!("init");
 
                 // an initial poll
-                self.schedule();
-                self.active_poll(el);
+                self.force_poll(el);
             }
         }
     }
@@ -191,7 +191,7 @@ where
 
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Request) {
         match req {
-            Request::Wake => self.inert_poll(el),
+            Request::Wake => self.force_poll(el),
             Request::MakeWindow { out, attr } => {
                 log::debug!("make window");
                 let res = Window::new(&self.cx, self.proxy.clone(), el, attr.winit());
@@ -314,7 +314,7 @@ where
 
                 window.time.reset();
                 window.shared.redraw.set_value(delta_time);
-                self.schedule();
+                self.force_poll(el);
             }
             _ => {}
         }

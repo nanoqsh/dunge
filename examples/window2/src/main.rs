@@ -13,6 +13,7 @@ async fn run(cx: Context, control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
             color::Rgb,
+            glam::{Vec2, Vec3},
             prelude::*,
             runtime::Attributes,
             uniform::Uniform,
@@ -26,8 +27,8 @@ async fn run(cx: Context, control: Control) -> Result<(), Error> {
     #[repr(C)]
     #[derive(Vertex)]
     struct Vert {
-        pos: [f32; 2],
-        col: [f32; 3],
+        pos: Vec2,
+        col: Vec3,
     }
 
     #[derive(Group)]
@@ -53,23 +54,22 @@ async fn run(cx: Context, control: Control) -> Result<(), Error> {
     };
 
     let mesh = {
-        let verts = const {
-            MeshData::from_verts(&[
-                Vert {
-                    pos: [-0.5, -0.5],
-                    col: [1., 0., 0.],
-                },
-                Vert {
-                    pos: [0.5, -0.5],
-                    col: [0., 1., 0.],
-                },
-                Vert {
-                    pos: [0., 0.5],
-                    col: [0., 0., 1.],
-                },
-            ])
-        };
+        const VERTS: [Vert; 3] = [
+            Vert {
+                pos: Vec2::new(-0.5, -0.5),
+                col: Vec3::new(1., 0., 0.),
+            },
+            Vert {
+                pos: Vec2::new(0.5, -0.5),
+                col: Vec3::new(0., 1., 0.),
+            },
+            Vert {
+                pos: Vec2::new(0., 0.5),
+                col: Vec3::new(0., 0., 1.),
+            },
+        ];
 
+        let verts = MeshData::from_verts(&VERTS);
         cx.make_mesh(&verts)
     };
 

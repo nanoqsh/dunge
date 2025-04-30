@@ -14,7 +14,7 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
             uniform::Uniform,
             winit::keyboard::KeyCode,
         },
-        futures_lite::future,
+        futures_concurrency::prelude::*,
         std::time::Duration,
     };
 
@@ -120,14 +120,17 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
         .await?;
 
     let layer = cx.make_layer(&shader, window.format());
+    let bg = if window.format().is_standard() {
+        Rgb::from_standard_bytes([25, 10, 40])
+    } else {
+        Rgb::from_bytes([25, 10, 40])
+    };
 
     let render = async {
         loop {
             let redraw = window.redraw().await;
             update_scene(window.size(), redraw.delta_time());
-
             cx.shed(|mut s| {
-                let bg = Rgb::from_standard([0.1, 0.05, 0.15]);
                 s.render(&redraw, bg)
                     .layer(&layer)
                     .set(&transform)
@@ -139,8 +142,9 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
         }
     };
 
-    let close = window.pressed(KeyCode::Escape);
-    future::or(render, close).await;
+    let close = window.close_requested();
+    let esc_pressed = window.pressed(KeyCode::Escape);
+    (render, close, esc_pressed).race().await;
 
     Ok(())
 }

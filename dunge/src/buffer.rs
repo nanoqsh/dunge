@@ -32,6 +32,11 @@ impl Format {
     }
 
     #[inline]
+    pub const fn is_standard(self) -> bool {
+        matches!(self, Self::SrgbAlpha | Self::SbgrAlpha)
+    }
+
+    #[inline]
     pub(crate) const fn wgpu(self) -> wgpu::TextureFormat {
         match self {
             Self::SrgbAlpha => wgpu::TextureFormat::Rgba8UnormSrgb,
