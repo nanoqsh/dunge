@@ -38,6 +38,58 @@ struct AppWindow {
     time: Time,
 }
 
+enum Out<R> {
+    Empty,
+    Done(R),
+    Fail(Error),
+}
+
+struct Return<R> {
+    out: Cell<Out<R>>,
+    waker: RefCell<Option<Waker>>,
+}
+
+impl<R> Return<R> {
+    const fn new() -> Self {
+        Self {
+            out: Cell::new(Out::Empty),
+            waker: RefCell::new(None),
+        }
+    }
+
+    fn set(&self, res: Result<R, Error>) {
+        let out = match res {
+            Ok(r) => Out::Done(r),
+            Err(e) => Out::Fail(e),
+        };
+
+        self.out.set(out);
+        if let Some(waker) = &*self.waker.borrow() {
+            waker.wake_by_ref();
+        }
+    }
+
+    fn try_poll(&self) -> Poll<Result<R, Error>> {
+        match self.out.replace(Out::Empty) {
+            Out::Empty => Poll::Pending,
+            Out::Done(r) => Poll::Ready(Ok(r)),
+            Out::Fail(e) => Poll::Ready(Err(e)),
+        }
+    }
+
+    #[cfg(target_family = "wasm")]
+    fn poll(&self, cx: &mut task::Context<'_>) -> Poll<Result<R, Error>> {
+        let poll = self.try_poll();
+        if poll.is_pending() {
+            if let Some(waker) = &mut *self.waker.borrow_mut() {
+                waker.clone_from(cx.waker());
+            }
+        }
+
+        poll
+    }
+}
+
 struct App<'waker, F, R> {
     cx: Context,
     proxy: event_loop::EventLoopProxy<Request>,
@@ -46,7 +98,7 @@ struct App<'waker, F, R> {
     need_to_poll: bool,
     context: task::Context<'waker>,
     fu: Pin<Box<F>>,
-    out: async_channel::Sender<Result<R, Error>>,
+    ret: Rc<Return<R>>,
 }
 
 impl<F> App<'_, F, F::Output>
@@ -55,10 +107,12 @@ where
 {
     const WAIT_TIME: Duration = Duration::from_millis(100);
 
+    #[inline]
     fn schedule(&mut self) {
         self.need_to_poll = true;
     }
 
+    #[inline]
     fn active_poll(&mut self, el: &event_loop::ActiveEventLoop) {
         if !self.need_to_poll {
             return;
@@ -68,15 +122,17 @@ where
         self.need_to_poll = false;
     }
 
+    #[inline]
     fn inert_poll(&mut self, el: &event_loop::ActiveEventLoop) {
         if let Poll::Ready(res) = self.fu.as_mut().poll(&mut self.context) {
-            _ = self.out.force_send(Ok(res));
+            self.ret.set(Ok(res));
             el.exit();
         }
     }
 
+    #[inline]
     fn exit_with_error(&mut self, el: &event_loop::ActiveEventLoop, e: Error) {
-        _ = self.out.force_send(Err(e));
+        self.ret.set(Err(e));
         el.exit();
     }
 }
@@ -293,7 +349,7 @@ where
 
     let cx = dunge::context().await.map_err(Error::Context)?;
 
-    let (out, take) = async_channel::bounded(1);
+    let ret = Rc::new(Return::new());
     let app = App {
         cx: cx.clone(),
         proxy: el.create_proxy(),
@@ -302,11 +358,11 @@ where
         need_to_poll: false,
         context: task::Context::from_waker(Waker::noop()),
         fu: Box::pin(async move { f(cx, control).await }),
-        out,
+        ret: ret.clone(),
     };
 
     el.spawn_app(app);
-    take.recv().await.expect("take result of async function")
+    future::poll_fn(|cx| ret.poll(cx)).await
 }
 
 #[cfg(target_family = "wasm")]
@@ -369,7 +425,7 @@ where
 
     let waker = Waker::from(Arc::new(AppWaker {}));
 
-    let (out, take) = async_channel::bounded(1);
+    let ret = Rc::new(Return::new());
     let mut app = App {
         cx: cx.clone(),
         proxy: el.create_proxy(),
@@ -378,11 +434,15 @@ where
         need_to_poll: false,
         context: task::Context::from_waker(&waker),
         fu: Box::pin(f(cx, control)),
-        out,
+        ret: ret.clone(),
     };
 
     el.run_app(&mut app).map_err(Error::EventLoop)?;
-    take.recv_blocking().expect("take result of async function")
+    let Poll::Ready(res) = ret.try_poll() else {
+        unreachable!();
+    };
+
+    res
 }
 
 #[cfg(not(target_family = "wasm"))]

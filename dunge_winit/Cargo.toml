@@ -10,7 +10,6 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-async-channel.workspace = true
 dunge.workspace = true
 instant.workspace = true
 log.workspace = true
