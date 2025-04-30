@@ -16,7 +16,6 @@ mod state;
 pub mod storage;
 #[doc(hidden)]
 pub mod surface;
-pub mod uniform;
 pub mod usage;
 pub mod value;
 pub mod vertex;

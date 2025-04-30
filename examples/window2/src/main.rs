@@ -16,7 +16,7 @@ async fn run(cx: Context, control: Control) -> Result<(), Error> {
             glam::{Vec2, Vec3},
             prelude::*,
             runtime::Attributes,
-            uniform::Uniform,
+            storage::Uniform,
             winit::{self, keyboard::KeyCode},
         },
         futures_concurrency::prelude::*,

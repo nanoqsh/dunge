@@ -3,9 +3,8 @@
 use crate::{
     buffer::Sampler,
     sl::{Global, GlobalOut, Ret},
-    storage::Storage,
+    storage::{Storage, Uniform},
     types::{self, MemberData, MemberType},
-    uniform::Uniform,
     value::Value,
 };
 

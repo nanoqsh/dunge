@@ -9,7 +9,7 @@ pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
         prelude::*,
         set::UniqueSet,
         sl::{Groups, InVertex, Index, Render},
-        uniform::Uniform,
+        storage::Uniform,
     };
 
     const SCREEN_FACTOR: u32 = 2;

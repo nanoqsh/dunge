@@ -6,7 +6,7 @@ pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
         glam::Vec4,
         prelude::*,
         sl::{Groups, Index, Render},
-        uniform::Uniform,
+        storage::Uniform,
     };
 
     #[derive(Group)]

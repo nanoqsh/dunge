@@ -11,7 +11,7 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
             prelude::*,
             runtime::Attributes,
             sl::{Groups, InVertex, Render},
-            uniform::Uniform,
+            storage::Uniform,
             winit::keyboard::KeyCode,
         },
         futures_concurrency::prelude::*,
