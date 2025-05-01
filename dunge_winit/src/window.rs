@@ -1,7 +1,7 @@
 use {
     crate::{
-        app::{Error, Request},
         canvas::Canvas,
+        runtime::{Error, Request},
     },
     dunge::{
         AsTarget, Context, Target,
@@ -160,6 +160,7 @@ pub(crate) struct Events {
 }
 
 pub(crate) struct Shared {
+    cx: Context,
     surface: Surface<window::Window, Ops>,
     min_delta_time: Cell<Duration>,
     events: Events,
@@ -172,8 +173,8 @@ impl Shared {
     }
 
     #[inline]
-    pub(crate) fn resize(&self, cx: &Context) {
-        self.surface.resize(cx);
+    pub(crate) fn resize(&self) {
+        self.surface.resize(&self.cx);
     }
 
     #[inline]
@@ -199,15 +200,18 @@ impl Window {
 
     #[inline]
     pub(crate) fn new(
-        cx: &Context,
+        cx: Context,
         req: Request,
         el: &event_loop::ActiveEventLoop,
         attr: Attributes,
     ) -> Result<Self, Error> {
         let window = el.create_window(attr.winit()).map_err(Error::Os)?;
+        let surface = Surface::new(&cx, window).map_err(Error::CreateSurface)?;
+
         let shared = Rc::new(Shared {
+            cx,
             min_delta_time: Cell::new(Duration::from_secs_f32(1. / Self::DEFAULT_FPS as f32)),
-            surface: Surface::new(cx, window).map_err(Error::CreateSurface)?,
+            surface,
             events: Events {
                 press_keys: Keys::new(),
                 release_keys: Keys::new(),

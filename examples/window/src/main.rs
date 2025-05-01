@@ -1,108 +1,153 @@
+use dunge_winit::prelude::*;
+
 type Error = Box<dyn std::error::Error>;
 
 fn main() {
     env_logger::init();
-    if let Err(e) = dunge::block_on(run()) {
+    if let Err(e) = dunge_winit::winit::try_block_on(run) {
         eprintln!("error: {e}");
     }
 }
 
-async fn run() -> Result<(), Error> {
-    use dunge::prelude::*;
+async fn run(control: Control) -> Result<(), Error> {
+    use {
+        dunge_winit::{
+            color::Rgb,
+            glam::{Vec2, Vec3},
+            storage::Uniform,
+        },
+        futures_concurrency::prelude::*,
+        smol::Timer,
+        std::{cell::Cell, time::Duration},
+        winit::{keyboard::KeyCode, window},
+    };
 
-    // Create a vertex type
     #[repr(C)]
     #[derive(Vertex)]
     struct Vert {
-        pos: [f32; 2],
-        col: [f32; 3],
+        pos: Vec2,
+        col: Vec3,
     }
 
-    // Create a shader program
-    let triangle = |vert: sl::InVertex<Vert>| {
-        // Describe the vertex position:
-        // Take the vertex data as vec2 and expand it to vec4
+    #[derive(Group)]
+    struct Delta<'u>(&'u Uniform<f32>);
+
+    let triangle = |vert: sl::InVertex<Vert>, sl::Groups(u): sl::Groups<Delta<'_>>| {
         let place = sl::vec4_concat(vert.pos, sl::vec2(0., 1.));
-
-        // Then describe the vertex color:
-        // First you need to pass the color from
-        // vertex shader stage to fragment shader stage
         let fragment_col = sl::fragment(vert.col);
-
-        // Now create the final color by adding an alpha value
-        let color = sl::vec4_with(fragment_col, 1.);
-
-        // As a result, return a program that describes how to
-        // compute the vertex position and the fragment color
+        let color = sl::vec4_with(fragment_col * u.0, 1.);
         sl::Render { place, color }
     };
 
-    // Create the dunge context
     let cx = dunge::context().await?;
-
-    // You can use the context to manage dunge objects.
-    // Create a shader instance
     let shader = cx.make_shader(triangle);
+    let uniform = cx.make_uniform(&0.);
+    let set = cx.make_set(&shader, Delta(&uniform));
 
-    // Create a mesh from vertices
+    let mut t = 0.;
+    let mut update_scene = |delta_time: Duration| {
+        t += delta_time.as_secs_f32();
+        let v = f32::sin(t) * 0.5 + 0.5;
+        uniform.update(&cx, &v);
+    };
+
     let mesh = {
-        let verts = const {
-            MeshData::from_verts(&[
-                Vert {
-                    pos: [-0.5, -0.5],
-                    col: [1., 0., 0.],
-                },
-                Vert {
-                    pos: [0.5, -0.5],
-                    col: [0., 1., 0.],
-                },
-                Vert {
-                    pos: [0., 0.5],
-                    col: [0., 0., 1.],
-                },
-            ])
-        };
+        const VERTS: [Vert; 3] = [
+            Vert {
+                pos: Vec2::new(-0.5, -0.5),
+                col: Vec3::new(1., 0., 0.),
+            },
+            Vert {
+                pos: Vec2::new(0.5, -0.5),
+                col: Vec3::new(0., 1., 0.),
+            },
+            Vert {
+                pos: Vec2::new(0., 0.5),
+                col: Vec3::new(0., 0., 1.),
+            },
+        ];
 
+        let verts = MeshData::from_verts(&VERTS);
         cx.make_mesh(&verts)
     };
 
-    let make_handler = |cx: &Context, view: &View| {
-        // Describe the `Update` handler
-        let upd = |ctrl: &Control| {
-            for key in ctrl.pressed_keys() {
-                // Exit by pressing escape key
-                if key.code == KeyCode::Escape {
-                    return Then::Close;
-                }
-            }
+    let window = control.make_window(&cx, Attributes::default()).await?;
+    let layer = cx.make_layer(&shader, window.format());
 
-            // Otherwise continue running
-            Then::Run
-        };
+    #[derive(Default)]
+    struct Fps(Cell<u32>);
 
-        // Create a layer for drawing a mesh on it
-        let layer = cx.make_layer(&shader, view.format());
+    impl Fps {
+        fn inc(&self) {
+            self.0.set(self.0.get() + 1);
+        }
 
-        // Describe the `Draw` handler
-        let draw = move |mut frame: _Frame<'_, '_>| {
-            use dunge::color::Rgb;
+        fn reset(&self) -> u32 {
+            let total = self.0.get();
+            self.0.set(0);
+            total
+        }
+    }
 
-            // Create a black RGBA background
-            let bg = Rgb::from_bytes([0; 3]);
-
-            frame
-                // Select a layer to draw on it
-                ._set_layer(&layer, bg)
-                // The shader has no bindings, so call empty bind
-                ._bind_empty()
-                // And finally draw the mesh
-                ._draw(&mesh);
-        };
-
-        dunge::update(upd, draw)
+    let fps = Fps::default();
+    let fps_counter = async {
+        loop {
+            Timer::after(Duration::from_secs(1)).await;
+            let total = fps.reset();
+            println!("fps: {total}");
+        }
     };
 
-    // Run the window with handlers
-    dunge::window().run_local(cx, dunge::make(make_handler))?;
+    let render = async {
+        loop {
+            let redraw = window.redraw().await;
+            update_scene(redraw.delta_time());
+
+            cx.shed(|mut s| {
+                let bg = Rgb::from_bytes([0; 3]);
+                s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);
+            })
+            .await;
+
+            redraw.present();
+            fps.inc();
+        }
+    };
+
+    let resize = async {
+        loop {
+            let (width, height) = window.resized().await;
+            println!("resized: {width} {height}");
+        }
+    };
+
+    let toggle_fullscreen = async {
+        let mut fullscreen = false;
+        loop {
+            window.pressed(KeyCode::KeyF).await;
+
+            fullscreen = !fullscreen;
+            window.winit().set_fullscreen(if fullscreen {
+                Some(window::Fullscreen::Borderless(None))
+            } else {
+                None
+            });
+        }
+    };
+
+    let close = window.close_requested();
+    let esc_pressed = window.pressed(KeyCode::Escape);
+
+    (
+        fps_counter,
+        render,
+        resize,
+        toggle_fullscreen,
+        close,
+        esc_pressed,
+    )
+        .race()
+        .await;
+
     Ok(())
 }

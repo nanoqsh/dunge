@@ -1,16 +1,15 @@
-use dunge_winit::{Context, winit::Control};
+use dunge_winit::prelude::*;
 
 type Error = Box<dyn std::error::Error>;
 
-pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
+pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
             color::Rgb,
             glam::{Mat4, Quat, Vec3},
-            prelude::*,
             sl::{Groups, InVertex, Render},
             storage::Uniform,
-            winit::{Attributes, Canvas},
+            winit::Canvas,
         },
         futures_concurrency::prelude::*,
         std::time::Duration,
@@ -32,6 +31,8 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
 
+    // FIX: broken on web
+    let cx = dunge::context().await?;
     let shader = cx.make_shader(cube);
     let uniform = cx.make_uniform(&Mat4::IDENTITY);
     let transform = cx.make_set(&shader, Transform(&uniform));
@@ -119,7 +120,7 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
             .with_title("cube")
             .with_canvas(Canvas::by_id("root"));
 
-        control.make_window(attr).await?
+        control.make_window(&cx, attr).await?
     };
 
     let layer = cx.make_layer(&shader, window.format());

@@ -4,7 +4,7 @@ use {
         window::{Attributes, Shared, Window},
     },
     dunge::{
-        Context, FailedMakeContext,
+        Context,
         surface::{CreateSurfaceError, SurfaceError},
     },
     std::{
@@ -23,8 +23,9 @@ use {
 enum Message {
     Wake,
     MakeWindow {
-        out: Rc<OnceCell<Result<Window, Error>>>,
+        cx: Context,
         attr: Box<Attributes>,
+        out: Rc<OnceCell<Result<Window, Error>>>,
     },
     RemoveWindow(window::WindowId),
     RecreateSurface(window::WindowId),
@@ -42,11 +43,12 @@ impl Request {
     }
 
     #[inline]
-    async fn make_window(&self, attr: Attributes) -> Result<Window, Error> {
+    async fn make_window(&self, cx: Context, attr: Attributes) -> Result<Window, Error> {
         let mut out = Rc::new(OnceCell::new());
         _ = self.0.send_event(Message::MakeWindow {
-            out: out.clone(),
+            cx,
             attr: Box::new(attr),
+            out: out.clone(),
         });
 
         let mut active_poll = || {
@@ -132,7 +134,6 @@ impl<R> Return<R> {
 }
 
 struct App<'waker, F, R> {
-    cx: Context,
     req: Request,
     lifecycle: Rc<Lifecycle>,
     windows: HashMap<window::WindowId, AppWindow>,
@@ -233,9 +234,9 @@ where
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Message) {
         match req {
             Message::Wake => self.force_poll(el),
-            Message::MakeWindow { out, attr } => {
+            Message::MakeWindow { cx, attr, out } => {
                 log::debug!("make window");
-                let res = Window::new(&self.cx, self.req.clone(), el, *attr);
+                let res = Window::new(cx, self.req.clone(), el, *attr);
                 if let Ok(window) = &res {
                     let shared = window.shared().clone();
                     let id = shared.window().id();
@@ -263,7 +264,7 @@ where
                     return;
                 };
 
-                window.shared.resize(&self.cx);
+                window.shared.resize();
                 self.schedule();
             }
             Message::Exit(e) => {
@@ -288,7 +289,7 @@ where
                 let (width, height): (u32, u32) = size.into();
                 log::debug!("resized {id:?}: {width} {height}");
 
-                window.shared.resize(&self.cx);
+                window.shared.resize();
                 window.shared.events().resize.set();
                 self.schedule();
             }
@@ -373,7 +374,7 @@ where
 #[inline]
 pub async fn run<F, R>(mut f: F) -> Result<R, Error>
 where
-    F: AsyncFnMut(Context, Control) -> R + 'static,
+    F: AsyncFnMut(Control) -> R + 'static,
     R: 'static,
 {
     use winit::platform::web::EventLoopExtWebSys;
@@ -393,17 +394,14 @@ where
         lifecycle: lifecycle.clone(),
     };
 
-    let cx = dunge::context().await.map_err(Error::Context)?;
-
     let ret = Rc::new(Return::new());
     let app = App {
-        cx: cx.clone(),
         req,
         lifecycle,
         windows: HashMap::new(),
         need_to_poll: false,
         context: task::Context::from_waker(Waker::noop()),
-        fu: Box::pin(async move { f(cx, control).await }),
+        fu: Box::pin(async move { f(control).await }),
         ret: ret.clone(),
     };
 
@@ -416,7 +414,7 @@ where
 #[inline]
 pub async fn try_run<F, R, U>(f: F) -> Result<R, Error<U>>
 where
-    F: AsyncFnMut(Context, Control) -> Result<R, U> + 'static,
+    F: AsyncFnMut(Control) -> Result<R, U> + 'static,
     R: 'static,
     U: 'static,
 {
@@ -432,7 +430,7 @@ where
 #[inline]
 pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
 where
-    F: AsyncFnMut(Context, Control) -> R,
+    F: AsyncFnMut(Control) -> R,
 {
     use std::sync::Arc;
 
@@ -450,8 +448,6 @@ where
         req: req.clone(),
         lifecycle: lifecycle.clone(),
     };
-
-    let cx = dunge::block_on(dunge::context()).map_err(Error::Context)?;
 
     struct AppWaker {
         // it doesn't work :(
@@ -479,13 +475,12 @@ where
 
     let ret = Rc::new(Return::new());
     let mut app = App {
-        cx: cx.clone(),
         req,
         lifecycle,
         windows: HashMap::new(),
         need_to_poll: false,
         context: task::Context::from_waker(&waker),
-        fu: Box::pin(f(cx, control)),
+        fu: Box::pin(f(control)),
         ret: ret.clone(),
     };
 
@@ -502,7 +497,7 @@ where
 #[inline]
 pub fn try_block_on<F, R, U>(f: F) -> Result<R, Error<U>>
 where
-    F: AsyncFnMut(Context, Control) -> Result<R, U>,
+    F: AsyncFnMut(Control) -> Result<R, U>,
 {
     match block_on(f) {
         Ok(Ok(r)) => Ok(r),
@@ -514,7 +509,6 @@ where
 /// The event loop error type.
 #[derive(Debug)]
 pub enum Error<U = Infallible> {
-    Context(FailedMakeContext),
     EventLoop(winit::error::EventLoopError),
     Os(winit::error::OsError),
     CreateSurface(CreateSurfaceError),
@@ -529,7 +523,6 @@ impl<U> Error<U> {
         F: FnOnce(U) -> V,
     {
         match self {
-            Self::Context(e) => Error::Context(e),
             Self::EventLoop(e) => Error::EventLoop(e),
             Self::Os(e) => Error::Os(e),
             Self::CreateSurface(e) => Error::CreateSurface(e),
@@ -545,7 +538,6 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Context(e) => e.fmt(f),
             Self::EventLoop(e) => e.fmt(f),
             Self::Os(e) => e.fmt(f),
             Self::CreateSurface(e) => e.fmt(f),
@@ -561,7 +553,6 @@ where
 {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            Self::Context(e) => Some(e),
             Self::EventLoop(e) => Some(e),
             Self::Os(e) => Some(e),
             Self::CreateSurface(e) => Some(e),
@@ -610,6 +601,31 @@ pub struct Control {
 }
 
 impl Control {
+    /// Creates a new window with specified [attributes](Attributes).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dunge_winit::prelude::*;
+    ///
+    /// # async fn t(control: Control) -> Result<(), Box<dyn std::error::Error>> {
+    /// let cx = dunge::context().await?;
+    /// let attr = Attributes::default().with_title("cube");
+    /// let window = control.make_window(&cx, attr).await?;
+    ///
+    /// // wait for some window events
+    /// loop {
+    ///     let (width, height) = window.resized().await;
+    ///     println!("resized: {width} {height}");
+    /// }
+    /// # }
+    /// ```
+    ///
+    #[inline]
+    pub async fn make_window(&self, cx: &Context, attr: Attributes) -> Result<Window, Error> {
+        self.req.make_window(cx.clone(), attr).await
+    }
+
     /// Waits until the application is resumed.
     #[inline]
     pub async fn resumed(&self) {
@@ -620,11 +636,5 @@ impl Control {
     #[inline]
     pub async fn suspended(&self) {
         future::poll_fn(|_| self.lifecycle.active_poll_suspended()).await;
-    }
-
-    /// Creates a new window with specified [attributes](Attributes).
-    #[inline]
-    pub async fn make_window(&self, attr: Attributes) -> Result<Window, Error> {
-        self.req.make_window(attr).await
     }
 }
