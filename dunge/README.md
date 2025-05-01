@@ -16,7 +16,7 @@
 * Customizable vertices, groups and instances
 * Shader code described as a single rust function
 * High degree of typesafety with minimal runtime checks
-* Desktop, WASM and (later) Android support
+* Desktop and WASM support
 * Optional built-in window and event loop
 
 ## Application area

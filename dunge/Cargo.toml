@@ -43,11 +43,6 @@ web-sys = { workspace = true, features = ["Document", "Window", "Element"] }
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 parking.workspace = true
 
-[target.'cfg(target_os = "android")'.dependencies.winit]
-workspace = true
-features = ["android-native-activity"]
-optional = true
-
 [dev-dependencies]
 dunge_shader = { workspace = true, features = ["wgsl"] }
 helpers = { path = "../helpers", features = ["png"] }
