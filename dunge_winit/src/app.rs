@@ -368,6 +368,7 @@ where
     }
 }
 
+/// Runs an event loop on web.
 #[cfg(target_family = "wasm")]
 #[inline]
 pub async fn run<F, R>(mut f: F) -> Result<R, Error>
@@ -410,6 +411,7 @@ where
     future::poll_fn(|cx| ret.poll(cx)).await
 }
 
+/// Same as [`run`], but allows returning a custom error type.
 #[cfg(target_family = "wasm")]
 #[inline]
 pub async fn try_run<F, R, U>(f: F) -> Result<R, Error<U>>
@@ -425,6 +427,7 @@ where
     }
 }
 
+/// Runs the event loop on the current thread on desktop platform.
 #[cfg(not(target_family = "wasm"))]
 #[inline]
 pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
@@ -494,6 +497,7 @@ where
     res
 }
 
+/// Same as [`block_on`], but allows returning a custom error type.
 #[cfg(not(target_family = "wasm"))]
 #[inline]
 pub fn try_block_on<F, R, U>(f: F) -> Result<R, Error<U>>
@@ -507,6 +511,7 @@ where
     }
 }
 
+/// The event loop error type.
 #[derive(Debug)]
 pub enum Error<U = Infallible> {
     Context(FailedMakeContext),
@@ -518,6 +523,7 @@ pub enum Error<U = Infallible> {
 }
 
 impl<U> Error<U> {
+    /// Transforms the custom error type.
     pub fn map<F, V>(self, f: F) -> Error<V>
     where
         F: FnOnce(U) -> V,
@@ -597,22 +603,26 @@ impl Lifecycle {
     }
 }
 
+/// Passed to the user function to control and interact with the event loop.
 pub struct Control {
     req: Request,
     lifecycle: Rc<Lifecycle>,
 }
 
 impl Control {
+    /// Waits until the application is resumed.
     #[inline]
     pub async fn resumed(&self) {
         future::poll_fn(|_| self.lifecycle.active_poll_resumed()).await;
     }
 
+    /// Waits until the application is suspended.
     #[inline]
     pub async fn suspended(&self) {
         future::poll_fn(|_| self.lifecycle.active_poll_suspended()).await;
     }
 
+    /// Creates a new window with specified [attributes](Attributes).
     #[inline]
     pub async fn make_window(&self, attr: Attributes) -> Result<Window, Error> {
         self.req.make_window(attr).await

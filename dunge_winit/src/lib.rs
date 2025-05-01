@@ -3,15 +3,17 @@ mod canvas;
 mod time;
 mod window;
 
+/// The dunge prelude.
 pub mod prelude {
     pub use {dunge, dunge::prelude::*};
 }
 
+/// Extension of the dunge with a windowing system.
 pub mod winit {
     pub use crate::{
         app::{Control, Error},
         canvas::Canvas,
-        window::{Attributes, Window},
+        window::{Attributes, Redraw, Window},
     };
 
     #[cfg(target_family = "wasm")]

@@ -22,12 +22,14 @@ use {
     winit::{event_loop, keyboard, window},
 };
 
+/// [Window] attributes.
 pub struct Attributes {
     title: Cow<'static, str>,
     canvas: Option<Canvas>,
 }
 
 impl Attributes {
+    /// Sets the window title.
     #[inline]
     pub fn with_title<S>(mut self, title: S) -> Self
     where
@@ -37,6 +39,7 @@ impl Attributes {
         self
     }
 
+    /// Sets the window [canvas](Canvas).
     #[inline]
     pub fn with_canvas<C>(mut self, canvas: C) -> Self
     where
@@ -184,6 +187,7 @@ impl Shared {
     }
 }
 
+/// A window within the running event loop.
 #[derive(Clone)]
 pub struct Window {
     shared: Rc<Shared>,
@@ -221,21 +225,25 @@ impl Window {
         &self.shared
     }
 
+    /// Returns the internal `winit` window.
     #[inline]
     pub fn winit(&self) -> &Arc<window::Window> {
         self.shared.surface.window()
     }
 
+    /// Returns the surface format of the window.
     #[inline]
     pub fn format(&self) -> Format {
         self.shared.surface.format()
     }
 
+    /// Returns the size of the window in pixels.
     #[inline]
     pub fn size(&self) -> (u32, u32) {
         self.shared.surface.size()
     }
 
+    /// Sets the number of times per second the window should be [redrawed](Window::redraw).
     #[inline]
     pub fn set_fps(&self, fps: NonZeroU32) {
         self.shared
@@ -243,6 +251,7 @@ impl Window {
             .set(Duration::from_secs_f32(1. / fps.get() as f32));
     }
 
+    /// Waits for a key press event.
     #[inline]
     pub async fn pressed(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.press_keys;
@@ -250,6 +259,7 @@ impl Window {
         future::poll_fn(|_| keys.active_poll(code)).await;
     }
 
+    /// Waits for a key release event.
     #[inline]
     pub async fn released(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.release_keys;
@@ -257,12 +267,14 @@ impl Window {
         future::poll_fn(|_| keys.active_poll(code)).await;
     }
 
+    /// Waits for a window resize event.
     #[inline]
     pub async fn resized(&self) -> (u32, u32) {
         future::poll_fn(|_| self.shared.events.resize.active_poll()).await;
         self.shared.surface.size()
     }
 
+    /// Waits for a redraw event.
     #[inline]
     pub async fn redraw(&self) -> Redraw<'_> {
         loop {
@@ -286,6 +298,7 @@ impl Window {
         }
     }
 
+    /// Waits for a window close request event.
     #[inline]
     pub async fn close_requested(&self) {
         future::poll_fn(|_| self.shared.events.close.active_poll()).await;
@@ -300,17 +313,20 @@ impl Drop for Window {
     }
 }
 
+/// An object for frame redrawing.
 pub struct Redraw<'surface> {
     output: Output<'surface>,
     delta_time: Duration,
 }
 
 impl Redraw<'_> {
+    /// Returns the delta time since the last redraw.
     #[inline]
     pub fn delta_time(&self) -> Duration {
         self.delta_time
     }
 
+    /// Presents the redrawed frame on the screen.
     #[inline]
     pub fn present(self) {
         self.output.present();

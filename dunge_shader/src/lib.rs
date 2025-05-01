@@ -17,9 +17,8 @@ mod vector;
 pub mod vertex;
 mod zero;
 
+/// Shader generator functions.
 pub mod sl {
-    //! Shader generator functions.
-
     pub use crate::{
         branch::*, context::*, convert::*, define::*, discard::*, eval::*, math::*, matrix::*,
         module::*, op::*, texture::*, vector::*, zero::*,

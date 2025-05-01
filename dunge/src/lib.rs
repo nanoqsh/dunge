@@ -32,9 +32,8 @@ mod element;
 #[cfg(feature = "winit")]
 mod update;
 
+/// The dunge prelude.
 pub mod prelude {
-    //! The dunge prelude.
-
     pub use crate::{
         _Frame, Group, Instance, Options, Vertex,
         buffer::{Format, TextureData},

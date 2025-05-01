@@ -114,9 +114,13 @@ pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let window = control
-        .make_window(Attributes::default().with_canvas(Canvas::by_id("root")))
-        .await?;
+    let window = {
+        let attr = Attributes::default()
+            .with_title("cube")
+            .with_canvas(Canvas::by_id("root"));
+
+        control.make_window(attr).await?
+    };
 
     let layer = cx.make_layer(&shader, window.format());
     let bg = if window.format().is_standard() {

@@ -1,11 +1,16 @@
 use winit::window;
 
+/// The HTML canvas for the web platform.
 pub struct Canvas(
     #[cfg(target_family = "wasm")] web_sys::HtmlCanvasElement,
     #[cfg(not(target_family = "wasm"))] std::convert::Infallible,
 );
 
 impl Canvas {
+    /// Finds a HTML canvas on a web page by its id.
+    ///
+    /// Returns `None` if no element is found.
+    /// Does nothing on non-web platforms.
     pub fn by_id(id: &str) -> Option<Self> {
         #[cfg(target_family = "wasm")]
         {
