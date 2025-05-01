@@ -47,23 +47,23 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let projection_name = quote::format_ident!("{name}Projection");
     let vector_types = fields.iter().map(|field| {
         let ty = &field.ty;
-        quote::quote! { <#ty as ::dunge::vertex::InputProjection>::TYPE }
+        quote::quote! { <#ty as dunge::vertex::InputProjection>::TYPE }
     });
 
     let projection_fields = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         if named {
-            quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::Field }
+            quote::quote! { #ident: <#ty as dunge::vertex::InputProjection>::Field }
         } else {
-            quote::quote! { <#ty as ::dunge::vertex::InputProjection>::Field }
+            quote::quote! { <#ty as dunge::vertex::InputProjection>::Field }
         }
     });
 
     let projection_inputs = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
-        quote::quote! { #ident: <#ty as ::dunge::vertex::InputProjection>::input_projection(id, #index) }
+        quote::quote! { #ident: <#ty as dunge::vertex::InputProjection>::input_projection(id, #index) }
     });
 
     let projection = if named {
@@ -82,13 +82,13 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
     let checks = fields.iter().map(|field| {
         let ty = &field.ty;
-        quote::quote! { const _: () = ::dunge::vertex::check_projection_type::<#ty>(); }
+        quote::quote! { const _: () = dunge::vertex::check_projection_type::<#ty>(); }
     });
 
     quote::quote! {
-        unsafe impl ::dunge::Vertex for #name {
+        unsafe impl dunge::Vertex for #name {
             type Projection = #projection_name;
-            const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
+            const DEF: dunge::sl::Define<dunge::types::VectorType> = dunge::sl::Define::new(&[
                 #(#vector_types),*,
             ]);
         }
@@ -97,7 +97,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
         #(#checks)*
 
-        impl ::dunge::vertex::Projection for #projection_name {
+        impl dunge::vertex::Projection for #projection_name {
             fn projection(id: ::core::primitive::u32) -> Self {
                 Self {
                     #(#projection_inputs),*,
@@ -136,27 +136,27 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            unsafe impl ::dunge::Vertex for Vert {
+            unsafe impl dunge::Vertex for Vert {
                 type Projection = VertProjection;
-                const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
-                    <[f32; 2] as ::dunge::vertex::InputProjection>::TYPE,
-                    <[f32; 3] as ::dunge::vertex::InputProjection>::TYPE,
+                const DEF: dunge::sl::Define<dunge::types::VectorType> = dunge::sl::Define::new(&[
+                    <[f32; 2] as dunge::vertex::InputProjection>::TYPE,
+                    <[f32; 3] as dunge::vertex::InputProjection>::TYPE,
                 ]);
             }
 
             pub struct VertProjection {
-                pos: <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
-                col: <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
+                pos: <[f32; 2] as dunge::vertex::InputProjection>::Field,
+                col: <[f32; 3] as dunge::vertex::InputProjection>::Field,
             }
 
-            const _: () = ::dunge::vertex::check_projection_type::<[f32; 2]>();
-            const _: () = ::dunge::vertex::check_projection_type::<[f32; 3]>();
+            const _: () = dunge::vertex::check_projection_type::<[f32; 2]>();
+            const _: () = dunge::vertex::check_projection_type::<[f32; 3]>();
 
-            impl ::dunge::vertex::Projection for VertProjection {
+            impl dunge::vertex::Projection for VertProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
-                        pos: <[f32; 2] as ::dunge::vertex::InputProjection>::input_projection(id, 0u32),
-                        col: <[f32; 3] as ::dunge::vertex::InputProjection>::input_projection(id, 1u32),
+                        pos: <[f32; 2] as dunge::vertex::InputProjection>::input_projection(id, 0u32),
+                        col: <[f32; 3] as dunge::vertex::InputProjection>::input_projection(id, 1u32),
                     }
                 }
             }
@@ -175,27 +175,27 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            unsafe impl ::dunge::Vertex for Vert {
+            unsafe impl dunge::Vertex for Vert {
                 type Projection = VertProjection;
-                const DEF: ::dunge::sl::Define<::dunge::types::VectorType> = ::dunge::sl::Define::new(&[
-                    <[f32; 2] as ::dunge::vertex::InputProjection>::TYPE,
-                    <[f32; 3] as ::dunge::vertex::InputProjection>::TYPE,
+                const DEF: dunge::sl::Define<dunge::types::VectorType> = dunge::sl::Define::new(&[
+                    <[f32; 2] as dunge::vertex::InputProjection>::TYPE,
+                    <[f32; 3] as dunge::vertex::InputProjection>::TYPE,
                 ]);
             }
 
             pub struct VertProjection(
-                <[f32; 2] as ::dunge::vertex::InputProjection>::Field,
-                <[f32; 3] as ::dunge::vertex::InputProjection>::Field,
+                <[f32; 2] as dunge::vertex::InputProjection>::Field,
+                <[f32; 3] as dunge::vertex::InputProjection>::Field,
             );
 
-            const _: () = ::dunge::vertex::check_projection_type::<[f32; 2]>();
-            const _: () = ::dunge::vertex::check_projection_type::<[f32; 3]>();
+            const _: () = dunge::vertex::check_projection_type::<[f32; 2]>();
+            const _: () = dunge::vertex::check_projection_type::<[f32; 3]>();
 
-            impl ::dunge::vertex::Projection for VertProjection {
+            impl dunge::vertex::Projection for VertProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
-                        0: <[f32; 2] as ::dunge::vertex::InputProjection>::input_projection(id, 0u32),
-                        1: <[f32; 3] as ::dunge::vertex::InputProjection>::input_projection(id, 1u32),
+                        0: <[f32; 2] as dunge::vertex::InputProjection>::input_projection(id, 0u32),
+                        1: <[f32; 3] as dunge::vertex::InputProjection>::input_projection(id, 1u32),
                     }
                 }
             }

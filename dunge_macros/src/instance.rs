@@ -39,28 +39,28 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let projection_name = quote::format_ident!("{name}Projection");
     let instance_types = fields.iter().map(|field| {
         let ty = &field.ty;
-        quote::quote! { <#ty as ::dunge::instance::MemberProjection>::TYPE }
+        quote::quote! { <#ty as dunge::instance::MemberProjection>::TYPE }
     });
 
     let instance_set_members = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
-        quote::quote! { ::dunge::instance::SetMember::set_member(&self.#ident, setter) }
+        quote::quote! { dunge::instance::SetMember::set_member(&self.#ident, setter) }
     });
 
     let instance_fields = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         if named {
-            quote::quote! { #ident: <#ty as ::dunge::instance::MemberProjection>::Field }
+            quote::quote! { #ident: <#ty as dunge::instance::MemberProjection>::Field }
         } else {
-            quote::quote! { <#ty as ::dunge::instance::MemberProjection>::Field }
+            quote::quote! { <#ty as dunge::instance::MemberProjection>::Field }
         }
     });
 
     let instance_member_projections = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
-        quote::quote! { #ident: <#ty as ::dunge::instance::MemberProjection>::member_projection(id + #index) }
+        quote::quote! { #ident: <#ty as dunge::instance::MemberProjection>::member_projection(id + #index) }
     });
 
     let projection = if named {
@@ -78,22 +78,22 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     };
 
     quote::quote! {
-        impl ::dunge::Instance for #name {
+        impl dunge::Instance for #name {
             type Projection = #projection_name;
-            const DEF: ::dunge::sl::Define<::dunge::types::ValueType> = ::dunge::sl::Define::new(&[
+            const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
                 #(#instance_types),*,
             ]);
         }
 
-        impl ::dunge::instance::Set for #name {
-            fn set(&self, setter: &mut ::dunge::instance::Setter<'_, '_>) {
+        impl dunge::instance::Set for #name {
+            fn set(&self, setter: &mut dunge::instance::Setter<'_, '_>) {
                 #(#instance_set_members);*;
             }
         }
 
         #projection
 
-        impl ::dunge::instance::Projection for #projection_name {
+        impl dunge::instance::Projection for #projection_name {
             fn projection(id: ::core::primitive::u32) -> Self {
                 Self {
                     #(#instance_member_projections),*,
@@ -119,31 +119,31 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            impl ::dunge::Instance for Transform {
+            impl dunge::Instance for Transform {
                 type Projection = TransformProjection;
-                const DEF: ::dunge::sl::Define<::dunge::types::ValueType> = ::dunge::sl::Define::new(&[
-                    <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::TYPE,
-                    <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::TYPE,
+                const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
+                    <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
+                    <Row<[f32; 3]> as dunge::instance::MemberProjection>::TYPE,
                 ]);
             }
 
-            impl ::dunge::instance::Set for Transform {
-                fn set(&self, setter: &mut ::dunge::instance::Setter<'_, '_>) {
-                    ::dunge::instance::SetMember::set_member(&self.pos, setter);
-                    ::dunge::instance::SetMember::set_member(&self.col, setter);
+            impl dunge::instance::Set for Transform {
+                fn set(&self, setter: &mut dunge::instance::Setter<'_, '_>) {
+                    dunge::instance::SetMember::set_member(&self.pos, setter);
+                    dunge::instance::SetMember::set_member(&self.col, setter);
                 }
             }
 
             pub struct TransformProjection {
-                pos: <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::Field,
-                col: <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::Field,
+                pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
+                col: <Row<[f32; 3]> as dunge::instance::MemberProjection>::Field,
             }
 
-            impl ::dunge::instance::Projection for TransformProjection {
+            impl dunge::instance::Projection for TransformProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
-                        pos: <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::member_projection(id + 0u32),
-                        col: <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::member_projection(id + 1u32),
+                        pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::member_projection(id + 0u32),
+                        col: <Row<[f32; 3]> as dunge::instance::MemberProjection>::member_projection(id + 1u32),
                     }
                 }
             }
@@ -161,31 +161,31 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            impl ::dunge::Instance for Transform {
+            impl dunge::Instance for Transform {
                 type Projection = TransformProjection;
-                const DEF: ::dunge::sl::Define<::dunge::types::ValueType> = ::dunge::sl::Define::new(&[
-                    <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::TYPE,
-                    <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::TYPE,
+                const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
+                    <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
+                    <Row<[f32; 3]> as dunge::instance::MemberProjection>::TYPE,
                 ]);
             }
 
-            impl ::dunge::instance::Set for Transform {
-                fn set(&self, setter: &mut ::dunge::instance::Setter<'_, '_>) {
-                    ::dunge::instance::SetMember::set_member(&self.0, setter);
-                    ::dunge::instance::SetMember::set_member(&self.1, setter);
+            impl dunge::instance::Set for Transform {
+                fn set(&self, setter: &mut dunge::instance::Setter<'_, '_>) {
+                    dunge::instance::SetMember::set_member(&self.0, setter);
+                    dunge::instance::SetMember::set_member(&self.1, setter);
                 }
             }
 
             pub struct TransformProjection(
-                <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::Field,
-                <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::Field,
+                <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
+                <Row<[f32; 3]> as dunge::instance::MemberProjection>::Field,
             );
 
-            impl ::dunge::instance::Projection for TransformProjection {
+            impl dunge::instance::Projection for TransformProjection {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
-                        0: <Row<[f32; 2]> as ::dunge::instance::MemberProjection>::member_projection(id + 0u32),
-                        1: <Row<[f32; 3]> as ::dunge::instance::MemberProjection>::member_projection(id + 1u32),
+                        0: <Row<[f32; 2]> as dunge::instance::MemberProjection>::member_projection(id + 0u32),
+                        1: <Row<[f32; 3]> as dunge::instance::MemberProjection>::member_projection(id + 1u32),
                     }
                 }
             }

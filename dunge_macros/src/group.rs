@@ -71,29 +71,29 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let projection_name = quote::format_ident!("{name}Projection");
     let group_types = fields.iter().map(|field| {
         let ty = &field.ty;
-        quote::quote! { <#ty as ::dunge::group::MemberProjection>::MEMBER }
+        quote::quote! { <#ty as dunge::group::MemberProjection>::MEMBER }
     });
 
     let n_members = fields.len();
     let group_visit_members = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
-        quote::quote! { ::dunge::set::VisitMember::visit_member(self.#ident, visitor) }
+        quote::quote! { dunge::set::VisitMember::visit_member(self.#ident, visitor) }
     });
 
     let group_fields = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         if named {
-            quote::quote! { #ident: <#ty as ::dunge::group::MemberProjection>::Field }
+            quote::quote! { #ident: <#ty as dunge::group::MemberProjection>::Field }
         } else {
-            quote::quote! { <#ty as ::dunge::group::MemberProjection>::Field }
+            quote::quote! { <#ty as dunge::group::MemberProjection>::Field }
         }
     });
 
     let group_member_projections = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
-        quote::quote! { #ident: <#ty as ::dunge::group::MemberProjection>::member_projection(id, #index, out.clone()) }
+        quote::quote! { #ident: <#ty as dunge::group::MemberProjection>::member_projection(id, #index, out.clone()) }
     });
 
     let projection = if named {
@@ -111,24 +111,24 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     };
 
     quote::quote! {
-        impl<#(#lts),*> ::dunge::Group for #name<#(#lts),*> {
+        impl<#(#lts),*> dunge::Group for #name<#(#lts),*> {
             type Projection = #projection_name<#(#static_lts),*>;
-            const DEF: ::dunge::sl::Define<::dunge::types::MemberData> = ::dunge::sl::Define::new(&[
+            const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
                 #(#group_types),*,
             ]);
         }
 
-        impl ::dunge::set::Visit for #name<#(#anon_lts),*> {
+        impl dunge::set::Visit for #name<#(#anon_lts),*> {
             const N_MEMBERS: ::core::primitive::usize = #n_members;
-            fn visit<'group>(&'group self, visitor: &mut ::dunge::set::Visitor<'group>) {
+            fn visit<'group>(&'group self, visitor: &mut dunge::set::Visitor<'group>) {
                 #(#group_visit_members);*;
             }
         }
 
         #projection
 
-        impl<#(#lts),*> ::dunge::group::Projection for #projection_name<#(#lts),*> {
-            fn projection(id: ::core::primitive::u32, out: ::dunge::sl::GlobalOut) -> Self {
+        impl<#(#lts),*> dunge::group::Projection for #projection_name<#(#lts),*> {
+            fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
                 Self {
                     #(#group_member_projections),*,
                 }
@@ -153,32 +153,32 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            impl<'tx> ::dunge::Group for Map<'tx> {
+            impl<'tx> dunge::Group for Map<'tx> {
                 type Projection = MapProjection<'static>;
-                const DEF: ::dunge::sl::Define<::dunge::types::MemberData> = ::dunge::sl::Define::new(&[
-                    <BoundTexture<'tx> as ::dunge::group::MemberProjection>::MEMBER,
-                    <&'tx Sampler as ::dunge::group::MemberProjection>::MEMBER,
+                const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
+                    <BoundTexture<'tx> as dunge::group::MemberProjection>::MEMBER,
+                    <&'tx Sampler as dunge::group::MemberProjection>::MEMBER,
                 ]);
             }
 
-            impl ::dunge::set::Visit for Map<'_> {
+            impl dunge::set::Visit for Map<'_> {
                 const N_MEMBERS: ::core::primitive::usize = 2usize;
-                fn visit<'group>(&'group self, visitor: &mut ::dunge::set::Visitor<'group>) {
-                    ::dunge::set::VisitMember::visit_member(self.tex, visitor);
-                    ::dunge::set::VisitMember::visit_member(self.sam, visitor);
+                fn visit<'group>(&'group self, visitor: &mut dunge::set::Visitor<'group>) {
+                    dunge::set::VisitMember::visit_member(self.tex, visitor);
+                    dunge::set::VisitMember::visit_member(self.sam, visitor);
                 }
             }
 
             pub struct MapProjection<'tx> {
-                tex: <BoundTexture<'tx> as ::dunge::group::MemberProjection>::Field,
-                sam: <&'tx Sampler as ::dunge::group::MemberProjection>::Field,
+                tex: <BoundTexture<'tx> as dunge::group::MemberProjection>::Field,
+                sam: <&'tx Sampler as dunge::group::MemberProjection>::Field,
             }
 
-            impl<'tx> ::dunge::group::Projection for MapProjection<'tx> {
-                fn projection(id: ::core::primitive::u32, out: ::dunge::sl::GlobalOut) -> Self {
+            impl<'tx> dunge::group::Projection for MapProjection<'tx> {
+                fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
                     Self {
-                        tex: <BoundTexture<'tx> as ::dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
-                        sam: <&'tx Sampler as ::dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
+                        tex: <BoundTexture<'tx> as dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
+                        sam: <&'tx Sampler as dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
                     }
                 }
             }
@@ -196,32 +196,32 @@ mod tests {
         let input = syn::parse2(input).expect("parse input");
         let actual = derive(input);
         let expected = quote::quote! {
-            impl<'tx> ::dunge::Group for Map<'tx> {
+            impl<'tx> dunge::Group for Map<'tx> {
                 type Projection = MapProjection<'static>;
-                const DEF: ::dunge::sl::Define<::dunge::types::MemberData> = ::dunge::sl::Define::new(&[
-                    <BoundTexture<'tx> as ::dunge::group::MemberProjection>::MEMBER,
-                    <&'tx Sampler as ::dunge::group::MemberProjection>::MEMBER,
+                const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
+                    <BoundTexture<'tx> as dunge::group::MemberProjection>::MEMBER,
+                    <&'tx Sampler as dunge::group::MemberProjection>::MEMBER,
                 ]);
             }
 
-            impl ::dunge::set::Visit for Map<'_> {
+            impl dunge::set::Visit for Map<'_> {
                 const N_MEMBERS: ::core::primitive::usize = 2usize;
-                fn visit<'group>(&'group self, visitor: &mut ::dunge::set::Visitor<'group>) {
-                    ::dunge::set::VisitMember::visit_member(self.0, visitor);
-                    ::dunge::set::VisitMember::visit_member(self.1, visitor);
+                fn visit<'group>(&'group self, visitor: &mut dunge::set::Visitor<'group>) {
+                    dunge::set::VisitMember::visit_member(self.0, visitor);
+                    dunge::set::VisitMember::visit_member(self.1, visitor);
                 }
             }
 
             pub struct MapProjection<'tx>(
-                <BoundTexture<'tx> as ::dunge::group::MemberProjection>::Field,
-                <&'tx Sampler as ::dunge::group::MemberProjection>::Field,
+                <BoundTexture<'tx> as dunge::group::MemberProjection>::Field,
+                <&'tx Sampler as dunge::group::MemberProjection>::Field,
             );
 
-            impl<'tx> ::dunge::group::Projection for MapProjection<'tx> {
-                fn projection(id: ::core::primitive::u32, out: ::dunge::sl::GlobalOut) -> Self {
+            impl<'tx> dunge::group::Projection for MapProjection<'tx> {
+                fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
                     Self {
-                        0: <BoundTexture<'tx> as ::dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
-                        1: <&'tx Sampler as ::dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
+                        0: <BoundTexture<'tx> as dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
+                        1: <&'tx Sampler as dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
                     }
                 }
             }

@@ -5,8 +5,6 @@ edition.workspace = true
 publish = false
 
 [dependencies]
-# for derive macro
-dunge.workspace = true
 dunge_winit.workspace = true
 env_logger.workspace = true
 futures-concurrency.workspace = true

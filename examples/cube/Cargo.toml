@@ -9,8 +9,6 @@ name = "cube_bin"
 path = "src/main.rs"
 
 [dependencies]
-# for derive macro
-dunge.workspace = true
 dunge_winit.workspace = true
 env_logger.workspace = true
 futures-concurrency.workspace = true
