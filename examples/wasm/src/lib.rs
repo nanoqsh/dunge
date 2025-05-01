@@ -23,7 +23,7 @@ async fn start() {
         run = triangle::run;
     }
 
-    if let Err(e) = dunge_winit::runtime::try_run(run).await {
+    if let Err(e) = dunge_winit::winit::try_run(run).await {
         panic!("error: {e}");
     }
 }

@@ -1,21 +1,20 @@
-use dunge_winit::{Context, runtime::Control};
+use dunge_winit::{Context, winit::Control};
 
 type Error = Box<dyn std::error::Error>;
 
 pub async fn run(cx: Context, control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
-            Canvas,
             color::Rgb,
             glam::{Mat4, Quat, Vec3},
             prelude::*,
-            runtime::Attributes,
             sl::{Groups, InVertex, Render},
             storage::Uniform,
-            winit::keyboard::KeyCode,
+            winit::{Attributes, Canvas},
         },
         futures_concurrency::prelude::*,
         std::time::Duration,
+        winit::keyboard::KeyCode,
     };
 
     #[repr(C)]

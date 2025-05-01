@@ -1,10 +1,10 @@
-use dunge_winit::{Context, runtime::Control};
+use dunge_winit::{Context, winit::Control};
 
 type Error = Box<dyn std::error::Error>;
 
 fn main() {
     env_logger::init();
-    if let Err(e) = dunge_winit::runtime::try_block_on(run) {
+    if let Err(e) = dunge_winit::winit::try_block_on(run) {
         eprintln!("error: {e}");
     }
 }
@@ -15,13 +15,13 @@ async fn run(cx: Context, control: Control) -> Result<(), Error> {
             color::Rgb,
             glam::{Vec2, Vec3},
             prelude::*,
-            runtime::Attributes,
             storage::Uniform,
-            winit::{self, keyboard::KeyCode},
+            winit::Attributes,
         },
         futures_concurrency::prelude::*,
         smol::Timer,
         std::{cell::Cell, time::Duration},
+        winit::{keyboard::KeyCode, window},
     };
 
     #[repr(C)]
@@ -130,7 +130,7 @@ async fn run(cx: Context, control: Control) -> Result<(), Error> {
 
             fullscreen = !fullscreen;
             window.winit().set_fullscreen(if fullscreen {
-                Some(winit::window::Fullscreen::Borderless(None))
+                Some(window::Fullscreen::Borderless(None))
             } else {
                 None
             });

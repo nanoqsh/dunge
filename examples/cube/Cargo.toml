@@ -12,6 +12,7 @@ path = "src/main.rs"
 dunge_winit.workspace = true
 env_logger.workspace = true
 futures-concurrency.workspace = true
+winit.workspace = true
 
 [lints]
 workspace = true

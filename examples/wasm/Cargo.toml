@@ -15,8 +15,6 @@ triangle = ["dep:triangle"]
 [target.'cfg(target_family = "wasm")'.dependencies]
 console_error_panic_hook.workspace = true
 cube = { path = "../cube", optional = true }
-# for derive macro
-dunge = { workspace = true, features = ["winit"] }
 dunge_winit.workspace = true
 ssaa = { path = "../ssaa", optional = true }
 triangle = { path = "../triangle", optional = true }
