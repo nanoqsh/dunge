@@ -1,4 +1,5 @@
 mod canvas;
+mod reactor;
 mod runtime;
 mod time;
 mod window;
@@ -16,6 +17,7 @@ pub mod prelude {
 pub mod winit {
     pub use crate::{
         canvas::Canvas,
+        reactor::Timer,
         runtime::{Control, Error},
         window::{Attributes, Redraw, Window},
     };

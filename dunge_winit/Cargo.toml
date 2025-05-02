@@ -11,6 +11,7 @@ rust-version.workspace = true
 
 [dependencies]
 dunge.workspace = true
+futures-core.workspace = true
 instant.workspace = true
 log.workspace = true
 winit = { workspace = true, features = ["rwh_06", "x11"] }

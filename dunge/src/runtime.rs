@@ -51,7 +51,12 @@ impl Ticket {
     pub(crate) fn wait(&self) -> impl Future<Output = bool> {
         future::poll_fn(|cx| match self.state.load(Ordering::Acquire) {
             WAIT => {
-                *self.waker.lock().expect("lock waker") = Some(cx.waker().clone());
+                let mut waker = self.waker.lock().expect("lock waker");
+                match waker.as_mut() {
+                    Some(waker) => waker.clone_from(cx.waker()),
+                    None => *waker = Some(cx.waker().clone()),
+                }
+
                 Poll::Pending
             }
             DONE => Poll::Ready(true),
