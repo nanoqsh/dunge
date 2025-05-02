@@ -31,7 +31,6 @@ pub async fn run(control: Control) -> Result<(), Error> {
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
 
-    // FIX: broken on web
     let cx = dunge::context().await?;
     let shader = cx.make_shader(cube);
     let uniform = cx.make_uniform(&Mat4::IDENTITY);

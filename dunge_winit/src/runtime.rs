@@ -14,6 +14,10 @@ use {
         error, fmt, future,
         pin::Pin,
         rc::Rc,
+        sync::{
+            Arc, OnceLock,
+            atomic::{AtomicBool, Ordering},
+        },
         task::{self, Poll, Waker},
         time::Duration,
     },
@@ -21,7 +25,6 @@ use {
 };
 
 enum Message {
-    Wake,
     MakeWindow {
         cx: Context,
         attr: Box<Attributes>,
@@ -36,12 +39,6 @@ enum Message {
 pub(crate) struct Request(event_loop::EventLoopProxy<Message>);
 
 impl Request {
-    #[expect(dead_code)]
-    #[inline]
-    fn wake(&self) {
-        _ = self.0.send_event(Message::Wake);
-    }
-
     #[inline]
     async fn make_window(&self, cx: Context, attr: Attributes) -> Result<Window, Error> {
         let mut out = Rc::new(OnceCell::new());
@@ -133,39 +130,73 @@ impl<R> Return<R> {
     }
 }
 
-struct App<'waker, F, R> {
+struct AppWaker {
+    need_to_poll: AtomicBool,
+}
+
+impl task::Wake for AppWaker {
+    fn wake(self: Arc<Self>) {
+        self.wake_by_ref();
+    }
+
+    fn wake_by_ref(self: &Arc<Self>) {
+        self.need_to_poll.store(true, Ordering::Relaxed);
+    }
+}
+
+struct App<F, R> {
     req: Request,
     lifecycle: Rc<Lifecycle>,
     windows: HashMap<window::WindowId, AppWindow>,
-    need_to_poll: bool,
-    context: task::Context<'waker>,
+    tick_duration: Duration,
+    app_waker: Arc<AppWaker>,
+    scheduled: bool,
+    context: task::Context<'static>,
     fu: Pin<Box<F>>,
     ret: Rc<Return<R>>,
 }
 
-impl<F> App<'_, F, F::Output>
+impl<F> App<F, F::Output>
 where
     F: Future,
 {
-    const WAIT_TIME: Duration = Duration::from_millis(100);
-
     #[inline]
-    fn schedule(&mut self) {
-        self.need_to_poll = true;
+    fn tick(&mut self, el: &event_loop::ActiveEventLoop) {
+        self.request_redraw();
+
+        while self.need_to_poll() {
+            self.poll(el);
+        }
+
+        el.set_control_flow(event_loop::ControlFlow::wait_duration(self.tick_duration));
     }
 
     #[inline]
-    fn active_poll(&mut self, el: &event_loop::ActiveEventLoop) {
-        if !self.need_to_poll {
+    fn need_to_poll(&mut self) -> bool {
+        let scheduled = self.scheduled;
+        self.scheduled = false;
+        let awakened = self.app_waker.need_to_poll.swap(false, Ordering::Relaxed);
+        scheduled || awakened
+    }
+
+    #[inline]
+    fn request_redraw(&mut self) {
+        if let LifecycleState::Inactive = self.lifecycle.state.get() {
             return;
         }
 
-        self.force_poll(el);
-        self.need_to_poll = false;
+        for window in self.windows.values() {
+            window.shared.window().request_redraw();
+        }
     }
 
     #[inline]
-    fn force_poll(&mut self, el: &event_loop::ActiveEventLoop) {
+    fn schedule(&mut self) {
+        self.scheduled = true;
+    }
+
+    #[inline]
+    fn poll(&mut self, el: &event_loop::ActiveEventLoop) {
         if let Poll::Ready(res) = self.fu.as_mut().poll(&mut self.context) {
             self.ret.set(Ok(res));
             el.exit();
@@ -179,19 +210,15 @@ where
     }
 }
 
-impl<F> ApplicationHandler<Message> for App<'_, F, F::Output>
+impl<F> ApplicationHandler<Message> for App<F, F::Output>
 where
     F: Future,
 {
     fn new_events(&mut self, el: &event_loop::ActiveEventLoop, cause: event::StartCause) {
         match cause {
             event::StartCause::ResumeTimeReached { .. } => {
-                log::debug!("resume time reached");
-                for window in self.windows.values() {
-                    window.shared.window().request_redraw();
-                }
-
-                self.schedule();
+                log::debug!("tick");
+                self.tick(el);
             }
             event::StartCause::WaitCancelled {
                 requested_resume, ..
@@ -199,7 +226,7 @@ where
                 log::debug!("wait cancelled");
                 let flow = match requested_resume {
                     Some(resume) => event_loop::ControlFlow::WaitUntil(resume),
-                    None => event_loop::ControlFlow::wait_duration(Self::WAIT_TIME),
+                    None => event_loop::ControlFlow::wait_duration(self.tick_duration),
                 };
 
                 el.set_control_flow(flow);
@@ -209,7 +236,10 @@ where
                 log::debug!("init");
 
                 // an initial poll
-                self.force_poll(el);
+                self.poll(el);
+
+                // an initial tick
+                self.tick(el);
             }
         }
     }
@@ -217,12 +247,7 @@ where
     fn resumed(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("resumed");
         self.lifecycle.set(LifecycleState::Active);
-
-        for window in self.windows.values() {
-            window.shared.window().request_redraw();
-        }
-
-        self.schedule();
+        self.request_redraw();
     }
 
     fn suspended(&mut self, _: &event_loop::ActiveEventLoop) {
@@ -233,7 +258,6 @@ where
 
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Message) {
         match req {
-            Message::Wake => self.force_poll(el),
             Message::MakeWindow { cx, attr, out } => {
                 log::debug!("make window");
                 let res = Window::new(cx, self.req.clone(), el, *attr);
@@ -276,7 +300,7 @@ where
 
     fn window_event(
         &mut self,
-        el: &event_loop::ActiveEventLoop,
+        _: &event_loop::ActiveEventLoop,
         id: window::WindowId,
         event: event::WindowEvent,
     ) {
@@ -301,8 +325,6 @@ where
             event::WindowEvent::Focused(focused) => {
                 if focused {
                     log::debug!("focused {id:?}");
-                    window.shared.window().request_redraw();
-                    self.schedule();
                 } else {
                     log::debug!("unfocused {id:?}");
                 }
@@ -338,35 +360,18 @@ where
                 self.schedule();
             }
             event::WindowEvent::RedrawRequested => {
-                if let LifecycleState::Active = self.lifecycle.state.get() {
-                    log::debug!("redraw requested {id:?}");
-                } else {
-                    log::debug!("redraw requested {id:?} (inactive)");
-
-                    // Wait a while to become active
-                    el.set_control_flow(event_loop::ControlFlow::wait_duration(Self::WAIT_TIME));
-                    return;
-                }
-
                 let delta_time = window.time.delta();
-                let min_delta_time = window.shared.min_delta_time();
-                if delta_time < min_delta_time {
-                    let wait = min_delta_time - delta_time;
-                    el.set_control_flow(event_loop::ControlFlow::wait_duration(wait));
-                    return;
-                }
-
-                window.time.reset();
                 window.shared.events().redraw.set_value(delta_time);
-                self.force_poll(el);
+                self.schedule();
             }
             _ => {}
         }
     }
+}
 
-    fn about_to_wait(&mut self, el: &event_loop::ActiveEventLoop) {
-        self.active_poll(el);
-    }
+fn cached_waker(app_waker: Arc<AppWaker>) -> &'static Waker {
+    static CACHE: OnceLock<Waker> = OnceLock::new();
+    CACHE.get_or_init(|| Waker::from(app_waker))
 }
 
 /// Runs an event loop on web.
@@ -394,13 +399,19 @@ where
         lifecycle: lifecycle.clone(),
     };
 
+    let app_waker = Arc::new(AppWaker {
+        need_to_poll: AtomicBool::new(false),
+    });
+
     let ret = Rc::new(Return::new());
     let app = App {
         req,
         lifecycle,
         windows: HashMap::new(),
-        need_to_poll: false,
-        context: task::Context::from_waker(Waker::noop()),
+        tick_duration: Duration::from_secs_f32(1. / 60.),
+        app_waker: app_waker.clone(),
+        scheduled: false,
+        context: task::Context::from_waker(cached_waker(app_waker.clone())),
         fu: Box::pin(async move { f(control).await }),
         ret: ret.clone(),
     };
@@ -432,8 +443,6 @@ pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
 where
     F: AsyncFnMut(Control) -> R,
 {
-    use std::sync::Arc;
-
     let el = event_loop::EventLoop::with_user_event()
         .build()
         .map_err(Error::EventLoop)?;
@@ -449,37 +458,19 @@ where
         lifecycle: lifecycle.clone(),
     };
 
-    struct AppWaker {
-        // it doesn't work :(
-        // > cannot be sent between threads safely
-        // so I need either sendable proxy from winit
-        // or local wakers in std.
-        #[cfg(any())]
-        proxy: event_loop::EventLoopProxy<Message>,
-    }
-
-    impl task::Wake for AppWaker {
-        fn wake(self: Arc<Self>) {
-            self.wake_by_ref();
-        }
-
-        fn wake_by_ref(self: &Arc<Self>) {
-            #[cfg(any())]
-            {
-                _ = self.proxy.send_event(Message::Wake);
-            }
-        }
-    }
-
-    let waker = Waker::from(Arc::new(AppWaker {}));
+    let app_waker = Arc::new(AppWaker {
+        need_to_poll: AtomicBool::new(false),
+    });
 
     let ret = Rc::new(Return::new());
     let mut app = App {
         req,
         lifecycle,
         windows: HashMap::new(),
-        need_to_poll: false,
-        context: task::Context::from_waker(&waker),
+        tick_duration: Duration::from_secs_f32(1. / 60.),
+        app_waker: app_waker.clone(),
+        scheduled: false,
+        context: task::Context::from_waker(cached_waker(app_waker.clone())),
         fu: Box::pin(f(control)),
         ret: ret.clone(),
     };

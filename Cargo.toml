@@ -30,6 +30,7 @@ dunge_winit = { version = "=0.3.3", path = "dunge_winit" }
 askama = { version = "0.14", default-features = false }
 async-channel = "2.1"
 async-executor = "1.8"
+async-io = "2.4"
 async-net = "2.0"
 bytemuck = "1.13"
 console_error_panic_hook = "0.1"
@@ -38,6 +39,7 @@ env_logger = "0.11"
 futures-concurrency = "7.6"
 futures-lite = "2.1"
 glam = "0.30"
+gloo-timers = { version = "0.3", default-features = false }
 http-body-util = "0.1"
 hyper = "1"
 instant = "0.1"
@@ -47,7 +49,6 @@ parking = "2.2"
 png = "0.17"
 proc-macro2 = "1.0"
 quote = "1.0"
-smol = "2.0"
 smol-hyper = "0.1"
 syn = { version = "2.0", default-features = false }
 wasm-bindgen = "0.2"

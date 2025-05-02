@@ -11,13 +11,13 @@ fn main() {
 
 async fn run(control: Control) -> Result<(), Error> {
     use {
+        async_io::Timer,
         dunge_winit::{
             color::Rgb,
             glam::{Vec2, Vec3},
             storage::Uniform,
         },
         futures_concurrency::prelude::*,
-        smol::Timer,
         std::{cell::Cell, time::Duration},
         winit::{keyboard::KeyCode, window},
     };

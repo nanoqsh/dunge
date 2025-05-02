@@ -14,8 +14,10 @@ triangle = ["dep:triangle"]
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 console_error_panic_hook.workspace = true
+console_log.workspace = true
 cube = { path = "../cube", optional = true }
 dunge_winit.workspace = true
+log.workspace = true
 ssaa = { path = "../ssaa", optional = true }
 triangle = { path = "../triangle", optional = true }
 wasm-bindgen.workspace = true

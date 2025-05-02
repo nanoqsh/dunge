@@ -13,7 +13,6 @@ use {
         cell::{Cell, RefCell},
         collections::{HashMap, hash_map::Entry},
         future,
-        num::NonZeroU32,
         rc::Rc,
         sync::Arc,
         task::Poll,
@@ -162,7 +161,6 @@ pub(crate) struct Events {
 pub(crate) struct Shared {
     cx: Context,
     surface: Surface<window::Window, Ops>,
-    min_delta_time: Cell<Duration>,
     events: Events,
 }
 
@@ -175,11 +173,6 @@ impl Shared {
     #[inline]
     pub(crate) fn resize(&self) {
         self.surface.resize(&self.cx);
-    }
-
-    #[inline]
-    pub(crate) fn min_delta_time(&self) -> Duration {
-        self.min_delta_time.get()
     }
 
     #[inline]
@@ -196,8 +189,6 @@ pub struct Window {
 }
 
 impl Window {
-    const DEFAULT_FPS: u32 = 60;
-
     #[inline]
     pub(crate) fn new(
         cx: Context,
@@ -210,7 +201,6 @@ impl Window {
 
         let shared = Rc::new(Shared {
             cx,
-            min_delta_time: Cell::new(Duration::from_secs_f32(1. / Self::DEFAULT_FPS as f32)),
             surface,
             events: Events {
                 press_keys: Keys::new(),
@@ -245,14 +235,6 @@ impl Window {
     #[inline]
     pub fn size(&self) -> (u32, u32) {
         self.shared.surface.size()
-    }
-
-    /// Sets the number of times per second the window should be [redrawed](Window::redraw).
-    #[inline]
-    pub fn set_fps(&self, fps: NonZeroU32) {
-        self.shared
-            .min_delta_time
-            .set(Duration::from_secs_f32(1. / fps.get() as f32));
     }
 
     /// Waits for a key press event.
