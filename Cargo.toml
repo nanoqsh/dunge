@@ -43,7 +43,6 @@ glam = "0.30"
 gloo-timers = { version = "0.3", default-features = false }
 http-body-util = "0.1"
 hyper = "1"
-instant = "0.1"
 log = "0.4"
 naga = "25.0"
 parking = "2.2"
@@ -56,6 +55,7 @@ wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 wgpu = { version = "25.0", default-features = false }
 web-sys = "0.3"
+web-time = "1.1"
 winit = { version = "0.30", default-features = false }
 
 [workspace.lints.rust]

@@ -38,7 +38,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let mut r = 0.;
     let mut update_scene = |(width, height), delta_time: Duration| {
-        r += delta_time.as_secs_f32() * 1.5;
+        r += delta_time.as_secs_f32() * 2.;
 
         let model = {
             let pos = Vec3::new(0., 0., -2.);

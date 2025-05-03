@@ -12,7 +12,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [features]
-winit = ["dep:instant", "dep:winit"]
+winit = ["dep:winit"]
 wgsl = ["dunge_shader/wgsl"]
 
 [dependencies]
@@ -20,9 +20,9 @@ dunge_macros.workspace = true
 dunge_shader.workspace = true
 bytemuck.workspace = true
 glam = { workspace = true, features = ["bytemuck"] }
-# TODO: remove
-instant = { workspace = true, optional = true }
 log.workspace = true
+# TODO: remove
+web-time.workspace = true
 wgpu = { workspace = true, features = ["naga-ir"] }
 winit = { workspace = true, features = ["rwh_06", "x11"], optional = true }
 
@@ -36,7 +36,6 @@ wgpu = { workspace = true, features = ["vulkan"] }
 wgpu = { workspace = true, features = ["metal"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-instant = { workspace = true, features = ["wasm-bindgen"], optional = true }
 wgpu = { workspace = true, features = ["webgpu"] }
 web-sys = { workspace = true, features = ["Document", "Window", "Element"] }
 

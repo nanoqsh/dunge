@@ -1,4 +1,10 @@
-use {instant::Instant, std::time::Duration};
+use std::time::Duration;
+
+#[cfg(target_family = "wasm")]
+use web_time::Instant;
+
+#[cfg(not(target_family = "wasm"))]
+use std::time::Instant;
 
 pub(crate) struct Time {
     last: Instant,

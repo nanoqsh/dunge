@@ -1,6 +1,6 @@
 use {
     crate::{
-        reactor::{Reactor, Timer},
+        reactor::{Process, Reactor, Timer},
         time::Time,
         window::{Attributes, Shared, Window},
     },
@@ -21,9 +21,16 @@ use {
             atomic::{AtomicBool, Ordering},
         },
         task::{self, Poll, Waker},
+        time::Duration,
     },
     winit::{application::ApplicationHandler, event, event_loop, keyboard, window},
 };
+
+#[cfg(target_family = "wasm")]
+use web_time::Instant;
+
+#[cfg(not(target_family = "wasm"))]
+use std::time::Instant;
 
 enum Message {
     MakeWindow {
@@ -131,6 +138,11 @@ impl<R> Return<R> {
     }
 }
 
+enum Action {
+    Tick,
+    Process,
+}
+
 struct AppWaker {
     need_to_poll: AtomicBool,
 }
@@ -149,6 +161,7 @@ struct App<F, R> {
     req: Request,
     lifecycle: Rc<Lifecycle>,
     windows: HashMap<window::WindowId, AppWindow>,
+    action: Action,
     timer: Timer,
     app_waker: Arc<AppWaker>,
     scheduled: bool,
@@ -162,6 +175,25 @@ where
     F: Future,
 {
     #[inline]
+    fn process_timers(&mut self, el: &event_loop::ActiveEventLoop) {
+        // tick after wait
+        self.tick(el);
+
+        let next = loop {
+            match Reactor::get().process_timers() {
+                // ready to make progress
+                Process::Ready => self.tick(el),
+                // wait for next timer
+                Process::Wait(next) => break next,
+                // nothing to do, sleep some time
+                Process::Sleep => break Instant::now() + Duration::from_millis(50),
+            }
+        };
+
+        el.set_control_flow(event_loop::ControlFlow::WaitUntil(next));
+    }
+
+    #[inline]
     fn tick(&mut self, el: &event_loop::ActiveEventLoop) {
         if Pin::new(&mut self.timer)
             .poll_next(&mut self.context)
@@ -173,16 +205,6 @@ where
         while self.need_to_poll() {
             self.poll(el);
         }
-    }
-
-    #[inline]
-    fn process_timers(&self, el: &event_loop::ActiveEventLoop) {
-        let next = Reactor::get()
-            .process_timers()
-            .expect("the event loop has its own timer at least");
-
-        // TODO: use `web_time` crate
-        el.set_control_flow(event_loop::ControlFlow::WaitUntil(next));
     }
 
     #[inline]
@@ -232,12 +254,17 @@ where
         match cause {
             event::StartCause::ResumeTimeReached { .. } => {
                 log::debug!("resume time reached");
-                self.tick(el);
-                self.process_timers(el);
+                self.action = Action::Process;
             }
-            event::StartCause::WaitCancelled { .. } => {
+            event::StartCause::WaitCancelled {
+                requested_resume, ..
+            } => {
                 log::debug!("wait cancelled");
-                self.process_timers(el);
+                let next =
+                    requested_resume.unwrap_or_else(|| Instant::now() + Duration::from_millis(100));
+
+                el.set_control_flow(event_loop::ControlFlow::WaitUntil(next));
+                self.action = Action::Tick;
             }
             event::StartCause::Poll => log::debug!("poll"),
             event::StartCause::Init => {
@@ -246,9 +273,7 @@ where
                 // an initial poll
                 self.poll(el);
 
-                // an initial tick
-                self.tick(el);
-                self.process_timers(el);
+                self.action = Action::Process;
             }
         }
     }
@@ -376,6 +401,14 @@ where
             _ => {}
         }
     }
+
+    fn about_to_wait(&mut self, el: &event_loop::ActiveEventLoop) {
+        if let Action::Process = self.action {
+            self.process_timers(el);
+        } else {
+            self.tick(el);
+        }
+    }
 }
 
 fn cached_waker(app_waker: Arc<AppWaker>) -> &'static Waker {
@@ -417,6 +450,8 @@ where
         req,
         lifecycle,
         windows: HashMap::new(),
+        action: Action::Process,
+        timer: Timer::interval(Duration::from_secs_f32(1. / 60.)),
         app_waker: app_waker.clone(),
         scheduled: false,
         context: task::Context::from_waker(cached_waker(app_waker.clone())),
@@ -451,8 +486,6 @@ pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
 where
     F: AsyncFnMut(Control) -> R,
 {
-    use std::time::Duration;
-
     let el = event_loop::EventLoop::with_user_event()
         .build()
         .map_err(Error::EventLoop)?;
@@ -477,6 +510,7 @@ where
         req,
         lifecycle,
         windows: HashMap::new(),
+        action: Action::Process,
         timer: Timer::interval(Duration::from_secs_f32(1. / 60.)),
         app_waker: app_waker.clone(),
         scheduled: false,

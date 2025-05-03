@@ -1,6 +1,5 @@
 use {
     futures_core::Stream,
-    instant::Instant,
     std::{
         collections::BTreeMap,
         mem,
@@ -13,6 +12,12 @@ use {
         time::Duration,
     },
 };
+
+#[cfg(target_family = "wasm")]
+use web_time::Instant;
+
+#[cfg(not(target_family = "wasm"))]
+use std::time::Instant;
 
 pub(crate) struct Reactor {
     timers: Mutex<BTreeMap<(Instant, u64), Waker>>,
@@ -51,28 +56,37 @@ impl Reactor {
         timers.remove(&(when, id));
     }
 
-    pub(crate) fn process_timers(&self) -> Option<Instant> {
-        let (ready, next) = {
+    pub(crate) fn process_timers(&self) -> Process {
+        let (ready, out) = {
             let mut timers = self.timers.lock().expect("lock timers");
             let now = Instant::now();
             let pending = timers.split_off(&(now + Duration::from_nanos(1), 0));
             let ready = mem::replace(&mut *timers, pending);
 
-            let next = if ready.is_empty() {
-                timers.keys().next().map(|(when, _)| *when)
+            let out = if ready.is_empty() {
+                timers
+                    .keys()
+                    .next()
+                    .map_or(Process::Sleep, |(when, _)| Process::Wait(*when))
             } else {
-                Some(now)
+                Process::Ready
             };
 
-            (ready, next)
+            (ready, out)
         };
 
         for (_, waker) in ready {
             waker.wake();
         }
 
-        next
+        out
     }
+}
+
+pub(crate) enum Process {
+    Ready,
+    Wait(Instant),
+    Sleep,
 }
 
 struct Record {

@@ -12,12 +12,11 @@ rust-version.workspace = true
 [dependencies]
 dunge.workspace = true
 futures-core.workspace = true
-instant.workspace = true
 log.workspace = true
 winit = { workspace = true, features = ["rwh_06", "x11"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-instant = { workspace = true, features = ["wasm-bindgen"] }
+web-time.workspace = true
 wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["Document", "Window", "Element"] }
 

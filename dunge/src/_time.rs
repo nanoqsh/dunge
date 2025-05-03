@@ -1,4 +1,4 @@
-use {instant::Instant, std::time::Duration};
+use {std::time::Duration, web_time::Instant};
 
 pub(crate) struct Time {
     last: Instant,
