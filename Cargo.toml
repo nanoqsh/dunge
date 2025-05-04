@@ -30,7 +30,6 @@ dunge_winit = { version = "=0.3.3", path = "dunge_winit" }
 askama = { version = "0.14", default-features = false }
 async-channel = "2.1"
 async-executor = "1.8"
-async-io = "2.4"
 async-net = "2.0"
 bytemuck = "1.13"
 console_error_panic_hook = "0.1"

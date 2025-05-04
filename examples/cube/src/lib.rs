@@ -35,13 +35,15 @@ pub async fn run(control: Control) -> Result<(), Error> {
     let uniform = cx.make_uniform(&Mat4::IDENTITY);
     let transform = cx.make_set(&shader, Transform(&uniform));
 
-    let mut r = 0.;
+    let mut time = Duration::ZERO;
     let mut update_scene = |(width, height), delta_time: Duration| {
-        r += delta_time.as_secs_f32() * 2.;
+        time += delta_time;
 
         let model = {
             let pos = Vec3::new(0., 0., -2.);
-            let rot = Quat::from_axis_angle(Vec3::splat(1.).normalize(), f32::sin(r));
+            let axis = Vec3::splat(1.).normalize();
+            let angle = (time.as_secs_f32() * 2.).sin();
+            let rot = Quat::from_axis_angle(axis, angle);
             Mat4::from_rotation_translation(rot, pos)
         };
 

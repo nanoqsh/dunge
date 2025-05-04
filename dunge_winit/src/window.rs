@@ -13,6 +13,8 @@ use {
         cell::{Cell, RefCell},
         collections::{HashMap, hash_map::Entry},
         future,
+        num::NonZeroU32,
+        ops,
         rc::Rc,
         sync::Arc,
         task::Poll,
@@ -98,8 +100,17 @@ impl Event {
 
 impl<T> Event<Option<T>> {
     #[inline]
-    pub(crate) fn set_value(&self, value: T) {
-        self.0.set(Some(value));
+    pub(crate) fn add_value(&self, value: T)
+    where
+        T: Copy + ops::AddAssign,
+    {
+        match self.0.get() {
+            Some(mut curr) => {
+                curr += value;
+                self.0.set(Some(curr));
+            }
+            None => self.0.set(Some(value)),
+        }
     }
 
     #[inline]
@@ -272,7 +283,6 @@ impl Window {
                 Err(e) => e,
             };
 
-            log::warn!("surface error: {e}");
             match e.action() {
                 Action::Run => {}
                 Action::Recreate => {
@@ -288,6 +298,15 @@ impl Window {
     #[inline]
     pub async fn close_requested(&self) {
         future::poll_fn(|_| self.shared.events.close.active_poll()).await;
+    }
+
+    #[inline]
+    pub fn set_fps(&self, fps: NonZeroU32) {
+        const NANO: u32 = 1_000_000_000;
+
+        let id = self.shared.surface.window().id();
+        let duration = Duration::from_nanos(u64::from(NANO / fps));
+        self.req.set_fps(id, duration);
     }
 }
 

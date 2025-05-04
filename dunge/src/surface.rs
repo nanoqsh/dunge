@@ -197,8 +197,8 @@ pub struct SurfaceError(wgpu::SurfaceError);
 impl SurfaceError {
     pub fn action(&self) -> Action {
         match self.0 {
-            wgpu::SurfaceError::Timeout | wgpu::SurfaceError::Outdated => Action::Run,
-            wgpu::SurfaceError::Lost => Action::Recreate,
+            wgpu::SurfaceError::Timeout => Action::Run,
+            wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost => Action::Recreate,
             wgpu::SurfaceError::OutOfMemory | wgpu::SurfaceError::Other => Action::Exit,
         }
     }

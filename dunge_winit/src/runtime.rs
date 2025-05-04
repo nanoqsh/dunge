@@ -39,6 +39,7 @@ enum Message {
     },
     RemoveWindow(window::WindowId),
     RecreateSurface(window::WindowId),
+    SetFps(window::WindowId, Duration),
     Exit(Box<Error>),
 }
 
@@ -75,6 +76,11 @@ impl Request {
     }
 
     #[inline]
+    pub(crate) fn set_fps(&self, id: window::WindowId, period: Duration) {
+        _ = self.0.send_event(Message::SetFps(id, period));
+    }
+
+    #[inline]
     pub(crate) fn exit(&self, e: Error) {
         _ = self.0.send_event(Message::Exit(Box::new(e)));
     }
@@ -82,7 +88,9 @@ impl Request {
 
 struct AppWindow {
     shared: Rc<Shared>,
+    timer: Timer,
     last_render: Instant,
+    set_fps: Option<Duration>,
 }
 
 enum Out<R> {
@@ -163,7 +171,6 @@ struct App<F, R> {
     lifecycle: Rc<Lifecycle>,
     windows: HashMap<window::WindowId, AppWindow>,
     action: Action,
-    timer: Timer,
     app_waker: Arc<AppWaker>,
     scheduled: bool,
     context: task::Context<'static>,
@@ -198,13 +205,7 @@ where
 
     #[inline]
     fn tick(&mut self, el: &event_loop::ActiveEventLoop) {
-        if Pin::new(&mut self.timer)
-            .poll_next(&mut self.context)
-            .is_ready()
-        {
-            self.request_redraw();
-        }
-
+        self.redraw();
         while self.need_to_poll() {
             self.poll(el);
         }
@@ -219,13 +220,18 @@ where
     }
 
     #[inline]
-    fn request_redraw(&mut self) {
+    fn redraw(&mut self) {
         if let LifecycleState::Inactive = self.lifecycle.state.get() {
             return;
         }
 
-        for window in self.windows.values() {
-            window.shared.window().request_redraw();
+        for window in self.windows.values_mut() {
+            if Pin::new(&mut window.timer)
+                .poll_next(&mut self.context)
+                .is_ready()
+            {
+                window.shared.window().request_redraw();
+            }
         }
     }
 
@@ -286,7 +292,10 @@ where
     fn resumed(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("resumed");
         self.lifecycle.set(LifecycleState::Active);
-        self.request_redraw();
+
+        for window in self.windows.values() {
+            window.shared.window().request_redraw();
+        }
     }
 
     #[inline]
@@ -311,7 +320,9 @@ where
                         id,
                         AppWindow {
                             shared,
+                            timer: Timer::interval(Duration::from_secs_f32(1. / 60.)),
                             last_render: Instant::now(),
+                            set_fps: None,
                         },
                     );
                 }
@@ -331,6 +342,14 @@ where
 
                 window.shared.resize();
                 self.schedule();
+            }
+            Message::SetFps(id, period) => {
+                log::debug!("set fps {id:?}");
+                let Some(window) = self.windows.get_mut(&id) else {
+                    return;
+                };
+
+                window.set_fps = Some(period);
             }
             Message::Exit(e) => {
                 log::debug!("exit with error: {e}");
@@ -406,7 +425,12 @@ where
                 let now = Instant::now();
                 let delta_time = now.duration_since(window.last_render);
                 window.last_render = now;
-                window.shared.events().redraw.set_value(delta_time);
+                window.shared.events().redraw.add_value(delta_time);
+
+                if let Some(period) = window.set_fps.take() {
+                    window.timer = Timer::interval(period);
+                }
+
                 self.schedule();
             }
             _ => {}
@@ -463,7 +487,6 @@ where
         lifecycle,
         windows: HashMap::new(),
         action: Action::Process,
-        timer: Timer::interval(Duration::from_secs_f32(1. / 60.)),
         app_waker: app_waker.clone(),
         scheduled: false,
         context: task::Context::from_waker(cached_waker(app_waker.clone())),
@@ -523,7 +546,6 @@ where
         lifecycle,
         windows: HashMap::new(),
         action: Action::Process,
-        timer: Timer::interval(Duration::from_secs_f32(1. / 60.)),
         app_waker: app_waker.clone(),
         scheduled: false,
         context: task::Context::from_waker(cached_waker(app_waker.clone())),

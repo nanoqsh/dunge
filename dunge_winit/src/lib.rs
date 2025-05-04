@@ -6,7 +6,11 @@ mod window;
 /// The dunge prelude.
 pub mod prelude {
     pub use {
-        crate::{runtime::Control, window::Attributes},
+        crate::{
+            reactor::{DurationTimerExt as _, InstantTimerExt as _},
+            runtime::Control,
+            window::Attributes,
+        },
         dunge,
         dunge::prelude::*,
     };
@@ -16,7 +20,7 @@ pub mod prelude {
 pub mod winit {
     pub use crate::{
         canvas::Canvas,
-        reactor::Timer,
+        reactor::{DurationTimerExt, InstantTimerExt, Timer},
         runtime::{Control, Error},
         window::{Attributes, Redraw, Window},
     };

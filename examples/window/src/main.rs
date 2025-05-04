@@ -11,13 +11,12 @@ fn main() {
 
 async fn run(control: Control) -> Result<(), Error> {
     use {
-        async_io::Timer,
         dunge_winit::{
-            color::Rgb,
             glam::{Vec2, Vec3},
             storage::Uniform,
         },
         futures_concurrency::prelude::*,
+        futures_lite::prelude::*,
         std::{cell::Cell, time::Duration},
         winit::{keyboard::KeyCode, window},
     };
@@ -44,10 +43,10 @@ async fn run(control: Control) -> Result<(), Error> {
     let uniform = cx.make_uniform(&0.);
     let set = cx.make_set(&shader, Delta(&uniform));
 
-    let mut t = 0.;
+    let mut time = Duration::ZERO;
     let mut update_scene = |delta_time: Duration| {
-        t += delta_time.as_secs_f32();
-        let v = f32::sin(t) * 0.5 + 0.5;
+        time += delta_time;
+        let v = time.as_secs_f32().sin() * 0.5 + 0.5;
         uniform.update(&cx, &v);
     };
 
@@ -74,43 +73,28 @@ async fn run(control: Control) -> Result<(), Error> {
     let window = control.make_window(&cx, Attributes::default()).await?;
     let layer = cx.make_layer(&shader, window.format());
 
-    #[derive(Default)]
-    struct Fps(Cell<u32>);
+    let fps = Cell::new(0);
+    let inc = || fps.set(fps.get() + 1);
+    let reset = || fps.take();
 
-    impl Fps {
-        fn inc(&self) {
-            self.0.set(self.0.get() + 1);
-        }
+    let fps_counter = Duration::from_secs(1).interval().for_each(|_| {
+        let total = reset();
+        println!("fps: {total}");
+    });
 
-        fn reset(&self) -> u32 {
-            let total = self.0.get();
-            self.0.set(0);
-            total
-        }
-    }
-
-    let fps = Fps::default();
-    let fps_counter = async {
-        loop {
-            Timer::after(Duration::from_secs(1)).await;
-            let total = fps.reset();
-            println!("fps: {total}");
-        }
-    };
-
+    let bg = layer.format().rgb_from_bytes([0; 3]);
     let render = async {
         loop {
             let redraw = window.redraw().await;
             update_scene(redraw.delta_time());
 
             cx.shed(|mut s| {
-                let bg = Rgb::from_bytes([0; 3]);
                 s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);
             })
             .await;
 
             redraw.present();
-            fps.inc();
+            inc();
         }
     };
 

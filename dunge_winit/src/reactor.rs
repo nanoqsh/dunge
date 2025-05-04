@@ -24,6 +24,7 @@ pub(crate) struct Reactor {
 }
 
 impl Reactor {
+    #[inline]
     pub(crate) fn get() -> &'static Self {
         static REACTOR: LazyLock<Reactor> = LazyLock::new(|| Reactor {
             timers: Mutex::new(BTreeMap::new()),
@@ -32,6 +33,7 @@ impl Reactor {
         &REACTOR
     }
 
+    #[inline]
     fn insert_timer(&self, when: Instant, waker: Waker) -> u64 {
         static COUNTER: AtomicU64 = AtomicU64::new(1);
         let id = COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -44,6 +46,7 @@ impl Reactor {
         id
     }
 
+    #[inline]
     fn update_timer(&self, when: Instant, id: u64, new: &Waker) {
         let mut timers = self.timers.lock().expect("lock timers");
         if let Some(waker) = timers.get_mut(&(when, id)) {
@@ -51,6 +54,7 @@ impl Reactor {
         }
     }
 
+    #[inline]
     fn remove_timer(&self, when: Instant, id: u64) {
         let mut timers = self.timers.lock().expect("lock timers");
         timers.remove(&(when, id));
@@ -101,18 +105,22 @@ pub struct Timer {
 }
 
 impl Timer {
+    #[inline]
     pub fn after(duration: Duration) -> Self {
         Self::at(Instant::now() + duration)
     }
 
+    #[inline]
     pub fn at(instant: Instant) -> Self {
         Self::interval_at(instant, Duration::MAX)
     }
 
+    #[inline]
     pub fn interval(period: Duration) -> Self {
         Self::interval_at(Instant::now() + period, period)
     }
 
+    #[inline]
     pub fn interval_at(when: Instant, period: Duration) -> Self {
         Self {
             when,
@@ -121,11 +129,13 @@ impl Timer {
         }
     }
 
+    #[inline]
     fn register(&mut self, waker: Waker) {
         let id = Reactor::get().insert_timer(self.when, waker.clone());
         self.record = Some(Record { id, waker });
     }
 
+    #[inline]
     fn update_waker(&mut self, new: &Waker) {
         match &mut self.record {
             Some(Record { waker, .. }) if waker.will_wake(new) => {}
@@ -137,6 +147,7 @@ impl Timer {
         }
     }
 
+    #[inline]
     fn deregister(&mut self) {
         if let (when, Some(Record { id, .. })) = (self.when, self.record.take()) {
             Reactor::get().remove_timer(when, id);
@@ -145,6 +156,7 @@ impl Timer {
 }
 
 impl Drop for Timer {
+    #[inline]
     fn drop(&mut self) {
         self.deregister();
     }
@@ -153,6 +165,7 @@ impl Drop for Timer {
 impl Future for Timer {
     type Output = Instant;
 
+    #[inline]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.poll_next(cx) {
             Poll::Ready(Some(when)) => Poll::Ready(when),
@@ -165,6 +178,7 @@ impl Future for Timer {
 impl Stream for Timer {
     type Item = Instant;
 
+    #[inline]
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let me = self.get_mut();
         if Instant::now() < me.when {
@@ -174,8 +188,45 @@ impl Stream for Timer {
 
         me.deregister();
         let result = me.when;
-        me.when += me.period;
-        me.register(cx.waker().clone());
+        if me.period != Duration::MAX {
+            me.when += me.period;
+            me.register(cx.waker().clone());
+        }
+
         Poll::Ready(Some(result))
+    }
+}
+
+pub trait DurationTimerExt {
+    fn after(self) -> Timer;
+    fn interval(self) -> Timer;
+}
+
+impl DurationTimerExt for Duration {
+    #[inline]
+    fn after(self) -> Timer {
+        Timer::after(self)
+    }
+
+    #[inline]
+    fn interval(self) -> Timer {
+        Timer::interval(self)
+    }
+}
+
+pub trait InstantTimerExt {
+    fn at(self) -> Timer;
+    fn interval_at(self, period: Duration) -> Timer;
+}
+
+impl InstantTimerExt for Instant {
+    #[inline]
+    fn at(self) -> Timer {
+        Timer::at(self)
+    }
+
+    #[inline]
+    fn interval_at(self, period: Duration) -> Timer {
+        Timer::interval_at(self, period)
     }
 }
