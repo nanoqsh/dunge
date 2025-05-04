@@ -1,7 +1,6 @@
 use {
     crate::{
         reactor::{Process, Reactor, Timer},
-        time::Time,
         window::{Attributes, Shared, Window},
     },
     dunge::{
@@ -83,7 +82,7 @@ impl Request {
 
 struct AppWindow {
     shared: Rc<Shared>,
-    time: Time,
+    last_render: Instant,
 }
 
 enum Out<R> {
@@ -176,6 +175,8 @@ impl<F> App<F, F::Output>
 where
     F: Future,
 {
+    const DEFAULT_SLEEP_DURATION: Duration = Duration::from_millis(50);
+
     #[inline]
     fn process_timers(&mut self, el: &event_loop::ActiveEventLoop) {
         // tick after wait
@@ -188,7 +189,7 @@ where
                 // wait for next timer
                 Process::Wait(next) => break next,
                 // nothing to do, sleep some time
-                Process::Sleep => break Instant::now() + Duration::from_millis(50),
+                Process::Sleep => break Instant::now() + Self::DEFAULT_SLEEP_DURATION,
             }
         };
 
@@ -263,13 +264,13 @@ where
                 requested_resume, ..
             } => {
                 log::debug!("wait cancelled");
-                let next =
-                    requested_resume.unwrap_or_else(|| Instant::now() + Duration::from_millis(100));
+                let next = requested_resume
+                    .unwrap_or_else(|| Instant::now() + Self::DEFAULT_SLEEP_DURATION);
 
                 el.set_control_flow(event_loop::ControlFlow::WaitUntil(next));
                 self.action = Action::Tick;
             }
-            event::StartCause::Poll => log::debug!("poll"),
+            event::StartCause::Poll => unreachable!("poll"),
             event::StartCause::Init => {
                 log::debug!("init");
 
@@ -310,7 +311,7 @@ where
                         id,
                         AppWindow {
                             shared,
-                            time: Time::now(),
+                            last_render: Instant::now(),
                         },
                     );
                 }
@@ -402,7 +403,9 @@ where
                 self.schedule();
             }
             event::WindowEvent::RedrawRequested => {
-                let delta_time = window.time.delta();
+                let now = Instant::now();
+                let delta_time = now.duration_since(window.last_render);
+                window.last_render = now;
                 window.shared.events().redraw.set_value(delta_time);
                 self.schedule();
             }

@@ -122,8 +122,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let layer = cx.make_layer(&shader, window.format());
-    let bg = window.format().rgb_from_bytes([25, 10, 40]);
 
+    let bg = window.format().rgb_from_bytes([25, 10, 40]);
     let render = async {
         loop {
             let redraw = window.redraw().await;

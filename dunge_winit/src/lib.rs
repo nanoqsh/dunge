@@ -1,7 +1,6 @@
 mod canvas;
 mod reactor;
 mod runtime;
-mod time;
 mod window;
 
 /// The dunge prelude.
