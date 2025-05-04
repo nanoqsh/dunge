@@ -2,6 +2,7 @@
 
 use {
     crate::{
+        color::{ColorExt, Rgb, Rgba},
         group::BoundTexture,
         runtime::Ticket,
         state::State,
@@ -58,6 +59,26 @@ impl Format {
             wgpu::TextureFormat::Depth32Float => Self::Depth,
             wgpu::TextureFormat::R8Uint => Self::Byte,
             _ => panic!("unsupported format"),
+        }
+    }
+}
+
+impl ColorExt for Format {
+    #[inline]
+    fn rgb_from_bytes(self, rgb: [u8; 3]) -> Rgb {
+        if self.is_standard() {
+            Rgb::from_standard_bytes(rgb)
+        } else {
+            Rgb::from_bytes(rgb)
+        }
+    }
+
+    #[inline]
+    fn rgba_from_bytes(self, rgba: [u8; 4]) -> Rgba {
+        if self.is_standard() {
+            Rgba::from_standard_bytes(rgba)
+        } else {
+            Rgba::from_bytes(rgba)
         }
     }
 }

@@ -45,3 +45,8 @@ impl Color<4> {
 fn to_f32_color(c: u8) -> f32 {
     f32::from(c) / f32::from(u8::MAX)
 }
+
+pub trait ColorExt {
+    fn rgb_from_bytes(self, rgb: [u8; 3]) -> Rgb;
+    fn rgba_from_bytes(self, rgba: [u8; 4]) -> Rgba;
+}

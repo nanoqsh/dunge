@@ -5,7 +5,6 @@ type Error = Box<dyn std::error::Error>;
 pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
-            color::Rgb,
             glam::{Mat4, Quat, Vec3},
             sl::{Groups, InVertex, Render},
             storage::Uniform,
@@ -123,11 +122,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let layer = cx.make_layer(&shader, window.format());
-    let bg = if window.format().is_standard() {
-        Rgb::from_standard_bytes([25, 10, 40])
-    } else {
-        Rgb::from_bytes([25, 10, 40])
-    };
+    let bg = window.format().rgb_from_bytes([25, 10, 40]);
 
     let render = async {
         loop {

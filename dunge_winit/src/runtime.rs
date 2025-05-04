@@ -148,10 +148,12 @@ struct AppWaker {
 }
 
 impl task::Wake for AppWaker {
+    #[inline]
     fn wake(self: Arc<Self>) {
         self.wake_by_ref();
     }
 
+    #[inline]
     fn wake_by_ref(self: &Arc<Self>) {
         self.need_to_poll.store(true, Ordering::Relaxed);
     }
@@ -250,6 +252,7 @@ impl<F> ApplicationHandler<Message> for App<F, F::Output>
 where
     F: Future,
 {
+    #[inline]
     fn new_events(&mut self, el: &event_loop::ActiveEventLoop, cause: event::StartCause) {
         match cause {
             event::StartCause::ResumeTimeReached { .. } => {
@@ -278,18 +281,21 @@ where
         }
     }
 
+    #[inline]
     fn resumed(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("resumed");
         self.lifecycle.set(LifecycleState::Active);
         self.request_redraw();
     }
 
+    #[inline]
     fn suspended(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("suspended");
         self.lifecycle.set(LifecycleState::Inactive);
         self.schedule();
     }
 
+    #[inline]
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Message) {
         match req {
             Message::MakeWindow { cx, attr, out } => {
@@ -332,6 +338,7 @@ where
         }
     }
 
+    #[inline]
     fn window_event(
         &mut self,
         _: &event_loop::ActiveEventLoop,
@@ -349,6 +356,7 @@ where
 
                 window.shared.resize();
                 window.shared.events().resize.set();
+                window.shared.window().request_redraw();
                 self.schedule();
             }
             event::WindowEvent::CloseRequested => {
@@ -402,6 +410,7 @@ where
         }
     }
 
+    #[inline]
     fn about_to_wait(&mut self, el: &event_loop::ActiveEventLoop) {
         if let Action::Process = self.action {
             self.process_timers(el);

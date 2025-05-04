@@ -37,6 +37,7 @@ pub mod prelude {
     pub use crate::{
         _Frame, Group, Instance, Options, Vertex,
         buffer::{Format, TextureData},
+        color::ColorExt as _,
         context::Context,
         mesh::MeshData,
         sl, types,
