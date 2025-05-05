@@ -205,7 +205,7 @@ impl<I> Layer<I> {
             },
             primitive: wgpu::PrimitiveState {
                 topology,
-                strip_index_format: topology.is_strip().then_some(wgpu::IndexFormat::Uint16),
+                strip_index_format: topology.is_strip().then_some(wgpu::IndexFormat::Uint32),
                 cull_mode: Some(wgpu::Face::Back),
                 ..Default::default()
             },

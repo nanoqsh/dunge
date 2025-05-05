@@ -5,7 +5,7 @@ use {
     std::{borrow::Cow, error, fmt, marker::PhantomData},
 };
 
-type Face = [u16; 3];
+type Face = [u32; 3];
 
 #[derive(Clone)]
 pub struct MeshData<'data, V> {
@@ -24,7 +24,7 @@ impl<'data, V> MeshData<'data, V> {
     /// # Errors
     /// Returns an [error](crate::mesh::Error) if the passed data is incorrect.
     pub fn new(verts: &'data [V], indxs: &'data [Face]) -> Result<Self, Error> {
-        let len: u16 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
+        let len: u32 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
         if let Some(index) = indxs.iter().flatten().copied().find(|&i| i >= len) {
             return Err(Error::InvalidIndex { index });
         }
@@ -40,7 +40,7 @@ impl<'data, V> MeshData<'data, V> {
     pub fn from_quads(verts: &'data [[V; 4]]) -> Result<Self, TooManyVertices> {
         let verts = verts.as_flattened();
         let indxs = {
-            let len = u16::try_from(verts.len()).map_err(|_| TooManyVertices)?;
+            let len = u32::try_from(verts.len()).map_err(|_| TooManyVertices)?;
             let faces = (0..len)
                 .step_by(4)
                 .flat_map(|i| [[i, i + 1, i + 2], [i, i + 2, i + 3]])
@@ -56,11 +56,11 @@ impl<'data, V> MeshData<'data, V> {
 /// An error returned from the [mesh data](crate::mesh::MeshData) constructors.
 #[derive(Debug)]
 pub enum Error {
-    /// Vertices length doesn't fit in [`u16`](std::u16) integer.
+    /// Vertices length doesn't fit in [`u32`](std::u32) integer.
     TooManyVertices,
 
     /// The vertex index is out of bounds of the vertex slice.
-    InvalidIndex { index: u16 },
+    InvalidIndex { index: u32 },
 }
 
 impl fmt::Display for Error {
@@ -74,7 +74,7 @@ impl fmt::Display for Error {
 
 impl error::Error for Error {}
 
-/// Vertices length doesn't fit in [`u16`](std::u16) integer.
+/// Vertices length doesn't fit in [`u32`](std::u32) integer.
 #[derive(Debug)]
 pub struct TooManyVertices;
 
@@ -131,8 +131,8 @@ impl<V> Mesh<V> {
         pass.set_vertex_buffer(slot, self.verts.slice(..));
         match &self.indxs {
             Some(indxs) => {
-                pass.set_index_buffer(indxs.slice(..), wgpu::IndexFormat::Uint16);
-                let len = indxs.size() as u32 / size_of::<u16>() as u32;
+                pass.set_index_buffer(indxs.slice(..), wgpu::IndexFormat::Uint32);
+                let len = indxs.size() as u32 / size_of::<u32>() as u32;
                 pass.draw_indexed(0..len, 0, 0..count);
             }
             None => {

@@ -96,7 +96,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             ]
         };
 
-        const INDXS: [[u16; 3]; 12] = [
+        const INDXS: [[u32; 3]; 12] = [
             [0, 1, 2],
             [0, 2, 3], // -x
             [4, 5, 6],
