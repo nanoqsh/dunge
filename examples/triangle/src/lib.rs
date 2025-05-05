@@ -1,20 +1,24 @@
+use dunge_winit::prelude::*;
+
 type Error = Box<dyn std::error::Error>;
 
-pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
-    use dunge::{
-        color::Rgb,
-        glam::Vec4,
-        prelude::*,
-        sl::{Groups, Index, Render},
-        storage::Uniform,
+pub async fn run(control: Control) -> Result<(), Error> {
+    use {
+        dunge_winit::{
+            glam::Vec4,
+            sl::{Groups, Index, Render},
+            storage::Uniform,
+            winit::Canvas,
+        },
+        futures_concurrency::prelude::*,
+        std::{f32::consts, time::Duration},
+        winit::keyboard::KeyCode,
     };
 
     #[derive(Group)]
     struct Offset<'uni>(&'uni Uniform<f32>);
 
     let triangle = |Index(idx): Index, Groups(offset): Groups<Offset<'_>>| {
-        use std::f32::consts;
-
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
@@ -27,34 +31,43 @@ pub async fn run(ws: dunge::_window::WindowState) -> Result<(), Error> {
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader(triangle);
-    let mut r = 0.;
-    let uniform = cx.make_uniform(&r);
+    let uniform = cx.make_uniform(&0.);
     let set = cx.make_set(&shader, Offset(&uniform));
 
-    let make_handler = move |cx: &Context, view: &View| {
-        let layer = cx.make_layer(&shader, view.format());
-
-        let cx = cx.clone();
-        let upd = move |ctrl: &Control| {
-            for key in ctrl.pressed_keys() {
-                if key.code == KeyCode::Escape {
-                    return Then::Close;
-                }
-            }
-
-            r += ctrl.delta_time().as_secs_f32() * 0.5;
-            uniform.update(&cx, &r);
-            Then::Run
-        };
-
-        let draw = move |mut frame: _Frame<'_, '_>| {
-            let opts = Rgb::from_standard([0.1, 0.05, 0.15]);
-            frame._set_layer(&layer, opts)._bind(&set)._draw_points(3);
-        };
-
-        dunge::update(upd, draw)
+    let mut time = Duration::ZERO;
+    let mut update_scene = |delta_time| {
+        time += delta_time;
+        let t = time.as_secs_f32() * 0.5;
+        uniform.update(&cx, &t);
     };
 
-    ws.run(cx, dunge::make(make_handler))?;
+    let window = {
+        let attr = Attributes::default()
+            .with_title("triangle")
+            .with_canvas(Canvas::by_id("root"));
+
+        control.make_window(&cx, attr).await?
+    };
+
+    let layer = cx.make_layer(&shader, window.format());
+
+    let bg = window.format().rgb_from_bytes([0; 3]);
+    let render = async {
+        loop {
+            let redraw = window.redraw().await;
+            update_scene(redraw.delta_time());
+            cx.shed(|mut s| {
+                s.render(&redraw, bg).layer(&layer).set(&set).draw_points(3);
+            })
+            .await;
+
+            redraw.present();
+        }
+    };
+
+    let close = window.close_requested();
+    let esc_pressed = window.pressed(KeyCode::Escape);
+    (render, close, esc_pressed).race().await;
+
     Ok(())
 }

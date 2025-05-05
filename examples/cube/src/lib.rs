@@ -36,7 +36,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     let transform = cx.make_set(&shader, Transform(&uniform));
 
     let mut time = Duration::ZERO;
-    let mut update_scene = |(width, height), delta_time: Duration| {
+    let mut update_scene = |(width, height), delta_time| {
         time += delta_time;
 
         let model = {
