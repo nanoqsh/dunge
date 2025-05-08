@@ -35,12 +35,8 @@ mod update;
 /// The dunge prelude.
 pub mod prelude {
     pub use crate::{
-        _Frame, Group, Instance, Options, Vertex,
-        buffer::{Format, TextureData},
-        color::ColorExt as _,
-        context::Context,
-        mesh::MeshData,
-        sl, types,
+        _Frame, Group, Instance, Vertex, buffer::TextureData, color::ColorExt as _,
+        context::Context, mesh::MeshData, sl, types,
     };
 
     #[cfg(feature = "winit")]

@@ -1,7 +1,6 @@
 fn main() {
     env_logger::init();
-    let ws = dunge::window().with_title("SSAA");
-    if let Err(e) = dunge::block_on(ssaa::run(ws)) {
+    if let Err(e) = dunge_winit::winit::try_block_on(ssaa::run) {
         eprintln!("error: {e}");
     }
 }

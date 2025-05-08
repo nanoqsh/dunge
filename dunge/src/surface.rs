@@ -1,5 +1,5 @@
 use {
-    crate::{Context, Target, prelude::Format},
+    crate::{buffer::Format, context::Context, state::Target},
     std::{
         cell::{Cell, RefCell},
         error, fmt,

@@ -9,8 +9,10 @@ name = "ssaa_bin"
 path = "src/main.rs"
 
 [dependencies]
-dunge = { workspace = true, features = ["winit"] }
+dunge_winit.workspace = true
 env_logger.workspace = true
+futures-concurrency.workspace = true
+winit.workspace = true
 
 [lints]
 workspace = true

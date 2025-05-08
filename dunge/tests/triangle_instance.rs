@@ -6,7 +6,7 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
-            buffer::Size,
+            buffer::{Format, Size},
             color::Rgb,
             instance::Row,
             prelude::*,
