@@ -2,10 +2,9 @@ use {
     crate::{
         Vertex,
         buffer::{
-            _CopyBuffer, _CopyBufferView, _MapResult, _Mapped, Buffer, BufferData, Filter, Read,
-            ReadFailed, Sampler, Texture, Texture2d, TextureData, Write, WriteFailed,
+            Buffer, BufferData, Filter, Read, ReadFailed, Sampler, Texture, Texture2d, TextureData,
+            Write, WriteFailed,
         },
-        draw::Draw,
         instance::Row,
         layer::{Config, Layer},
         mesh::{self, Mesh},
@@ -13,7 +12,7 @@ use {
         set::{self, Data, GroupHandler, UniqueSet, Visit},
         shader::{ComputeShader, RenderShader, Shader},
         sl,
-        state::{AsTarget, Scheduler, State},
+        state::{Scheduler, State},
         storage::{Storage, StorageValue, Uniform},
         usage::u,
         value::Value,
@@ -33,10 +32,6 @@ pub async fn context() -> Result<Context, FailedMakeContext> {
 }
 
 /// The main dunge context.
-///
-/// It can be created via the [`context`](fn@crate::context) function
-/// or the [`window`](fn@crate::window) function if you need a window
-/// and the `winit` feature is enabled.
 #[derive(Clone)]
 pub struct Context(Arc<State>);
 
@@ -133,10 +128,6 @@ impl Context {
         Buffer::new(&self.0, data)
     }
 
-    pub fn _make_copy_buffer(&self, size: (u32, u32)) -> _CopyBuffer {
-        _CopyBuffer::new(&self.0, size)
-    }
-
     #[inline]
     pub async fn read<'buf, U>(&self, buf: &'buf mut Buffer<U>) -> Result<Read<'buf>, ReadFailed>
     where
@@ -153,19 +144,6 @@ impl Context {
         buf.write(&self.0).await
     }
 
-    pub async fn _map_view<'slice, S, R>(
-        &self,
-        view: _CopyBufferView<'slice>,
-        tx: S,
-        rx: R,
-    ) -> _Mapped<'slice>
-    where
-        S: FnOnce(_MapResult) + wgpu::WasmNotSend + 'static,
-        R: IntoFuture<Output = _MapResult>,
-    {
-        view.map(&self.0, tx, rx).await
-    }
-
     #[inline]
     pub fn update_group<S, G>(
         &self,
@@ -176,15 +154,6 @@ impl Context {
         G: Visit,
     {
         set::update(&self.0, set, handler, group);
-    }
-
-    pub fn _draw_to<T, D>(&self, target: &T, draw: D)
-    where
-        T: AsTarget,
-        D: Draw,
-    {
-        let target = target.as_target();
-        self.0._draw(target, draw);
     }
 
     #[inline]

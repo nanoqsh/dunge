@@ -1,11 +1,9 @@
 use {
     crate::{
-        buffer::{self, _CopyBuffer, Destination, Format, Size, Source, Texture2d},
+        buffer::{self, Destination, Format, Size, Source, Texture2d},
         color::{Color, Rgb, Rgba},
         context::FailedMakeContext,
-        draw::Draw,
-        layer::{Layer, SetLayer},
-        render::{Input, Render},
+        render::{Render, TargetState},
         runtime::{self, Ticket, Worker},
         usage::u,
     },
@@ -99,43 +97,30 @@ impl State {
     }
 
     #[allow(dead_code)]
+    #[inline]
     pub(crate) fn instance(&self) -> &wgpu::Instance {
         &self.instance
     }
 
     #[allow(dead_code)]
+    #[inline]
     pub(crate) fn adapter(&self) -> &wgpu::Adapter {
         &self.adapter
     }
 
+    #[inline]
     pub(crate) fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
+    #[inline]
     pub(crate) fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 
+    #[inline]
     pub(crate) fn work(&self) {
         self.worker.work();
-    }
-
-    pub(crate) fn _draw<D>(&self, target: Target<'_>, draw: D)
-    where
-        D: Draw,
-    {
-        self.queue.submit([]);
-        let mut encoder = {
-            let desc = wgpu::CommandEncoderDescriptor::default();
-            self.device.create_command_encoder(&desc)
-        };
-
-        draw.draw(_Frame {
-            target,
-            encoder: &mut encoder,
-        });
-
-        self.queue.submit([encoder.finish()]);
     }
 
     #[inline]
@@ -228,8 +213,10 @@ impl Scheduler<'_> {
             ..Default::default()
         };
 
-        let pass = self.0.begin_render_pass(&desc);
-        Render(pass)
+        Render {
+            pass: self.0.begin_render_pass(&desc),
+            target: target.state(),
+        }
     }
 
     #[inline]
@@ -264,12 +251,14 @@ pub struct Options {
 
 impl Options {
     /// Sets clear color for the layer.
+    #[inline]
     pub fn clear_color(mut self, clear: Rgba) -> Self {
         self.clear_color = Some(clear);
         self
     }
 
     /// Sets clear depth for the layer.
+    #[inline]
     pub fn clear_depth(mut self, clear: f32) -> Self {
         self.clear_depth = Some(clear);
         self
@@ -288,78 +277,6 @@ impl From<Rgb> for Options {
     }
 }
 
-/// The frame type for drawing and copying operations.
-pub struct _Frame<'view, 'enc> {
-    target: Target<'view>,
-    encoder: &'enc mut wgpu::CommandEncoder,
-}
-
-impl _Frame<'_, '_> {
-    pub fn _set_layer<'ren, V, I, S, O>(
-        &'ren mut self,
-        layer: &'ren Layer<Input<V, I, S>>,
-        opts: O,
-    ) -> SetLayer<'ren, (V, I), S>
-    where
-        O: Into<Options>,
-    {
-        assert_eq!(
-            self.target.format,
-            layer.format(),
-            "layer format doesn't match frame format",
-        );
-
-        assert!(
-            !layer.depth() || self.target.depthv.is_some(),
-            "the target for a layer with depth must contain a depth buffer",
-        );
-
-        let opts = opts.into();
-        let color_attachment = wgpu::RenderPassColorAttachment {
-            view: self.target.colorv,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: opts
-                    .clear_color
-                    .map(Rgba::wgpu)
-                    .map_or(wgpu::LoadOp::Load, wgpu::LoadOp::Clear),
-                store: wgpu::StoreOp::Store,
-            },
-        };
-
-        let depth_attachment = |view| {
-            let ops = wgpu::Operations {
-                load: opts
-                    .clear_depth
-                    .map_or(wgpu::LoadOp::Load, wgpu::LoadOp::Clear),
-                store: wgpu::StoreOp::Store,
-            };
-
-            wgpu::RenderPassDepthStencilAttachment {
-                view,
-                depth_ops: Some(ops),
-                stencil_ops: None,
-            }
-        };
-
-        let desc = wgpu::RenderPassDescriptor {
-            color_attachments: &[Some(color_attachment)],
-            depth_stencil_attachment: self.target.depthv.map(depth_attachment),
-            ..Default::default()
-        };
-
-        let pass = self.encoder.begin_render_pass(&desc);
-        layer._set(pass)
-    }
-
-    pub fn _copy_texture<U>(&mut self, buffer: &_CopyBuffer, texture: &Texture2d<U>)
-    where
-        U: u::CopyFrom,
-    {
-        buffer.copy_texture(texture, self.encoder);
-    }
-}
-
 /// A target for current frame.
 #[derive(Clone, Copy)]
 pub struct Target<'view> {
@@ -369,11 +286,20 @@ pub struct Target<'view> {
 }
 
 impl<'view> Target<'view> {
+    #[inline]
     pub(crate) fn new(format: Format, colorv: &'view wgpu::TextureView) -> Self {
         Self {
             format,
             colorv,
             depthv: None,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn state(&self) -> TargetState {
+        TargetState {
+            format: self.format,
+            use_depth: self.depthv.is_some(),
         }
     }
 }
@@ -387,6 +313,7 @@ impl<A> AsTarget for &A
 where
     A: AsTarget,
 {
+    #[inline]
     fn as_target(&self) -> Target<'_> {
         (**self).as_target()
     }
@@ -396,6 +323,7 @@ impl<U> AsTarget for Texture2d<U>
 where
     U: u::Render,
 {
+    #[inline]
     fn as_target(&self) -> Target<'_> {
         Target::new(self.format(), self.view())
     }
@@ -406,6 +334,7 @@ where
     U: u::Render,
     V: u::Render,
 {
+    #[inline]
     fn as_target(&self) -> Target<'_> {
         let mut target = self.color.as_target();
         target.depthv = Some(self.depth.view());
@@ -440,14 +369,17 @@ impl<U, V> RenderBuffer<U, V> {
         Self { color, depth }
     }
 
+    #[inline]
     pub fn size(&self) -> Size {
         self.color.size()
     }
 
+    #[inline]
     pub fn color(&self) -> &Texture2d<U> {
         &self.color
     }
 
+    #[inline]
     pub fn depth(&self) -> &Texture2d<V> {
         &self.depth
     }

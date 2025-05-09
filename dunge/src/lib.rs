@@ -3,7 +3,6 @@
 pub mod buffer;
 pub mod color;
 mod context;
-mod draw;
 pub mod group;
 pub mod instance;
 pub mod layer;
@@ -21,37 +20,19 @@ pub mod value;
 pub mod vertex;
 pub mod workload;
 
-#[cfg(feature = "winit")]
-mod _time;
-#[cfg(feature = "winit")]
-pub mod _window;
-#[cfg(feature = "winit")]
-mod el;
-#[cfg(feature = "winit")]
-mod element;
-#[cfg(feature = "winit")]
-mod update;
-
 /// The dunge prelude.
 pub mod prelude {
     pub use crate::{
-        _Frame, Group, Instance, Vertex, buffer::TextureData, color::ColorExt as _,
-        context::Context, mesh::MeshData, sl, types,
-    };
-
-    #[cfg(feature = "winit")]
-    pub use crate::{
-        _window::View,
-        el::{Control, KeyCode, Then},
+        Group, Instance, Vertex, buffer::TextureData, color::ColorExt as _, context::Context,
+        mesh::MeshData, sl, types,
     };
 }
 
 pub use {
     crate::{
         context::{Context, FailedMakeContext, context},
-        draw::{Draw, draw},
         shader::{ComputeShader, RenderShader, Shader},
-        state::{_Frame, AsTarget, Options, RenderBuffer, Scheduler, Target},
+        state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
     },
     dunge_macros::{Group, Instance, Vertex},
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},
@@ -60,15 +41,3 @@ pub use {
 
 #[cfg(not(target_family = "wasm"))]
 pub use crate::runtime::block_on;
-
-#[cfg(all(feature = "winit", not(target_family = "wasm")))]
-pub use crate::_window::window;
-
-#[cfg(all(feature = "winit", target_family = "wasm"))]
-pub use crate::_window::from_element;
-
-#[cfg(feature = "winit")]
-pub use crate::{
-    el::{Buttons, Control, Flow, Key, KeyCode, LoopError, Mouse, MouseButton, SmolStr, Then},
-    update::{IntoUpdate, Update, make, update, update_with_event, update_with_state},
-};

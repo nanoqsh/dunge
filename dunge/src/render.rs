@@ -1,5 +1,6 @@
 use {
     crate::{
+        buffer::Format,
         instance::{self, Set},
         layer::Layer,
         mesh::Mesh,
@@ -23,13 +24,39 @@ impl<V, I, S> Types for Input<V, I, S> {
     type Set = S;
 }
 
-pub struct Render<'ren>(pub(crate) wgpu::RenderPass<'ren>);
+#[derive(Clone, Copy)]
+pub(crate) struct TargetState {
+    pub format: Format,
+    pub use_depth: bool,
+}
+
+impl TargetState {
+    #[inline]
+    fn check_layer<I>(self, layer: &Layer<I>) {
+        assert_eq!(
+            self.format,
+            layer.format(),
+            "layer format doesn't match frame format",
+        );
+
+        assert!(
+            !layer.depth() || self.use_depth,
+            "the target for a layer with depth must contain a depth buffer",
+        );
+    }
+}
+
+pub struct Render<'ren> {
+    pub(crate) pass: wgpu::RenderPass<'ren>,
+    pub(crate) target: TargetState,
+}
 
 impl<'ren> Render<'ren> {
     #[inline]
     pub fn layer<I>(&mut self, layer: &Layer<I>) -> On<'ren, '_, I, state::Layer> {
         let mut on = On::new(Runner {
-            pass: &mut self.0,
+            pass: &mut self.pass,
+            target: self.target,
             slots: layer.slots(),
             count: 1,
         });
@@ -77,6 +104,7 @@ impl<I, S> To<state::DrawPoints, state::DrawPoints> for Input<(), I, S> {}
 
 struct Runner<'ren, 'layer> {
     pass: &'layer mut wgpu::RenderPass<'ren>,
+    target: TargetState,
     slots: SlotNumbers,
     count: u32,
 }
@@ -144,6 +172,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
     where
         I: To<A, state::Layer>,
     {
+        self.run.target.check_layer(layer);
         self.run.layer(layer.render());
         self.to()
     }
@@ -188,11 +217,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
 
 pub(crate) struct VertexSetter<'ren, 'layer>(&'layer mut wgpu::RenderPass<'ren>);
 
-impl<'ren, 'layer> VertexSetter<'ren, 'layer> {
-    pub(crate) fn _new(pass: &'layer mut wgpu::RenderPass<'ren>) -> Self {
-        Self(pass)
-    }
-
+impl VertexSetter<'_, '_> {
     #[inline]
     pub(crate) fn set(&mut self, buf: &wgpu::Buffer, slot: u32) {
         let slice = buf.slice(..);
