@@ -1,12 +1,16 @@
 //! Workload types.
 
-use crate::{shader::ShaderData, state::State};
+use {
+    crate::{shader::ShaderData, state::State},
+    std::marker::PhantomData,
+};
 
-pub struct Workload {
+pub struct Workload<I> {
     compute: wgpu::ComputePipeline,
+    inp: PhantomData<I>,
 }
 
-impl Workload {
+impl<I> Workload<I> {
     pub(crate) fn new(state: &State, shader: &ShaderData) -> Self {
         let desc = wgpu::ComputePipelineDescriptor {
             label: None,
@@ -24,10 +28,13 @@ impl Workload {
         };
 
         let compute = state.device().create_compute_pipeline(&desc);
-        Self { compute }
+
+        Self {
+            compute,
+            inp: PhantomData,
+        }
     }
 
-    #[expect(dead_code)]
     pub(crate) fn compute(&self) -> &wgpu::ComputePipeline {
         &self.compute
     }

@@ -2,6 +2,7 @@ use {
     crate::{
         buffer::{self, Destination, Format, Size, Source, Texture2d},
         color::{Color, Rgb, Rgba},
+        compute::Compute,
         context::FailedMakeContext,
         render::{Render, TargetState},
         runtime::{self, Ticket, Worker},
@@ -168,7 +169,7 @@ impl Scheduler<'_> {
         };
 
         let pass = self.0.begin_compute_pass(&desc);
-        Compute(pass)
+        Compute { pass }
     }
 
     #[inline]
@@ -239,8 +240,6 @@ impl Scheduler<'_> {
         buffer::try_copy(from, to, self.0)
     }
 }
-
-pub struct Compute<'com>(#[expect(dead_code)] wgpu::ComputePass<'com>);
 
 /// Current layer options.
 #[derive(Clone, Copy, Default)]

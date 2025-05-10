@@ -5,10 +5,11 @@ use {
             Buffer, BufferData, Filter, Read, ReadFailed, Sampler, Texture, Texture2d, TextureData,
             Write, WriteFailed,
         },
+        compute,
         instance::Row,
         layer::{Config, Layer},
         mesh::{self, Mesh},
-        render::Input,
+        render,
         set::{self, Data, GroupHandler, UniqueSet, Visit},
         shader::{ComputeShader, RenderShader, Shader},
         sl,
@@ -78,7 +79,7 @@ impl Context {
         &self,
         shader: &RenderShader<V, I, S>,
         conf: C,
-    ) -> Layer<Input<V, I, S>>
+    ) -> Layer<render::Input<V, I, S>>
     where
         C: Into<Config>,
     {
@@ -87,7 +88,7 @@ impl Context {
     }
 
     #[inline]
-    pub fn make_workload<S>(&self, shader: &ComputeShader<S>) -> Workload {
+    pub fn make_workload<S>(&self, shader: &ComputeShader<S>) -> Workload<compute::Input<S>> {
         Workload::new(&self.0, shader.data())
     }
 

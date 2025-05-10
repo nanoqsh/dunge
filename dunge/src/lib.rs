@@ -2,6 +2,7 @@
 
 pub mod buffer;
 pub mod color;
+pub mod compute;
 mod context;
 pub mod group;
 pub mod instance;

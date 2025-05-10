@@ -91,7 +91,9 @@ where
         let data = Data::new(
             cx.state(),
             val.storage_value(),
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
         );
 
         Self {

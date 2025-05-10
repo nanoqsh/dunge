@@ -10,20 +10,6 @@ use {
     std::{iter, marker::PhantomData},
 };
 
-pub struct Input<V, I, S>(V, I, S);
-
-pub trait Types {
-    type Vertex;
-    type Instance;
-    type Set;
-}
-
-impl<V, I, S> Types for Input<V, I, S> {
-    type Vertex = V;
-    type Instance = I;
-    type Set = S;
-}
-
 #[derive(Clone, Copy)]
 pub(crate) struct TargetState {
     pub format: Format,
@@ -61,9 +47,24 @@ impl<'ren> Render<'ren> {
             count: 1,
         });
 
+        on.run.target.check_layer(layer);
         on.run.layer(layer.render());
         on
     }
+}
+
+pub struct Input<V, I, S>(V, I, S);
+
+pub trait Types {
+    type Vertex;
+    type Instance;
+    type Set;
+}
+
+impl<V, I, S> Types for Input<V, I, S> {
+    type Vertex = V;
+    type Instance = I;
+    type Set = S;
 }
 
 pub mod state {
@@ -75,7 +76,7 @@ pub mod state {
 }
 
 #[diagnostic::on_unimplemented(
-    message = "Render cannot transition into `{B}` state",
+    message = "Render cannot transition from `{A}` to `{B}` state",
     label = "This render function cannot be called"
 )]
 pub trait To<A, B> {}
