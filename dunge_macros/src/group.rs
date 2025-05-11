@@ -68,7 +68,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         .map(|lt| if lt.ident == "static" { lt } else { &anon_lt });
 
     let name = input.ident;
-    let projection_name = quote::format_ident!("{name}Projection");
+    let projection_name = quote::format_ident!("{name}Proj");
     let group_types = fields.iter().map(|field| {
         let ty = &field.ty;
         quote::quote! { <#ty as dunge::group::MemberProjection>::MEMBER }
@@ -154,7 +154,7 @@ mod tests {
         let actual = derive(input);
         let expected = quote::quote! {
             impl<'tx> dunge::Group for Map<'tx> {
-                type Projection = MapProjection<'static>;
+                type Projection = MapProj<'static>;
                 const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
                     <BoundTexture<'tx> as dunge::group::MemberProjection>::MEMBER,
                     <&'tx Sampler as dunge::group::MemberProjection>::MEMBER,
@@ -169,12 +169,12 @@ mod tests {
                 }
             }
 
-            pub struct MapProjection<'tx> {
+            pub struct MapProj<'tx> {
                 tex: <BoundTexture<'tx> as dunge::group::MemberProjection>::Field,
                 sam: <&'tx Sampler as dunge::group::MemberProjection>::Field,
             }
 
-            impl<'tx> dunge::group::Projection for MapProjection<'tx> {
+            impl<'tx> dunge::group::Projection for MapProj<'tx> {
                 fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
                     Self {
                         tex: <BoundTexture<'tx> as dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
@@ -184,7 +184,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        helpers::eq_lines(&actual.to_string(), &expected.to_string());
     }
 
     #[test]
@@ -197,7 +197,7 @@ mod tests {
         let actual = derive(input);
         let expected = quote::quote! {
             impl<'tx> dunge::Group for Map<'tx> {
-                type Projection = MapProjection<'static>;
+                type Projection = MapProj<'static>;
                 const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
                     <BoundTexture<'tx> as dunge::group::MemberProjection>::MEMBER,
                     <&'tx Sampler as dunge::group::MemberProjection>::MEMBER,
@@ -212,12 +212,12 @@ mod tests {
                 }
             }
 
-            pub struct MapProjection<'tx>(
+            pub struct MapProj<'tx>(
                 <BoundTexture<'tx> as dunge::group::MemberProjection>::Field,
                 <&'tx Sampler as dunge::group::MemberProjection>::Field,
             );
 
-            impl<'tx> dunge::group::Projection for MapProjection<'tx> {
+            impl<'tx> dunge::group::Projection for MapProj<'tx> {
                 fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
                     Self {
                         0: <BoundTexture<'tx> as dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
@@ -227,6 +227,6 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        helpers::eq_lines(&actual.to_string(), &expected.to_string());
     }
 }

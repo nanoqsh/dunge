@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 askama = { workspace = true, features = ["derive", "std"] }
-helpers = { path = "../helpers", features = ["serv"] }
+helpers = { workspace = true, features = ["serv"] }
 
 [lints]
 workspace = true

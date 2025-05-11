@@ -36,7 +36,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     }
 
     let name = input.ident;
-    let projection_name = quote::format_ident!("{name}Projection");
+    let projection_name = quote::format_ident!("{name}Proj");
     let instance_types = fields.iter().map(|field| {
         let ty = &field.ty;
         quote::quote! { <#ty as dunge::instance::MemberProjection>::TYPE }
@@ -120,7 +120,7 @@ mod tests {
         let actual = derive(input);
         let expected = quote::quote! {
             impl dunge::Instance for Transform {
-                type Projection = TransformProjection;
+                type Projection = TransformProj;
                 const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
                     <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
                     <Row<[f32; 3]> as dunge::instance::MemberProjection>::TYPE,
@@ -134,12 +134,12 @@ mod tests {
                 }
             }
 
-            pub struct TransformProjection {
+            pub struct TransformProj {
                 pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
                 col: <Row<[f32; 3]> as dunge::instance::MemberProjection>::Field,
             }
 
-            impl dunge::instance::Projection for TransformProjection {
+            impl dunge::instance::Projection for TransformProj {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
                         pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::member_projection(id + 0u32),
@@ -149,7 +149,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        helpers::eq_lines(&actual.to_string(), &expected.to_string());
     }
 
     #[test]
@@ -162,7 +162,7 @@ mod tests {
         let actual = derive(input);
         let expected = quote::quote! {
             impl dunge::Instance for Transform {
-                type Projection = TransformProjection;
+                type Projection = TransformProj;
                 const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
                     <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
                     <Row<[f32; 3]> as dunge::instance::MemberProjection>::TYPE,
@@ -176,12 +176,12 @@ mod tests {
                 }
             }
 
-            pub struct TransformProjection(
+            pub struct TransformProj(
                 <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
                 <Row<[f32; 3]> as dunge::instance::MemberProjection>::Field,
             );
 
-            impl dunge::instance::Projection for TransformProjection {
+            impl dunge::instance::Projection for TransformProj {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
                         0: <Row<[f32; 2]> as dunge::instance::MemberProjection>::member_projection(id + 0u32),
@@ -191,6 +191,6 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        helpers::eq_lines(&actual.to_string(), &expected.to_string());
     }
 }
