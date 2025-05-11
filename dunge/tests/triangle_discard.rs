@@ -27,7 +27,7 @@ fn render() -> Result<(), Error> {
     #[derive(Group)]
     struct Map<'tx> {
         tex: BoundTexture<'tx>,
-        sam: &'tx Sampler,
+        sam: Sampler,
     }
 
     let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map<'_>>| {
@@ -57,7 +57,7 @@ fn render() -> Result<(), Error> {
 
         let map = Map {
             tex: texture.bind(),
-            sam: &sampler,
+            sam: sampler,
         };
 
         cx.make_set(&shader, map)

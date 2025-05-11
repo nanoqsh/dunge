@@ -19,9 +19,23 @@ pub trait MemberProjection: s::Sealed {
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field;
 }
 
-impl<V> s::Sealed for &Uniform<V> where V: Value {}
+impl<M> s::Sealed for &M where M: s::Sealed {}
 
-impl<V> MemberProjection for &Uniform<V>
+impl<M> MemberProjection for &M
+where
+    M: MemberProjection,
+{
+    const MEMBER: MemberData = M::MEMBER;
+    type Field = M::Field;
+
+    fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
+        M::member_projection(id, binding, out)
+    }
+}
+
+impl<V> s::Sealed for Uniform<V> where V: Value {}
+
+impl<V> MemberProjection for Uniform<V>
 where
     V: Value,
 {
@@ -37,9 +51,9 @@ where
     }
 }
 
-impl<V, M> s::Sealed for &Storage<V, M> where V: Value {}
+impl<V, M> s::Sealed for Storage<V, M> where V: Value {}
 
-impl<V, M> MemberProjection for &Storage<V, M>
+impl<V, M> MemberProjection for Storage<V, M>
 where
     V: Value,
     M: types::Mutability,
@@ -56,9 +70,9 @@ where
     }
 }
 
-impl<V, M> s::Sealed for &Storage<[V], M> where V: Value {}
+impl<V, M> s::Sealed for Storage<[V], M> where V: Value {}
 
-impl<V, M> MemberProjection for &Storage<[V], M>
+impl<V, M> MemberProjection for Storage<[V], M>
 where
     V: Value,
     M: types::Mutability,
@@ -95,9 +109,9 @@ impl MemberProjection for BoundTexture<'_> {
     }
 }
 
-impl s::Sealed for &Sampler {}
+impl s::Sealed for Sampler {}
 
-impl MemberProjection for &Sampler {
+impl MemberProjection for Sampler {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::Sampl,
         mutable: false,

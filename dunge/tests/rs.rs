@@ -181,11 +181,11 @@ fn rs_storage() -> Result<(), Error> {
     };
 
     #[derive(Group)]
-    struct Map<'store> {
-        array: &'store Storage<[f32; 4]>,
+    struct Map {
+        array: Storage<[f32; 4]>,
     }
 
-    let compute = |Groups(map): Groups<Map<'_>>, Index(index): Index| Render {
+    let compute = |Groups(map): Groups<Map>, Index(index): Index| Render {
         place: sl::splat_vec4(1.) * map.array.load(index),
         color: sl::splat_vec4(1.),
     };

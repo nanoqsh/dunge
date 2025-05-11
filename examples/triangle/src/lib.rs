@@ -16,9 +16,9 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     #[derive(Group)]
-    struct Offset<'uni>(&'uni Uniform<f32>);
+    struct Offset(Uniform<f32>);
 
-    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset<'_>>| {
+    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
@@ -31,14 +31,14 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader(triangle);
-    let uniform = cx.make_uniform(&0.);
-    let set = cx.make_set(&shader, Offset(&uniform));
+    let uniform = Offset(cx.make_uniform(&0.));
+    let set = cx.make_set(&shader, &uniform);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time| {
         time += delta_time;
         let t = time.as_secs_f32() * 0.5;
-        uniform.update(&cx, &t);
+        uniform.0.update(&cx, &t);
     };
 
     let window = {

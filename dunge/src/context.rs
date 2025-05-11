@@ -19,6 +19,7 @@ use {
         value::Value,
         workload::Workload,
     },
+    dunge_shader::group::Group,
     std::{error, fmt, sync::Arc},
 };
 
@@ -152,7 +153,7 @@ impl Context {
         handler: &GroupHandler<S, G::Projection>,
         group: G,
     ) where
-        G: Visit,
+        G: Visit + Group,
     {
         set::update(&self.0, set, handler, group);
     }

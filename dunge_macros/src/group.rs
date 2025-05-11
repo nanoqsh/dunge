@@ -77,7 +77,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let n_members = fields.len();
     let group_visit_members = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
-        quote::quote! { dunge::set::VisitMember::visit_member(self.#ident, visitor) }
+        quote::quote! { dunge::set::VisitMember::visit_member(&self.#ident, visitor) }
     });
 
     let group_fields = iter::zip(0.., &fields).map(|(index, field)| {
@@ -120,7 +120,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
         impl dunge::set::Visit for #name<#(#anon_lts),*> {
             const N_MEMBERS: ::core::primitive::usize = #n_members;
-            fn visit<'group>(&'group self, visitor: &mut dunge::set::Visitor<'group>) {
+            fn visit<'visit>(&'visit self, visitor: &mut dunge::set::Visitor<'visit>) {
                 #(#group_visit_members);*;
             }
         }
@@ -163,9 +163,9 @@ mod tests {
 
             impl dunge::set::Visit for Map<'_> {
                 const N_MEMBERS: ::core::primitive::usize = 2usize;
-                fn visit<'group>(&'group self, visitor: &mut dunge::set::Visitor<'group>) {
-                    dunge::set::VisitMember::visit_member(self.tex, visitor);
-                    dunge::set::VisitMember::visit_member(self.sam, visitor);
+                fn visit<'visit>(&'visit self, visitor: &mut dunge::set::Visitor<'visit>) {
+                    dunge::set::VisitMember::visit_member(&self.tex, visitor);
+                    dunge::set::VisitMember::visit_member(&self.sam, visitor);
                 }
             }
 
@@ -206,9 +206,9 @@ mod tests {
 
             impl dunge::set::Visit for Map<'_> {
                 const N_MEMBERS: ::core::primitive::usize = 2usize;
-                fn visit<'group>(&'group self, visitor: &mut dunge::set::Visitor<'group>) {
-                    dunge::set::VisitMember::visit_member(self.0, visitor);
-                    dunge::set::VisitMember::visit_member(self.1, visitor);
+                fn visit<'visit>(&'visit self, visitor: &mut dunge::set::Visitor<'visit>) {
+                    dunge::set::VisitMember::visit_member(&self.0, visitor);
+                    dunge::set::VisitMember::visit_member(&self.1, visitor);
                 }
             }
 

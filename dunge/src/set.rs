@@ -12,9 +12,9 @@ use {
     std::{marker::PhantomData, sync::Arc},
 };
 
-pub trait Visit: Group {
+pub trait Visit {
     const N_MEMBERS: usize;
-    fn visit<'group>(&'group self, visitor: &mut Visitor<'group>);
+    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>);
 }
 
 impl<V> Visit for &V
@@ -23,59 +23,68 @@ where
 {
     const N_MEMBERS: usize = V::N_MEMBERS;
 
-    fn visit<'group>(&'group self, visitor: &mut Visitor<'group>) {
+    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         (*self).visit(visitor);
     }
 }
 
-pub struct Visitor<'group>(Vec<wgpu::BindGroupEntry<'group>>);
+pub struct Visitor<'visit>(Vec<wgpu::BindGroupEntry<'visit>>);
 
-impl<'group> Visitor<'group> {
+impl<'visit> Visitor<'visit> {
     fn clear(&mut self) {
         self.0.clear();
     }
 
-    fn entries(&self) -> &[wgpu::BindGroupEntry<'group>] {
+    fn entries(&self) -> &[wgpu::BindGroupEntry<'visit>] {
         &self.0
     }
 }
 
-impl<'group> Visitor<'group> {
-    fn push(&mut self, resource: wgpu::BindingResource<'group>) {
+impl<'visit> Visitor<'visit> {
+    fn push(&mut self, resource: wgpu::BindingResource<'visit>) {
         let binding = self.0.len() as u32;
         self.0.push(wgpu::BindGroupEntry { binding, resource });
     }
 }
 
-pub trait VisitMember<'group> {
-    fn visit_member(self, visitor: &mut Visitor<'group>);
+pub trait VisitMember {
+    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>);
 }
 
-impl<'group, V, M> VisitMember<'group> for &'group Storage<V, M>
+impl<M> VisitMember for &M
+where
+    M: VisitMember,
+{
+    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
+        (*self).visit_member(visitor);
+    }
+}
+
+impl<V, M> VisitMember for Storage<V, M>
 where
     V: ?Sized,
 {
-    fn visit_member(self, visitor: &mut Visitor<'group>) {
+    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(wgpu::BindingResource::Buffer(binding));
     }
 }
 
-impl<'group, V> VisitMember<'group> for &'group Uniform<V> {
-    fn visit_member(self, visitor: &mut Visitor<'group>) {
+impl<V> VisitMember for Uniform<V> {
+    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(wgpu::BindingResource::Buffer(binding));
     }
 }
 
-impl<'group> VisitMember<'group> for BoundTexture<'group> {
-    fn visit_member(self, visitor: &mut Visitor<'group>) {
+impl VisitMember for BoundTexture<'_> {
+    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         visitor.push(wgpu::BindingResource::TextureView(self.0));
     }
 }
 
-impl<'group> VisitMember<'group> for &'group Sampler {
-    fn visit_member(self, visitor: &mut Visitor<'group>) {
+impl VisitMember for Sampler {
+    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         visitor.push(wgpu::BindingResource::Sampler(self.inner()));
     }
 }
@@ -100,7 +109,7 @@ pub(crate) fn update<S, G>(
     handler: &GroupHandler<S, G::Projection>,
     group: G,
 ) where
-    G: Visit,
+    G: Visit + Group,
 {
     let device = state.device();
     group.set(|_, visitor| {
@@ -206,7 +215,7 @@ pub trait Data {
 
 impl<G> Data for G
 where
-    G: Visit,
+    G: Visit + Group,
 {
     type Set = (G::Projection,);
 
@@ -222,7 +231,7 @@ where
 
 impl<A> Data for (A,)
 where
-    A: Visit,
+    A: Visit + Group,
 {
     type Set = (A::Projection,);
 
@@ -238,8 +247,8 @@ where
 
 impl<A, B> Data for (A, B)
 where
-    A: Visit,
-    B: Visit,
+    A: Visit + Group,
+    B: Visit + Group,
 {
     type Set = (A::Projection, B::Projection);
 
@@ -260,9 +269,9 @@ where
 
 impl<A, B, C> Data for (A, B, C)
 where
-    A: Visit,
-    B: Visit,
-    C: Visit,
+    A: Visit + Group,
+    B: Visit + Group,
+    C: Visit + Group,
 {
     type Set = (A::Projection, B::Projection, C::Projection);
 
@@ -287,10 +296,10 @@ where
 
 impl<A, B, C, D> Data for (A, B, C, D)
 where
-    A: Visit,
-    B: Visit,
-    C: Visit,
-    D: Visit,
+    A: Visit + Group,
+    B: Visit + Group,
+    C: Visit + Group,
+    D: Visit + Group,
 {
     type Set = (A::Projection, B::Projection, C::Projection, D::Projection);
 

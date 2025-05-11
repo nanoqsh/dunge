@@ -23,17 +23,17 @@ pub async fn run(control: Control) -> Result<(), Error> {
     }
 
     #[derive(Group)]
-    struct Transform<'uni>(&'uni Uniform<Mat4>);
+    struct Transform(Uniform<Mat4>);
 
-    let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform<'_>>| Render {
+    let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform>| Render {
         place: tr.0 * sl::vec4_with(vert.pos, 1.),
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader(cube);
-    let uniform = cx.make_uniform(&Mat4::IDENTITY);
-    let transform = cx.make_set(&shader, Transform(&uniform));
+    let uniform = Transform(cx.make_uniform(&Mat4::IDENTITY));
+    let transform = cx.make_set(&shader, &uniform);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |(width, height), delta_time| {
@@ -53,7 +53,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         };
 
         let mat = projection * model;
-        uniform.update(&cx, &mat);
+        uniform.0.update(&cx, &mat);
     };
 
     let mesh = {

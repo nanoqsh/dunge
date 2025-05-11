@@ -29,9 +29,9 @@ async fn run(control: Control) -> Result<(), Error> {
     }
 
     #[derive(Group)]
-    struct Delta<'u>(&'u Uniform<f32>);
+    struct Delta(Uniform<f32>);
 
-    let triangle = |vert: sl::InVertex<Vert>, sl::Groups(u): sl::Groups<Delta<'_>>| {
+    let triangle = |vert: sl::InVertex<Vert>, sl::Groups(u): sl::Groups<Delta>| {
         let place = sl::vec4_concat(vert.pos, sl::vec2(0., 1.));
         let fragment_col = sl::fragment(vert.col);
         let color = sl::vec4_with(fragment_col * u.0, 1.);
@@ -40,14 +40,14 @@ async fn run(control: Control) -> Result<(), Error> {
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader(triangle);
-    let uniform = cx.make_uniform(&0.);
-    let set = cx.make_set(&shader, Delta(&uniform));
+    let uniform = Delta(cx.make_uniform(&0.));
+    let set = cx.make_set(&shader, &uniform);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time: Duration| {
         time += delta_time;
         let v = time.as_secs_f32().sin() * 0.5 + 0.5;
-        uniform.update(&cx, &v);
+        uniform.0.update(&cx, &v);
     };
 
     let mesh = {
