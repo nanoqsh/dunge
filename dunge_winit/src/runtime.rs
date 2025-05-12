@@ -205,7 +205,6 @@ where
 
     #[inline]
     fn tick(&mut self, el: &event_loop::ActiveEventLoop) {
-        self.redraw();
         while self.need_to_poll() {
             self.poll(el);
         }
@@ -219,20 +218,23 @@ where
         scheduled || awakened
     }
 
-    #[inline]
-    fn redraw(&mut self) {
+    fn redraw(&mut self) -> bool {
         if let LifecycleState::Inactive = self.lifecycle.state.get() {
-            return;
+            return false;
         }
 
+        let mut redraw = false;
         for window in self.windows.values_mut() {
             if Pin::new(&mut window.timer)
                 .poll_next(&mut self.context)
                 .is_ready()
             {
                 window.shared.window().request_redraw();
+                redraw = true;
             }
         }
+
+        redraw
     }
 
     #[inline]
@@ -261,29 +263,35 @@ where
 {
     #[inline]
     fn new_events(&mut self, el: &event_loop::ActiveEventLoop, cause: event::StartCause) {
-        match cause {
+        self.action = match cause {
             event::StartCause::ResumeTimeReached { .. } => {
                 log::debug!("resume time reached");
-                self.action = Action::Process;
+                Action::Process
             }
             event::StartCause::WaitCancelled {
                 requested_resume, ..
             } => {
                 log::debug!("wait cancelled");
-                let next = requested_resume
-                    .unwrap_or_else(|| Instant::now() + Self::DEFAULT_SLEEP_DURATION);
 
-                el.set_control_flow(event_loop::ControlFlow::WaitUntil(next));
-                self.action = Action::Tick;
+                match requested_resume {
+                    Some(resume) => {
+                        el.set_control_flow(event_loop::ControlFlow::WaitUntil(resume));
+                        Action::Tick
+                    }
+                    None => Action::Process,
+                }
             }
-            event::StartCause::Poll => unreachable!("poll"),
+            event::StartCause::Poll => {
+                log::debug!("poll");
+                Action::Process
+            }
             event::StartCause::Init => {
                 log::debug!("init");
 
                 // an initial poll
                 self.poll(el);
 
-                self.action = Action::Process;
+                Action::Process
             }
         }
     }
@@ -439,6 +447,12 @@ where
 
     #[inline]
     fn about_to_wait(&mut self, el: &event_loop::ActiveEventLoop) {
+        if self.redraw() {
+            // poll on redraw event
+            el.set_control_flow(event_loop::ControlFlow::Poll);
+            return;
+        }
+
         if let Action::Process = self.action {
             self.process_timers(el);
         } else {

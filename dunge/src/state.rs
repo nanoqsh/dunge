@@ -137,7 +137,6 @@ impl State {
         f(Scheduler(&mut encoder));
 
         self.queue.submit([encoder.finish()]);
-        self.work();
 
         let ticket = Arc::new(const { Ticket::new() });
 
@@ -148,11 +147,16 @@ impl State {
 
         #[cfg(not(target_family = "wasm"))]
         {
+            // register the callback before starting the work,
+            // otherwise the work might complete immediately
+            // and the callback would never be called.
             self.queue.on_submitted_work_done({
                 let ticket = ticket.clone();
                 move || ticket.done()
             });
         }
+
+        self.work();
 
         ticket.wait().await;
     }
