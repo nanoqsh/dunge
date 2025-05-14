@@ -22,18 +22,15 @@ pub async fn run(control: Control) -> Result<(), Error> {
         col: Vec3,
     }
 
-    #[derive(Group)]
-    struct Transform(Uniform<Mat4>);
-
-    let cube = |vert: InVertex<Vert>, Groups(tr): Groups<Transform>| Render {
-        place: tr.0 * sl::vec4_with(vert.pos, 1.),
+    let cube = |vert: InVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
+        place: m * sl::vec4_with(vert.pos, 1.),
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader(cube);
-    let uniform = Transform(cx.make_uniform(&Mat4::IDENTITY));
-    let transform = cx.make_set(&shader, &uniform);
+    let transform = cx.make_uniform(&Mat4::IDENTITY);
+    let set = cx.make_set(&shader, &transform);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |(width, height), delta_time| {
@@ -52,8 +49,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
             Mat4::perspective_rh(1.6, ratio, 0.1, 100.)
         };
 
-        let mat = projection * model;
-        uniform.0.update(&cx, &mat);
+        let m = projection * model;
+        transform.update(&cx, &m);
     };
 
     let mesh = {
@@ -131,10 +128,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             let redraw = window.redraw().await;
             update_scene(window.size(), redraw.delta_time());
             cx.shed(|mut s| {
-                s.render(&redraw, bg)
-                    .layer(&layer)
-                    .set(&transform)
-                    .draw(&mesh);
+                s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);
             })
             .await;
 

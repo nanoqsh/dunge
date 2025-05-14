@@ -10,18 +10,12 @@ type Error = Box<dyn std::error::Error>;
 #[test]
 fn cs_array() -> Result<(), Error> {
     use dunge::{
-        Group,
         sl::{Compute, Groups},
         storage::Storage,
     };
 
-    #[derive(Group)]
-    struct Map {
-        array: Storage<[f32; 4]>,
-    }
-
-    let compute = |Groups(m): Groups<Map>| Compute {
-        compute: m.array.load(0u32),
+    let compute = |Groups(a): Groups<Storage<[f32; 4]>>| Compute {
+        compute: a.load(0u32),
         workgroup_size: [64, 1, 1],
     };
 
@@ -33,18 +27,12 @@ fn cs_array() -> Result<(), Error> {
 #[test]
 fn cs_array_rw() -> Result<(), Error> {
     use dunge::{
-        Group,
         sl::{Compute, Groups},
         storage::RwStorage,
     };
 
-    #[derive(Group)]
-    struct Map {
-        array: RwStorage<[f32; 4]>,
-    }
-
-    let compute = |Groups(m): Groups<Map>| Compute {
-        compute: m.array.store(0u32, 1.),
+    let compute = |Groups(a): Groups<RwStorage<[f32; 4]>>| Compute {
+        compute: a.store(0u32, 1.),
         workgroup_size: [64, 1, 1],
     };
 
@@ -56,18 +44,12 @@ fn cs_array_rw() -> Result<(), Error> {
 #[test]
 fn cs_dynamic_array() -> Result<(), Error> {
     use dunge::{
-        Group,
         sl::{Compute, Groups},
         storage::Storage,
     };
 
-    #[derive(Group)]
-    struct Map {
-        array: Storage<[f32]>,
-    }
-
-    let compute = |Groups(m): Groups<Map>| Compute {
-        compute: m.array.load(0u32),
+    let compute = |Groups(a): Groups<Storage<[f32]>>| Compute {
+        compute: a.load(0u32),
         workgroup_size: [64, 1, 1],
     };
 
@@ -79,18 +61,12 @@ fn cs_dynamic_array() -> Result<(), Error> {
 #[test]
 fn cs_dynamic_array_rw() -> Result<(), Error> {
     use dunge::{
-        Group,
         sl::{Compute, Groups},
         storage::RwStorage,
     };
 
-    #[derive(Group)]
-    struct Map {
-        array: RwStorage<[f32]>,
-    }
-
-    let compute = |Groups(m): Groups<Map>| Compute {
-        compute: m.array.store(0u32, 1.),
+    let compute = |Groups(a): Groups<RwStorage<[f32]>>| Compute {
+        compute: a.store(0u32, 1.),
         workgroup_size: [64, 1, 1],
     };
 
@@ -106,18 +82,12 @@ fn cs_dynamic_array_rw() -> Result<(), Error> {
 #[test]
 fn cs_array2d() -> Result<(), Error> {
     use dunge::{
-        Group,
         sl::{Compute, Groups},
         storage::Storage,
     };
 
-    #[derive(Group)]
-    struct Map {
-        array: Storage<[[f32; 4]; 4]>,
-    }
-
-    let compute = |Groups(m): Groups<Map>| Compute {
-        compute: m.array.load(0u32).load(0u32),
+    let compute = |Groups(a): Groups<Storage<[[f32; 4]; 4]>>| Compute {
+        compute: a.load(0u32).load(0u32),
         workgroup_size: [64, 1, 1],
     };
 

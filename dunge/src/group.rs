@@ -1,11 +1,14 @@
 //! Shader group types and traits.
 
-use crate::{
-    buffer::Sampler,
-    sl::{Global, GlobalOut, Ret},
-    storage::{Storage, Uniform},
-    types::{self, MemberData, MemberType},
-    value::Value,
+use {
+    crate::{
+        buffer::Sampler,
+        sl::{Define, Global, GlobalOut, Ret},
+        storage::{Storage, Uniform},
+        types::{self, MemberData, MemberType},
+        value::Value,
+    },
+    dunge_shader::group::Group,
 };
 
 pub use dunge_shader::group::{Projection, Take};
@@ -13,13 +16,11 @@ pub use dunge_shader::group::{Projection, Take};
 /// Describes a group member type projection.
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
-pub trait MemberProjection: s::Sealed {
+pub trait MemberProjection {
     const MEMBER: MemberData;
     type Field;
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field;
 }
-
-impl<M> s::Sealed for &M where M: s::Sealed {}
 
 impl<M> MemberProjection for &M
 where
@@ -32,8 +33,6 @@ where
         M::member_projection(id, binding, out)
     }
 }
-
-impl<V> s::Sealed for Uniform<V> where V: Value {}
 
 impl<V> MemberProjection for Uniform<V>
 where
@@ -51,7 +50,13 @@ where
     }
 }
 
-impl<V, M> s::Sealed for Storage<V, M> where V: Value {}
+impl<V> Group for Uniform<V>
+where
+    Self: MemberProjection<Field: Projection>,
+{
+    type Projection = <Self as MemberProjection>::Field;
+    const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
+}
 
 impl<V, M> MemberProjection for Storage<V, M>
 where
@@ -69,8 +74,6 @@ where
         Global::new(id, binding, out)
     }
 }
-
-impl<V, M> s::Sealed for Storage<[V], M> where V: Value {}
 
 impl<V, M> MemberProjection for Storage<[V], M>
 where
@@ -91,10 +94,17 @@ where
     }
 }
 
+impl<V, M> Group for Storage<V, M>
+where
+    V: ?Sized,
+    Self: MemberProjection<Field: Projection>,
+{
+    type Projection = <Self as MemberProjection>::Field;
+    const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
+}
+
 #[derive(Clone)]
 pub struct BoundTexture(pub(crate) wgpu::TextureView);
-
-impl s::Sealed for BoundTexture {}
 
 impl MemberProjection for BoundTexture {
     const MEMBER: MemberData = MemberData {
@@ -109,7 +119,10 @@ impl MemberProjection for BoundTexture {
     }
 }
 
-impl s::Sealed for Sampler {}
+impl Group for BoundTexture {
+    type Projection = <Self as MemberProjection>::Field;
+    const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
+}
 
 impl MemberProjection for Sampler {
     const MEMBER: MemberData = MemberData {
@@ -124,6 +137,7 @@ impl MemberProjection for Sampler {
     }
 }
 
-mod s {
-    pub trait Sealed {}
+impl Group for Sampler {
+    type Projection = <Self as MemberProjection>::Field;
+    const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
 }

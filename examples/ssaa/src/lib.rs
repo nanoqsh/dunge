@@ -20,14 +20,11 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     const SCREEN_FACTOR: u32 = 2;
 
-    #[derive(Group)]
-    struct Offset(Uniform<f32>);
-
-    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
+    let triangle = |Index(idx): Index, Groups(offset): Groups<Uniform<f32>>| {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
-        let i = sl::thunk(sl::f32(idx) * third + offset.0);
+        let i = sl::thunk(sl::f32(idx) * third + offset);
         Render {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
             color,
@@ -39,13 +36,13 @@ pub async fn run(control: Control) -> Result<(), Error> {
     struct Screen(Vec2, Vec2);
 
     #[derive(Group)]
-    struct Map<'map> {
+    struct Map {
         tex: BoundTexture,
-        sam: &'map Sampler,
-        offset: &'map Uniform<Vec2>,
+        sam: Sampler,
+        offset: Uniform<Vec2>,
     }
 
-    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map<'_>>| Render {
+    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Render {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: {
             let s = sl::thunk(sl::fragment(vert.1));
@@ -67,14 +64,14 @@ pub async fn run(control: Control) -> Result<(), Error> {
     let cx = dunge::context().await?;
     let shader = cx.make_shader(triangle);
     let screen_shader = cx.make_shader(screen);
-    let uniform = Offset(cx.make_uniform(&0.));
-    let set = cx.make_set(&shader, &uniform);
+    let offset = cx.make_uniform(&0.);
+    let set = cx.make_set(&shader, &offset);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time| {
         time += delta_time;
         let t = time.as_secs_f32() * 0.5;
-        uniform.0.update(&cx, &t);
+        offset.update(&cx, &t);
     };
 
     let make_render_buffer = |(width, height)| {
@@ -97,19 +94,13 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let render_buffer = make_render_buffer((1, 1));
-    let sam = cx.make_sampler(Filter::Nearest);
-    let offset = cx.make_uniform(&make_offset(render_buffer.borrow().size()));
-    let map_set = {
-        let buffer = render_buffer.borrow();
-        let map = Map {
-            tex: buffer.bind(),
-            sam: &sam,
-            offset: &offset,
-        };
-
-        RefCell::new(cx.make_set(&screen_shader, map))
+    let mut map = Map {
+        tex: render_buffer.borrow().bind(),
+        sam: cx.make_sampler(Filter::Nearest),
+        offset: cx.make_uniform(&make_offset(render_buffer.borrow().size())),
     };
 
+    let map_set = RefCell::new(cx.make_set(&screen_shader, &map));
     let handler = map_set.borrow().handler(&screen_shader);
 
     let screen_mesh = {
@@ -167,13 +158,9 @@ pub async fn run(control: Control) -> Result<(), Error> {
             render_buffer.swap(&make_render_buffer(size));
 
             let buffer = render_buffer.borrow();
-            offset.update(&cx, &make_offset(buffer.size()));
 
-            let map = Map {
-                tex: buffer.bind(),
-                sam: &sam,
-                offset: &offset,
-            };
+            map.tex = buffer.bind();
+            map.offset.update(&cx, &make_offset(buffer.size()));
 
             cx.update_group(&mut map_set.borrow_mut(), &handler, &map);
         }

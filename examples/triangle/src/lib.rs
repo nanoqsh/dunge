@@ -15,14 +15,11 @@ pub async fn run(control: Control) -> Result<(), Error> {
         winit::keyboard::KeyCode,
     };
 
-    #[derive(Group)]
-    struct Offset(Uniform<f32>);
-
-    let triangle = |Index(idx): Index, Groups(offset): Groups<Offset>| {
+    let triangle = |Index(idx): Index, Groups(offset): Groups<Uniform<f32>>| {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
-        let i = sl::thunk(sl::f32(idx) * third + offset.0);
+        let i = sl::thunk(sl::f32(idx) * third + offset);
         Render {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
             color,
@@ -31,14 +28,14 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader(triangle);
-    let uniform = Offset(cx.make_uniform(&0.));
-    let set = cx.make_set(&shader, &uniform);
+    let offset = cx.make_uniform(&0.);
+    let set = cx.make_set(&shader, &offset);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time| {
         time += delta_time;
         let t = time.as_secs_f32() * 0.5;
-        uniform.0.update(&cx, &t);
+        offset.update(&cx, &t);
     };
 
     let window = {

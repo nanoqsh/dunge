@@ -6,7 +6,6 @@ type Error = Box<dyn std::error::Error>;
 fn compute() -> Result<(), Error> {
     use {
         dunge::{
-            Group,
             buffer::BufferData,
             sl::{Compute, Groups, Invocation},
             storage::RwStorage,
@@ -17,13 +16,10 @@ fn compute() -> Result<(), Error> {
     const SIZE: u32 = 16;
     const STORAGE_SIZE: usize = SIZE as usize * SIZE as usize;
 
-    #[derive(Group)]
-    struct Map<'store> {
-        array: &'store RwStorage<[u32; STORAGE_SIZE]>,
-    }
+    type Array = RwStorage<[u32; STORAGE_SIZE]>;
 
-    let compute = |Invocation(v): Invocation, Groups(m): Groups<Map<'_>>| Compute {
-        compute: m.array.store(v.x(), v.x()),
+    let compute = |Invocation(v): Invocation, Groups(a): Groups<Array>| Compute {
+        compute: a.store(v.x(), v.x()),
         workgroup_size: [SIZE, 1, 1],
     };
 
@@ -31,11 +27,8 @@ fn compute() -> Result<(), Error> {
     let shader = cx.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("compute_dispatch.wgsl"));
 
-    let storage = cx.make_storage(&[0; STORAGE_SIZE]).rw();
-    let map = {
-        let map = Map { array: &storage };
-        cx.make_set(&shader, map)
-    };
+    let array = cx.make_storage(&[0; STORAGE_SIZE]).rw();
+    let set = cx.make_set(&shader, &array);
 
     let workload = cx.make_workload(&shader);
 
@@ -50,10 +43,10 @@ fn compute() -> Result<(), Error> {
         cx.shed(|mut s| {
             s.compute()
                 .workload(&workload)
-                .set(&map)
+                .set(&set)
                 .dispatch(SIZE, 1, 1);
 
-            s.copy(&storage, &download);
+            s.copy(&array, &download);
         })
         .await;
 

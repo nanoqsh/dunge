@@ -13,7 +13,7 @@ use {
 };
 
 pub trait Visit {
-    const N_MEMBERS: usize;
+    const N_MEMBERS: usize = 1;
     fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>);
 }
 
@@ -47,44 +47,31 @@ impl<'visit> Visitor<'visit> {
     }
 }
 
-pub trait VisitMember {
-    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>);
-}
-
-impl<M> VisitMember for &M
-where
-    M: VisitMember,
-{
-    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
-        (*self).visit_member(visitor);
-    }
-}
-
-impl<V, M> VisitMember for Storage<V, M>
+impl<V, M> Visit for Storage<V, M>
 where
     V: ?Sized,
 {
-    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
+    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(wgpu::BindingResource::Buffer(binding));
     }
 }
 
-impl<V> VisitMember for Uniform<V> {
-    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
+impl<V> Visit for Uniform<V> {
+    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(wgpu::BindingResource::Buffer(binding));
     }
 }
 
-impl VisitMember for BoundTexture {
-    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
+impl Visit for BoundTexture {
+    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         visitor.push(wgpu::BindingResource::TextureView(&self.0));
     }
 }
 
-impl VisitMember for Sampler {
-    fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
+impl Visit for Sampler {
+    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         visitor.push(wgpu::BindingResource::Sampler(self.inner()));
     }
 }

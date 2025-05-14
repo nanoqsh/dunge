@@ -1,4 +1,9 @@
-use crate::{define::Define, eval::GlobalOut, types::MemberData};
+use crate::{
+    define::Define,
+    eval::{Global, GlobalOut},
+    op::Ret,
+    types::MemberData,
+};
 
 /// The group type description.
 pub trait Group {
@@ -17,6 +22,12 @@ where
 /// Group type projection in a shader.
 pub trait Projection {
     fn projection(id: u32, out: GlobalOut) -> Self;
+}
+
+impl<M, O> Projection for Ret<Global<M>, O> {
+    fn projection(id: u32, out: GlobalOut) -> Self {
+        Global::new(id, 0, out)
+    }
 }
 
 pub trait Take<const N: usize> {
