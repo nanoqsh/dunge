@@ -77,9 +77,9 @@ impl<V> VisitMember for Uniform<V> {
     }
 }
 
-impl VisitMember for BoundTexture<'_> {
+impl VisitMember for BoundTexture {
     fn visit_member<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
-        visitor.push(wgpu::BindingResource::TextureView(self.0));
+        visitor.push(wgpu::BindingResource::TextureView(&self.0));
     }
 }
 

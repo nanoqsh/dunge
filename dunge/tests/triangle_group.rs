@@ -25,12 +25,12 @@ fn render() -> Result<(), Error> {
     }
 
     #[derive(Group)]
-    struct Map<'tx> {
-        tex: BoundTexture<'tx>,
+    struct Map {
+        tex: BoundTexture,
         sam: Sampler,
     }
 
-    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map<'_>>| Render {
+    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| Render {
         place: sl::vec4_concat(vert.pos, Vec2::new(0., 1.)),
         color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
     };

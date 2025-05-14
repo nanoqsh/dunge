@@ -40,7 +40,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     #[derive(Group)]
     struct Map<'map> {
-        tex: BoundTexture<'map>,
+        tex: BoundTexture,
         sam: &'map Sampler,
         offset: &'map Uniform<Vec2>,
     }

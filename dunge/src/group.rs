@@ -91,12 +91,12 @@ where
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct BoundTexture<'tx>(pub(crate) &'tx wgpu::TextureView);
+#[derive(Clone)]
+pub struct BoundTexture(pub(crate) wgpu::TextureView);
 
-impl s::Sealed for BoundTexture<'_> {}
+impl s::Sealed for BoundTexture {}
 
-impl MemberProjection for BoundTexture<'_> {
+impl MemberProjection for BoundTexture {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::Tx2df,
         mutable: false,

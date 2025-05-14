@@ -379,11 +379,11 @@ pub type Texture2d<U> = Texture<D2, U>;
 
 impl<U> Texture2d<U> {
     #[inline]
-    pub fn bind(&self) -> BoundTexture<'_>
+    pub fn bind(&self) -> BoundTexture
     where
         U: u::Bind,
     {
-        BoundTexture(self.view())
+        BoundTexture(self.view().clone())
     }
 }
 
