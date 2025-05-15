@@ -63,6 +63,7 @@ elided-lifetimes-in-paths = "warn"
 unreachable-pub = "warn"
 
 [workspace.lints.clippy]
+assigning-clones = "warn"
 cast-lossless = "warn"
 explicit-iter-loop = "warn"
 flat-map-option = "warn"

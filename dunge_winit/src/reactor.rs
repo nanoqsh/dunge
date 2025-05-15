@@ -50,7 +50,7 @@ impl Reactor {
     fn update_timer(&self, when: Instant, id: u64, new: &Waker) {
         let mut timers = self.timers.lock().expect("lock timers");
         if let Some(waker) = timers.get_mut(&(when, id)) {
-            *waker = new.clone();
+            waker.clone_from(new);
         }
     }
 
@@ -141,7 +141,7 @@ impl Timer {
             Some(Record { waker, .. }) if waker.will_wake(new) => {}
             Some(Record { id, waker }) => {
                 Reactor::get().update_timer(self.when, *id, new);
-                *waker = new.clone();
+                waker.clone_from(new);
             }
             None => self.register(new.clone()),
         }
