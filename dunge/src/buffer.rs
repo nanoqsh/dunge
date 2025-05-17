@@ -7,7 +7,9 @@ use {
         runtime::Ticket,
         state::State,
         storage::{Storage, Uniform},
-        usage::{BufferNoUsages, TextureNoUsages, Use, u},
+        usage::{
+            BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
+        },
     },
     std::{error, fmt, marker::PhantomData, num::NonZeroU32, ops, sync::Arc},
 };
@@ -179,11 +181,11 @@ impl fmt::Display for ZeroSized {
 impl error::Error for ZeroSized {}
 
 #[derive(Clone, Copy)]
-pub struct TextureData<'data, U> {
+pub struct TextureData<'data, U = DynamicTextureUsages> {
     data: &'data [u8],
     size: Size,
     format: Format,
-    usage: PhantomData<U>,
+    usage: U,
 }
 
 impl<'data> TextureData<'data, TextureNoUsages> {
@@ -196,7 +198,7 @@ impl<'data> TextureData<'data, TextureNoUsages> {
             data: &[],
             size: size.into(),
             format,
-            usage: PhantomData,
+            usage: TextureNoUsages {},
         }
     }
 
@@ -226,10 +228,14 @@ impl<'data, U> TextureData<'data, U> {
             data: self.data,
             size: self.size,
             format: self.format,
-            usage: PhantomData,
+            usage: U::Out::default(),
         }
     }
 
+    /// Enables the read usage.
+    ///
+    /// This allows the texture to be used for reading.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn read(self) -> TextureData<'data, U::Out>
     where
@@ -238,6 +244,10 @@ impl<'data, U> TextureData<'data, U> {
         self.to()
     }
 
+    /// Enables the write usage.
+    ///
+    /// This allows the texture to be used for writing.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn write(self) -> TextureData<'data, U::Out>
     where
@@ -246,6 +256,10 @@ impl<'data, U> TextureData<'data, U> {
         self.to()
     }
 
+    /// Enables the copy from usage.
+    ///
+    /// This allows the texture to be used for coping from it.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn copy_from(self) -> TextureData<'data, U::Out>
     where
@@ -254,6 +268,10 @@ impl<'data, U> TextureData<'data, U> {
         self.to()
     }
 
+    /// Enables the copy to usage.
+    ///
+    /// This allows the texture to be used for coping to it.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn copy_to(self) -> TextureData<'data, U::Out>
     where
@@ -262,6 +280,10 @@ impl<'data, U> TextureData<'data, U> {
         self.to()
     }
 
+    /// Enables the bind usage.
+    ///
+    /// This allows the texture to be used for binding to read in a shader.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn bind(self) -> TextureData<'data, U::Out>
     where
@@ -270,12 +292,40 @@ impl<'data, U> TextureData<'data, U> {
         self.to()
     }
 
+    /// Enables the render usage.
+    ///
+    /// This allows the texture to be used for render into it.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn render(self) -> TextureData<'data, U::Out>
     where
         U: Use<dyn u::Render>,
     {
         self.to()
+    }
+
+    /// Erases the static type information about usages.
+    ///
+    /// The full static type of a texture includes information about all of its usages,
+    /// for example: `Texture2d<Texture<false, false, true, true>>`.
+    /// This enables compile-time checks for required usages - for example,
+    /// you won’t be able to render to a texture without the render usage.
+    /// However, this strict typing significantly complicates type management.
+    ///
+    /// As a compromise, you can call this method to erase usage information from the type,
+    /// which moves the checks to runtime instead. In this case, using the texture in a
+    /// context where the required usage is missing will cause a panic.
+    #[inline]
+    pub fn erase(self) -> TextureData<'data>
+    where
+        U: u::TextureUsages,
+    {
+        TextureData {
+            data: self.data,
+            size: self.size,
+            format: self.format,
+            usage: DynamicTextureUsages(self.usage.usages()),
+        }
     }
 }
 
@@ -319,9 +369,10 @@ impl Dimension for D2 {
     const N: DimensionsNumber = DimensionsNumber::D2;
 }
 
-pub struct Texture<D, U> {
+pub struct Texture<D, U = DynamicTextureUsages> {
     inner: TextureInner,
-    ty: PhantomData<(D, U)>,
+    usage: U,
+    dim: PhantomData<D>,
 }
 
 impl<D, U> Texture<D, U> {
@@ -336,13 +387,22 @@ impl<D, U> Texture<D, U> {
             size: data.size,
             format: data.format,
             dimension: D::N,
-            usage: U::usages(),
+            usage: data.usage.usages(),
         };
 
         Self {
             inner: TextureInner::new(state, new),
-            ty: PhantomData,
+            usage: data.usage,
+            dim: PhantomData,
         }
+    }
+
+    #[inline]
+    pub(crate) fn render(&self)
+    where
+        U: u::Render,
+    {
+        self.usage.render();
     }
 
     #[inline]
@@ -383,6 +443,7 @@ impl<U> Texture2d<U> {
     where
         U: u::Bind,
     {
+        self.usage.bind();
         BoundTexture(self.view().clone())
     }
 }
@@ -508,10 +569,10 @@ impl Sampler {
     }
 }
 
-pub struct BufferData<'data, U> {
+pub struct BufferData<'data, U = DynamicBufferUsages> {
     data: &'data [u8],
     size: u32,
-    usage: PhantomData<U>,
+    usage: U,
 }
 
 impl<'data> BufferData<'data, BufferNoUsages> {
@@ -520,7 +581,7 @@ impl<'data> BufferData<'data, BufferNoUsages> {
         Self {
             data: &[],
             size,
-            usage: PhantomData,
+            usage: BufferNoUsages {},
         }
     }
 
@@ -545,10 +606,14 @@ impl<'data, U> BufferData<'data, U> {
         BufferData {
             data: self.data,
             size: self.size,
-            usage: PhantomData,
+            usage: U::Out::default(),
         }
     }
 
+    /// Enables the read usage.
+    ///
+    /// This allows the buffer to be used for reading.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn read(self) -> BufferData<'data, U::Out>
     where
@@ -557,6 +622,10 @@ impl<'data, U> BufferData<'data, U> {
         self.to()
     }
 
+    /// Enables the write usage.
+    ///
+    /// This allows the buffer to be used for writing.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn write(self) -> BufferData<'data, U::Out>
     where
@@ -565,6 +634,10 @@ impl<'data, U> BufferData<'data, U> {
         self.to()
     }
 
+    /// Enables the copy from usage.
+    ///
+    /// This allows the buffer to be used for coping from it.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn copy_from(self) -> BufferData<'data, U::Out>
     where
@@ -573,6 +646,10 @@ impl<'data, U> BufferData<'data, U> {
         self.to()
     }
 
+    /// Enables the copy to usage.
+    ///
+    /// This allows the buffer to be used for coping to it.
+    /// Compile-time enforcement ensures the correct usage is present.
     #[inline]
     pub fn copy_to(self) -> BufferData<'data, U::Out>
     where
@@ -580,11 +657,34 @@ impl<'data, U> BufferData<'data, U> {
     {
         self.to()
     }
+
+    /// Erases the static type information about usages.
+    ///
+    /// The full static type of a buffer includes information about all of its usages,
+    /// for example: `Buffer<MapRead<true>>`.
+    /// This enables compile-time checks for required usages - for example,
+    /// you won’t be able to read from a buffer without the read usage.
+    /// However, this strict typing significantly complicates type management.
+    ///
+    /// As a compromise, you can call this method to erase usage information from the type,
+    /// which moves the checks to runtime instead. In this case, using the buffer in a
+    /// context where the required usage is missing will cause a panic.
+    #[inline]
+    pub fn erase(self) -> BufferData<'data>
+    where
+        U: u::BufferUsages,
+    {
+        BufferData {
+            data: self.data,
+            size: self.size,
+            usage: DynamicBufferUsages(self.usage.usages()),
+        }
+    }
 }
 
-pub struct Buffer<U> {
+pub struct Buffer<U = DynamicBufferUsages> {
     buf: wgpu::Buffer,
-    ty: PhantomData<U>,
+    usage: U,
 }
 
 impl<U> Buffer<U> {
@@ -596,12 +696,12 @@ impl<U> Buffer<U> {
         let new = NewBuffer {
             data: data.data,
             size: data.size,
-            usage: U::usages(),
+            usage: data.usage.usages(),
         };
 
         Self {
             buf: buffer(state, new),
-            ty: PhantomData,
+            usage: data.usage,
         }
     }
 
@@ -610,6 +710,7 @@ impl<U> Buffer<U> {
     where
         U: u::Read,
     {
+        self.usage.read();
         read_from_buffer(&mut self.buf, state).await
     }
 
@@ -618,6 +719,7 @@ impl<U> Buffer<U> {
     where
         U: u::Write,
     {
+        self.usage.write();
         write_to_buffer(&mut self.buf, state).await
     }
 }
@@ -859,18 +961,64 @@ where
     }
 }
 
-pub trait Source: i::AsInner {}
+pub trait Source: i::AsInner {
+    #[doc(hidden)]
+    #[inline]
+    fn source(&self) {}
+}
 
 impl<S> Source for &S where S: Source {}
-impl<D, U> Source for Texture<D, U> where U: u::CopyFrom {}
-impl<U> Source for Buffer<U> where U: u::CopyFrom {}
+
+impl<D, U> Source for Texture<D, U>
+where
+    U: u::CopyFrom,
+{
+    #[inline]
+    fn source(&self) {
+        self.usage.copy_from();
+    }
+}
+
+impl<U> Source for Buffer<U>
+where
+    U: u::CopyFrom,
+{
+    #[inline]
+    fn source(&self) {
+        self.usage.copy_from();
+    }
+}
+
 impl<V, M> Source for Storage<V, M> where V: ?Sized {}
 
-pub trait Destination: i::AsInner {}
+pub trait Destination: i::AsInner {
+    #[doc(hidden)]
+    #[inline]
+    fn destination(&self) {}
+}
 
 impl<D> Destination for &D where D: Destination {}
-impl<D, U> Destination for Texture<D, U> where U: u::CopyTo {}
-impl<U> Destination for Buffer<U> where U: u::CopyTo {}
+
+impl<D, U> Destination for Texture<D, U>
+where
+    U: u::CopyTo,
+{
+    #[inline]
+    fn destination(&self) {
+        self.usage.copy_to();
+    }
+}
+
+impl<U> Destination for Buffer<U>
+where
+    U: u::CopyTo,
+{
+    #[inline]
+    fn destination(&self) {
+        self.usage.copy_to();
+    }
+}
+
 impl<V, M> Destination for Storage<V, M> where V: ?Sized {}
 impl<V> Destination for Uniform<V> where V: ?Sized {}
 
@@ -880,6 +1028,9 @@ where
     S: Source,
     D: Destination,
 {
+    from.source();
+    to.destination();
+
     let i::Wrap(from) = from.as_inner();
     let i::Wrap(to) = to.as_inner();
 

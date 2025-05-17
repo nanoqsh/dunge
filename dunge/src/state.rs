@@ -328,6 +328,7 @@ where
 {
     #[inline]
     fn as_target(&self) -> Target<'_> {
+        self.render();
         Target::new(self.format(), self.view())
     }
 }
@@ -357,6 +358,9 @@ impl<U, V> RenderBuffer<U, V> {
         U: u::Render,
         V: u::Render,
     {
+        color.render();
+        depth.render();
+
         assert_eq!(
             depth.format(),
             Format::Depth,
