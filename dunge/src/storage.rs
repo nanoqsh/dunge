@@ -3,31 +3,9 @@
 //! Must be used with data that can be directly casted to the GPU buffer.
 
 use {
-    crate::{context::Context, state::State, types, value::Value},
+    crate::{context::Context, state::State, types, value::UnsizedValue},
     std::marker::PhantomData,
 };
-
-pub trait StorageValue {
-    fn storage_value(&self) -> &[u8];
-}
-
-impl<V> StorageValue for V
-where
-    V: Value,
-{
-    fn storage_value(&self) -> &[u8] {
-        self.value()
-    }
-}
-
-impl<V> StorageValue for [V]
-where
-    V: Value + bytemuck::Pod,
-{
-    fn storage_value(&self) -> &[u8] {
-        bytemuck::cast_slice(self)
-    }
-}
 
 struct Data {
     buf: wgpu::Buffer,
@@ -86,11 +64,11 @@ where
     #[inline]
     pub(crate) fn new(cx: &Context, val: &V) -> Self
     where
-        V: StorageValue,
+        V: UnsizedValue,
     {
         let data = Data::new(
             cx.state(),
-            val.storage_value(),
+            val.unsized_value(),
             wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST,
@@ -110,9 +88,9 @@ where
     #[inline]
     pub fn update(&self, cx: &Context, val: &V)
     where
-        V: StorageValue,
+        V: UnsizedValue,
     {
-        self.data.update(cx.state(), val.storage_value());
+        self.data.update(cx.state(), val.unsized_value());
     }
 
     #[inline]
@@ -156,11 +134,11 @@ where
     #[inline]
     pub(crate) fn new(cx: &Context, val: &V) -> Self
     where
-        V: StorageValue,
+        V: UnsizedValue,
     {
         let data = Data::new(
             cx.state(),
-            val.storage_value(),
+            val.unsized_value(),
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         );
 
@@ -177,9 +155,9 @@ where
     #[inline]
     pub fn update(&self, cx: &Context, val: &V)
     where
-        V: StorageValue,
+        V: UnsizedValue,
     {
-        self.data.update(cx.state(), val.storage_value());
+        self.data.update(cx.state(), val.unsized_value());
     }
 
     #[inline]

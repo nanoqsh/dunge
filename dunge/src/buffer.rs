@@ -27,6 +27,7 @@ pub enum Format {
 }
 
 impl Format {
+    /// Returns the number of bytes per pixel for this format.
     #[inline]
     pub const fn bytes(self) -> u32 {
         match self {
@@ -35,6 +36,7 @@ impl Format {
         }
     }
 
+    /// Returns `true` if the format is a standard sRGB variant.
     #[inline]
     pub const fn is_standard(self) -> bool {
         matches!(self, Self::SrgbAlpha | Self::SbgrAlpha)

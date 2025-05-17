@@ -1,6 +1,6 @@
 use crate::types;
 
-/// Uniform value.
+/// A buffer value.
 pub trait Value {
     type Type: types::Value;
     fn value(&self) -> &[u8];
@@ -78,5 +78,28 @@ where
 
     fn value(&self) -> &[u8] {
         bytemuck::bytes_of(self)
+    }
+}
+
+/// An unsized buffer value.
+pub trait UnsizedValue {
+    fn unsized_value(&self) -> &[u8];
+}
+
+impl<V> UnsizedValue for V
+where
+    V: Value,
+{
+    fn unsized_value(&self) -> &[u8] {
+        self.value()
+    }
+}
+
+impl<V> UnsizedValue for [V]
+where
+    V: Value + bytemuck::Pod,
+{
+    fn unsized_value(&self) -> &[u8] {
+        bytemuck::cast_slice(self)
     }
 }

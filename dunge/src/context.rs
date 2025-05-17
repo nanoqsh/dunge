@@ -14,9 +14,9 @@ use {
         shader::{ComputeShader, RenderShader, Shader},
         sl,
         state::{Scheduler, State},
-        storage::{Storage, StorageValue, Uniform},
+        storage::{Storage, Uniform},
         usage::u,
-        value::Value,
+        value::UnsizedValue,
         workload::Workload,
     },
     dunge_shader::group::Group,
@@ -62,7 +62,7 @@ impl Context {
     #[inline]
     pub fn make_uniform<V>(&self, val: &V) -> Uniform<V>
     where
-        V: StorageValue + ?Sized,
+        V: UnsizedValue + ?Sized,
     {
         Uniform::new(self, val)
     }
@@ -70,7 +70,7 @@ impl Context {
     #[inline]
     pub fn make_storage<V>(&self, val: &V) -> Storage<V>
     where
-        V: StorageValue + ?Sized,
+        V: UnsizedValue + ?Sized,
     {
         Storage::new(self, val)
     }
@@ -104,7 +104,7 @@ impl Context {
     #[inline]
     pub fn make_row<U>(&self, data: &[U]) -> Row<U>
     where
-        U: Value + bytemuck::NoUninit,
+        [U]: UnsizedValue,
     {
         Row::new(&self.0, data)
     }

@@ -8,9 +8,9 @@ use {
         sl::{ReadInstance, Ret},
         state::State,
         types::{self, ValueType, VectorType},
-        value::Value,
+        value::UnsizedValue,
     },
-    std::{error, fmt, marker::PhantomData},
+    std::marker::PhantomData,
 };
 
 pub use dunge_shader::instance::Projection;
@@ -115,15 +115,14 @@ pub struct Row<U> {
 impl<U> Row<U> {
     pub(crate) fn new(state: &State, data: &[U]) -> Self
     where
-        // TODO: remove NoUninit
-        U: Value + bytemuck::NoUninit,
+        [U]: UnsizedValue,
     {
         use wgpu::util::{self, DeviceExt};
 
         let buf = {
             let desc = util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(data),
+                contents: data.unsized_value(),
                 usage: wgpu::BufferUsages::VERTEX,
             };
 
@@ -139,35 +138,36 @@ impl<U> Row<U> {
         }
     }
 
-    pub fn update(&self, cx: &Context, data: &[U]) -> Result<(), UpdateError>
+    /// Updates the row data.
+    ///
+    /// # Panics
+    /// Panics if the row length is not equal to the length of the new value.
+    pub fn update(&self, cx: &Context, data: &[U])
     where
-        // TODO: remove NoUninit
-        U: Value + bytemuck::NoUninit,
+        [U]: UnsizedValue,
     {
-        if data.len() != self.len as usize {
-            return Err(UpdateError);
-        }
+        assert_eq!(
+            data.len(),
+            self.len(),
+            "cannot update row of length {} with value of length {}",
+            self.len(),
+            data.len(),
+        );
 
         let queue = cx.state().queue();
-        let data = bytemuck::cast_slice(data);
-        queue.write_buffer(&self.buf, 0, data.as_ref());
-        Ok(())
+        queue.write_buffer(&self.buf, 0, data.unsized_value());
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len as usize
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
-
-/// An error returned from the [update](crate::instance::Row::update) function.
-///
-/// Returned when passed data size is invalid.
-#[derive(Debug)]
-pub struct UpdateError;
-
-impl fmt::Display for UpdateError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "update error: the data size is invalid")
-    }
-}
-
-impl error::Error for UpdateError {}
 
 mod s {
     pub trait Sealed {}
