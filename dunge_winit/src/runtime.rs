@@ -8,7 +8,6 @@ use {
         surface::{CreateSurfaceError, SurfaceError},
     },
     futures_core::Stream,
-    glam::DVec2,
     std::{
         cell::{Cell, OnceCell, RefCell},
         collections::HashMap,
@@ -433,17 +432,16 @@ where
             event::WindowEvent::CursorMoved {
                 position: dpi::PhysicalPosition { x, y },
                 ..
-            } => {
-                window
-                    .shared
-                    .events()
-                    .cursor_moved
-                    .set_value(DVec2::new(x, y));
+            } => window.shared.cursor_moved(x, y),
+            event::WindowEvent::CursorLeft { .. } => window.shared.cursor_left(),
+            event::WindowEvent::MouseWheel { .. } => {}
+            event::WindowEvent::MouseInput { state, button, .. } => {
+                let events = window.shared.events();
+                match state {
+                    event::ElementState::Pressed => events.press_buttons.active(button),
+                    event::ElementState::Released => events.release_buttons.active(button),
+                }
 
-                self.schedule();
-            }
-            event::WindowEvent::CursorLeft { .. } => {
-                window.shared.events().cursor_left.set();
                 self.schedule();
             }
             event::WindowEvent::RedrawRequested => {

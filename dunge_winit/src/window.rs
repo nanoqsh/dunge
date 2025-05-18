@@ -21,7 +21,7 @@ use {
         task::Poll,
         time::Duration,
     },
-    winit::{event_loop, keyboard, window},
+    winit::{event, event_loop, keyboard, window},
 };
 
 /// [Window] attributes.
@@ -101,11 +101,6 @@ impl Event {
 
 impl<T> Event<Option<T>> {
     #[inline]
-    pub(crate) fn set_value(&self, value: T) {
-        self.0.set(Some(value));
-    }
-
-    #[inline]
     pub(crate) fn add_value(&self, value: T)
     where
         T: Copy + ops::AddAssign,
@@ -129,12 +124,12 @@ impl<T> Event<Option<T>> {
     }
 }
 
-enum KeyState {
+enum State {
     Wait,
     Active,
 }
 
-pub(crate) struct Keys(RefCell<HashMap<keyboard::KeyCode, KeyState>>);
+pub(crate) struct Keys(RefCell<HashMap<keyboard::KeyCode, State>>);
 
 impl Keys {
     #[inline]
@@ -144,20 +139,53 @@ impl Keys {
 
     #[inline]
     fn wait(&self, code: keyboard::KeyCode) {
-        self.0.borrow_mut().insert(code, KeyState::Wait);
+        self.0.borrow_mut().insert(code, State::Wait);
     }
 
     #[inline]
     pub(crate) fn active(&self, code: keyboard::KeyCode) {
-        if let Some(state @ KeyState::Wait) = self.0.borrow_mut().get_mut(&code) {
-            *state = KeyState::Active;
+        if let Some(state @ State::Wait) = self.0.borrow_mut().get_mut(&code) {
+            *state = State::Active;
         }
     }
 
     #[inline]
     fn active_poll(&self, code: keyboard::KeyCode) -> Poll<()> {
         if let Entry::Occupied(en) = self.0.borrow_mut().entry(code) {
-            if let KeyState::Active = en.get() {
+            if let State::Active = en.get() {
+                en.remove();
+                return Poll::Ready(());
+            }
+        }
+
+        Poll::Pending
+    }
+}
+
+pub(crate) struct Buttons(RefCell<HashMap<event::MouseButton, State>>);
+
+impl Buttons {
+    #[inline]
+    fn new() -> Self {
+        Self(RefCell::new(HashMap::new()))
+    }
+
+    #[inline]
+    fn wait(&self, button: event::MouseButton) {
+        self.0.borrow_mut().insert(button, State::Wait);
+    }
+
+    #[inline]
+    pub(crate) fn active(&self, button: event::MouseButton) {
+        if let Some(state @ State::Wait) = self.0.borrow_mut().get_mut(&button) {
+            *state = State::Active;
+        }
+    }
+
+    #[inline]
+    fn active_poll(&self, button: event::MouseButton) -> Poll<()> {
+        if let Entry::Occupied(en) = self.0.borrow_mut().entry(button) {
+            if let State::Active = en.get() {
                 en.remove();
                 return Poll::Ready(());
             }
@@ -168,8 +196,8 @@ impl Keys {
 }
 
 pub(crate) struct Events {
-    pub(crate) cursor_moved: Event<Option<DVec2>>,
-    pub(crate) cursor_left: Event,
+    pub(crate) press_buttons: Buttons,
+    pub(crate) release_buttons: Buttons,
     pub(crate) press_keys: Keys,
     pub(crate) release_keys: Keys,
     pub(crate) resize: Event,
@@ -181,6 +209,7 @@ pub(crate) struct Shared {
     cx: Context,
     surface: Surface<window::Window, Ops>,
     events: Events,
+    cursor_position: Cell<Option<DVec2>>,
 }
 
 impl Shared {
@@ -197,6 +226,16 @@ impl Shared {
     #[inline]
     pub(crate) fn events(&self) -> &Events {
         &self.events
+    }
+
+    #[inline]
+    pub(crate) fn cursor_moved(&self, x: f64, y: f64) {
+        self.cursor_position.set(Some(DVec2::new(x, y)));
+    }
+
+    #[inline]
+    pub(crate) fn cursor_left(&self) {
+        self.cursor_position.set(None);
     }
 }
 
@@ -222,14 +261,15 @@ impl Window {
             cx,
             surface,
             events: Events {
-                cursor_moved: Event::new(),
-                cursor_left: Event::new(),
+                press_buttons: Buttons::new(),
+                release_buttons: Buttons::new(),
                 press_keys: Keys::new(),
                 release_keys: Keys::new(),
                 resize: Event::new(),
                 redraw: Event::new(),
                 close: Event::new(),
             },
+            cursor_position: Cell::new(None),
         });
 
         Ok(Self { shared, req })
@@ -258,24 +298,31 @@ impl Window {
         self.shared.surface.size()
     }
 
-    /// Waits for a cursor event.
+    /// Returns the cursor position on the window.
     #[inline]
-    pub async fn cursor(&self) -> Cursor {
-        let cursor_moved = &self.shared.events.cursor_moved;
-        let cursor_left = &self.shared.events.cursor_left;
-        future::poll_fn(|_| match cursor_left.active_poll() {
-            Poll::Ready(()) => {
-                _ = cursor_moved.active_poll_value();
-                Poll::Ready(Cursor::Left)
-            }
-            Poll::Pending => cursor_moved.active_poll_value().map(Cursor::Moved),
-        })
-        .await
+    pub fn cursor_position(&self) -> Option<DVec2> {
+        self.shared.cursor_position.get()
+    }
+
+    /// Waits for a button press event.
+    #[inline]
+    pub async fn button_pressed(&self, button: event::MouseButton) {
+        let buttons = &self.shared.events.press_buttons;
+        buttons.wait(button);
+        future::poll_fn(|_| buttons.active_poll(button)).await;
+    }
+
+    /// Waits for a button release event.
+    #[inline]
+    pub async fn button_released(&self, button: event::MouseButton) {
+        let buttons = &self.shared.events.release_buttons;
+        buttons.wait(button);
+        future::poll_fn(|_| buttons.active_poll(button)).await;
     }
 
     /// Waits for a key press event.
     #[inline]
-    pub async fn pressed(&self, code: keyboard::KeyCode) {
+    pub async fn key_pressed(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.press_keys;
         keys.wait(code);
         future::poll_fn(|_| keys.active_poll(code)).await;
@@ -283,7 +330,7 @@ impl Window {
 
     /// Waits for a key release event.
     #[inline]
-    pub async fn released(&self, code: keyboard::KeyCode) {
+    pub async fn key_released(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.release_keys;
         keys.wait(code);
         future::poll_fn(|_| keys.active_poll(code)).await;
@@ -341,11 +388,6 @@ impl Drop for Window {
         let id = self.shared.surface.window().id();
         self.req.remove_window(id);
     }
-}
-
-pub enum Cursor {
-    Moved(DVec2),
-    Left,
 }
 
 /// An object for frame redrawing.

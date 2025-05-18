@@ -63,7 +63,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let close = window.close_requested();
-    let esc_pressed = window.pressed(KeyCode::Escape);
+    let esc_pressed = window.key_pressed(KeyCode::Escape);
     (render, close, esc_pressed).race().await;
 
     Ok(())

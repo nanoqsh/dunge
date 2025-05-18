@@ -8,11 +8,11 @@ pub async fn run(control: Control) -> Result<(), Error> {
             glam::{Mat4, Quat, Vec3},
             sl::{Groups, InVertex, Render},
             storage::Uniform,
-            winit::{Canvas, Cursor},
+            winit::Canvas,
         },
         futures_concurrency::prelude::*,
         std::time::Duration,
-        winit::keyboard::KeyCode,
+        winit::{event::MouseButton, keyboard::KeyCode},
     };
 
     #[repr(C)]
@@ -120,12 +120,17 @@ pub async fn run(control: Control) -> Result<(), Error> {
         control.make_window(&cx, attr).await?
     };
 
-    let cursor = async {
+    let mouse = async {
         loop {
-            match window.cursor().await {
-                Cursor::Moved(v) => println!("moved {v}"),
-                Cursor::Left => println!("left"),
-            }
+            window.button_pressed(MouseButton::Left).await;
+            let Some(p) = window.cursor_position() else {
+                continue;
+            };
+
+            println!("pressed at {p}");
+
+            window.button_released(MouseButton::Left).await;
+            println!("released");
         }
     };
 
@@ -146,8 +151,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let close = window.close_requested();
-    let esc_pressed = window.pressed(KeyCode::Escape);
-    (cursor, render, close, esc_pressed).race().await;
+    let esc_pressed = window.key_pressed(KeyCode::Escape);
+    (mouse, render, close, esc_pressed).race().await;
 
     Ok(())
 }

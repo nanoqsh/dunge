@@ -105,7 +105,7 @@ async fn run(control: Control) -> Result<(), Error> {
     let toggle_fullscreen = async {
         let mut fullscreen = false;
         loop {
-            window.pressed(KeyCode::KeyF).await;
+            window.key_pressed(KeyCode::KeyF).await;
 
             fullscreen = !fullscreen;
             window.winit().set_fullscreen(if fullscreen {
@@ -117,7 +117,7 @@ async fn run(control: Control) -> Result<(), Error> {
     };
 
     let close = window.close_requested();
-    let esc_pressed = window.pressed(KeyCode::Escape);
+    let esc_pressed = window.key_pressed(KeyCode::Escape);
 
     (
         fps_counter,

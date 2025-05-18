@@ -22,7 +22,7 @@ pub mod winit {
         canvas::Canvas,
         reactor::{DurationTimerExt, InstantTimerExt, Timer},
         runtime::{Control, Error},
-        window::{Attributes, Cursor, Redraw, Window},
+        window::{Attributes, Redraw, Window},
     };
 
     #[cfg(target_family = "wasm")]
