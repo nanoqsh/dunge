@@ -8,6 +8,7 @@ use {
         surface::{CreateSurfaceError, SurfaceError},
     },
     futures_core::Stream,
+    glam::DVec2,
     std::{
         cell::{Cell, OnceCell, RefCell},
         collections::HashMap,
@@ -22,7 +23,7 @@ use {
         task::{self, Poll, Waker},
         time::Duration,
     },
-    winit::{application::ApplicationHandler, event, event_loop, keyboard, window},
+    winit::{application::ApplicationHandler, dpi, event, event_loop, keyboard, window},
 };
 
 #[cfg(target_family = "wasm")]
@@ -427,6 +428,22 @@ where
                     event::ElementState::Released => events.release_keys.active(code),
                 }
 
+                self.schedule();
+            }
+            event::WindowEvent::CursorMoved {
+                position: dpi::PhysicalPosition { x, y },
+                ..
+            } => {
+                window
+                    .shared
+                    .events()
+                    .cursor_moved
+                    .set_value(DVec2::new(x, y));
+
+                self.schedule();
+            }
+            event::WindowEvent::CursorLeft { .. } => {
+                window.shared.events().cursor_left.set();
                 self.schedule();
             }
             event::WindowEvent::RedrawRequested => {

@@ -8,7 +8,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             glam::{Mat4, Quat, Vec3},
             sl::{Groups, InVertex, Render},
             storage::Uniform,
-            winit::Canvas,
+            winit::{Canvas, Cursor},
         },
         futures_concurrency::prelude::*,
         std::time::Duration,
@@ -120,6 +120,15 @@ pub async fn run(control: Control) -> Result<(), Error> {
         control.make_window(&cx, attr).await?
     };
 
+    let cursor = async {
+        loop {
+            match window.cursor().await {
+                Cursor::Moved(v) => println!("moved {v}"),
+                Cursor::Left => println!("left"),
+            }
+        }
+    };
+
     let layer = cx.make_layer(&shader, window.format());
 
     let bg = window.format().rgb_from_bytes([25, 10, 40]);
@@ -138,7 +147,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let close = window.close_requested();
     let esc_pressed = window.pressed(KeyCode::Escape);
-    (render, close, esc_pressed).race().await;
+    (cursor, render, close, esc_pressed).race().await;
 
     Ok(())
 }

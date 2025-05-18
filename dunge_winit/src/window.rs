@@ -8,6 +8,7 @@ use {
         buffer::Format,
         surface::{Action, Output, Surface, WindowOps},
     },
+    glam::DVec2,
     std::{
         borrow::Cow,
         cell::{Cell, RefCell},
@@ -100,6 +101,11 @@ impl Event {
 
 impl<T> Event<Option<T>> {
     #[inline]
+    pub(crate) fn set_value(&self, value: T) {
+        self.0.set(Some(value));
+    }
+
+    #[inline]
     pub(crate) fn add_value(&self, value: T)
     where
         T: Copy + ops::AddAssign,
@@ -162,6 +168,8 @@ impl Keys {
 }
 
 pub(crate) struct Events {
+    pub(crate) cursor_moved: Event<Option<DVec2>>,
+    pub(crate) cursor_left: Event,
     pub(crate) press_keys: Keys,
     pub(crate) release_keys: Keys,
     pub(crate) resize: Event,
@@ -214,6 +222,8 @@ impl Window {
             cx,
             surface,
             events: Events {
+                cursor_moved: Event::new(),
+                cursor_left: Event::new(),
                 press_keys: Keys::new(),
                 release_keys: Keys::new(),
                 resize: Event::new(),
@@ -246,6 +256,21 @@ impl Window {
     #[inline]
     pub fn size(&self) -> (u32, u32) {
         self.shared.surface.size()
+    }
+
+    /// Waits for a cursor event.
+    #[inline]
+    pub async fn cursor(&self) -> Cursor {
+        let cursor_moved = &self.shared.events.cursor_moved;
+        let cursor_left = &self.shared.events.cursor_left;
+        future::poll_fn(|_| match cursor_left.active_poll() {
+            Poll::Ready(()) => {
+                _ = cursor_moved.active_poll_value();
+                Poll::Ready(Cursor::Left)
+            }
+            Poll::Pending => cursor_moved.active_poll_value().map(Cursor::Moved),
+        })
+        .await
     }
 
     /// Waits for a key press event.
@@ -316,6 +341,11 @@ impl Drop for Window {
         let id = self.shared.surface.window().id();
         self.req.remove_window(id);
     }
+}
+
+pub enum Cursor {
+    Moved(DVec2),
+    Left,
 }
 
 /// An object for frame redrawing.
