@@ -123,7 +123,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::BufferUsages::MAP_READ),
                 "the buffer usages has no read unsage",
-            )
+            );
         }
     }
 
@@ -144,7 +144,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::BufferUsages::MAP_WRITE),
                 "the buffer usages has no write unsage",
-            )
+            );
         }
     }
 
@@ -175,7 +175,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::BufferUsages::COPY_SRC),
                 "the buffer usages has no copy from unsage",
-            )
+            );
         }
     }
 
@@ -185,7 +185,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::TextureUsages::COPY_SRC),
                 "the texture usages has no copy from unsage",
-            )
+            );
         }
     }
 
@@ -216,7 +216,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::BufferUsages::COPY_DST),
                 "the buffer usages has no copy to unsage",
-            )
+            );
         }
     }
 
@@ -226,7 +226,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::TextureUsages::COPY_DST),
                 "the texture usages has no copy to unsage",
-            )
+            );
         }
     }
 
@@ -247,7 +247,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::TextureUsages::TEXTURE_BINDING),
                 "the texture usages has no bind unsage",
-            )
+            );
         }
     }
 
@@ -268,7 +268,7 @@ pub(crate) mod u {
             assert!(
                 self.0.contains(wgpu::TextureUsages::RENDER_ATTACHMENT),
                 "the texture usages has no render unsage",
-            )
+            );
         }
     }
 }
