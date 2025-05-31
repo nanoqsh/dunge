@@ -6,12 +6,13 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
             glam::{Mat4, Quat, Vec3},
+            layer::{Config, Mode},
             sl::{Groups, InVertex, Render},
             storage::Uniform,
             winit::Canvas,
         },
         futures_concurrency::prelude::*,
-        std::time::Duration,
+        std::{cell::Cell, time::Duration},
         winit::{event::MouseButton, keyboard::KeyCode},
     };
 
@@ -134,15 +135,32 @@ pub async fn run(control: Control) -> Result<(), Error> {
         }
     };
 
-    let layer = cx.make_layer(&shader, window.format());
+    let conf = Config::from(window.format());
+    let layer_solid = cx.make_layer(&shader, conf.clone());
+    let layer_wireframe = cx.make_layer(
+        &shader,
+        Config {
+            mode: Mode::Line,
+            ..conf
+        },
+    );
+
+    let mode = Cell::new(true);
 
     let bg = window.format().rgb_from_bytes([25, 10, 40]);
     let render = async {
         loop {
             let redraw = window.redraw().await;
             update_scene(window.size(), redraw.delta_time());
+
+            let layer = if mode.get() {
+                &layer_solid
+            } else {
+                &layer_wireframe
+            };
+
             cx.shed(|mut s| {
-                s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);
+                s.render(&redraw, bg).layer(layer).set(&set).draw(&mesh);
             })
             .await;
 
@@ -150,9 +168,18 @@ pub async fn run(control: Control) -> Result<(), Error> {
         }
     };
 
+    let toggle_mode = async {
+        loop {
+            window.key_pressed(KeyCode::KeyT).await;
+            mode.set(!mode.get());
+        }
+    };
+
     let close = window.close_requested();
     let esc_pressed = window.key_pressed(KeyCode::Escape);
-    (mouse, render, close, esc_pressed).race().await;
+    (mouse, render, toggle_mode, close, esc_pressed)
+        .race()
+        .await;
 
     Ok(())
 }

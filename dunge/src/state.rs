@@ -70,6 +70,8 @@ impl State {
 
         let (device, queue) = {
             let desc = wgpu::DeviceDescriptor {
+                required_features: wgpu::Features::POLYGON_MODE_LINE
+                    | wgpu::Features::POLYGON_MODE_POINT,
                 required_limits: wgpu::Limits {
                     ..if cfg!(target_family = "wasm") {
                         wgpu::Limits::downlevel_defaults()

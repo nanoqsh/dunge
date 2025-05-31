@@ -49,11 +49,30 @@ impl Topology {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
+pub enum Mode {
+    #[default]
+    Fill,
+    Line,
+    Point,
+}
+
+impl Mode {
+    fn wgpu(self) -> wgpu::PolygonMode {
+        match self {
+            Self::Fill => wgpu::PolygonMode::Fill,
+            Self::Line => wgpu::PolygonMode::Line,
+            Self::Point => wgpu::PolygonMode::Point,
+        }
+    }
+}
+
+#[derive(Clone, Default)]
 pub struct Config {
     pub format: Format,
     pub blend: Blend,
     pub topology: Topology,
+    pub mode: Mode,
     pub depth: bool,
 }
 
@@ -80,6 +99,7 @@ impl<I> Layer<I> {
             format,
             blend,
             topology,
+            mode,
             depth,
         } = conf;
 
@@ -105,6 +125,7 @@ impl<I> Layer<I> {
                 topology,
                 strip_index_format: topology.is_strip().then_some(wgpu::IndexFormat::Uint32),
                 cull_mode: Some(wgpu::Face::Back),
+                polygon_mode: mode.wgpu(),
                 ..Default::default()
             },
             depth_stencil: depth.then_some(wgpu::DepthStencilState {
