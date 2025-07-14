@@ -1070,14 +1070,14 @@ impl Statements {
     fn insert(&mut self, st: naga::Statement, exprs: &naga::Arena<naga::Expression>) {
         match self.0.last_mut() {
             Some(naga::Statement::Emit(top)) => {
-                if let naga::Statement::Emit(new) = &st {
-                    let top_range = top.index_range();
-                    let new_range = new.index_range();
-                    if top_range.end == new_range.start {
-                        let merged = top_range.start..new_range.end;
-                        *top = naga::Range::from_index_range(merged, exprs);
-                        return;
-                    }
+                if let naga::Statement::Emit(new) = &st
+                    && let top_range = top.index_range()
+                    && let new_range = new.index_range()
+                    && top_range.end == new_range.start
+                {
+                    let merged = top_range.start..new_range.end;
+                    *top = naga::Range::from_index_range(merged, exprs);
+                    return;
                 }
             }
             Some(st) if st.is_terminator() => return,

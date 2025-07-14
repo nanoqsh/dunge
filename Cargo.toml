@@ -18,7 +18,7 @@ authors = ["nanoqsh"]
 keywords = ["graphics", "wgpu"]
 documentation = "https://docs.rs/dunge"
 repository = "https://github.com/nanoqsh/dunge"
-rust-version = "1.86"
+rust-version = "1.88"
 
 [workspace.dependencies]
 # workspace

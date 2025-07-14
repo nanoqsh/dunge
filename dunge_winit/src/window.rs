@@ -151,14 +151,14 @@ impl Keys {
 
     #[inline]
     fn active_poll(&self, code: keyboard::KeyCode) -> Poll<()> {
-        if let Entry::Occupied(en) = self.0.borrow_mut().entry(code) {
-            if let State::Active = en.get() {
-                en.remove();
-                return Poll::Ready(());
-            }
+        if let Entry::Occupied(en) = self.0.borrow_mut().entry(code)
+            && let State::Active = en.get()
+        {
+            en.remove();
+            Poll::Ready(())
+        } else {
+            Poll::Pending
         }
-
-        Poll::Pending
     }
 }
 
@@ -184,14 +184,14 @@ impl Buttons {
 
     #[inline]
     fn active_poll(&self, button: event::MouseButton) -> Poll<()> {
-        if let Entry::Occupied(en) = self.0.borrow_mut().entry(button) {
-            if let State::Active = en.get() {
-                en.remove();
-                return Poll::Ready(());
-            }
+        if let Entry::Occupied(en) = self.0.borrow_mut().entry(button)
+            && let State::Active = en.get()
+        {
+            en.remove();
+            Poll::Ready(())
+        } else {
+            Poll::Pending
         }
-
-        Poll::Pending
     }
 }
 
