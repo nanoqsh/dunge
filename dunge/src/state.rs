@@ -189,6 +189,7 @@ impl Scheduler<'_> {
 
         let color_attachment = wgpu::RenderPassColorAttachment {
             view: target.colorv,
+            depth_slice: None,
             resolve_target: None,
             ops: wgpu::Operations {
                 load: opts

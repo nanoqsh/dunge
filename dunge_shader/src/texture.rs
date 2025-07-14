@@ -59,6 +59,7 @@ impl Sampled {
             offset: None,
             level: naga::SampleLevel::Auto,
             depth_ref: None,
+            clamp_to_edge: false,
         }
     }
 }
