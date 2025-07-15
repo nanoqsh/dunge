@@ -48,7 +48,7 @@ async fn run(control: Control) -> Result<(), Error> {
     };
 
     let mesh = {
-        const VERTS: [Vert; 3] = [
+        const DATA: MeshData<'static, Vert> = MeshData::from_verts(&[
             Vert {
                 pos: Vec2::new(-0.5, -0.5),
                 col: Vec3::new(1., 0., 0.),
@@ -61,17 +61,16 @@ async fn run(control: Control) -> Result<(), Error> {
                 pos: Vec2::new(0., 0.5),
                 col: Vec3::new(0., 0., 1.),
             },
-        ];
+        ]);
 
-        let verts = MeshData::from_verts(&VERTS);
-        cx.make_mesh(&verts)
+        cx.make_mesh(&DATA)
     };
 
     let window = control.make_window(&cx, Attributes::default()).await?;
     let layer = cx.make_layer(&shader, window.format());
 
     let fps = Cell::new(0);
-    let inc = || fps.set(fps.get() + 1);
+    let inc = || fps.update(|n| n + 1);
     let reset = || fps.take();
 
     let fps_counter = Duration::from_secs(1).interval().for_each(|_| {

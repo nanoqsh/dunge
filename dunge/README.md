@@ -17,31 +17,31 @@
 * Shader code described as a single rust function
 * High degree of typesafety with minimal runtime checks
 * Desktop and WASM support
-* Optional built-in window and event loop
+* Optional windowing extension
 
 ## Application area
 
-Currently the library is for personal use only. Although, over time I plan to stabilize API so that someone could use it for their tasks.
+Currently the library is for personal use only. Although, over time I plan to stabilize API so that someone could use it for their tasks
 
 ## Getting Started
 
-To start using the library add it to your project:
+To start using the library, add the `dunge` crate to your project's dependencies. If you need the windowing extension, add the `dunge_winit` crate only - it directly re-exports everything from the `dunge` crate, so there's no need to include both
 
 ```sh
-cargo add dunge -F winit
+cargo add dunge_winit
 ```
 
-Specify the `winit` feature if you need to create a windowed application. Although this is not necessary, for example, you can simply draw a scene directly to the image in RAM.
+You can also opt out of window system support and render the scene directly into an image in RAM
 
-So what if you want to draw something on the screen? Let's say you want to draw a simple colored triangle. Then start by creating a vertex type. To do this, derive the `Vertex` trait for your struct:
+So what if you want to draw something on the screen? Let's say you want to draw a simple colored triangle. Then start by creating a vertex type. To do this, derive the `Vertex` trait for your struct
 
 ```rust
-use dunge::{
+use dunge_winit::{
     glam::{Vec2, Vec3},
     prelude::*,
 };
 
-// Create a vertex type
+// create a vertex type
 #[repr(C)]
 #[derive(Vertex)]
 struct Vert {
@@ -50,125 +50,126 @@ struct Vert {
 }
 ```
 
-To render something on GPU you need to program a shader. In dunge you can do this via a normal (almost) rust function:
+To render something on GPU you need to program a shader. In dunge you can do this via a normal (almost) rust function
 
 ```rust
-// Create a shader program
+// create a shader program
 let triangle = |vert: sl::InVertex<Vert>| {
-    // Describe the vertex position:
-    // Take the vertex data as vec2 and expand it to vec4
+    // describe the vertex position:
+    // take the vertex data as vec2 and expand it to vec4
     let place = sl::vec4_concat(vert.pos, sl::vec2(0., 1.));
 
-    // Then describe the vertex color:
-    // First you need to pass the color from
+    // then describe the vertex color:
+    // first you need to pass the color from
     // vertex shader stage to fragment shader stage
     let fragment_col = sl::fragment(vert.col);
 
-    // Now create the final color by adding an alpha value
+    // now create the final color by adding an alpha value
     let color = sl::vec4_with(fragment_col, 1.);
 
-    // As a result, return a program that describes how to
+    // as a result, return a program that describes how to
     // compute the vertex position and the fragment color
     sl::Render { place, color }
 };
 ```
 
-As you can see from the snippet, the shader requires you to provide two things: the position of the vertex on the screen and the color of each fragment/pixel. The result is a `triangle` function, but if you ask for its type in the IDE you may notice that it is more complex than usual:
+As you can see from the snippet, the shader requires you to provide two things: the position of the vertex on the screen and the color of each fragment/pixel. The result is a `triangle` function, but if you ask for its type in the IDE you may notice that it is more complex than usual
 
 `impl Fn(InVertex<Vert>) -> Render<Ret<Compose<Ret<ReadVertex, Vec2<f32>>, Ret<NewVec<(f32, f32), Vs>, Vec2<f32>>>, Vec4<f32>>, Ret<Compose<Ret<Fragment<Ret<ReadVertex, Vec3<f32>>>, Vec3<f32>>, f32>, Vec4<f32>>>`
 
-That's because this function doesn't actually compute anything. It is needed only to describe the method for computing what we need on GPU. During shader instantiation, this function is used to compile an actual shader. However, this saves us from having to write the shader in wgsl and allows to typecheck at compile time. For example, dunge checks that a vertex type in a shader matches with a mesh used during rendering. It also checks types inside the shader itself.
+That's because this function doesn't actually compute anything. It is needed only to describe the method for computing what we need on GPU. During shader instantiation, this function is used to compile an actual shader. However, this saves us from having to write the shader in wgsl and allows to typecheck at compile time. For example, dunge checks that a vertex type in a shader matches with a mesh used during rendering. It also checks types inside the shader itself
 
-Now let's create the dunge context and other necessary things:
+Now let's create the dunge context and other necessary things
 
 ```rust
-// Create the dunge context
+// create the dunge context
 let cx = dunge::context().await?;
 
-// You can use the context to manage dunge objects.
-// Create a shader instance
+// you can use the context to manage dunge objects.
+// create a shader instance
 let shader = cx.make_shader(triangle);
 ```
 
-You may notice the context creation requires async. This is WGPU specific, so you will have to add your favorite async runtime in the project.
+You may notice that context creation requires async. Indeed, dunge is fundamentally **async**: scheduling GPU workloads, managing windows, handling real-time IO and working with timings - all of these are inherently asynchronous operations. This API also makes it easy to integrate existing ecosystem components into your project. For example, you can effortlessly add asynchronous network IO handling - whether you're targeting a desktop system or a browser runtime
 
-Also create a triangle mesh that we're going to draw:
-
-```rust
-// Create a mesh from vertices
-let mesh = {
-    let data = const {
-        MeshData::from_verts(&[
-            Vert { pos: Vec2::new(-0.5, -0.5), col: Vec3::new(1., 0., 0.) },
-            Vert { pos: Vec2::new( 0.5, -0.5), col: Vec3::new(0., 1., 0.) },
-            Vert { pos: Vec2::new( 0. ,  0.5), col: Vec3::new(0., 0., 1.) },
-        ])
-    };
-
-    cx.make_mesh(&data)
-};
-```
-
-Now to run the application we need two last things: handlers. One `Update` that is called every time before rendering and is used to control the render objects and manage the main [event loop](https://en.wikipedia.org/wiki/Event_loop):
+That's why dunge includes its own asynchronous runtime. If you're not using the `dunge_winit` windowing extension and simply want to work with the GPU, you can use the `dunge::block_on` function - it allows you to run an async routine on desktop platforms. For windowed applications, use `dunge_winit::winit::block_on` or `dunge_winit::winit::try_block_on`, which handle the event loop of a windowed app. A minimal usage example with error handling might look like this:
 
 ```rust
-// Describe the `Update` handler
-let upd = |ctrl: &Control| {
-    for key in ctrl.pressed_keys() {
-        // Exit by pressing escape key
-        if key.code == KeyCode::Escape {
-            return Then::Close;
-        }
+async fn run(control: Control) -> Result<(), Error> {
+    // full the application logic here
+}
+
+fn main() {
+    if let Err(e) = dunge_winit::winit::try_block_on(run) {
+        eprintln!("error: {e}");
     }
-
-    // Otherwise continue running
-    Then::Run
-};
+}
 ```
 
-We don't do anything special here, we just check is <kbd>Esc</kbd> pressed and end the main loop if necessary. Note that this handler is only needed to use a window with the `winit` feature.
-
-Second `Draw` is used directly to draw something in the final frame:
+Also create a triangle mesh that we're going to draw
 
 ```rust
-// Create a layer for drawing a mesh on it
-let layer = cx.make_layer(&shader, view.format());
+// create a mesh from vertices
+let mesh = {
+    const DATA: MeshData<'static, Vert> = MeshData::from_verts(&[
+        Vert { pos: Vec2::new(-0.5, -0.5), col: Vec3::new(1., 0., 0.) },
+        Vert { pos: Vec2::new(0.5, -0.5),  col: Vec3::new(0., 1., 0.) },
+        Vert { pos: Vec2::new(0., 0.5),    col: Vec3::new(0., 0., 1.) },
+    ]);
 
-// Describe the `Draw` handler
-let draw = move |mut frame: Frame<'_, '_>| {
-    use dunge::color::Rgb;
-
-    // Create a black RGB background
-    let bg = Rgb::from_bytes([0, 0, 0]);
-
-    frame
-        // Set a layer to draw on it
-        .set_layer(&layer, bg)
-        // The shader has no bindings, so call empty bind
-        .bind_empty()
-        // And finally draw the mesh
-        .draw(&mesh);
+    cx.make_mesh(&DATA)
 };
 ```
 
-> **Note:** To create a layer we need to know the window format. It would be possible to guess it, but it is better to get it directly from a view object. You can get the view from a special `make` helper, which will call a closure when the handler is initialized and passes the necessary data to it.
-
-Now you can join two steps in one hander and run the application and see the window:
+Now we need to create the application window and a layer - the surface onto which the final scene will be rendered. The layer must use the same color format as the window, so we'll query the required format directly. Additionally, the layer needs to know which shader to use for rendering, so we'll specify our shader as well
 
 ```rust
-let make_handler = |cx: &Context, view: &View| {
-    let upd = |ctrl: &Control| {/***/};
-    let draw = move |mut frame: Frame| {/***/};
-    dunge::update(upd, draw)
-};
-
-// Run the window with handlers
-dunge::window().run_local(cx, dunge::make(make_handler))?;
+let window = control.make_window(&cx, Attributes::default()).await?;
+let layer = cx.make_layer(&shader, window.format());
 ```
 
-<div align="center">
-    <img src="https://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/examples/window/s.png">
-</div>
+Now we can create the render loop. It's described in a simple and straightforward way: it's literally a loop where we wait for the window's redraw event, schedule the rendering of the layer with a triangle mesh, and present the final result
+
+```rust
+// specify a color of render background, it will be black
+let bg = layer.format().rgb_from_bytes([0; 3]);
+let render = async {
+    loop {
+        // wait for window is going to redraw
+        let redraw = window.redraw().await;
+
+        // schedule the render
+        cx.shed(|mut s| {
+            s.render(&redraw, bg).layer(&layer).draw(&mesh);
+        })
+        .await;
+
+        // present rendered image on the window
+        redraw.present();
+    }
+};
+
+// render is an infinite future, so we can await on it
+render.await;
+```
+
+That's it - you can now run the program and see a beautiful colorful triangle on the screen!
+
+However, theres one issue you may have noticed earlier: our render future runs indefinitely, which means there's currently no way to gracefully shut down the application. What happens if a user closes the window? Nothing - because we arent tracking that event Fortunately, this is easy to fix. To do so, we'll need to use one of the asynchronous utility libraries: `futures`, `futures-lite` or `futures-concurrency` - feel free to pick whichever you prefer. For this example, we'll use `futures-concurrency`, which provides a convenient `race` function that allows you to concurrently await multiple futures - exactly what we need in this case
+
+```rust
+use futures_concurrency::prelude::*;
+
+let render = async {/**/};
+
+// wait for close requested event
+let close = window.close_requested();
+
+// race two futures
+// since render will never finish, this race will finish
+// as soon as close requested event will be emitted
+(render, close).race().await;
+```
 
 You can see full code from this example [here](https://github.com/nanoqsh/dunge/tree/main/examples/window) and run it using:
 ```sh
