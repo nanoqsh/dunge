@@ -50,7 +50,7 @@ png = "0.17"
 proc-macro2 = "1.0"
 quote = "1.0"
 smol-hyper = "0.1"
-syn = { version = "2.0", default-features = false }
+syn = "2.0"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 wgpu = { version = "26.0", default-features = false }
