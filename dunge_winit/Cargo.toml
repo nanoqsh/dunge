@@ -1,5 +1,6 @@
 [package]
 name = "dunge_winit"
+description = "Window extension for the dunge library"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
