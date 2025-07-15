@@ -16,7 +16,7 @@ proc-macro = true
 [dependencies]
 quote.workspace = true
 proc-macro2.workspace = true
-syn = { workspace = true, features = ["parsing"] }
+syn = { workspace = true, features = ["parsing", "proc-macro"] }
 
 [dev-dependencies]
 helpers.workspace = true
