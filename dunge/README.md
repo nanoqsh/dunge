@@ -124,6 +124,7 @@ let mesh = {
 We need to create the application window and a layer - the surface onto which the final scene will be rendered. The layer must use the same color format as the window, so we'll query the required format directly. Additionally, the layer needs to know which shader to use for rendering, so we'll specify our shader as well
 
 ```rust
+// the control object is created from the `(try_)block_on` function
 let window = control.make_window(&cx, Attributes::default()).await?;
 let layer = cx.make_layer(&shader, window.format());
 ```
