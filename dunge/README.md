@@ -121,7 +121,7 @@ let mesh = {
 };
 ```
 
-Now we need to create the application window and a layer - the surface onto which the final scene will be rendered. The layer must use the same color format as the window, so we'll query the required format directly. Additionally, the layer needs to know which shader to use for rendering, so we'll specify our shader as well
+We need to create the application window and a layer - the surface onto which the final scene will be rendered. The layer must use the same color format as the window, so we'll query the required format directly. Additionally, the layer needs to know which shader to use for rendering, so we'll specify our shader as well
 
 ```rust
 let window = control.make_window(&cx, Attributes::default()).await?;
@@ -155,7 +155,9 @@ render.await;
 
 That's it - you can now run the program and see a beautiful colorful triangle on the screen!
 
-However, theres one issue you may have noticed earlier: our render future runs indefinitely, which means there's currently no way to gracefully shut down the application. What happens if a user closes the window? Nothing - because we arent tracking that event Fortunately, this is easy to fix. To do so, we'll need to use one of the asynchronous utility libraries: `futures`, `futures-lite` or `futures-concurrency` - feel free to pick whichever you prefer. For this example, we'll use `futures-concurrency`, which provides a convenient `race` function that allows you to concurrently await multiple futures - exactly what we need in this case
+However, there's one issue you may have noticed earlier: our render future runs indefinitely, which means there's currently no way to gracefully shut down the application. What happens if a user closes the window? Nothing - because we arent tracking that event
+
+Fortunately, this is easy to fix. We'll need to use one of the async utility libraries: `futures`, `futures-lite` or `futures-concurrency` - feel free to pick whichever you prefer. For this example, we'll use `futures-concurrency`, which provides a convenient [`race`](https://docs.rs/futures-concurrency/latest/futures_concurrency/future/trait.Race.html#tymethod.race) function that allows you to concurrently await multiple futures - exactly what we need:
 
 ```rust
 use futures_concurrency::prelude::*;
@@ -171,7 +173,7 @@ let close = window.close_requested();
 (render, close).race().await;
 ```
 
-You can see full code from this example [here](https://github.com/nanoqsh/dunge/tree/main/examples/window) and run it using:
+You can see full code (with additions) from this example [here](https://github.com/nanoqsh/dunge/tree/main/examples/window/src/main.rs) and run it using:
 ```sh
 cargo run -p window
 ```
