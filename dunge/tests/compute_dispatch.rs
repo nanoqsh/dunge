@@ -40,7 +40,7 @@ fn compute() -> Result<(), Error> {
     );
 
     let read = dunge::block_on(async {
-        cx.shed(|mut s| {
+        cx.shed(|s| {
             s.compute()
                 .workload(&workload)
                 .set(&set)

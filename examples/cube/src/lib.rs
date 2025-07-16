@@ -159,7 +159,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
                 &layer_wireframe
             };
 
-            cx.shed(|mut s| {
+            cx.shed(|s| {
                 s.render(&redraw, bg).layer(layer).set(&set).draw(&mesh);
             })
             .await;

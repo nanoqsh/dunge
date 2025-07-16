@@ -161,7 +161,7 @@ impl Context {
     #[inline]
     pub async fn shed<F>(&self, f: F)
     where
-        F: FnOnce(Scheduler<'_>),
+        F: FnOnce(&mut Scheduler),
     {
         self.0.run(f).await;
     }

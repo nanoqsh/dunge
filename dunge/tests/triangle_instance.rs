@@ -71,7 +71,7 @@ fn render() -> Result<(), Error> {
 
     let read = dunge::block_on(async {
         let bg = Rgb::from_bytes([0; 3]);
-        cx.shed(|mut s| {
+        cx.shed(|s| {
             s.render(&view, bg)
                 .layer(&layer)
                 .instance(&transform)

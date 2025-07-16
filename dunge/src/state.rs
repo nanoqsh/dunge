@@ -129,15 +129,17 @@ impl State {
     #[inline]
     pub(crate) async fn run<F>(&self, f: F)
     where
-        F: FnOnce(Scheduler<'_>),
+        F: FnOnce(&mut Scheduler),
     {
-        let mut encoder = {
+        let encoder = {
             let desc = wgpu::CommandEncoderDescriptor::default();
             self.device.create_command_encoder(&desc)
         };
 
-        f(Scheduler(&mut encoder));
+        let mut shed = Scheduler(encoder);
+        f(&mut shed);
 
+        let Scheduler(encoder) = shed;
         self.queue.submit([encoder.finish()]);
 
         let ticket = Arc::new(const { Ticket::new() });
@@ -164,9 +166,9 @@ impl State {
     }
 }
 
-pub struct Scheduler<'shed>(&'shed mut wgpu::CommandEncoder);
+pub struct Scheduler(wgpu::CommandEncoder);
 
-impl Scheduler<'_> {
+impl Scheduler {
     #[inline]
     pub fn compute(&mut self) -> Compute<'_> {
         let desc = wgpu::ComputePassDescriptor {
@@ -233,7 +235,7 @@ impl Scheduler<'_> {
         S: Source,
         D: Destination,
     {
-        if let Err(e) = buffer::try_copy(from, to, self.0) {
+        if let Err(e) = buffer::try_copy(from, to, &mut self.0) {
             panic!("{e}");
         }
     }
@@ -244,7 +246,7 @@ impl Scheduler<'_> {
         S: Source,
         D: Destination,
     {
-        buffer::try_copy(from, to, self.0)
+        buffer::try_copy(from, to, &mut self.0)
     }
 }
 

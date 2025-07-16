@@ -84,7 +84,7 @@ async fn run(control: Control) -> Result<(), Error> {
             let redraw = window.redraw().await;
             update_scene(redraw.delta_time());
 
-            cx.shed(|mut s| {
+            cx.shed(|s| {
                 s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);
             })
             .await;

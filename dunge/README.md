@@ -140,7 +140,7 @@ let render = async {
         let redraw = window.redraw().await;
 
         // schedule the render
-        cx.shed(|mut s| {
+        cx.shed(|s| {
             s.render(&redraw, bg).layer(&layer).draw(&mesh);
         })
         .await;

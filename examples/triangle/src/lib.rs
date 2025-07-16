@@ -53,7 +53,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         loop {
             let redraw = window.redraw().await;
             update_scene(redraw.delta_time());
-            cx.shed(|mut s| {
+            cx.shed(|s| {
                 s.render(&redraw, bg).layer(&layer).set(&set).draw_points(3);
             })
             .await;

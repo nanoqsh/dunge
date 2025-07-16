@@ -132,7 +132,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             let redraw = window.redraw().await;
             update_scene(redraw.delta_time());
 
-            cx.shed(|mut s| {
+            cx.shed(|s| {
                 // draw the frame to the render buffer
                 s.render(&*render_buffer.borrow(), bg)
                     .layer(&triangle_layer)
