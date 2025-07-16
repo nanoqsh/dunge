@@ -43,6 +43,7 @@ where
     type Input = RenderInput<(), ()>;
     type Set = ();
 
+    #[inline]
     fn into_module(self) -> Module {
         let cx = Context::new();
         eval::make_render(cx, self)
@@ -66,6 +67,7 @@ macro_rules! impl_into_render_module {
             type Input = RenderInput<A::Vertex, A::Instance>;
             type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
 
+            #[inline]
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
                 let a = A::from_render(&mut cx);
@@ -101,6 +103,7 @@ macro_rules! impl_into_compute_module {
             type Input = ComputeInput;
             type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
 
+            #[inline]
             fn into_module(self) -> Module {
                 let mut cx = Context::new();
                 $(

@@ -1,7 +1,7 @@
 <div align="center">
     <h1>dunge</h1>
     <p>
-        Simple and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">wgpu</a>
+        Typesafe and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">wgpu</a>
     </p>
     <p>
         <a href="https://crates.io/crates/dunge"><img src="https://img.shields.io/crates/v/dunge.svg"></img></a>
@@ -12,9 +12,9 @@
 
 ## Features
 
-* Simple and flexible API
+* Typesafe and flexible API
 * Customizable vertices, groups and instances
-* Shader code described as a single rust function
+* Render and compute shaders described as a single rust function
 * High degree of typesafety with minimal runtime checks
 * Desktop and WASM support
 * Optional windowing extension

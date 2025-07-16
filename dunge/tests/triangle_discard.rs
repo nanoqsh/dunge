@@ -10,7 +10,7 @@ fn render() -> Result<(), Error> {
             color::Rgb,
             group::BoundTexture,
             prelude::*,
-            sl::{self, Groups, InVertex, Render},
+            sl::{self, Groups, PassVertex, Render},
         },
         glam::Vec2,
         helpers::image::Image,
@@ -30,7 +30,7 @@ fn render() -> Result<(), Error> {
         sam: Sampler,
     }
 
-    let triangle = |vert: InVertex<Vert>, Groups(map): Groups<Map>| {
+    let triangle = |vert: PassVertex<Vert>, Groups(map): Groups<Map>| {
         let place = sl::vec4_concat(vert.pos, Vec2::new(0., 1.));
         let color = {
             let samp = sl::thunk(sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)));

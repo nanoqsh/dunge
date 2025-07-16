@@ -10,7 +10,7 @@ fn render() -> Result<(), Error> {
             color::Rgb,
             instance::Row,
             prelude::*,
-            sl::{self, InInstance, Index, Render},
+            sl::{self, Index, PassInstance, Render},
         },
         glam::{Vec2, Vec3},
         helpers::image::Image,
@@ -20,7 +20,7 @@ fn render() -> Result<(), Error> {
     #[derive(Instance)]
     struct Transform(Row<Vec2>, Row<Vec3>);
 
-    let triangle = |t: InInstance<Transform>, Index(index): Index| {
+    let triangle = |t: PassInstance<Transform>, Index(index): Index| {
         let triangle_size = 0.4;
         let third = const { consts::TAU / 3. };
         let r_offset = const { -consts::TAU / 4. };

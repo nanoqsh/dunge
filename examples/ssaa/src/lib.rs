@@ -9,7 +9,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             buffer::{Filter, Format, Sampler, Size},
             glam::{Vec2, Vec4},
             group::BoundTexture,
-            sl::{Groups, InVertex, Index, Render},
+            sl::{Groups, Index, PassVertex, Render},
             storage::Uniform,
             winit::Canvas,
         },
@@ -42,7 +42,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         offset: Uniform<Vec2>,
     }
 
-    let screen = |vert: InVertex<Screen>, Groups(map): Groups<Map>| Render {
+    let screen = |vert: PassVertex<Screen>, Groups(map): Groups<Map>| Render {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: {
             let s = sl::thunk(sl::fragment(vert.1));

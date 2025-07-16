@@ -192,11 +192,11 @@ where
     }
 }
 
-pub struct InVertex<V>(V::Projection)
+pub struct PassVertex<V>(V::Projection)
 where
     V: Vertex;
 
-impl<V> ops::Deref for InVertex<V>
+impl<V> ops::Deref for PassVertex<V>
 where
     V: Vertex,
 {
@@ -207,7 +207,7 @@ where
     }
 }
 
-impl<V, O> FromRender<O> for InVertex<V>
+impl<V, O> FromRender<O> for PassVertex<V>
 where
     V: Vertex,
 {
@@ -220,11 +220,11 @@ where
     }
 }
 
-pub struct InInstance<I>(I::Projection)
+pub struct PassInstance<I>(I::Projection)
 where
     I: Instance;
 
-impl<I> ops::Deref for InInstance<I>
+impl<I> ops::Deref for PassInstance<I>
 where
     I: Instance,
 {
@@ -235,7 +235,7 @@ where
     }
 }
 
-impl<I, O> FromRender<O> for InInstance<I>
+impl<I, O> FromRender<O> for PassInstance<I>
 where
     I: Instance,
 {
@@ -253,12 +253,12 @@ where
     }
 }
 
-pub struct In<V, I>(pub V::Projection, pub I::Projection)
+pub struct Pass<V, I>(pub V::Projection, pub I::Projection)
 where
     V: Vertex,
     I: Instance;
 
-impl<V, I, O> FromRender<O> for In<V, I>
+impl<V, I, O> FromRender<O> for Pass<V, I>
 where
     V: Vertex,
     I: Instance,
@@ -267,8 +267,8 @@ where
     type Instance = I;
 
     fn from_render(cx: &mut Context) -> Self {
-        let InVertex(vert) = <InVertex<V> as FromRender<O>>::from_render(cx);
-        let InInstance(inst) = <InInstance<I> as FromRender<O>>::from_render(cx);
+        let PassVertex(vert) = <PassVertex<V> as FromRender<O>>::from_render(cx);
+        let PassInstance(inst) = <PassInstance<I> as FromRender<O>>::from_render(cx);
         Self(vert, inst)
     }
 }

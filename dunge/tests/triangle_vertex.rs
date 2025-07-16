@@ -9,7 +9,7 @@ fn render() -> Result<(), Error> {
             buffer::{Format, Size},
             color::Rgb,
             prelude::*,
-            sl::{self, InVertex, Render},
+            sl::{self, PassVertex, Render},
         },
         glam::{Vec2, Vec3},
         helpers::image::Image,
@@ -20,7 +20,7 @@ fn render() -> Result<(), Error> {
     #[derive(Vertex)]
     struct Vert(Vec2, Vec3);
 
-    let triangle = |vert: InVertex<Vert>| Render {
+    let triangle = |vert: PassVertex<Vert>| Render {
         place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
         color: sl::vec4_with(sl::fragment(vert.1), 1.),
     };

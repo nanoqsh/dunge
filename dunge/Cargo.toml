@@ -1,6 +1,6 @@
 [package]
 name = "dunge"
-description = "Simple and portable 3d render library"
+description = "Typesafe and portable 3d render library"
 readme = "README.md"
 version.workspace = true
 edition.workspace = true

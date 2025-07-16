@@ -7,7 +7,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         dunge_winit::{
             glam::{Mat4, Quat, Vec3},
             layer::{Config, Mode},
-            sl::{Groups, InVertex, Render},
+            sl::{Groups, PassVertex, Render},
             storage::Uniform,
             winit::Canvas,
         },
@@ -23,7 +23,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         col: Vec3,
     }
 
-    let cube = |vert: InVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
+    let cube = |vert: PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
         place: m * sl::vec4_with(vert.pos, 1.),
         color: sl::vec4_with(sl::fragment(vert.col), 1.),
     };

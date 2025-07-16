@@ -43,6 +43,123 @@ impl Context {
         &self.0
     }
 
+    /// Creates a shader program from a function.
+    ///
+    /// The provided function defines the GPU computation, which is then compiled into a shader
+    /// for the current backend. There are two types of shaders: render shaders and compute shaders.
+    ///
+    /// No actual computation is performed inside the function itself (aside from compile-time
+    /// from the shader's perspective). Instead, the computation is described declaratively
+    /// using functions from the [`sl`](crate::sl) module. For example, if you need to compute
+    /// [`sin`](crate::sl::sin), use the corresponding function `let y = sl::sin(x);`. This creates
+    /// a lazily evaluated sin expression, which will be compiled later during creation of a shader
+    /// object. For more details, see the [`sl`](crate::sl) module.
+    ///
+    /// This function holds static type information of the shader:
+    /// * Its input types - vertex and instance types, relevant for render shaders.
+    /// * Its bind groups - relevant for all shader types.
+    ///
+    /// # Render shader
+    ///
+    /// Render shaders can accept the following input types:
+    ///
+    /// | Type                                      | Semantics in shader          | Must lead first |
+    /// | :---------------------------------------- | :--------------------------- | :-------------- |
+    /// | [`PassVertex`](crate::sl::PassVertex)     | Passes a vertex              | Yes             |
+    /// | [`PassInstance`](crate::sl::PassInstance) | Passes an instance           | Yes             |
+    /// | [`Pass`](crate::sl::Pass)                 | Passes a vertex and instance | Yes             |
+    /// | [`Index`](crate::sl::Index)               | Passes a vertex index        | No              |
+    /// | [`Groups`](crate::sl::Groups)             | Passes group data            | No              |
+    ///
+    /// The return type of a render shader must be the [`Render`](crate::sl::Render) struct.
+    /// This struct requires two expressions to be set: the final vertex position in the `place` field
+    /// and the final fragment (pixel) color in the `color` field.
+    /// The vertex position is specified in
+    /// [homogeneous coordinates](https://en.wikipedia.org/wiki/Homogeneous_coordinates), so the type
+    /// of the `place` expression must be [`Vec4<f32>`](crate::types::Vec4). The fragment color is
+    /// specified in RGBA format, so the type of the `color` expression must also be
+    /// [`Vec4<f32>`](crate::types::Vec4).
+    ///
+    /// A render shader consists of two stages: the vertex stage and the fragment stage,  
+    /// but both are described together as a single function. To pass output data from the
+    /// vertex stage to the fragment stage, use the [`fragment`](crate::sl::fragment) function.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dunge::{
+    ///     prelude::*,
+    ///     glam::Mat4,
+    ///     sl::{Groups, PassVertex, Render},
+    ///     storage::Uniform,
+    /// };
+    ///
+    /// type Vec4f = [f32; 4];
+    ///
+    /// // describe a vertex type
+    /// #[repr(C)]
+    /// #[derive(Vertex)]
+    /// struct Vert { pos: Vec4f, col: Vec4f }
+    ///
+    /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
+    /// // pass the vertex and a bound 4x4 matrix in the shader
+    /// let program = |vert: PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
+    ///     // multiply the matrix and the vertex `pos` field  
+    ///     place: m * vert.pos,
+    ///
+    ///     // pass `col` from the vertex to fragment stage and return as a final pixel color
+    ///     color: sl::fragment(vert.col),
+    /// };
+    ///
+    /// let cx = dunge::context().await?;
+    /// let shader = cx.make_shader(program);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Compute shader
+    ///
+    /// Compute shaders can accept the following input types:
+    ///
+    /// | Type                                      | Semantics in shader         |
+    /// | :---------------------------------------- | :-------------------------- |
+    /// | [`Invocation`](crate::sl::Invocation)     | Passes an invocation vector |
+    /// | [`Groups`](crate::sl::Groups)             | Passes group data           |
+    ///
+    /// The return type of a compute shader must be the [`Compute`](crate::sl::Compute) struct.
+    /// This struct requires two things: an expression in the `compute` field, which will be executed
+    /// on each shader invocation, and the workgroup size specified in the `workgroup_size` field.
+    /// The `compute` expression can have any type, but its value is not used in the final result.
+    /// Instead, the expression is expected to produce side effects - for example,
+    /// writing output data to a buffer that can be [read](Context::read) later.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use dunge::{
+    ///     prelude::*,
+    ///     sl::{Compute, Groups, Invocation},
+    ///     storage::RwStorage,
+    /// };
+    ///
+    /// // describe an input/output storage array
+    /// type Array = RwStorage<[u32; 64]>;
+    ///
+    /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
+    /// // pass an invocation vector and a bound storage in the shader
+    /// let program = |Invocation(v): Invocation, Groups(a): Groups<Array>| Compute {
+    ///     // read values from the array and rewrite in back
+    ///     compute: a.store(v.x(), v.x()),
+    ///
+    ///     // set the workgroup size
+    ///     workgroup_size: [16, 1, 1],
+    /// };
+    ///
+    /// let cx = dunge::context().await?;
+    /// let shader = cx.make_shader(program);
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline]
     pub fn make_shader<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
     where

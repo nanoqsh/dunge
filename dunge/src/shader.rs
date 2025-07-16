@@ -20,6 +20,7 @@ pub struct Shader<I, S> {
 }
 
 impl<I, S> Shader<I, S> {
+    #[inline]
     pub(crate) fn new<M, A, K>(state: &State, module: M) -> Self
     where
         M: IntoModule<A, K, Input = I, Set = S>,
@@ -36,10 +37,12 @@ impl<I, S> Shader<I, S> {
     /// Debug generated wgsl shader.
     ///
     /// Is empty when the `wgsl` feature is disabled.
+    #[inline]
     pub fn debug_wgsl(&self) -> &str {
         &self.wgsl
     }
 
+    #[inline]
     pub(crate) fn data(&self) -> &ShaderData {
         &self.data
     }
