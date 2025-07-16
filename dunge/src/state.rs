@@ -143,21 +143,13 @@ impl State {
 
         let ticket = Arc::new(const { Ticket::new() });
 
-        #[cfg(target_family = "wasm")]
-        {
-            ticket.done();
-        }
-
-        #[cfg(not(target_family = "wasm"))]
-        {
-            // register the callback before starting the work,
-            // otherwise the work might complete immediately
-            // and the callback would never be called.
-            self.queue.on_submitted_work_done({
-                let ticket = ticket.clone();
-                move || ticket.done()
-            });
-        }
+        // register the callback before starting the work,
+        // otherwise the work might complete immediately
+        // and the callback would never be called.
+        self.queue.on_submitted_work_done({
+            let ticket = ticket.clone();
+            move || ticket.done()
+        });
 
         self.work();
         ticket.wait().await;
