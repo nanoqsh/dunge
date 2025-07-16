@@ -161,7 +161,6 @@ impl State {
         }
 
         self.work();
-
         ticket.wait().await;
     }
 }

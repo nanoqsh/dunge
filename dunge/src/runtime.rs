@@ -72,6 +72,7 @@ impl Ticket {
 ///
 /// ```
 /// # #[cfg(not(target_family = "wasm"))]
+/// # {
 /// let out = dunge::block_on(async {
 ///     let x = async { 1 }.await;
 ///     let y = async { 2 }.await;
@@ -79,6 +80,7 @@ impl Ticket {
 /// });
 ///
 /// assert_eq!(out, 3);
+/// # }
 /// ```
 ///
 #[cfg(not(target_family = "wasm"))]

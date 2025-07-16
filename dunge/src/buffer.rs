@@ -437,7 +437,7 @@ impl<D, U> Texture<D, U> {
 
 type BufferCopyTo = <BufferNoUsages as Use<dyn u::CopyTo>>::Out;
 
-pub type Texture2d<U> = Texture<D2, U>;
+pub type Texture2d<U = DynamicTextureUsages> = Texture<D2, U>;
 
 impl<U> Texture2d<U> {
     #[inline]
@@ -708,21 +708,27 @@ impl<U> Buffer<U> {
     }
 
     #[inline]
-    pub(crate) async fn read(&mut self, state: &State) -> Result<Read<'_>, ReadFailed>
+    pub(crate) fn read(
+        &mut self,
+        state: &State,
+    ) -> impl Future<Output = Result<Read<'_>, ReadFailed>>
     where
         U: u::Read,
     {
         self.usage.read();
-        read_from_buffer(&mut self.buf, state).await
+        read_from_buffer(&mut self.buf, state)
     }
 
     #[inline]
-    pub(crate) async fn write(&mut self, state: &State) -> Result<Write<'_>, WriteFailed>
+    pub(crate) fn write(
+        &mut self,
+        state: &State,
+    ) -> impl Future<Output = Result<Write<'_>, WriteFailed>>
     where
         U: u::Write,
     {
         self.usage.write();
-        write_to_buffer(&mut self.buf, state).await
+        write_to_buffer(&mut self.buf, state)
     }
 }
 

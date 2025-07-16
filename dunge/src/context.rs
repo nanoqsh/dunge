@@ -146,6 +146,68 @@ impl Context {
         buf.write(&self.0).await
     }
 
+    /// Runs a closure that schedules GPU work.
+    ///
+    /// The closure receives a [scheduler](Scheduler) object capable of scheduling various GPU operations,
+    /// such as rendering, compute, or data copying. All scheduled operations will begin executing
+    /// as soon as possible. This function is asynchronous and awaiting it will wait until
+    /// all scheduled operations have completed.
+    ///
+    /// # Examples
+    ///
+    /// Typical window render loop:
+    ///
+    /// ```
+    /// # struct Window;
+    /// # impl Window {
+    /// #     async fn redraw(&self) -> Redraw { Redraw }
+    /// # }
+    /// #
+    /// # struct Redraw;
+    /// # impl Redraw {
+    /// #     fn present(&self) {}
+    /// # }
+    /// # impl dunge::AsTarget for Redraw {
+    /// #     fn as_target(&self) -> dunge::Target<'_> { unreachable!() }
+    /// # }
+    /// #
+    /// # async fn f<V>(
+    /// #    window: Window,
+    /// #    layer: dunge::layer::Layer<dunge::render::Input<V, (), ()>>,
+    /// #    mesh: dunge::mesh::Mesh<V>,
+    /// # ) -> Result<(), dunge::FailedMakeContext> {
+    /// use dunge::Options;
+    ///
+    /// let cx = dunge::context().await?;
+    /// # #[cfg(false)]
+    /// # {
+    /// let (window, layer, mesh) = ..
+    /// # ;
+    /// # }
+    ///
+    /// loop {
+    ///     let redraw = window.redraw().await;
+    ///
+    ///     cx.shed(|s| {
+    ///         let opts = Options::default();
+    ///         s.render(&redraw, opts).layer(&layer).draw(&mesh);
+    ///     })
+    ///     .await;
+    ///
+    ///     redraw.present();
+    /// }
+    /// # }
+    /// ```
+    ///
+    /// See the [`render`](Scheduler::render) function for more details.
+    #[inline]
+    pub async fn shed<F>(&self, f: F)
+    where
+        F: FnOnce(&mut Scheduler),
+    {
+        self.0.run(f).await;
+    }
+
     #[inline]
     pub fn update_group<S, G>(
         &self,
@@ -157,13 +219,11 @@ impl Context {
     {
         set::update(&self.0, set, handler, group);
     }
+}
 
-    #[inline]
-    pub async fn shed<F>(&self, f: F)
-    where
-        F: FnOnce(&mut Scheduler),
-    {
-        self.0.run(f).await;
+impl fmt::Debug for Context {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Context").field(&"..").finish()
     }
 }
 
