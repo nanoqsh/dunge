@@ -22,6 +22,7 @@ impl<'data, V> MeshData<'data, V> {
     /// Creates a [mesh data](crate::mesh::MeshData) from given vertices and indices.
     ///
     /// # Errors
+    ///
     /// Returns an [error](crate::mesh::Error) if the passed data is incorrect.
     pub fn new(verts: &'data [V], indxs: &'data [Face]) -> Result<Self, Error> {
         let len: u32 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
@@ -36,6 +37,7 @@ impl<'data, V> MeshData<'data, V> {
     /// Creates a [mesh data](crate::mesh::MeshData) from given quadrilaterals.
     ///
     /// # Errors
+    ///
     /// Returns an [error](crate::mesh::TooManyVertices) if too many vertices are passed.
     pub fn from_quads(verts: &'data [[V; 4]]) -> Result<Self, TooManyVertices> {
         let verts = verts.as_flattened();

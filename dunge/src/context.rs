@@ -20,17 +20,84 @@ use {
         workload::Workload,
     },
     dunge_shader::group::Group,
-    std::{error, fmt, sync::Arc},
+    std::{error, fmt, pin::Pin, sync::Arc},
 };
 
-/// Creates the context instance.
+/// Creates the [context](Context) instance.
+///
+/// This function returns an async builder, which must be `.await`ed to create
+/// the context object. To do this, use the [`block_on`](crate::block_on) function
+/// on desktop platform.
+///
+/// # On desktop example
+///
+/// ```
+/// # fn f() -> Result<(), dunge::FailedMakeContext> {
+/// let cx = dunge::block_on(dunge::context())?;
+/// /* use the context */
+/// # Ok(())
+/// # }
+/// ```
+///
+/// If you're using the library in windowed mode via the
+/// [`dunge_winit`](https://docs.rs/dunge_winit/latest/dunge_winit/index.html) crate, use
+/// [`dunge_winit::winit::block_on`](https://docs.rs/dunge_winit/latest/dunge_winit/winit/fn.block_on.html) or
+/// [`dunge_winit::winit::try_block_on`](https://docs.rs/dunge_winit/latest/dunge_winit/winit/fn.try_block_on.html)
+/// instead.
+///
+/// # On wasm example
+///
+/// On wasm platform use the browser's runtime directly - no blocking
+/// functions are needed in this case.
+///
+/// ```
+/// # #[cfg(false)]
+/// #[wasm_bindgen(start)]
+/// async fn start() {
+///     let cx = match dunge::context().await {
+///         Ok(cx) => cx,
+///         Err(e) => panic!("failed to create dunge context: {e}"),
+///     };
+///
+///     /* use the context */
+/// }
+/// ```
 ///
 /// # Errors
-/// Returns an error when the context could not be created.
+///
+/// The builder returns an error when the context could not be created.
 /// See [`FailedMakeContext`] for details.
-pub async fn context() -> Result<Context, FailedMakeContext> {
-    let state = State::new().await?;
-    Ok(Context(Arc::new(state)))
+pub fn context() -> Builder {
+    Builder(wgpu::Features::empty())
+}
+
+/// The [context](Context) builder.
+pub struct Builder(wgpu::Features);
+
+impl Builder {
+    /// Enables line polygon mode for current backend.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn enable_polygon_mode_line(self) -> Self {
+        Self(self.0 | wgpu::Features::POLYGON_MODE_LINE)
+    }
+
+    /// Enables point polygon mode for current backend.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn enable_polygon_mode_point(self) -> Self {
+        Self(self.0 | wgpu::Features::POLYGON_MODE_POINT)
+    }
+}
+
+impl IntoFuture for Builder {
+    type Output = Result<Context, FailedMakeContext>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Self::Output>>>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(async move {
+            let state = State::new(self.0).await?;
+            Ok(Context(Arc::new(state)))
+        })
+    }
 }
 
 /// The main dunge context.

@@ -53,7 +53,9 @@ impl Topology {
 pub enum Mode {
     #[default]
     Fill,
+    #[cfg(not(target_family = "wasm"))]
     Line,
+    #[cfg(not(target_family = "wasm"))]
     Point,
 }
 
@@ -61,7 +63,9 @@ impl Mode {
     fn wgpu(self) -> wgpu::PolygonMode {
         match self {
             Self::Fill => wgpu::PolygonMode::Fill,
+            #[cfg(not(target_family = "wasm"))]
             Self::Line => wgpu::PolygonMode::Line,
+            #[cfg(not(target_family = "wasm"))]
             Self::Point => wgpu::PolygonMode::Point,
         }
     }

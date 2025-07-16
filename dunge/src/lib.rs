@@ -31,7 +31,7 @@ pub mod prelude {
 
 pub use {
     crate::{
-        context::{Context, FailedMakeContext, context},
+        context::{Builder, Context, FailedMakeContext, context},
         shader::{ComputeShader, RenderShader, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
     },
