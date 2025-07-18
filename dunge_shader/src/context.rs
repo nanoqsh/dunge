@@ -1,15 +1,12 @@
-use {
-    crate::{
-        define::Define,
-        eval::{GlobalOut, ReadIndex, ReadInvocation, Stage},
-        group::{self, Group},
-        instance::{self, Instance},
-        module::{ComputeKind, RenderKind},
-        op::Ret,
-        types::{self, MemberData, ValueType, VectorType},
-        vertex::{self, Vertex},
-    },
-    std::ops,
+use crate::{
+    define::Define,
+    eval::{GlobalOut, ReadIndex, ReadInvocation, Stage},
+    group::{self, Group},
+    instance::{self, Instance},
+    module::{ComputeKind, RenderKind},
+    op::Ret,
+    types::{self, MemberData, ValueType, VectorType},
+    vertex::{self, Vertex},
 };
 
 #[derive(Clone, Copy)]
@@ -192,20 +189,9 @@ where
     }
 }
 
-pub struct PassVertex<V>(V::Projection)
+pub struct PassVertex<V>(pub V::Projection)
 where
     V: Vertex;
-
-impl<V> ops::Deref for PassVertex<V>
-where
-    V: Vertex,
-{
-    type Target = V::Projection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl<V, O> FromRender<O> for PassVertex<V>
 where
@@ -220,20 +206,9 @@ where
     }
 }
 
-pub struct PassInstance<I>(I::Projection)
+pub struct PassInstance<I>(pub I::Projection)
 where
     I: Instance;
-
-impl<I> ops::Deref for PassInstance<I>
-where
-    I: Instance,
-{
-    type Target = I::Projection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl<I, O> FromRender<O> for PassInstance<I>
 where
@@ -253,7 +228,7 @@ where
     }
 }
 
-pub struct Pass<V, I>(V::Projection, I::Projection)
+pub struct Pass<V, I>(pub V::Projection, pub I::Projection)
 where
     V: Vertex,
     I: Instance;

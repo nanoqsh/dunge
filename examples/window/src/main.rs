@@ -13,6 +13,7 @@ async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
             glam::{Vec2, Vec3},
+            sl::{Groups, PassVertex, Render},
             storage::Uniform,
         },
         futures_concurrency::prelude::*,
@@ -28,11 +29,11 @@ async fn run(control: Control) -> Result<(), Error> {
         col: Vec3,
     }
 
-    let triangle = |vert: sl::PassVertex<Vert>, sl::Groups(u): sl::Groups<Uniform<f32>>| {
-        let place = sl::vec4_concat(vert.pos, sl::vec2(0., 1.));
-        let fragment_col = sl::fragment(vert.col);
+    let triangle = |PassVertex(v): PassVertex<Vert>, Groups(u): Groups<Uniform<f32>>| {
+        let place = sl::vec4_concat(v.pos, sl::vec2(0., 1.));
+        let fragment_col = sl::fragment(v.col);
         let color = sl::vec4_with(fragment_col * u, 1.);
-        sl::Render { place, color }
+        Render { place, color }
     };
 
     let cx = dunge::context().await?;

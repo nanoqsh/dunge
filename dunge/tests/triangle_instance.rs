@@ -20,7 +20,7 @@ fn render() -> Result<(), Error> {
     #[derive(Instance)]
     struct Transform(Row<Vec2>, Row<Vec3>);
 
-    let triangle = |t: PassInstance<Transform>, Index(index): Index| {
+    let triangle = |PassInstance(t): PassInstance<Transform>, Index(index): Index| {
         let triangle_size = 0.4;
         let third = const { consts::TAU / 3. };
         let r_offset = const { -consts::TAU / 4. };

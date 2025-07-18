@@ -170,12 +170,12 @@ impl Context {
     ///
     /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
     /// // pass the vertex and a bound 4x4 matrix in the shader
-    /// let program = |vert: PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
+    /// let program = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
     ///     // multiply the matrix and the vertex `pos` field  
-    ///     place: m * vert.pos,
+    ///     place: m * v.pos,
     ///
     ///     // pass `col` from the vertex to fragment stage and return as a final pixel color
-    ///     color: sl::fragment(vert.col),
+    ///     color: sl::fragment(v.col),
     /// };
     ///
     /// let cx = dunge::context().await?;
@@ -254,27 +254,24 @@ impl Context {
     ///     storage::Uniform,
     /// };
     ///
-    /// #[repr(C)]
-    /// #[derive(Vertex)]
-    /// struct Vert([f32; 4]);
+    /// type Vec4f = [f32; 4];
     ///
     /// # async fn f(
     /// #     target: dunge::buffer::Texture2d,
     /// #     opts: dunge::Options,
-    /// #     layer: dunge::layer::Layer<dunge::render::Input<Vert, (), (sl::Ret<sl::Global, dunge::types::Vec4<f32>>,)>>,
-    /// #     mesh: dunge::mesh::Mesh<Vert>,
+    /// #     layer: dunge::layer::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Vec4<f32>>,)>>,
+    /// #     mesh: dunge::mesh::Mesh<Vec4f>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
-    /// let cx = dunge::context().await?;
-    ///
     /// // pass the color value via a uniform
-    /// let filler = |v: PassVertex<Vert>, Groups(color): Groups<Uniform<Vec4>>| Render {
+    /// let filler = |PassVertex(v): PassVertex<Vec4f>, Groups(color): Groups<Uniform<Vec4>>| Render {
     ///     // set vertex coordinates
-    ///     place: v.0,
+    ///     place: v,
     ///     // pass color from the vertex stage to the fragment stage
     ///     color: sl::fragment(color),
     /// };
     ///
-    /// // create the shader
+    /// // create the context and shader
+    /// let cx = dunge::context().await?;
     /// let shader = cx.make_shader(filler);
     ///
     /// // create a color uniform in RGBA format - for example, red.

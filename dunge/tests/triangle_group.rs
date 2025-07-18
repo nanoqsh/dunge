@@ -30,9 +30,9 @@ fn render() -> Result<(), Error> {
         sam: Sampler,
     }
 
-    let triangle = |vert: PassVertex<Vert>, Groups(map): Groups<Map>| Render {
-        place: sl::vec4_concat(vert.pos, Vec2::new(0., 1.)),
-        color: sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)),
+    let triangle = |PassVertex(v): PassVertex<Vert>, Groups(map): Groups<Map>| Render {
+        place: sl::vec4_concat(v.pos, Vec2::new(0., 1.)),
+        color: sl::texture_sample(map.tex, map.sam, sl::fragment(v.tex)),
     };
 
     let cx = dunge::block_on(dunge::context())?;

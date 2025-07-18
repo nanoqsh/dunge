@@ -18,7 +18,6 @@ pub mod storage;
 pub mod surface;
 pub mod usage;
 pub mod value;
-pub mod vertex;
 pub mod workload;
 
 /// The dunge prelude.
@@ -26,6 +25,13 @@ pub mod prelude {
     pub use crate::{
         Group, Instance, Vertex, buffer::TextureData, color::ColorExt as _, context::Context,
         mesh::MeshData, sl, types,
+    };
+}
+
+/// The vertex module.
+pub mod vertex {
+    pub use dunge_shader::vertex::{
+        InputProjection, Projection, check_projection_type, verts_as_bytes,
     };
 }
 

@@ -20,9 +20,9 @@ fn render() -> Result<(), Error> {
     #[derive(Vertex)]
     struct Vert(Vec2, Vec3);
 
-    let triangle = |vert: PassVertex<Vert>| Render {
-        place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
-        color: sl::vec4_with(sl::fragment(vert.1), 1.),
+    let triangle = |PassVertex(v): PassVertex<Vert>| Render {
+        place: sl::vec4_concat(v.0, Vec2::new(0., 1.)),
+        color: sl::vec4_with(sl::fragment(v.1), 1.),
     };
 
     let cx = dunge::block_on(dunge::context())?;

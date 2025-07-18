@@ -30,10 +30,10 @@ fn render() -> Result<(), Error> {
         sam: Sampler,
     }
 
-    let triangle = |vert: PassVertex<Vert>, Groups(map): Groups<Map>| {
-        let place = sl::vec4_concat(vert.pos, Vec2::new(0., 1.));
+    let triangle = |PassVertex(v): PassVertex<Vert>, Groups(map): Groups<Map>| {
+        let place = sl::vec4_concat(v.pos, Vec2::new(0., 1.));
         let color = {
-            let samp = sl::thunk(sl::texture_sample(map.tex, map.sam, sl::fragment(vert.tex)));
+            let samp = sl::thunk(sl::texture_sample(map.tex, map.sam, sl::fragment(v.tex)));
             let alpha = samp.clone().z();
             sl::if_then_else(sl::lt(alpha, 0.5), sl::discard, || samp)
         };

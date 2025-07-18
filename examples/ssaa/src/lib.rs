@@ -42,10 +42,10 @@ pub async fn run(control: Control) -> Result<(), Error> {
         offset: Uniform<Vec2>,
     }
 
-    let screen = |vert: PassVertex<Screen>, Groups(map): Groups<Map>| Render {
-        place: sl::vec4_concat(vert.0, Vec2::new(0., 1.)),
+    let screen = |PassVertex(v): PassVertex<Screen>, Groups(map): Groups<Map>| Render {
+        place: sl::vec4_concat(v.0, Vec2::new(0., 1.)),
         color: {
-            let s = sl::thunk(sl::fragment(vert.1));
+            let s = sl::thunk(sl::fragment(v.1));
             let tex = || map.tex.clone();
             let sam = || map.sam.clone();
             let offset = || map.offset.clone();
