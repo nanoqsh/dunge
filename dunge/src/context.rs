@@ -2,8 +2,7 @@ use {
     crate::{
         Vertex,
         buffer::{
-            Buffer, BufferData, Filter, Read, ReadFailed, Sampler, Texture, Texture2d, TextureData,
-            Write, WriteFailed,
+            self, Buffer, Filter, Read, ReadFailed, Sampler, Texture, Texture2d, Write, WriteFailed,
         },
         compute,
         instance::Row,
@@ -110,7 +109,7 @@ impl Context {
         &self.0
     }
 
-    /// Creates a shader program from a function.
+    /// Creates a [shader](Shader) program from a function.
     ///
     /// The provided function defines the GPU computation, which is then compiled into a shader
     /// for the current backend. There are two types of shaders: render shaders and compute shaders.
@@ -235,7 +234,7 @@ impl Context {
         Shader::new(&self.0, module)
     }
 
-    /// Creates a set of data for the shader.
+    /// Creates a [set](UniqueSet) of data for the shader.
     ///
     /// A set is a collection of associated data that you can [bind](crate::set::Bind::bind) during
     /// [render](Scheduler::render) or [compute](Scheduler::compute) operations and access from within the shader.
@@ -301,6 +300,7 @@ impl Context {
         UniqueSet::new(&self.0, shader.data(), set)
     }
 
+    /// Creates a [uniform](Uniform) from the given value.
     #[inline]
     pub fn make_uniform<V>(&self, val: &V) -> Uniform<V>
     where
@@ -309,6 +309,7 @@ impl Context {
         Uniform::new(self, val)
     }
 
+    /// Creates a [storage](Storage) from the given value.
     #[inline]
     pub fn make_storage<V>(&self, val: &V) -> Storage<V>
     where
@@ -317,6 +318,9 @@ impl Context {
         Storage::new(self, val)
     }
 
+    /// Creates a [layer](Layer) for the given [render shader](RenderShader).
+    ///
+    /// This method also accepts a [config](Config) which defines the layer's properties.
     #[inline]
     pub fn make_layer<V, I, S, C>(
         &self,
@@ -327,14 +331,16 @@ impl Context {
         C: Into<Config>,
     {
         let conf = conf.into();
-        Layer::new(&self.0, shader.data(), &conf)
+        Layer::new(&self.0, shader.data(), conf)
     }
 
+    /// Creates a [workload](Workload) for the given [compute shader](ComputeShader).
     #[inline]
     pub fn make_workload<S>(&self, shader: &ComputeShader<S>) -> Workload<compute::Input<S>> {
         Workload::new(&self.0, shader.data())
     }
 
+    /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
     #[inline]
     pub fn make_mesh<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
     where
@@ -343,6 +349,7 @@ impl Context {
         Mesh::new(&self.0, data)
     }
 
+    /// Creates a [row](Row) with the given data.
     #[inline]
     pub fn make_row<U>(&self, data: &[U]) -> Row<U>
     where
@@ -351,27 +358,31 @@ impl Context {
         Row::new(&self.0, data)
     }
 
+    /// Creates a [2D texture](Texture2d) with the given [data](buffer::TextureData).
     #[inline]
-    pub fn make_texture<U>(&self, data: TextureData<'_, U>) -> Texture2d<U>
+    pub fn make_texture<U>(&self, data: buffer::TextureData<'_, U>) -> Texture2d<U>
     where
         U: u::TextureUsages,
     {
         Texture::new(&self.0, data)
     }
 
+    /// Creates a [sampler](Sampler) with the [filter](Filter) value.
     #[inline]
     pub fn make_sampler(&self, filter: Filter) -> Sampler {
         Sampler::new(&self.0, filter)
     }
 
+    /// Creates a [buffer](Buffer) with the given [data](buffer::BufferData).
     #[inline]
-    pub fn make_buffer<U>(&self, data: BufferData<'_, U>) -> Buffer<U>
+    pub fn make_buffer<U>(&self, data: buffer::BufferData<'_, U>) -> Buffer<U>
     where
         U: u::BufferUsages,
     {
         Buffer::new(&self.0, data)
     }
 
+    /// Reads from a buffer.
     #[inline]
     pub async fn read<'buf, U>(&self, buf: &'buf mut Buffer<U>) -> Result<Read<'buf>, ReadFailed>
     where
@@ -380,6 +391,7 @@ impl Context {
         buf.read(&self.0).await
     }
 
+    /// Writes to a buffer.
     #[inline]
     pub async fn write<'buf, U>(&self, buf: &'buf mut Buffer<U>) -> Result<Write<'buf>, WriteFailed>
     where

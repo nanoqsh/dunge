@@ -71,7 +71,7 @@ impl Mode {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Copy, Default)]
 pub struct Config {
     pub format: Format,
     pub blend: Blend,
@@ -98,7 +98,7 @@ pub struct Layer<I> {
 }
 
 impl<I> Layer<I> {
-    pub(crate) fn new(state: &State, shader: &ShaderData, conf: &Config) -> Self {
+    pub(crate) fn new(state: &State, shader: &ShaderData, conf: Config) -> Self {
         let Config {
             format,
             blend,
@@ -154,8 +154,8 @@ impl<I> Layer<I> {
 
         Self {
             slots: shader.slots(),
-            depth: *depth,
-            format: *format,
+            depth,
+            format,
             render,
             inp: PhantomData,
         }
