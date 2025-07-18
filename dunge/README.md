@@ -53,29 +53,31 @@ struct Vert {
 To render something on GPU you need to program a shader. In dunge you can do this via a normal (almost) rust function
 
 ```rust
+use dunge_winit::sl::{PassVertex, Render},
+
 // create a shader program
-let triangle = |vert: sl::InVertex<Vert>| {
+let triangle = |PassVertex(v): PassVertex<Vert>| {
     // describe the vertex position:
     // take the vertex data as vec2 and expand it to vec4
-    let place = sl::vec4_concat(vert.pos, sl::vec2(0., 1.));
+    let place = sl::vec4_concat(v.pos, sl::vec2(0., 1.));
 
     // then describe the vertex color:
     // first you need to pass the color from
     // vertex shader stage to fragment shader stage
-    let fragment_col = sl::fragment(vert.col);
+    let fragment_col = sl::fragment(v.col);
 
     // now create the final color by adding an alpha value
     let color = sl::vec4_with(fragment_col, 1.);
 
     // as a result, return a program that describes how to
     // compute the vertex position and the fragment color
-    sl::Render { place, color }
+    Render { place, color }
 };
 ```
 
 As you can see from the snippet, the shader requires you to provide two things: the position of the vertex on the screen and the color of each fragment/pixel. The result is a `triangle` function, but if you ask for its type in the IDE you may notice that it is more complex than usual
 
-`impl Fn(InVertex<Vert>) -> Render<Ret<Compose<Ret<ReadVertex, Vec2<f32>>, Ret<NewVec<(f32, f32), Vs>, Vec2<f32>>>, Vec4<f32>>, Ret<Compose<Ret<Fragment<Ret<ReadVertex, Vec3<f32>>>, Vec3<f32>>, f32>, Vec4<f32>>>`
+`impl Fn(PassVertex<Vert>) -> Render<Ret<Compose<Ret<ReadVertex, Vec2<f32>>, Ret<NewVec<(f32, f32), Vs>, Vec2<f32>>>, Vec4<f32>>, Ret<Compose<Ret<Fragment<Ret<ReadVertex, Vec3<f32>>>, Vec3<f32>>, f32>, Vec4<f32>>>`
 
 That's because this function doesn't actually compute anything. It is needed only to describe the method for computing what we need on GPU. During shader instantiation, this function is used to compile an actual shader. However, this saves us from having to write the shader in wgsl and allows to typecheck at compile time. For example, dunge checks that a vertex type in a shader matches with a mesh used during rendering. It also checks types inside the shader itself
 
