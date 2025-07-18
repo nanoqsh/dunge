@@ -151,7 +151,7 @@ impl Context {
     /// but both are described together as a single function. To pass output data from the
     /// vertex stage to the fragment stage, use the [`fragment`](crate::sl::fragment) function.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// use dunge::{
@@ -200,7 +200,7 @@ impl Context {
     /// Instead, the expression is expected to produce side effects - for example,
     /// writing output data to a buffer that can be [read](Context::read) later.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// use dunge::{
@@ -235,6 +235,67 @@ impl Context {
         Shader::new(&self.0, module)
     }
 
+    /// Creates a set of data for the shader.
+    ///
+    /// A set is a collection of associated data that you can [bind](crate::set::Bind::bind) during
+    /// [render](Scheduler::render) or [compute](Scheduler::compute) operations and access from within the shader.
+    /// A set can be created from any value that implements the [`Group`] trait, or from a tuple of such types.
+    /// You can also derive an implementation of [`Group`](derive@crate::Group) for your custom types.
+    ///
+    /// # Examples
+    ///
+    /// For example, here is a shader that fills each fragment with a color passed to it
+    ///
+    /// ```
+    /// use dunge::{
+    ///     prelude::*,
+    ///     glam::Vec4,
+    ///     sl::{Groups, PassVertex, Render},
+    ///     storage::Uniform,
+    /// };
+    ///
+    /// #[repr(C)]
+    /// #[derive(Vertex)]
+    /// struct Vert([f32; 4]);
+    ///
+    /// # async fn f(
+    /// #     target: dunge::buffer::Texture2d,
+    /// #     opts: dunge::Options,
+    /// #     layer: dunge::layer::Layer<dunge::render::Input<Vert, (), (sl::Ret<sl::Global, dunge::types::Vec4<f32>>,)>>,
+    /// #     mesh: dunge::mesh::Mesh<Vert>,
+    /// # ) -> Result<(), dunge::FailedMakeContext> {
+    /// let cx = dunge::context().await?;
+    ///
+    /// // pass the color value via a uniform
+    /// let filler = |v: PassVertex<Vert>, Groups(color): Groups<Uniform<Vec4>>| Render {
+    ///     // set vertex coordinates
+    ///     place: v.0,
+    ///     // pass color from the vertex stage to the fragment stage
+    ///     color: sl::fragment(color),
+    /// };
+    ///
+    /// // create the shader
+    /// let shader = cx.make_shader(filler);
+    ///
+    /// // create a color uniform in RGBA format - for example, red.
+    /// let color_uniform = cx.make_uniform(&Vec4::new(1., 0., 0., 1.));
+    ///
+    /// // create the set value from the uniform
+    /// let set = cx.make_set(&shader, color_uniform);
+    ///
+    /// // now you can bind this set on a render operation
+    /// # #[cfg(false)]
+    /// # {
+    /// let (target, opts, layer, mesh) = ..;
+    /// # }
+    /// cx.shed(|s| {
+    ///     s.render(&target, opts).layer(&layer).set(&set).draw(&mesh);
+    ///     //                                         ^^^ bind the set
+    /// })
+    /// .await;
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline]
     pub fn make_set<K, S, D>(&self, shader: &Shader<K, S>, set: D) -> UniqueSet<S>
     where

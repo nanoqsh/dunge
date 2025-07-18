@@ -253,7 +253,7 @@ where
     }
 }
 
-pub struct Pass<V, I>(pub V::Projection, pub I::Projection)
+pub struct Pass<V, I>(V::Projection, I::Projection)
 where
     V: Vertex,
     I: Instance;
