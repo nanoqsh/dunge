@@ -30,9 +30,7 @@ pub mod prelude {
 
 /// The vertex module.
 pub mod vertex {
-    pub use dunge_shader::vertex::{
-        InputProjection, Projection, check_projection_type, verts_as_bytes,
-    };
+    pub use dunge_shader::vertex::{InputProjection, Projection, verts_as_bytes};
 }
 
 pub use {

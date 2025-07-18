@@ -139,16 +139,6 @@ mod ignore {
     impl !InputProjection for glam::Vec4 {}
 }
 
-pub const fn check_projection_type<P>()
-where
-    P: f::F32Aligned,
-{
-    assert!(
-        align_of::<P>() == align_of::<f32>(),
-        "the type must be f32 aligned",
-    );
-}
-
 mod f {
     pub trait F32Aligned {}
 }

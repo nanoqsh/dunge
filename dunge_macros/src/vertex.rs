@@ -82,7 +82,12 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
 
     let checks = fields.iter().map(|field| {
         let ty = &field.ty;
-        quote::quote! { const _: () = dunge::vertex::check_projection_type::<#ty>(); }
+        quote::quote! {
+            const _: () = ::core::assert!(
+                ::core::mem::align_of::<#ty>() == ::core::mem::align_of::<f32>(),
+                "the type must be f32 aligned",
+            );
+        }
     });
 
     quote::quote! {
@@ -149,8 +154,15 @@ mod tests {
                 col: <[f32; 3] as dunge::vertex::InputProjection>::Field,
             }
 
-            const _: () = dunge::vertex::check_projection_type::<[f32; 2]>();
-            const _: () = dunge::vertex::check_projection_type::<[f32; 3]>();
+            const _: () = ::core::assert!(
+                ::core::mem::align_of::<[f32; 2]>() == ::core::mem::align_of::<f32>(),
+                "the type must be f32 aligned",
+            );
+
+            const _: () = ::core::assert!(
+                ::core::mem::align_of::<[f32; 3]>() == ::core::mem::align_of::<f32>(),
+                "the type must be f32 aligned",
+            );
 
             impl dunge::vertex::Projection for VertProj {
                 fn projection(id: ::core::primitive::u32) -> Self {
@@ -188,8 +200,15 @@ mod tests {
                 <[f32; 3] as dunge::vertex::InputProjection>::Field,
             );
 
-            const _: () = dunge::vertex::check_projection_type::<[f32; 2]>();
-            const _: () = dunge::vertex::check_projection_type::<[f32; 3]>();
+            const _: () = ::core::assert!(
+                ::core::mem::align_of::<[f32; 2]>() == ::core::mem::align_of::<f32>(),
+                "the type must be f32 aligned",
+            );
+
+            const _: () = ::core::assert!(
+                ::core::mem::align_of::<[f32; 3]>() == ::core::mem::align_of::<f32>(),
+                "the type must be f32 aligned",
+            );
 
             impl dunge::vertex::Projection for VertProj {
                 fn projection(id: ::core::primitive::u32) -> Self {
