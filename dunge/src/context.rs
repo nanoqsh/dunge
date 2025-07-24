@@ -282,7 +282,8 @@ impl Context {
     /// // now you can bind this set on a render operation
     /// # #[cfg(false)]
     /// # {
-    /// let (target, opts, layer, mesh) = ..;
+    /// let (target, opts, layer, mesh) = ..
+    /// # ;
     /// # }
     /// cx.shed(|s| {
     ///     s.render(&target, opts).layer(&layer).set(&set).draw(&mesh);
@@ -374,6 +375,24 @@ impl Context {
     }
 
     /// Creates a [buffer](Buffer) with the given [data](buffer::BufferData).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
+    /// use dunge::buffer::BufferData;
+    ///
+    /// let cx = dunge::context().await?;
+    ///
+    /// // create a buffer filled with four `i32` numbers
+    /// let data = BufferData::new(&[1, 2, 3, 4])
+    ///     .read()     // set a usage to read from the buffer
+    ///     .copy_to(); // set a usage to copy to the buffer
+    ///
+    /// let buffer = cx.make_buffer(data);
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline]
     pub fn make_buffer<U>(&self, data: buffer::BufferData<'_, U>) -> Buffer<U>
     where

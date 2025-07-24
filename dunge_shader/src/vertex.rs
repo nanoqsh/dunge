@@ -133,7 +133,7 @@ impl InputProjection for glam::Vec3 {
     }
 }
 
-#[cfg(any())]
+#[cfg(false)]
 mod ignore {
     // glam::Vec4 is not f32 aligned
     impl !InputProjection for glam::Vec4 {}
