@@ -5,8 +5,8 @@ type Error = Box<dyn std::error::Error>;
 pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge_winit::{
+            Config,
             glam::{Mat4, Quat, Vec3},
-            layer::Config,
             sl::{Groups, PassVertex, Render},
             storage::Uniform,
             winit::Canvas,

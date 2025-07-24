@@ -258,7 +258,7 @@ impl Context {
     /// # async fn f(
     /// #     target: dunge::buffer::Texture2d,
     /// #     opts: dunge::Options,
-    /// #     layer: dunge::layer::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Vec4<f32>>,)>>,
+    /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Vec4<f32>>,)>>,
     /// #     mesh: dunge::mesh::Mesh<Vec4f>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
     /// // pass the color value via a uniform
@@ -446,7 +446,7 @@ impl Context {
     /// #
     /// # async fn f<V>(
     /// #    window: Window,
-    /// #    layer: dunge::layer::Layer<dunge::render::Input<V, (), ()>>,
+    /// #    layer: dunge::Layer<dunge::render::Input<V, (), ()>>,
     /// #    mesh: dunge::mesh::Mesh<V>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
     /// use dunge::Options;

@@ -6,7 +6,7 @@ pub mod compute;
 mod context;
 pub mod group;
 pub mod instance;
-pub mod layer;
+mod layer;
 pub mod mesh;
 pub mod render;
 mod runtime;
@@ -17,8 +17,8 @@ pub mod storage;
 #[doc(hidden)]
 pub mod surface;
 pub mod usage;
-pub mod value;
-pub mod workload;
+mod value;
+mod workload;
 
 /// The dunge prelude.
 pub mod prelude {
@@ -36,8 +36,11 @@ pub mod vertex {
 pub use {
     crate::{
         context::{Builder, Context, FailedMakeContext, context},
+        layer::{Blend, Config, Layer, Mode, Topology},
         shader::{ComputeShader, RenderShader, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
+        value::{UnsizedValue, Value},
+        workload::Workload,
     },
     dunge_macros::{Group, Instance, Vertex},
     dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},
