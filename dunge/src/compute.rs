@@ -1,3 +1,5 @@
+//! Compute management.
+
 use {
     crate::{
         set::{Bind, Bindings},

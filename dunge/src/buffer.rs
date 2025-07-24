@@ -1,4 +1,4 @@
-//! The texture module.
+//! Texture and buffer types.
 
 use {
     crate::{

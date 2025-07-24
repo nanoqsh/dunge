@@ -156,6 +156,7 @@ impl State {
     }
 }
 
+/// Scheduler used inside the callback passed to the [`shed`](crate::Context::shed) method.
 pub struct Scheduler(wgpu::CommandEncoder);
 
 impl Scheduler {

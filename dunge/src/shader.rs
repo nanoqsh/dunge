@@ -7,7 +7,10 @@ use {
     std::{borrow::Cow, cell::Cell, iter, marker::PhantomData, mem, sync::Arc},
 };
 
+/// Alias of render [shader](Shader).
 pub type RenderShader<V, I, S> = Shader<RenderInput<V, I>, S>;
+
+/// Alias of compute [shader](Shader).
 pub type ComputeShader<S> = Shader<ComputeInput, S>;
 
 /// The shader type.

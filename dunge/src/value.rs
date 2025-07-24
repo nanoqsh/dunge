@@ -1,3 +1,5 @@
+//! Value traits.
+
 use crate::types;
 
 /// A buffer value.

@@ -1,3 +1,5 @@
+//! Render management.
+
 use {
     crate::{
         buffer::Format,

@@ -1,3 +1,5 @@
+//! Texture and buffer usages.
+
 #[derive(Default)]
 pub struct MapRead<
     // Read
