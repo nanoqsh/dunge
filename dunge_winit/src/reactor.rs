@@ -93,11 +93,14 @@ pub(crate) enum Process {
     Sleep,
 }
 
+#[derive(Debug)]
 struct Record {
     id: u64,
     waker: Waker,
 }
 
+/// The timer type for `await`-ing for timings.
+#[derive(Debug)]
 pub struct Timer {
     when: Instant,
     period: Duration,
@@ -197,6 +200,7 @@ impl Stream for Timer {
     }
 }
 
+/// Extension trait for [`Duration`] type.
 pub trait DurationTimerExt {
     fn after(self) -> Timer;
     fn interval(self) -> Timer;
@@ -214,6 +218,7 @@ impl DurationTimerExt for Duration {
     }
 }
 
+/// Extension trait for [`Instant`] type.
 pub trait InstantTimerExt {
     fn at(self) -> Timer;
     fn interval_at(self, period: Duration) -> Timer;
