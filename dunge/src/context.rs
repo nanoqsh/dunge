@@ -40,8 +40,8 @@ use {
 ///
 /// If you're using the library in windowed mode via the
 /// [`dunge_winit`](https://docs.rs/dunge_winit/latest/dunge_winit/index.html) crate, use
-/// [`dunge_winit::winit::block_on`](https://docs.rs/dunge_winit/latest/dunge_winit/winit/fn.block_on.html) or
-/// [`dunge_winit::winit::try_block_on`](https://docs.rs/dunge_winit/latest/dunge_winit/winit/fn.try_block_on.html)
+/// [`dunge_winit::block_on`](https://docs.rs/dunge_winit/latest/dunge_winit/fn.block_on.html) or
+/// [`dunge_winit::try_block_on`](https://docs.rs/dunge_winit/latest/dunge_winit/fn.try_block_on.html)
 /// instead.
 ///
 /// # On wasm example

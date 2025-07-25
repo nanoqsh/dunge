@@ -4,14 +4,14 @@ type Error = Box<dyn std::error::Error>;
 
 fn main() {
     env_logger::init();
-    if let Err(e) = dunge_winit::winit::try_block_on(run) {
+    if let Err(e) = dunge_winit::try_block_on(run) {
         eprintln!("error: {e}");
     }
 }
 
 async fn run(control: Control) -> Result<(), Error> {
     use {
-        dunge_winit::{
+        dunge::{
             glam::{Vec2, Vec3},
             sl::{Groups, PassVertex, Render},
             storage::Uniform,

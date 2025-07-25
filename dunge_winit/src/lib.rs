@@ -13,23 +13,22 @@ pub mod prelude {
         },
         dunge,
         dunge::prelude::*,
+        winit,
     };
 }
 
-/// Extension of the dunge with a windowing system.
-pub mod winit {
-    pub use crate::{
+pub use {
+    crate::{
         canvas::Canvas,
         reactor::{DurationTimerExt, InstantTimerExt, Timer},
         runtime::{Control, Error},
         window::{Attributes, Redraw, Window},
-    };
+    },
+    dunge, winit,
+};
 
-    #[cfg(target_family = "wasm")]
-    pub use crate::runtime::{run, try_run};
+#[cfg(target_family = "wasm")]
+pub use crate::runtime::{run, try_run};
 
-    #[cfg(not(target_family = "wasm"))]
-    pub use crate::runtime::{block_on, try_block_on};
-}
-
-pub use dunge::*;
+#[cfg(not(target_family = "wasm"))]
+pub use crate::runtime::{block_on, try_block_on};

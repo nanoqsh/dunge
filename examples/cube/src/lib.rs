@@ -4,13 +4,13 @@ type Error = Box<dyn std::error::Error>;
 
 pub async fn run(control: Control) -> Result<(), Error> {
     use {
-        dunge_winit::{
+        dunge::{
             Config,
             glam::{Mat4, Quat, Vec3},
             sl::{Groups, PassVertex, Render},
             storage::Uniform,
-            winit::Canvas,
         },
+        dunge_winit::Canvas,
         futures_concurrency::prelude::*,
         std::time::Duration,
         winit::{event::MouseButton, keyboard::KeyCode},

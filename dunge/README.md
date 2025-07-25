@@ -94,7 +94,7 @@ let shader = cx.make_shader(triangle);
 
 You may notice that context creation requires async. Indeed, dunge is fundamentally **async**: scheduling GPU workloads, managing windows, handling real-time IO and working with timings - all of these are inherently asynchronous operations. This API also makes it easy to integrate existing ecosystem components into your project. For example, you can effortlessly add asynchronous network IO handling - whether you're targeting a desktop system or a browser runtime
 
-That's why dunge includes its own asynchronous runtime. If you're not using the `dunge_winit` windowing extension and simply want to work with the GPU, you can use the `dunge::block_on` function - it allows you to run an async routine on desktop platforms. For windowed applications, use `dunge_winit::winit::block_on` or `dunge_winit::winit::try_block_on`, which handle the event loop of a windowed app. A minimal usage example with error handling might look like this:
+That's why dunge includes its own asynchronous runtime. If you're not using the `dunge_winit` windowing extension and simply want to work with the GPU, you can use the `dunge::block_on` function - it allows you to run an async routine on desktop platforms. For windowed applications, use `dunge_winit::block_on` or `dunge_winit::try_block_on`, which handle the event loop of a windowed app. A minimal usage example with error handling might look like this:
 
 ```rust
 async fn run(control: Control) -> Result<(), Error> {
@@ -102,7 +102,7 @@ async fn run(control: Control) -> Result<(), Error> {
 }
 
 fn main() {
-    if let Err(e) = dunge_winit::winit::try_block_on(run) {
+    if let Err(e) = dunge_winit::try_block_on(run) {
         eprintln!("error: {e}");
     }
 }
