@@ -9,6 +9,7 @@ use {
     std::marker::PhantomData,
 };
 
+/// [Layer's](Layer) blend mode.
 #[derive(Clone, Copy, Default)]
 pub enum Blend {
     #[default]
@@ -27,6 +28,7 @@ impl Blend {
     }
 }
 
+/// [Layer's](Layer) primitive topology.
 #[derive(Clone, Copy, Default)]
 pub enum Topology {
     PointList,
@@ -49,8 +51,9 @@ impl Topology {
     }
 }
 
+/// [Layer's](Layer) polygon mode.
 #[derive(Clone, Copy, Default)]
-pub enum Mode {
+pub enum Polygon {
     #[default]
     Fill,
     #[cfg(not(target_family = "wasm"))]
@@ -59,7 +62,7 @@ pub enum Mode {
     Point,
 }
 
-impl Mode {
+impl Polygon {
     fn wgpu(self) -> wgpu::PolygonMode {
         match self {
             Self::Fill => wgpu::PolygonMode::Fill,
@@ -71,12 +74,15 @@ impl Mode {
     }
 }
 
+/// The [layer](Layer) configuration.
+///
+/// Used when creating a layer in the [`make_layer`](crate::Context::make_layer) method.
 #[derive(Clone, Copy, Default)]
 pub struct Config {
     pub format: Format,
     pub blend: Blend,
     pub topology: Topology,
-    pub mode: Mode,
+    pub polygon: Polygon,
     pub depth: bool,
 }
 
@@ -89,6 +95,9 @@ impl From<Format> for Config {
     }
 }
 
+/// The render layer.
+///
+/// Can be created using the [`make_layer`](crate::Context::make_layer) method.
 pub struct Layer<I> {
     slots: SlotNumbers,
     depth: bool,
@@ -103,7 +112,7 @@ impl<I> Layer<I> {
             format,
             blend,
             topology,
-            mode,
+            polygon,
             depth,
         } = conf;
 
@@ -129,7 +138,7 @@ impl<I> Layer<I> {
                 topology,
                 strip_index_format: topology.is_strip().then_some(wgpu::IndexFormat::Uint32),
                 cull_mode: Some(wgpu::Face::Back),
-                polygon_mode: mode.wgpu(),
+                polygon_mode: polygon.wgpu(),
                 ..Default::default()
             },
             depth_stencil: depth.then_some(wgpu::DepthStencilState {
@@ -165,10 +174,12 @@ impl<I> Layer<I> {
         self.slots
     }
 
+    /// Whether the layer uses depth.
     pub fn depth(&self) -> bool {
         self.depth
     }
 
+    /// Returns the color [format](Format) used by the layer.
     pub fn format(&self) -> Format {
         self.format
     }

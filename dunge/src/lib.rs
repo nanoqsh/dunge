@@ -36,7 +36,7 @@ pub mod vertex {
 pub use {
     crate::{
         context::{Builder, Context, FailedMakeContext, context},
-        layer::{Blend, Config, Layer, Mode, Topology},
+        layer::{Blend, Config, Layer, Polygon, Topology},
         shader::{ComputeShader, RenderShader, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
         value::{UnsizedValue, Value},

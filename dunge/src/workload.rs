@@ -5,6 +5,9 @@ use {
     std::marker::PhantomData,
 };
 
+/// The compute workload.
+///
+/// Can be created using the [`make_workload`](crate::Context::make_workload) method.
 pub struct Workload<I> {
     compute: wgpu::ComputePipeline,
     inp: PhantomData<I>,
