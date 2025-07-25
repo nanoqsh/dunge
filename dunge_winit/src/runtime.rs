@@ -43,7 +43,7 @@ enum Message {
     Exit(Box<Error>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Request(event_loop::EventLoopProxy<Message>);
 
 impl Request {
@@ -660,12 +660,13 @@ where
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum LifecycleState {
     Active,
     Inactive,
 }
 
+#[derive(Debug)]
 struct Lifecycle {
     state: Cell<LifecycleState>,
 }
@@ -693,6 +694,7 @@ impl Lifecycle {
 }
 
 /// Passed to the user function to control and interact with the event loop.
+#[derive(Clone, Debug)]
 pub struct Control {
     req: Request,
     lifecycle: Rc<Lifecycle>,
