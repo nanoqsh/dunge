@@ -4,7 +4,7 @@ use {
         window::{Attributes, Shared, Window, WindowBuilder},
     },
     dunge::{
-        Context,
+        Context, FailedMakeContext,
         surface::{CreateSurfaceError, SurfaceError},
     },
     futures_core::Stream,
@@ -607,6 +607,7 @@ where
 /// The event loop error type.
 #[derive(Debug)]
 pub enum Error<U = Infallible> {
+    Context(FailedMakeContext),
     EventLoop(winit::error::EventLoopError),
     Os(winit::error::OsError),
     CreateSurface(CreateSurfaceError),
@@ -621,6 +622,7 @@ impl<U> Error<U> {
         F: FnOnce(U) -> V,
     {
         match self {
+            Self::Context(e) => Error::Context(e),
             Self::EventLoop(e) => Error::EventLoop(e),
             Self::Os(e) => Error::Os(e),
             Self::CreateSurface(e) => Error::CreateSurface(e),
@@ -636,6 +638,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Context(e) => e.fmt(f),
             Self::EventLoop(e) => e.fmt(f),
             Self::Os(e) => e.fmt(f),
             Self::CreateSurface(e) => e.fmt(f),
@@ -651,12 +654,19 @@ where
 {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
+            Self::Context(e) => Some(e),
             Self::EventLoop(e) => Some(e),
             Self::Os(e) => Some(e),
             Self::CreateSurface(e) => Some(e),
             Self::Surface(e) => Some(e),
             Self::Custom(e) => Some(e),
         }
+    }
+}
+
+impl<U> From<FailedMakeContext> for Error<U> {
+    fn from(e: FailedMakeContext) -> Self {
+        Self::Context(e)
     }
 }
 

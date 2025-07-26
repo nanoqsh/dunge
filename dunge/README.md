@@ -97,8 +97,10 @@ You may notice that context creation requires async. Indeed, dunge is fundamenta
 That's why dunge includes its own asynchronous runtime. If you're not using the `dunge_winit` windowing extension and simply want to work with the GPU, you can use the `dunge::block_on` function - it allows you to run an async routine on desktop platforms. For windowed applications, use `dunge_winit::block_on` or `dunge_winit::try_block_on`, which handle the event loop of a windowed app. A minimal usage example with error handling might look like this:
 
 ```rust
-async fn run(control: Control) -> Result<(), Error> {
+async fn run(control: Control) -> Result<(), dunge_winit::Error> {
+    let cx = dunge::context().await?;
     // full the application logic here
+    Ok(())
 }
 
 fn main() {
