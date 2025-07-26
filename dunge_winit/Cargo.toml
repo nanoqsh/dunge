@@ -10,6 +10,9 @@ documentation.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+wgsl = ["dunge/wgsl"]
+
 [dependencies]
 dunge.workspace = true
 futures-core.workspace = true
