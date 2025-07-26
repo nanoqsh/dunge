@@ -82,7 +82,6 @@ impl Ticket {
 /// assert_eq!(out, 3);
 /// # }
 /// ```
-///
 #[cfg(not(target_family = "wasm"))]
 #[inline]
 pub fn block_on<F>(f: F) -> F::Output

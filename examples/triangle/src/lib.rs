@@ -38,13 +38,11 @@ pub async fn run(control: Control) -> Result<(), Error> {
         offset.update(&cx, &t);
     };
 
-    let window = {
-        let attr = Attributes::default()
-            .with_title("triangle")
-            .with_canvas(Canvas::by_id("root"));
-
-        control.make_window(&cx, attr).await?
-    };
+    let window = control
+        .make_window(&cx)
+        .with_title("triangle")
+        .with_canvas(Canvas::by_id("root"))
+        .await?;
 
     let layer = cx.make_layer(&shader, window.format());
 

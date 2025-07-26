@@ -1,7 +1,7 @@
 use {
     crate::{
         reactor::{Process, Reactor, Timer},
-        window::{Attributes, Shared, Window},
+        window::{Attributes, Shared, Window, WindowBuilder},
     },
     dunge::{
         Context,
@@ -48,7 +48,7 @@ pub(crate) struct Request(event_loop::EventLoopProxy<Message>);
 
 impl Request {
     #[inline]
-    async fn make_window(&self, cx: Context, attr: Attributes) -> Result<Window, Error> {
+    pub(crate) async fn make_window(&self, cx: Context, attr: Attributes) -> Result<Window, Error> {
         let mut out = Rc::new(OnceCell::new());
         _ = self.0.send_event(Message::MakeWindow {
             cx,
@@ -701,7 +701,8 @@ pub struct Control {
 }
 
 impl Control {
-    /// Creates a new window with specified [attributes](Attributes).
+    /// Creates a new [window](Window) with specified attributes
+    /// configured by a [builder](WindowBuilder).
     ///
     /// # Example
     ///
@@ -710,8 +711,10 @@ impl Control {
     ///
     /// # async fn t(control: Control) -> Result<(), Box<dyn std::error::Error>> {
     /// let cx = dunge::context().await?;
-    /// let attr = Attributes::default().with_title("cube");
-    /// let window = control.make_window(&cx, attr).await?;
+    /// let window = control
+    ///     .make_window(&cx)
+    ///     .with_title("cube")
+    ///     .await?;
     ///
     /// // wait for some window events
     /// loop {
@@ -720,10 +723,9 @@ impl Control {
     /// }
     /// # }
     /// ```
-    ///
     #[inline]
-    pub async fn make_window(&self, cx: &Context, attr: Attributes) -> Result<Window, Error> {
-        self.req.make_window(cx.clone(), attr).await
+    pub fn make_window(&self, cx: &Context) -> WindowBuilder<'_> {
+        WindowBuilder::new(&self.req, cx.clone())
     }
 
     /// Waits until the application is resumed.

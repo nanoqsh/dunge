@@ -16,6 +16,7 @@ use {
         future,
         num::NonZeroU32,
         ops,
+        pin::Pin,
         rc::Rc,
         sync::Arc,
         task::Poll,
@@ -24,20 +25,34 @@ use {
     winit::{event, event_loop, keyboard, window},
 };
 
-/// [Window] attributes.
-pub struct Attributes {
-    title: Cow<'static, str>,
-    canvas: Option<Canvas>,
+/// The [window](Window) builder returned from
+/// [`make_window`](crate::Control::make_window) method.
+pub struct WindowBuilder<'req> {
+    req: &'req Request,
+    cx: Context,
+    attr: Attributes,
 }
 
-impl Attributes {
+impl<'req> WindowBuilder<'req> {
+    #[inline]
+    pub(crate) fn new(req: &'req Request, cx: Context) -> Self {
+        Self {
+            req,
+            cx,
+            attr: Attributes {
+                title: Cow::Borrowed("dunge"),
+                canvas: None,
+            },
+        }
+    }
+
     /// Sets the window title.
     #[inline]
     pub fn with_title<S>(mut self, title: S) -> Self
     where
         S: Into<String>,
     {
-        self.title = Cow::Owned(title.into());
+        self.attr.title = Cow::Owned(title.into());
         self
     }
 
@@ -47,10 +62,28 @@ impl Attributes {
     where
         C: Into<Option<Canvas>>,
     {
-        self.canvas = canvas.into();
+        self.attr.canvas = canvas.into();
         self
     }
+}
 
+impl<'req> IntoFuture for WindowBuilder<'req> {
+    type Output = Result<Window, Error>;
+    type IntoFuture = Pin<Box<dyn Future<Output = Result<Window, Error>> + 'req>>;
+
+    #[inline]
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(self.req.make_window(self.cx, self.attr))
+    }
+}
+
+/// [Window] attributes.
+pub(crate) struct Attributes {
+    title: Cow<'static, str>,
+    canvas: Option<Canvas>,
+}
+
+impl Attributes {
     #[inline]
     fn winit(mut self) -> window::WindowAttributes {
         let mut attr = window::WindowAttributes::default().with_title(self.title);
@@ -59,15 +92,6 @@ impl Attributes {
         }
 
         attr
-    }
-}
-
-impl Default for Attributes {
-    fn default() -> Self {
-        Self {
-            title: Cow::Borrowed("dunge"),
-            canvas: None,
-        }
     }
 }
 

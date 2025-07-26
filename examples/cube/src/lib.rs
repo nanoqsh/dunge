@@ -113,13 +113,11 @@ pub async fn run(control: Control) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let window = {
-        let attr = Attributes::default()
-            .with_title("cube")
-            .with_canvas(Canvas::by_id("root"));
-
-        control.make_window(&cx, attr).await?
-    };
+    let window = control
+        .make_window(&cx)
+        .with_title("cube")
+        .with_canvas(Canvas::by_id("root"))
+        .await?;
 
     let mouse = async {
         loop {

@@ -34,7 +34,6 @@ use {
 ///     col: [f32; 3],
 /// }
 /// ```
-///
 pub unsafe trait Vertex {
     type Projection: Projection + 'static;
     const DEF: Define<VectorType>;

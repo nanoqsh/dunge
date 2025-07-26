@@ -115,13 +115,11 @@ pub async fn run(control: Control) -> Result<(), Error> {
         cx.make_mesh(&data)
     };
 
-    let window = {
-        let attr = Attributes::default()
-            .with_title("ssaa")
-            .with_canvas(Canvas::by_id("root"));
-
-        control.make_window(&cx, attr).await?
-    };
+    let window = control
+        .make_window(&cx)
+        .with_title("ssaa")
+        .with_canvas(Canvas::by_id("root"))
+        .await?;
 
     let triangle_layer = cx.make_layer(&shader, render_buffer.borrow().format());
     let screen_layer = cx.make_layer(&screen_shader, window.format());

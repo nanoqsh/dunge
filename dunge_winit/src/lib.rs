@@ -9,7 +9,6 @@ pub mod prelude {
         crate::{
             reactor::{DurationTimerExt as _, InstantTimerExt as _},
             runtime::Control,
-            window::Attributes,
         },
         dunge,
         dunge::prelude::*,
@@ -22,7 +21,7 @@ pub use {
         canvas::Canvas,
         reactor::{DurationTimerExt, InstantTimerExt, Timer},
         runtime::{Control, Error},
-        window::{Attributes, Redraw, Window},
+        window::{Redraw, Window, WindowBuilder},
     },
     dunge, winit,
 };

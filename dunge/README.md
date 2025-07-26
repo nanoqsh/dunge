@@ -127,7 +127,7 @@ We need to create the application window and a layer - the surface onto which th
 
 ```rust
 // the control object is created from the `(try_)block_on` function
-let window = control.make_window(&cx, Attributes::default()).await?;
+let window = control.make_window(&cx).await?;
 let layer = cx.make_layer(&shader, window.format());
 ```
 
