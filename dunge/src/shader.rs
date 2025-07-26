@@ -2,7 +2,7 @@ use {
     crate::{
         sl::{ComputeInput, InputInfo, IntoModule, Module, RenderInput, Stages},
         state::State,
-        types::{MemberType, ScalarType, ValueType, VectorType},
+        types::{MemberType, ScalarType, Space, ValueType, VectorType},
     },
     std::{borrow::Cow, cell::Cell, iter, marker::PhantomData, mem, sync::Arc},
 };
@@ -96,32 +96,6 @@ impl ShaderData {
             entries.clear();
             for (binding, member) in iter::zip(0.., info.def) {
                 let entry = match member.ty {
-                    MemberType::Scalar(_) | MemberType::Vector(_) | MemberType::Matrix(_) => {
-                        wgpu::BindGroupLayoutEntry {
-                            binding,
-                            visibility: visibility(info.stages),
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        }
-                    }
-                    MemberType::Array(_) | MemberType::DynamicArrayType(_) => {
-                        wgpu::BindGroupLayoutEntry {
-                            binding,
-                            visibility: visibility(info.stages),
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage {
-                                    read_only: !member.mutable,
-                                },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        }
-                    }
                     MemberType::Tx2df => wgpu::BindGroupLayoutEntry {
                         binding,
                         visibility: visibility(info.stages),
@@ -138,6 +112,26 @@ impl ShaderData {
                         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     },
+                    _ => {
+                        let ty = match member.space {
+                            Space::Uniform => wgpu::BufferBindingType::Uniform,
+                            Space::Storage { mutable } => wgpu::BufferBindingType::Storage {
+                                read_only: !mutable,
+                            },
+                            Space::Handle => unreachable!(),
+                        };
+
+                        wgpu::BindGroupLayoutEntry {
+                            binding,
+                            visibility: visibility(info.stages),
+                            ty: wgpu::BindingType::Buffer {
+                                ty,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        }
+                    }
                 };
 
                 entries.push(entry);

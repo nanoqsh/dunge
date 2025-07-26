@@ -3,12 +3,12 @@
 use crate::{color::Color, types};
 
 /// A buffer value.
-pub trait Value {
+pub trait Value<const U: bool> {
     type Type: types::Value;
     fn value(&self) -> &[u8];
 }
 
-impl Value for u32 {
+impl<const U: bool> Value<U> for u32 {
     type Type = Self;
 
     fn value(&self) -> &[u8] {
@@ -16,7 +16,7 @@ impl Value for u32 {
     }
 }
 
-impl Value for f32 {
+impl<const U: bool> Value<U> for f32 {
     type Type = Self;
 
     fn value(&self) -> &[u8] {
@@ -24,7 +24,7 @@ impl Value for f32 {
     }
 }
 
-impl Value for glam::Vec2 {
+impl<const U: bool> Value<U> for glam::Vec2 {
     type Type = types::Vec2<f32>;
 
     fn value(&self) -> &[u8] {
@@ -32,7 +32,7 @@ impl Value for glam::Vec2 {
     }
 }
 
-impl Value for glam::Vec3 {
+impl<const U: bool> Value<U> for glam::Vec3 {
     type Type = types::Vec3<f32>;
 
     fn value(&self) -> &[u8] {
@@ -40,7 +40,7 @@ impl Value for glam::Vec3 {
     }
 }
 
-impl Value for glam::Vec4 {
+impl<const U: bool> Value<U> for glam::Vec4 {
     type Type = types::Vec4<f32>;
 
     fn value(&self) -> &[u8] {
@@ -48,7 +48,7 @@ impl Value for glam::Vec4 {
     }
 }
 
-impl Value for glam::Mat2 {
+impl<const U: bool> Value<U> for glam::Mat2 {
     type Type = types::Mat2;
 
     fn value(&self) -> &[u8] {
@@ -56,7 +56,7 @@ impl Value for glam::Mat2 {
     }
 }
 
-impl Value for glam::Mat3 {
+impl<const U: bool> Value<U> for glam::Mat3 {
     type Type = types::Mat3;
 
     fn value(&self) -> &[u8] {
@@ -64,7 +64,7 @@ impl Value for glam::Mat3 {
     }
 }
 
-impl Value for glam::Mat4 {
+impl<const U: bool> Value<U> for glam::Mat4 {
     type Type = types::Mat4;
 
     fn value(&self) -> &[u8] {
@@ -72,36 +72,36 @@ impl Value for glam::Mat4 {
     }
 }
 
-impl<V, const N: usize> Value for [V; N]
+impl<V, const N: usize, const U: bool> Value<U> for [V; N]
 where
-    V: Value + bytemuck::Pod,
+    V: Value<U> + bytemuck::Pod,
 {
-    type Type = types::Array<V::Type, N>;
+    type Type = types::Array<V::Type, N, U>;
 
     fn value(&self) -> &[u8] {
         bytemuck::bytes_of(self)
     }
 }
 
-/// An unsized buffer value.
-pub trait UnsizedValue {
-    fn unsized_value(&self) -> &[u8];
+/// An storage buffer value.
+pub trait StorageValue {
+    fn storage_value(&self) -> &[u8];
 }
 
-impl<V> UnsizedValue for V
+impl<V> StorageValue for V
 where
-    V: Value,
+    V: Value<false>,
 {
-    fn unsized_value(&self) -> &[u8] {
+    fn storage_value(&self) -> &[u8] {
         self.value()
     }
 }
 
-impl<V> UnsizedValue for [V]
+impl<V> StorageValue for [V]
 where
-    V: Value + bytemuck::Pod,
+    V: Value<false> + bytemuck::Pod,
 {
-    fn unsized_value(&self) -> &[u8] {
+    fn storage_value(&self) -> &[u8] {
         bytemuck::cast_slice(self)
     }
 }
@@ -127,7 +127,7 @@ impl ColorValue for Color<4> {
     type Type = types::Vec4<f32>;
 }
 
-impl<const N: usize> Value for Color<N>
+impl<const N: usize, const U: bool> Value<U> for Color<N>
 where
     Self: ColorValue,
 {

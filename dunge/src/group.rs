@@ -5,7 +5,7 @@ use {
         buffer::Sampler,
         sl::{Define, Global, GlobalOut, Ret},
         storage::{Storage, Uniform},
-        types::{self, MemberData, MemberType},
+        types::{self, MemberData, MemberType, Space},
         value::Value,
     },
     dunge_shader::group::Group,
@@ -36,15 +36,15 @@ where
     }
 }
 
-impl<V> s::Sealed for Uniform<V> where V: Value {}
+impl<V> s::Sealed for Uniform<V> where V: Value<true> {}
 
 impl<V> MemberProjection for Uniform<V>
 where
-    V: Value,
+    V: Value<true>,
 {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::from_value(<V::Type as types::Value>::VALUE_TYPE),
-        mutable: false,
+        space: Space::Uniform,
     };
 
     type Field = Ret<Global, V::Type>;
@@ -64,19 +64,21 @@ where
 
 impl<V, M> s::Sealed for Storage<V, M>
 where
-    V: Value,
+    V: Value<false>,
     M: types::Mutability,
 {
 }
 
 impl<V, M> MemberProjection for Storage<V, M>
 where
-    V: Value,
+    V: Value<false>,
     M: types::Mutability,
 {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::from_value(<V::Type as types::Value>::VALUE_TYPE),
-        mutable: M::MUTABLE,
+        space: Space::Storage {
+            mutable: M::MUTABLE,
+        },
     };
 
     type Field = Ret<Global<M>, V::Type>;
@@ -88,21 +90,23 @@ where
 
 impl<V, M> s::Sealed for Storage<[V], M>
 where
-    V: Value,
+    V: Value<false>,
     M: types::Mutability,
 {
 }
 
 impl<V, M> MemberProjection for Storage<[V], M>
 where
-    V: Value,
+    V: Value<false>,
     M: types::Mutability,
 {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::DynamicArrayType(types::DynamicArrayType {
             base: &<V::Type as types::Value>::VALUE_TYPE,
         }),
-        mutable: M::MUTABLE,
+        space: Space::Storage {
+            mutable: M::MUTABLE,
+        },
     };
 
     type Field = Ret<Global<M>, types::DynamicArray<V::Type>>;
@@ -129,7 +133,7 @@ impl s::Sealed for BoundTexture {}
 impl MemberProjection for BoundTexture {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::Tx2df,
-        mutable: false,
+        space: Space::Handle,
     };
 
     type Field = Ret<Global, types::Texture2d<f32>>;
@@ -149,7 +153,7 @@ impl s::Sealed for Sampler {}
 impl MemberProjection for Sampler {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::Sampl,
-        mutable: false,
+        space: Space::Handle,
     };
 
     type Field = Ret<Global, types::Sampler>;

@@ -95,3 +95,37 @@ fn cs_array2d() -> Result<(), Error> {
     helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array2d.wgsl"));
     Ok(())
 }
+
+#[test]
+fn cs_array_uniform() -> Result<(), Error> {
+    use dunge::{
+        sl::{Compute, Groups},
+        storage::Uniform,
+    };
+
+    let compute = |Groups(a): Groups<Uniform<[f32; 4]>>| Compute {
+        compute: a.load(0u32),
+        workgroup_size: [64, 1, 1],
+    };
+
+    let shader = CONTEXT.make_shader(compute);
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array_uniform.wgsl"));
+    Ok(())
+}
+
+#[test]
+fn cs_array2d_uniform() -> Result<(), Error> {
+    use dunge::{
+        sl::{Compute, Groups},
+        storage::Uniform,
+    };
+
+    let compute = |Groups(a): Groups<Uniform<[[f32; 4]; 4]>>| Compute {
+        compute: a.load(0u32).load(0u32),
+        workgroup_size: [64, 1, 1],
+    };
+
+    let shader = CONTEXT.make_shader(compute);
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array2d_uniform.wgsl"));
+    Ok(())
+}

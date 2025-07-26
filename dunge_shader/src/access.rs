@@ -94,7 +94,7 @@ pub trait Indexable {
     type Member: types::Value;
 }
 
-impl<V, const N: usize> Indexable for types::Array<V, N>
+impl<V, const N: usize, const U: bool> Indexable for types::Array<V, N, U>
 where
     V: types::Value,
 {

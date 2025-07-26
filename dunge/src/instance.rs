@@ -8,7 +8,7 @@ use {
         sl::{ReadInstance, Ret},
         state::State,
         types::{self, ValueType, VectorType},
-        value::UnsizedValue,
+        value::StorageValue,
     },
     std::marker::PhantomData,
 };
@@ -115,14 +115,14 @@ pub struct Row<U> {
 impl<U> Row<U> {
     pub(crate) fn new(state: &State, data: &[U]) -> Self
     where
-        [U]: UnsizedValue,
+        [U]: StorageValue,
     {
         use wgpu::util::{self, DeviceExt};
 
         let buf = {
             let desc = util::BufferInitDescriptor {
                 label: None,
-                contents: data.unsized_value(),
+                contents: data.storage_value(),
                 usage: wgpu::BufferUsages::VERTEX,
             };
 
@@ -144,7 +144,7 @@ impl<U> Row<U> {
     /// Panics if the row length is not equal to the length of the new value.
     pub fn update(&self, cx: &Context, data: &[U])
     where
-        [U]: UnsizedValue,
+        [U]: StorageValue,
     {
         assert_eq!(
             data.len(),
@@ -155,7 +155,7 @@ impl<U> Row<U> {
         );
 
         let queue = cx.state().queue();
-        queue.write_buffer(&self.buf, 0, data.unsized_value());
+        queue.write_buffer(&self.buf, 0, data.storage_value());
     }
 
     #[inline]

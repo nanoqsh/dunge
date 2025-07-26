@@ -3,7 +3,7 @@
 //! Must be used with data that can be directly casted to the GPU buffer.
 
 use {
-    crate::{context::Context, state::State, types, value::UnsizedValue},
+    crate::{context::Context, state::State, types, value::StorageValue},
     std::marker::PhantomData,
 };
 
@@ -64,11 +64,11 @@ where
     #[inline]
     pub(crate) fn new(cx: &Context, val: &V) -> Self
     where
-        V: UnsizedValue,
+        V: StorageValue,
     {
         let data = Data::new(
             cx.state(),
-            val.unsized_value(),
+            val.storage_value(),
             wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST,
@@ -88,9 +88,9 @@ where
     #[inline]
     pub fn update(&self, cx: &Context, val: &V)
     where
-        V: UnsizedValue,
+        V: StorageValue,
     {
-        self.data.update(cx.state(), val.unsized_value());
+        self.data.update(cx.state(), val.storage_value());
     }
 
     #[inline]
@@ -134,11 +134,11 @@ where
     #[inline]
     pub(crate) fn new(cx: &Context, val: &V) -> Self
     where
-        V: UnsizedValue,
+        V: StorageValue,
     {
         let data = Data::new(
             cx.state(),
-            val.unsized_value(),
+            val.storage_value(),
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         );
 
@@ -155,9 +155,9 @@ where
     #[inline]
     pub fn update(&self, cx: &Context, val: &V)
     where
-        V: UnsizedValue,
+        V: StorageValue,
     {
-        self.data.update(cx.state(), val.unsized_value());
+        self.data.update(cx.state(), val.storage_value());
     }
 
     #[inline]

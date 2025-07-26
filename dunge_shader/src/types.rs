@@ -61,6 +61,7 @@ impl ValueType {
 /// The trait for types used inside a shader.
 pub trait Value {
     const VALUE_TYPE: ValueType;
+    const IN_UNIFORM: bool = false;
 }
 
 impl Value for f32 {
@@ -362,15 +363,16 @@ impl Matrix for Mat2 {}
 impl Matrix for Mat3 {}
 impl Matrix for Mat4 {}
 
-pub struct Array<V, const N: usize>(PhantomData<V>);
+pub struct Array<V, const N: usize, const U: bool>(PhantomData<V>);
 
-impl<V, const N: usize> Value for Array<V, N>
+impl<V, const N: usize, const U: bool> Value for Array<V, N, U>
 where
     V: Value,
 {
     const VALUE_TYPE: ValueType = ValueType::Array(ArrayType {
         base: &V::VALUE_TYPE,
         size: NonZeroU32::new(N as u32).expect("array size cannot be zero"),
+        in_uniform: U,
     });
 }
 
@@ -378,20 +380,35 @@ where
 pub struct ArrayType {
     pub base: &'static ValueType,
     pub size: NonZeroU32,
+    pub in_uniform: bool,
 }
 
 impl ArrayType {
-    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
+    fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
+        fn round_up(k: u32, n: u32) -> u32 {
+            u32::div_ceil(n, k) * k
+        }
+
         let base = self.base.ty(add);
+
+        let stride = {
+            let base_stride = self.base.stride();
+            if self.in_uniform {
+                round_up(16, base_stride)
+            } else {
+                base_stride
+            }
+        };
+
         let ty = naga::Type {
             name: None,
             inner: naga::TypeInner::Array {
                 base,
                 size: naga::ArraySize::Constant(self.size),
-                stride: self.base.stride(),
+                stride,
             },
         };
 
@@ -431,7 +448,7 @@ pub struct DynamicArrayType {
 }
 
 impl DynamicArrayType {
-    pub(crate) fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
+    fn ty<A>(self, add: &mut A) -> naga::Handle<naga::Type>
     where
         A: AddType,
     {
@@ -516,18 +533,6 @@ impl MemberType {
             ),
         }
     }
-
-    pub(crate) fn address_space(self, mutable: bool) -> naga::AddressSpace {
-        match self {
-            Self::Scalar(_) | Self::Vector(_) | Self::Matrix(_) => naga::AddressSpace::Uniform,
-            Self::Array(_) | Self::DynamicArrayType(_) => {
-                let mut access = naga::StorageAccess::LOAD;
-                access.set(naga::StorageAccess::STORE, mutable);
-                naga::AddressSpace::Storage { access }
-            }
-            Self::Tx2df | Self::Sampl => naga::AddressSpace::Handle,
-        }
-    }
 }
 
 /// Some values require an indirect load to be read from a global variable.
@@ -559,5 +564,26 @@ impl Mutability for Mutable {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct MemberData {
     pub ty: MemberType,
-    pub mutable: bool,
+    pub space: Space,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Space {
+    Uniform,
+    Storage { mutable: bool },
+    Handle,
+}
+
+impl Space {
+    pub(crate) fn address_space(self) -> naga::AddressSpace {
+        match self {
+            Self::Uniform => naga::AddressSpace::Uniform,
+            Self::Storage { mutable } => {
+                let mut access = naga::StorageAccess::LOAD;
+                access.set(naga::StorageAccess::STORE, mutable);
+                naga::AddressSpace::Storage { access }
+            }
+            Self::Handle => naga::AddressSpace::Handle,
+        }
+    }
 }

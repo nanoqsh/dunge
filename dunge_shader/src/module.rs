@@ -158,7 +158,10 @@ impl Module {
 
         #[cfg(any(debug_assertions, feature = "wgsl"))]
         {
-            use naga::valid;
+            use {
+                naga::valid,
+                std::{error::Error, fmt::Write},
+            };
 
             let mut validator =
                 valid::Validator::new(valid::ValidationFlags::all(), valid::Capabilities::empty());
@@ -167,7 +170,15 @@ impl Module {
                 Ok(info) => info,
                 Err(e) => {
                     log::error!("{nm:#?}");
-                    panic!("shader error: {e}\n{val:#?}", val = e.as_inner());
+
+                    let mut inner = e.as_inner() as &dyn Error;
+                    let mut s = format!("{inner}\n");
+                    while let Some(source) = inner.source() {
+                        _ = writeln!(&mut s, "{source}");
+                        inner = source;
+                    }
+
+                    panic!("shader error: {s}");
                 }
             };
 

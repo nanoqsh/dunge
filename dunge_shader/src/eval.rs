@@ -1182,7 +1182,7 @@ impl Compiler {
 
     fn define_group(&mut self, group: u32, def: Define<MemberData>) {
         for (binding, member) in iter::zip(0.., def) {
-            let space = member.ty.address_space(member.mutable);
+            let space = member.space.address_space();
             let ty = member.ty.ty(&mut self.types);
             let res = naga::ResourceBinding { group, binding };
             self.globs.add(space, ty, res);
