@@ -961,10 +961,7 @@ where
     }
 }
 
-impl<V> i::AsInner for Uniform<V>
-where
-    V: ?Sized,
-{
+impl<V> i::AsInner for Uniform<V> {
     fn as_inner(&self) -> i::Wrap<'_> {
         i::Wrap(Inner::Buffer(self.buffer()))
     }
@@ -1029,7 +1026,7 @@ where
 }
 
 impl<V, M> Destination for Storage<V, M> where V: ?Sized {}
-impl<V> Destination for Uniform<V> where V: ?Sized {}
+impl<V> Destination for Uniform<V> {}
 
 #[inline]
 pub(crate) fn try_copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder) -> Result<(), SizeError>

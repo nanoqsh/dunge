@@ -83,7 +83,21 @@ where
     }
 }
 
-/// An storage buffer value.
+/// A [uniform](crate::storage::Uniform) buffer value.
+pub trait UniformValue {
+    fn uniform_value(&self) -> &[u8];
+}
+
+impl<V> UniformValue for V
+where
+    V: Value<true>,
+{
+    fn uniform_value(&self) -> &[u8] {
+        self.value()
+    }
+}
+
+/// A [storage](crate::storage::Storage) buffer value.
 pub trait StorageValue {
     fn storage_value(&self) -> &[u8];
 }

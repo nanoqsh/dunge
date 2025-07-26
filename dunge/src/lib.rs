@@ -39,7 +39,7 @@ pub use {
         layer::{Blend, Config, Layer, Polygon, Topology},
         shader::{ComputeShader, RenderShader, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
-        value::{ColorValue, StorageValue, Value},
+        value::{ColorValue, StorageValue, UniformValue, Value},
         workload::Workload,
     },
     dunge_macros::{Group, Instance, Vertex},

@@ -15,7 +15,7 @@ use {
         state::{Scheduler, State},
         storage::{Storage, Uniform},
         usage::u,
-        value::StorageValue,
+        value::{StorageValue, UniformValue},
         workload::Workload,
     },
     dunge_shader::group::Group,
@@ -305,7 +305,7 @@ impl Context {
     #[inline]
     pub fn make_uniform<V>(&self, val: &V) -> Uniform<V>
     where
-        V: StorageValue + ?Sized,
+        V: UniformValue,
     {
         Uniform::new(self, val)
     }
