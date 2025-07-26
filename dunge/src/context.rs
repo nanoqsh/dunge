@@ -248,7 +248,7 @@ impl Context {
     /// ```
     /// use dunge::{
     ///     prelude::*,
-    ///     glam::Vec4,
+    ///     color::Rgba,
     ///     sl::{Groups, PassVertex, Render},
     ///     storage::Uniform,
     /// };
@@ -262,7 +262,7 @@ impl Context {
     /// #     mesh: dunge::mesh::Mesh<Vec4f>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
     /// // pass the color value via a uniform
-    /// let filler = |PassVertex(v): PassVertex<Vec4f>, Groups(color): Groups<Uniform<Vec4>>| Render {
+    /// let filler = |PassVertex(v): PassVertex<Vec4f>, Groups(color): Groups<Uniform<Rgba>>| Render {
     ///     // set vertex coordinates
     ///     place: v,
     ///     // pass color from the vertex stage to the fragment stage
@@ -274,7 +274,7 @@ impl Context {
     /// let shader = cx.make_shader(filler);
     ///
     /// // create a color uniform in RGBA format - for example, red.
-    /// let color_uniform = cx.make_uniform(&Vec4::new(1., 0., 0., 1.));
+    /// let color_uniform = cx.make_uniform(&Rgba::from_bytes([!0, 0, 0, !0]));
     ///
     /// // create the set value from the uniform
     /// let set = cx.make_set(&shader, color_uniform);
