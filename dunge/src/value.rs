@@ -1,6 +1,6 @@
 //! Value traits.
 
-use crate::types;
+use crate::{color::Color, types};
 
 /// A buffer value.
 pub trait Value {
@@ -103,5 +103,37 @@ where
 {
     fn unsized_value(&self) -> &[u8] {
         bytemuck::cast_slice(self)
+    }
+}
+
+/// The trait to treat [colors](Color) as [values](Value).
+pub trait ColorValue {
+    type Type: types::Value;
+}
+
+impl ColorValue for Color<1> {
+    type Type = f32;
+}
+
+impl ColorValue for Color<2> {
+    type Type = types::Vec2<f32>;
+}
+
+impl ColorValue for Color<3> {
+    type Type = types::Vec3<f32>;
+}
+
+impl ColorValue for Color<4> {
+    type Type = types::Vec4<f32>;
+}
+
+impl<const N: usize> Value for Color<N>
+where
+    Self: ColorValue,
+{
+    type Type = <Self as ColorValue>::Type;
+
+    fn value(&self) -> &[u8] {
+        bytemuck::bytes_of(&self.0)
     }
 }
