@@ -4,7 +4,7 @@ use {
         window::{Attributes, Shared, Window, WindowBuilder},
     },
     dunge::{
-        Context, FailedMakeContext,
+        Context, FailedMakeContext, buffer, mesh,
         surface::{CreateSurfaceError, SurfaceError},
     },
     futures_core::Stream,
@@ -608,6 +608,9 @@ where
 #[derive(Debug)]
 pub enum Error<U = Infallible> {
     Context(FailedMakeContext),
+    Mesh(mesh::Error),
+    Size(buffer::ZeroSized),
+    Texture(buffer::InvalidLen),
     EventLoop(winit::error::EventLoopError),
     Os(winit::error::OsError),
     CreateSurface(CreateSurfaceError),
@@ -623,6 +626,9 @@ impl<U> Error<U> {
     {
         match self {
             Self::Context(e) => Error::Context(e),
+            Self::Mesh(e) => Error::Mesh(e),
+            Self::Size(e) => Error::Size(e),
+            Self::Texture(e) => Error::Texture(e),
             Self::EventLoop(e) => Error::EventLoop(e),
             Self::Os(e) => Error::Os(e),
             Self::CreateSurface(e) => Error::CreateSurface(e),
@@ -639,6 +645,9 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Context(e) => e.fmt(f),
+            Self::Mesh(e) => e.fmt(f),
+            Self::Size(e) => e.fmt(f),
+            Self::Texture(e) => e.fmt(f),
             Self::EventLoop(e) => e.fmt(f),
             Self::Os(e) => e.fmt(f),
             Self::CreateSurface(e) => e.fmt(f),
@@ -655,6 +664,9 @@ where
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Self::Context(e) => Some(e),
+            Self::Mesh(e) => Some(e),
+            Self::Size(e) => Some(e),
+            Self::Texture(e) => Some(e),
             Self::EventLoop(e) => Some(e),
             Self::Os(e) => Some(e),
             Self::CreateSurface(e) => Some(e),
@@ -667,6 +679,24 @@ where
 impl<U> From<FailedMakeContext> for Error<U> {
     fn from(e: FailedMakeContext) -> Self {
         Self::Context(e)
+    }
+}
+
+impl<U> From<mesh::Error> for Error<U> {
+    fn from(e: mesh::Error) -> Self {
+        Self::Mesh(e)
+    }
+}
+
+impl<U> From<buffer::ZeroSized> for Error<U> {
+    fn from(e: buffer::ZeroSized) -> Self {
+        Self::Size(e)
+    }
+}
+
+impl<U> From<buffer::InvalidLen> for Error<U> {
+    fn from(e: buffer::InvalidLen) -> Self {
+        Self::Texture(e)
     }
 }
 
