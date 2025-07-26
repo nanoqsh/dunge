@@ -79,6 +79,15 @@ where
     type Type = types::Array<V::Type, N, U>;
 
     fn value(&self) -> &[u8] {
+        const {
+            if U {
+                assert!(
+                    size_of::<V>().is_multiple_of(16),
+                    "in uniforms stride must be multiple of 16",
+                );
+            }
+        }
+
         bytemuck::bytes_of(self)
     }
 }

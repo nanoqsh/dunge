@@ -388,20 +388,15 @@ impl ArrayType {
     where
         A: AddType,
     {
-        fn round_up(k: u32, n: u32) -> u32 {
-            u32::div_ceil(n, k) * k
-        }
-
         let base = self.base.ty(add);
+        let stride = self.base.stride();
 
-        let stride = {
-            let base_stride = self.base.stride();
-            if self.in_uniform {
-                round_up(16, base_stride)
-            } else {
-                base_stride
-            }
-        };
+        if self.in_uniform {
+            assert!(
+                stride.is_multiple_of(16),
+                "in uniforms stride must be multiple of 16",
+            );
+        }
 
         let ty = naga::Type {
             name: None,

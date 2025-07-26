@@ -99,33 +99,21 @@ fn cs_array2d() -> Result<(), Error> {
 #[test]
 fn cs_array_uniform() -> Result<(), Error> {
     use dunge::{
+        glam::Vec4,
         sl::{Compute, Groups},
         storage::Uniform,
     };
 
-    let compute = |Groups(a): Groups<Uniform<[f32; 4]>>| Compute {
+    let compute = |Groups(a): Groups<Uniform<[Vec4; 4]>>| Compute {
         compute: a.load(0u32),
         workgroup_size: [64, 1, 1],
     };
 
     let shader = CONTEXT.make_shader(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array_uniform.wgsl"));
-    Ok(())
-}
 
-#[test]
-fn cs_array2d_uniform() -> Result<(), Error> {
-    use dunge::{
-        sl::{Compute, Groups},
-        storage::Uniform,
-    };
+    let uniform = CONTEXT.make_uniform(&[Vec4::splat(0.); 4]);
+    _ = CONTEXT.make_set(&shader, uniform);
 
-    let compute = |Groups(a): Groups<Uniform<[[f32; 4]; 4]>>| Compute {
-        compute: a.load(0u32).load(0u32),
-        workgroup_size: [64, 1, 1],
-    };
-
-    let shader = CONTEXT.make_shader(compute);
-    helpers::eq_lines(shader.debug_wgsl(), include_str!("cs_array2d_uniform.wgsl"));
     Ok(())
 }
