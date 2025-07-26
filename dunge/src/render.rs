@@ -41,6 +41,7 @@ pub struct Render<'ren> {
 
 impl<'ren> Render<'ren> {
     #[inline]
+    #[must_use]
     pub fn layer<I>(&mut self, layer: &Layer<I>) -> On<'ren, '_, I, state::Layer> {
         let mut on = On::new(Runner {
             pass: &mut self.pass,
@@ -171,6 +172,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
     }
 
     #[inline]
+    #[must_use]
     pub fn layer(mut self, layer: &Layer<I>) -> On<'ren, 'layer, I, state::Layer>
     where
         I: To<A, state::Layer>,
@@ -181,6 +183,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
     }
 
     #[inline]
+    #[must_use]
     pub fn set<S>(mut self, set: &S) -> On<'ren, 'layer, I, state::Set>
     where
         I: To<A, state::Set> + Types,
@@ -191,6 +194,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
     }
 
     #[inline]
+    #[must_use]
     pub fn instance(mut self, instance: &I::Instance) -> On<'ren, 'layer, I, state::Inst>
     where
         I: To<A, state::Inst> + Types<Instance: Set>,

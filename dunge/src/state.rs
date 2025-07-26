@@ -161,6 +161,7 @@ pub struct Scheduler(wgpu::CommandEncoder);
 
 impl Scheduler {
     #[inline]
+    #[must_use]
     pub fn compute(&mut self) -> Compute<'_> {
         let desc = wgpu::ComputePassDescriptor {
             label: None,
@@ -172,6 +173,7 @@ impl Scheduler {
     }
 
     #[inline]
+    #[must_use]
     pub fn render<T, O>(&mut self, target: T, opts: O) -> Render<'_>
     where
         T: AsTarget,

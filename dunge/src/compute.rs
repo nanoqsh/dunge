@@ -14,6 +14,7 @@ pub struct Compute<'com> {
 
 impl<'com> Compute<'com> {
     #[inline]
+    #[must_use]
     pub fn workload<I>(&mut self, workload: &Workload<I>) -> On<'com, '_, I, state::Workload> {
         let mut on = On::new(Runner {
             pass: &mut self.pass,
@@ -104,6 +105,7 @@ impl<'com, 'work, I, A> On<'com, 'work, I, A> {
     }
 
     #[inline]
+    #[must_use]
     pub fn workload(mut self, workload: &Workload<I>) -> On<'com, 'work, I, state::Workload>
     where
         I: To<A, state::Workload>,
@@ -113,6 +115,7 @@ impl<'com, 'work, I, A> On<'com, 'work, I, A> {
     }
 
     #[inline]
+    #[must_use]
     pub fn set<S>(mut self, set: &S) -> On<'com, 'work, I, state::Set>
     where
         I: To<A, state::Set> + Types,
