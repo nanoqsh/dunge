@@ -10,7 +10,6 @@ use {
     },
     glam::DVec2,
     std::{
-        borrow::Cow,
         cell::{Cell, RefCell},
         collections::{HashMap, hash_map::Entry},
         future,
@@ -22,11 +21,16 @@ use {
         task::Poll,
         time::Duration,
     },
-    winit::{event, event_loop, keyboard, window},
+    winit::{dpi, event, event_loop, keyboard, window},
 };
 
 /// The [window](Window) builder returned from
 /// [`make_window`](crate::Control::make_window) method.
+///
+/// This builder provides shortcuts for some commonly used properties.
+/// However, for more fine-grained configuration, you can directly specify
+/// the [winit attributes](window::WindowAttributes) using the
+/// [`with_winit`](WindowBuilder::with_winit) method.
 pub struct WindowBuilder<'req> {
     req: &'req Request,
     cx: Context,
@@ -40,8 +44,8 @@ impl<'req> WindowBuilder<'req> {
             req,
             cx,
             attr: Attributes {
-                title: Cow::Borrowed("dunge"),
                 canvas: None,
+                winit: Box::new(window::WindowAttributes::default()),
             },
         }
     }
@@ -52,7 +56,14 @@ impl<'req> WindowBuilder<'req> {
     where
         S: Into<String>,
     {
-        self.attr.title = Cow::Owned(title.into());
+        self.attr.winit.title = title.into();
+        self
+    }
+
+    /// Sets the window inner physical size.
+    #[inline]
+    pub fn with_physical_size(mut self, width: u32, height: u32) -> Self {
+        self.attr.winit.inner_size = Some(dpi::Size::Physical(dpi::PhysicalSize { width, height }));
         self
     }
 
@@ -63,6 +74,16 @@ impl<'req> WindowBuilder<'req> {
         C: Into<Option<Canvas>>,
     {
         self.attr.canvas = canvas.into();
+        self
+    }
+
+    /// Sets the [winit attributes](window::WindowAttributes).
+    #[inline]
+    pub fn with_winit<A>(mut self, winit: A) -> Self
+    where
+        A: Into<Box<window::WindowAttributes>>,
+    {
+        self.attr.winit = winit.into();
         self
     }
 }
@@ -79,19 +100,20 @@ impl<'req> IntoFuture for WindowBuilder<'req> {
 
 /// [Window] attributes.
 pub(crate) struct Attributes {
-    title: Cow<'static, str>,
     canvas: Option<Canvas>,
+    // boxed to reduse sizeof
+    winit: Box<window::WindowAttributes>,
 }
 
 impl Attributes {
     #[inline]
-    fn winit(mut self) -> window::WindowAttributes {
-        let mut attr = window::WindowAttributes::default().with_title(self.title);
+    pub(crate) fn winit(mut self) -> Box<window::WindowAttributes> {
+        let mut winit = *self.winit;
         if let Some(canvas) = self.canvas.take() {
-            attr = canvas.set(attr);
+            winit = canvas.set(winit);
         }
 
-        attr
+        Box::new(winit)
     }
 }
 
@@ -276,9 +298,9 @@ impl Window {
         cx: Context,
         req: Request,
         el: &event_loop::ActiveEventLoop,
-        attr: Attributes,
+        attr: Box<window::WindowAttributes>,
     ) -> Result<Self, Error> {
-        let window = el.create_window(attr.winit()).map_err(Error::Os)?;
+        let window = el.create_window(*attr).map_err(Error::Os)?;
         let surface = Surface::new(&cx, window).map_err(Error::CreateSurface)?;
 
         let shared = Rc::new(Shared {

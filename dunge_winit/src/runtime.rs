@@ -34,7 +34,7 @@ use std::time::Instant;
 enum Message {
     MakeWindow {
         cx: Context,
-        attr: Box<Attributes>,
+        attr: Box<window::WindowAttributes>,
         out: Rc<OnceCell<Result<Window, Error>>>,
     },
     RemoveWindow(window::WindowId),
@@ -52,7 +52,7 @@ impl Request {
         let mut out = Rc::new(OnceCell::new());
         _ = self.0.send_event(Message::MakeWindow {
             cx,
-            attr: Box::new(attr),
+            attr: attr.winit(),
             out: out.clone(),
         });
 
@@ -318,7 +318,7 @@ where
         match req {
             Message::MakeWindow { cx, attr, out } => {
                 log::debug!("make window");
-                let res = Window::new(cx, self.req.clone(), el, *attr);
+                let res = Window::new(cx, self.req.clone(), el, attr);
                 if let Ok(window) = &res {
                     let shared = window.shared().clone();
                     let id = shared.window().id();
