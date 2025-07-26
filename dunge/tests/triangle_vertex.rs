@@ -47,9 +47,7 @@ fn render() -> Result<(), Error> {
             Vert(Vec2::new(-0.866, 0.75), Vec3::new(0., 0., 1.)),
         ];
 
-        const DATA: MeshData<'_, Vert> = MeshData::from_verts(&VERTS);
-
-        cx.make_mesh(&DATA)
+        cx.make_mesh(&MeshData::from_verts(&VERTS).expect("mesh data"))
     };
 
     let mut buf = {

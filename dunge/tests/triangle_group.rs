@@ -85,9 +85,7 @@ fn render() -> Result<(), Error> {
             },
         ];
 
-        const DATA: MeshData<'_, Vert> = MeshData::from_verts(&VERTS);
-
-        cx.make_mesh(&DATA)
+        cx.make_mesh(&MeshData::from_verts(&VERTS).expect("mesh data"))
     };
 
     let mut buf = {

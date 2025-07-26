@@ -49,7 +49,7 @@ async fn run(control: Control) -> Result<(), Error> {
     };
 
     let mesh = {
-        const DATA: MeshData<'static, Vert> = MeshData::from_verts(&[
+        const VERTS: [Vert; 3] = [
             Vert {
                 pos: Vec2::new(-0.5, -0.5),
                 col: Vec3::new(1., 0., 0.),
@@ -62,9 +62,9 @@ async fn run(control: Control) -> Result<(), Error> {
                 pos: Vec2::new(0., 0.5),
                 col: Vec3::new(0., 0., 1.),
             },
-        ]);
+        ];
 
-        cx.make_mesh(&DATA)
+        cx.make_mesh(&MeshData::from_verts(&VERTS).expect("mesh data"))
     };
 
     let window = control.make_window(&cx).await?;
