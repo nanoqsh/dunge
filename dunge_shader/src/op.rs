@@ -156,6 +156,8 @@ impl_binary!(Div::div(u32, u32) -> u32);
 impl_binary!(Rem::rem(u32, u32) -> u32);
 impl_binary!(Shl::shl(u32, u32) -> u32);
 impl_binary!(Shr::shr(u32, u32) -> u32);
+impl_binary!(BitAnd::bitand(u32, u32) -> u32);
+impl_binary!(BitOr::bitor(u32, u32) -> u32);
 impl_binary!(BitXor::bitxor(u32, u32) -> u32);
 
 impl_binary!(Add::add(glam::Vec2, glam::Vec2) -> glam::Vec2);
@@ -282,6 +284,8 @@ pub(crate) enum Bi {
     Shr,
     And,
     Or,
+    BitAnd,
+    BitOr,
     BitXor,
     Eq,
     Ne,
@@ -303,6 +307,8 @@ impl Bi {
             Self::Shr => naga::BinaryOperator::ShiftRight,
             Self::And => naga::BinaryOperator::LogicalAnd,
             Self::Or => naga::BinaryOperator::LogicalOr,
+            Self::BitAnd => naga::BinaryOperator::And,
+            Self::BitOr => naga::BinaryOperator::InclusiveOr,
             Self::BitXor => naga::BinaryOperator::ExclusiveOr,
             Self::Eq => naga::BinaryOperator::Equal,
             Self::Ne => naga::BinaryOperator::NotEqual,

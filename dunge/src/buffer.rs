@@ -182,7 +182,7 @@ impl fmt::Display for ZeroSized {
 
 impl error::Error for ZeroSized {}
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct TextureData<'data, U = DynamicTextureUsages> {
     data: &'data [u8],
     size: Size,
@@ -571,6 +571,7 @@ impl Sampler {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct BufferData<'data, U = DynamicBufferUsages> {
     data: &'data [u8],
     size: u32,
