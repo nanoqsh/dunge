@@ -48,7 +48,7 @@ where
         space: Space::Uniform,
     };
 
-    type Field = Ret<Global, V::Type>;
+    type Field = Ret<Global, V::GlobalType>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         Global::new(id, binding, out)
@@ -82,7 +82,7 @@ where
         },
     };
 
-    type Field = Ret<Global<M>, V::Type>;
+    type Field = Ret<Global<M>, V::GlobalType>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         Global::new(id, binding, out)

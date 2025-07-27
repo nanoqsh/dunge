@@ -75,6 +75,7 @@ impl Value for glam::Mat4 {
 /// A [uniform](crate::storage::Uniform) buffer value.
 pub trait UniformValue {
     type Type;
+    type GlobalType;
     fn uniform_value(&self) -> &[u8];
 }
 
@@ -83,6 +84,7 @@ where
     V: Value,
 {
     type Type = V::Type;
+    type GlobalType = types::Pointer<Self::Type>;
 
     fn uniform_value(&self) -> &[u8] {
         self.value()
@@ -94,6 +96,7 @@ where
     V: UniformValue + bytemuck::Pod,
 {
     type Type = types::Array<V::Type, N, true>;
+    type GlobalType = Self::Type;
 
     fn uniform_value(&self) -> &[u8] {
         const {
@@ -110,6 +113,7 @@ where
 /// A [storage](crate::storage::Storage) buffer value.
 pub trait StorageValue {
     type Type;
+    type GlobalType;
     fn storage_value(&self) -> &[u8];
 }
 
@@ -118,6 +122,7 @@ where
     V: Value,
 {
     type Type = V::Type;
+    type GlobalType = types::Pointer<Self::Type>;
 
     fn storage_value(&self) -> &[u8] {
         self.value()
@@ -129,6 +134,7 @@ where
     V: StorageValue + bytemuck::Pod,
 {
     type Type = types::Array<V::Type, N, false>;
+    type GlobalType = Self::Type;
 
     fn storage_value(&self) -> &[u8] {
         bytemuck::bytes_of(self)
@@ -140,6 +146,7 @@ where
     V: StorageValue + bytemuck::Pod,
 {
     type Type = types::DynamicArray<V::Type>;
+    type GlobalType = Self::Type;
 
     fn storage_value(&self) -> &[u8] {
         bytemuck::cast_slice(self)

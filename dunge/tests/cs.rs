@@ -14,6 +14,8 @@ fn cs_array() -> Result<(), Error> {
         storage::Storage,
     };
 
+    env_logger::init();
+
     let compute = |Groups(a): Groups<Storage<[f32; 4]>>| Compute {
         compute: a.load(0u32),
         workgroup_size: [64, 1, 1],

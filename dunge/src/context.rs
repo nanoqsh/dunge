@@ -171,7 +171,7 @@ impl Context {
     /// // pass the vertex and a bound 4x4 matrix in the shader
     /// let program = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
     ///     // multiply the matrix and the vertex `pos` field  
-    ///     place: m * v.pos,
+    ///     place: m.deref() * v.pos,
     ///
     ///     // pass `col` from the vertex to fragment stage and return as a final pixel color
     ///     color: sl::fragment(v.col),
@@ -258,7 +258,7 @@ impl Context {
     /// # async fn f(
     /// #     target: dunge::buffer::Texture2d,
     /// #     opts: dunge::Options,
-    /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Vec4<f32>>,)>>,
+    /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Pointer<dunge::types::Vec4<f32>>>,)>>,
     /// #     mesh: dunge::mesh::Mesh<Vec4f>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
     /// // pass the color value via a uniform
@@ -266,7 +266,7 @@ impl Context {
     ///     // set vertex coordinates
     ///     place: v,
     ///     // pass color from the vertex stage to the fragment stage
-    ///     color: sl::fragment(color),
+    ///     color: sl::fragment(color.deref()),
     /// };
     ///
     /// // create the context and shader

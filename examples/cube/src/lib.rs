@@ -24,7 +24,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     }
 
     let cube = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
-        place: m * sl::vec4_with(v.pos, 1.),
+        place: m.deref() * sl::vec4_with(v.pos, 1.),
         color: sl::vec4_with(sl::fragment(v.col), 1.),
     };
 

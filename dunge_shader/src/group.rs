@@ -2,13 +2,13 @@ use crate::{
     define::Define,
     eval::{Global, GlobalOut},
     op::Ret,
-    types::MemberData,
+    types,
 };
 
 /// The group type description.
 pub trait Group {
     type Projection: Projection;
-    const DEF: Define<MemberData>;
+    const DEF: Define<types::MemberData>;
 }
 
 impl<G> Group for &G
@@ -16,7 +16,7 @@ where
     G: Group,
 {
     type Projection = G::Projection;
-    const DEF: Define<MemberData> = G::DEF;
+    const DEF: Define<types::MemberData> = G::DEF;
 }
 
 /// Group type projection in a shader.

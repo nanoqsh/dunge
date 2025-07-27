@@ -27,15 +27,23 @@ impl<A, E, O> Eval<E> for Ret<Take<A, E>, O>
 where
     A: Eval<E>,
     E: GetEntry,
-    O: types::Value,
 {
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
         let me = self.get();
         let v = me.a.eval(en);
+
         let en = en.get_entry();
-        en.access_index(v, me.index)
+        let access = en.access_index(v, me.index);
+
+        // if const { types::is_value::<Self::Out>() } {
+        //     en.load(access)
+        // } else {
+        //     access
+        // }
+
+        access
     }
 }
 
@@ -91,44 +99,68 @@ pub trait Access {
     type Member;
 }
 
+impl<A, O> Ret<A, types::Pointer<O>> {
+    pub fn deref<E>(self) -> Ret<DerefPointer<Self, E>, O> {
+        Ret::new(DerefPointer {
+            p: self,
+            e: PhantomData,
+        })
+    }
+}
+
+pub struct DerefPointer<P, E> {
+    p: P,
+    e: PhantomData<E>,
+}
+
+impl<P, E, O> Eval<E> for Ret<DerefPointer<P, E>, O>
+where
+    P: Eval<E>,
+    E: GetEntry,
+{
+    type Out = O;
+
+    fn eval(self, en: &mut E) -> Expr {
+        let DerefPointer { p, .. } = self.get();
+        let ptr = p.eval(en);
+        en.get_entry().load(ptr)
+    }
+}
+
 /// An expression that can be indexed, like an array.
 pub trait Indexable {
-    type Member: types::Value;
+    type Read;
+    type Write;
 }
 
-impl<V> Indexable for types::Vec2<V>
-where
-    V: types::Value,
-{
-    type Member = V;
+impl<V> Indexable for types::Pointer<V> {
+    type Read = Self;
+    type Write = V;
 }
 
-impl<V> Indexable for types::Vec3<V>
-where
-    V: types::Value,
-{
-    type Member = V;
+impl<V> Indexable for types::Vec2<V> {
+    type Read = V;
+    type Write = V;
 }
 
-impl<V> Indexable for types::Vec4<V>
-where
-    V: types::Value,
-{
-    type Member = V;
+impl<V> Indexable for types::Vec3<V> {
+    type Read = V;
+    type Write = V;
 }
 
-impl<V, const N: usize, const U: bool> Indexable for types::Array<V, N, U>
-where
-    V: types::Value,
-{
-    type Member = V;
+impl<V> Indexable for types::Vec4<V> {
+    type Read = V;
+    type Write = V;
 }
 
-impl<V> Indexable for types::DynamicArray<V>
-where
-    V: types::Value,
-{
-    type Member = V;
+impl<V, const N: usize, const U: bool> Indexable for types::Array<V, N, U> {
+    type Read = types::Pointer<V>;
+    type Write = V;
+}
+
+impl<V> Indexable for types::DynamicArray<V> {
+    type Read = types::Pointer<V>;
+    type Write = V;
 }
 
 impl<A, O> Ret<A, O>
@@ -136,7 +168,7 @@ where
     O: Indexable,
 {
     /// Loads a value from an array, using *computed* u32 index.
-    pub fn load<I, E>(self, index: I) -> Ret<IndexLoad<I, Self, E>, O::Member>
+    pub fn load<I, E>(self, index: I) -> Ret<IndexLoad<I, Self, E>, O::Read>
     where
         I: Eval<E, Out = u32>,
     {
@@ -144,22 +176,8 @@ where
     }
 
     /// Loads a value from an array, using *direct* u32 index.
-    pub fn load_with_u32<E>(self, index: u32) -> Ret<Take<Self, E>, O::Member> {
+    pub fn load_with_u32<E>(self, index: u32) -> Ret<Take<Self, E>, O::Read> {
         Ret::new(Take::new(index, self))
-    }
-}
-
-impl<O> Ret<Global<types::Mutable>, O>
-where
-    O: Indexable,
-{
-    /// Stores a value to an array, using a computed u32 index.
-    pub fn store<I, V, E>(self, index: I, value: V) -> Ret<IndexStore<I, Self, V, E>, O::Member>
-    where
-        I: Eval<E, Out = u32>,
-        V: Eval<E, Out = O::Member>,
-    {
-        Ret::new(IndexStore::new(index, self, value))
     }
 }
 
@@ -179,13 +197,13 @@ impl<I, A, E> IndexLoad<I, A, E> {
     }
 }
 
-impl<I, A, E> Eval<E> for Ret<IndexLoad<I, A, E>, <A::Out as Indexable>::Member>
+impl<I, A, E> Eval<E> for Ret<IndexLoad<I, A, E>, <A::Out as Indexable>::Read>
 where
     I: Eval<E, Out = u32>,
     A: Eval<E, Out: Indexable>,
     E: GetEntry,
 {
-    type Out = <A::Out as Indexable>::Member;
+    type Out = <A::Out as Indexable>::Read;
 
     fn eval(self, en: &mut E) -> Expr {
         let me = self.get();
@@ -195,11 +213,27 @@ where
         let en = en.get_entry();
         let access = en.access(array, index);
 
-        if const { types::indirect_load::<Self::Out>() } {
-            en.load(access)
-        } else {
-            access
-        }
+        // if const { types::is_value::<Self::Out>() } {
+        //     en.load(access)
+        // } else {
+        //     access
+        // }
+
+        access
+    }
+}
+
+impl<O> Ret<Global<types::Mutable>, O>
+where
+    O: Indexable,
+{
+    /// Stores a value to an array, using a computed u32 index.
+    pub fn store<I, V, E>(self, index: I, value: V) -> Ret<IndexStore<I, Self, V, E>, O::Write>
+    where
+        I: Eval<E, Out = u32>,
+        V: Eval<E, Out = O::Write>,
+    {
+        Ret::new(IndexStore::new(index, self, value))
     }
 }
 
@@ -224,7 +258,7 @@ impl<I, A, V, E> IndexStore<I, A, V, E> {
 impl<I, A, V, E> Eval<E> for Ret<IndexStore<I, A, V, E>, V::Out>
 where
     I: Eval<E, Out = u32>,
-    A: Eval<E, Out: Indexable<Member = V::Out>>,
+    A: Eval<E, Out: Indexable>,
     V: Eval<E>,
     E: GetEntry,
 {

@@ -335,7 +335,7 @@ pub struct Global<M = types::Immutable> {
 }
 
 impl<M> Global<M> {
-    pub const fn new<T>(id: u32, binding: u32, out: GlobalOut) -> Ret<Self, T> {
+    pub const fn new<O>(id: u32, binding: u32, out: GlobalOut) -> Ret<Self, O> {
         Ret::new(Self {
             id,
             binding,
@@ -358,7 +358,6 @@ impl<M> Clone for Global<M> {
 
 impl<M, O, E> Eval<E> for Ret<Global<M>, O>
 where
-    O: types::Member,
     E: GetEntry,
 {
     type Out = O;
@@ -372,13 +371,7 @@ where
         let en = en.get_entry();
         let res = naga::ResourceBinding { group: id, binding };
         let var = en.compl.globs.get(res);
-        let global = en.global(var);
-
-        if const { types::indirect_load::<O>() } {
-            en.load(global)
-        } else {
-            global
-        }
+        en.global(var)
     }
 }
 

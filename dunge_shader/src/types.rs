@@ -530,14 +530,11 @@ impl MemberType {
 }
 
 /// Some values require an indirect load to be read from a global variable.
-pub const fn indirect_load<M>() -> bool
+pub const fn is_value<M>() -> bool
 where
     M: Member,
 {
-    matches!(
-        M::MEMBER_TYPE,
-        MemberType::Scalar(_) | MemberType::Vector(_) | MemberType::Matrix(_),
-    )
+    !matches!(M::MEMBER_TYPE, MemberType::Tx2df | MemberType::Sampl,)
 }
 
 pub enum Immutable {}
@@ -581,3 +578,5 @@ impl Space {
         }
     }
 }
+
+pub struct Pointer<V>(V);
