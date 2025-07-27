@@ -112,12 +112,20 @@ impl<A, O> Ret<A, O>
 where
     O: Indexable,
 {
-    /// Loads a value from an array, using a computed u32 index.
+    /// Loads a value from an array, using *computed* u32 index.
     pub fn load<I, E>(self, index: I) -> Ret<IndexLoad<I, Self, E>, O::Member>
     where
         I: Eval<E, Out = u32>,
     {
         Ret::new(IndexLoad::new(index, self))
+    }
+
+    /// Loads a value from an array, using *direct* u32 index.
+    pub fn load_with_u32<I, E>(self, _index: u32) -> Ret<IndexLoad<I, Self, E>, O::Member>
+    where
+        I: Eval<E, Out = u32>,
+    {
+        todo!()
     }
 }
 

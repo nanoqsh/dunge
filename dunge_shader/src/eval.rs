@@ -290,7 +290,7 @@ where
 
                 en.compose(ty, exprs)
             }
-            ValueType::Array(_) => unreachable!(),
+            ValueType::Array(_) => en.argument(id),
         }
     }
 }
@@ -1152,7 +1152,9 @@ impl Compiler {
 
     fn define_instance(&mut self, ty: ValueType, binds: &mut Bindings) -> naga::Handle<naga::Type> {
         match ty {
-            ValueType::Scalar(_) | ValueType::Vector(_) => ty.ty(&mut self.types),
+            ValueType::Scalar(_) | ValueType::Vector(_) | ValueType::Array(_) => {
+                ty.ty(&mut self.types)
+            }
             ValueType::Matrix(mat) => {
                 let len = mat.dims();
                 let mut members = Vec::with_capacity(len as usize);
@@ -1176,7 +1178,6 @@ impl Compiler {
                     },
                 })
             }
-            ValueType::Array(_) => unreachable!(),
         }
     }
 

@@ -93,7 +93,7 @@ impl Context {
             limits: Limits {
                 index: 1,
                 verts: 1,
-                insts: 2,
+                insts: 3,
                 group: 1,
             },
         }

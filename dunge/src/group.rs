@@ -2,11 +2,12 @@
 
 use {
     crate::{
+        StorageValue,
         buffer::Sampler,
         sl::{Define, Global, GlobalOut, Ret},
         storage::{Storage, Uniform},
         types::{self, MemberData, MemberType, Space},
-        value::Value,
+        value::UniformValue,
     },
     dunge_shader::group::Group,
 };
@@ -36,14 +37,14 @@ where
     }
 }
 
-impl<V> s::Sealed for Uniform<V> where V: Value<true> {}
+impl<V> s::Sealed for Uniform<V> where V: UniformValue<Type: types::Member> {}
 
 impl<V> MemberProjection for Uniform<V>
 where
-    V: Value<true>,
+    V: UniformValue<Type: types::Member>,
 {
     const MEMBER: MemberData = MemberData {
-        ty: MemberType::from_value(<V::Type as types::Value>::VALUE_TYPE),
+        ty: <V::Type as types::Member>::MEMBER_TYPE,
         space: Space::Uniform,
     };
 
@@ -64,52 +65,24 @@ where
 
 impl<V, M> s::Sealed for Storage<V, M>
 where
-    V: Value<false>,
+    V: StorageValue + ?Sized,
     M: types::Mutability,
 {
 }
 
 impl<V, M> MemberProjection for Storage<V, M>
 where
-    V: Value<false>,
+    V: StorageValue<Type: types::Member> + ?Sized,
     M: types::Mutability,
 {
     const MEMBER: MemberData = MemberData {
-        ty: MemberType::from_value(<V::Type as types::Value>::VALUE_TYPE),
+        ty: <V::Type as types::Member>::MEMBER_TYPE,
         space: Space::Storage {
             mutable: M::MUTABLE,
         },
     };
 
     type Field = Ret<Global<M>, V::Type>;
-
-    fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
-        Global::new(id, binding, out)
-    }
-}
-
-impl<V, M> s::Sealed for Storage<[V], M>
-where
-    V: Value<false>,
-    M: types::Mutability,
-{
-}
-
-impl<V, M> MemberProjection for Storage<[V], M>
-where
-    V: Value<false>,
-    M: types::Mutability,
-{
-    const MEMBER: MemberData = MemberData {
-        ty: MemberType::DynamicArrayType(types::DynamicArrayType {
-            base: &<V::Type as types::Value>::VALUE_TYPE,
-        }),
-        space: Space::Storage {
-            mutable: M::MUTABLE,
-        },
-    };
-
-    type Field = Ret<Global<M>, types::DynamicArray<V::Type>>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         Global::new(id, binding, out)

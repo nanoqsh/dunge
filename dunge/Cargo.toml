@@ -39,6 +39,7 @@ parking.workspace = true
 
 [dev-dependencies]
 dunge_shader = { workspace = true, features = ["wgsl"] }
+env_logger.workspace = true
 helpers = { workspace = true, features = ["png"] }
 
 [lints]

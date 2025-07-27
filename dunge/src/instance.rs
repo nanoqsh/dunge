@@ -7,8 +7,8 @@ use {
         render::VertexSetter,
         sl::{ReadInstance, Ret},
         state::State,
-        types::{self, ValueType, VectorType},
-        value::StorageValue,
+        types::{self, ValueType},
+        value::Value,
     },
     std::marker::PhantomData,
 };
@@ -24,33 +24,30 @@ pub trait MemberProjection: s::Sealed {
     fn member_projection(id: u32) -> Self::Field;
 }
 
-impl s::Sealed for Row<glam::Vec2> {}
+pub trait RowValue: Sized {
+    type Type;
+    fn row_value(slice: &[Self]) -> &[u8];
+}
 
-impl MemberProjection for Row<glam::Vec2> {
-    const TYPE: ValueType = ValueType::Vector(VectorType::Vec2f);
-    type Field = Ret<ReadInstance, types::Vec2<f32>>;
+impl<V> RowValue for V
+where
+    V: Value + bytemuck::Pod,
+{
+    type Type = V::Type;
 
-    fn member_projection(id: u32) -> Self::Field {
-        ReadInstance::new(id)
+    fn row_value(slice: &[Self]) -> &[u8] {
+        bytemuck::cast_slice(slice)
     }
 }
 
-impl s::Sealed for Row<glam::Vec3> {}
+impl<V> s::Sealed for Row<V> where V: RowValue<Type: types::Value> {}
 
-impl MemberProjection for Row<glam::Vec3> {
-    const TYPE: ValueType = ValueType::Vector(VectorType::Vec3f);
-    type Field = Ret<ReadInstance, types::Vec3<f32>>;
-
-    fn member_projection(id: u32) -> Self::Field {
-        ReadInstance::new(id)
-    }
-}
-
-impl s::Sealed for Row<glam::Vec4> {}
-
-impl MemberProjection for Row<glam::Vec4> {
-    const TYPE: ValueType = ValueType::Vector(VectorType::Vec4f);
-    type Field = Ret<ReadInstance, types::Vec4<f32>>;
+impl<V> MemberProjection for Row<V>
+where
+    V: RowValue<Type: types::Value>,
+{
+    const TYPE: ValueType = <V::Type as types::Value>::VALUE_TYPE;
+    type Field = Ret<ReadInstance, V::Type>;
 
     fn member_projection(id: u32) -> Self::Field {
         ReadInstance::new(id)
@@ -98,7 +95,7 @@ pub trait SetMember {
     fn set_member(&self, setter: &mut Setter<'_, '_>);
 }
 
-impl<U> SetMember for Row<U> {
+impl<V> SetMember for Row<V> {
     fn set_member(&self, setter: &mut Setter<'_, '_>) {
         setter.update_len(self.len);
         let slot = setter.next_slot();
@@ -106,23 +103,23 @@ impl<U> SetMember for Row<U> {
     }
 }
 
-pub struct Row<U> {
+pub struct Row<V> {
     buf: wgpu::Buffer,
     len: u32,
-    ty: PhantomData<U>,
+    ty: PhantomData<V>,
 }
 
-impl<U> Row<U> {
-    pub(crate) fn new(state: &State, data: &[U]) -> Self
+impl<V> Row<V> {
+    pub(crate) fn new(state: &State, data: &[V]) -> Self
     where
-        [U]: StorageValue,
+        V: RowValue,
     {
         use wgpu::util::{self, DeviceExt};
 
         let buf = {
             let desc = util::BufferInitDescriptor {
                 label: None,
-                contents: data.storage_value(),
+                contents: V::row_value(data),
                 usage: wgpu::BufferUsages::VERTEX,
             };
 
@@ -142,9 +139,9 @@ impl<U> Row<U> {
     ///
     /// # Panics
     /// Panics if the row length is not equal to the length of the new value.
-    pub fn update(&self, cx: &Context, data: &[U])
+    pub fn update(&self, cx: &Context, data: &[V])
     where
-        [U]: StorageValue,
+        V: RowValue,
     {
         assert_eq!(
             data.len(),
@@ -155,7 +152,7 @@ impl<U> Row<U> {
         );
 
         let queue = cx.state().queue();
-        queue.write_buffer(&self.buf, 0, data.storage_value());
+        queue.write_buffer(&self.buf, 0, V::row_value(data));
     }
 
     #[inline]

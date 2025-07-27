@@ -61,7 +61,6 @@ impl ValueType {
 /// The trait for types used inside a shader.
 pub trait Value {
     const VALUE_TYPE: ValueType;
-    const IN_UNIFORM: bool = false;
 }
 
 impl Value for f32 {

@@ -5,7 +5,7 @@ use {
             self, Buffer, Filter, Read, ReadFailed, Sampler, Texture, Texture2d, Write, WriteFailed,
         },
         compute,
-        instance::Row,
+        instance::{Row, RowValue},
         layer::{Config, Layer},
         mesh::{self, Mesh},
         render,
@@ -352,9 +352,9 @@ impl Context {
 
     /// Creates a [row](Row) with the given data.
     #[inline]
-    pub fn make_row<U>(&self, data: &[U]) -> Row<U>
+    pub fn make_row<V>(&self, data: &[V]) -> Row<V>
     where
-        [U]: StorageValue,
+        V: RowValue,
     {
         Row::new(&self.0, data)
     }
