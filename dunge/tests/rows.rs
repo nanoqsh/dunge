@@ -13,8 +13,6 @@ fn render() -> Result<(), Error> {
         glam::{Mat4, Vec4},
     };
 
-    env_logger::init();
-
     #[derive(Instance)]
     struct Transform {
         f: Row<f32>,
@@ -29,7 +27,7 @@ fn render() -> Result<(), Error> {
 
     let cx = dunge::block_on(dunge::context())?;
     let shader = cx.make_shader(code);
-    helpers::eq_lines(shader.debug_wgsl(), include_str!("instance.wgsl"));
+    helpers::eq_lines(shader.debug_wgsl(), include_str!("rows.wgsl"));
 
     Ok(())
 }

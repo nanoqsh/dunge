@@ -23,17 +23,19 @@ impl<A, E> Take<A, E> {
     }
 }
 
-impl<A, E> Eval<E> for Ret<Take<A, E>, <A::Out as Access>::Member>
+impl<A, E, O> Eval<E> for Ret<Take<A, E>, O>
 where
-    A: Eval<E, Out: Access>,
+    A: Eval<E>,
     E: GetEntry,
+    O: types::Value,
 {
-    type Out = <A::Out as Access>::Member;
+    type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
         let me = self.get();
         let v = me.a.eval(en);
-        en.get_entry().access_index(v, me.index)
+        let en = en.get_entry();
+        en.access_index(v, me.index)
     }
 }
 
@@ -89,9 +91,30 @@ pub trait Access {
     type Member;
 }
 
-/// An expression that can be dynamically indexed into, like an array.
+/// An expression that can be indexed, like an array.
 pub trait Indexable {
     type Member: types::Value;
+}
+
+impl<V> Indexable for types::Vec2<V>
+where
+    V: types::Value,
+{
+    type Member = V;
+}
+
+impl<V> Indexable for types::Vec3<V>
+where
+    V: types::Value,
+{
+    type Member = V;
+}
+
+impl<V> Indexable for types::Vec4<V>
+where
+    V: types::Value,
+{
+    type Member = V;
 }
 
 impl<V, const N: usize, const U: bool> Indexable for types::Array<V, N, U>
@@ -121,11 +144,8 @@ where
     }
 
     /// Loads a value from an array, using *direct* u32 index.
-    pub fn load_with_u32<I, E>(self, _index: u32) -> Ret<IndexLoad<I, Self, E>, O::Member>
-    where
-        I: Eval<E, Out = u32>,
-    {
-        todo!()
+    pub fn load_with_u32<E>(self, index: u32) -> Ret<Take<Self, E>, O::Member> {
+        Ret::new(Take::new(index, self))
     }
 }
 
