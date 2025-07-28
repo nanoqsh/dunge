@@ -31,7 +31,7 @@ where
     type Out = types::Vec4<F>;
 
     fn eval(self, en: &mut Fs) -> Expr {
-        let Samp { tex, sam, crd, .. } = self.get();
+        let Samp { tex, sam, crd, .. } = self.inner();
         let ex = Sampled {
             tex: tex.eval(en),
             sam: sam.eval(en),

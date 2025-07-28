@@ -233,7 +233,7 @@ impl Eval<Vs> for Ret<ReadIndex, u32> {
     type Out = u32;
 
     fn eval(self, en: &mut Vs) -> Expr {
-        en.get_entry().argument(self.get().id)
+        en.get_entry().argument(self.inner().id)
     }
 }
 
@@ -254,8 +254,8 @@ impl<O> Eval<Vs> for Ret<ReadVertex, O> {
 
     fn eval(self, en: &mut Vs) -> Expr {
         let en = en.get_entry();
-        let arg = en.argument(self.get().id);
-        en.access_index(arg, self.get().index)
+        let arg = en.argument(self.inner().id);
+        en.access_index(arg, self.inner().index)
     }
 }
 
@@ -278,7 +278,7 @@ where
 
     fn eval(self, en: &mut Vs) -> Expr {
         let en = en.get_entry();
-        let id = self.get().id;
+        let id = self.inner().id;
         match O::VALUE_TYPE {
             ValueType::Scalar(_) | ValueType::Vector(_) => en.argument(id),
             ValueType::Matrix(mat) => {
@@ -310,7 +310,7 @@ impl Eval<Cs> for Ret<ReadInvocation, types::Vec3<u32>> {
     type Out = types::Vec3<u32>;
 
     fn eval(self, en: &mut Cs) -> Expr {
-        en.get_entry().argument(self.get().id)
+        en.get_entry().argument(self.inner().id)
     }
 }
 
@@ -365,7 +365,7 @@ where
     fn eval(self, en: &mut E) -> Expr {
         let Global {
             id, binding, out, ..
-        } = self.get();
+        } = self.inner();
 
         out.with_stage(E::STAGE);
         let en = en.get_entry();
@@ -392,7 +392,7 @@ where
 
     fn eval(self, en: &mut Fs) -> Expr {
         let vecty = <A::Out as types::Vector>::TYPE;
-        let index = en.push_evalf(vecty, |en| self.get().0.eval(en));
+        let index = en.push_evalf(vecty, |en| self.inner().0.eval(en));
         let en = &mut en.inner;
         let arg = en.argument(0);
         en.access_index(arg, index)
@@ -478,7 +478,7 @@ impl<E, O> Eval<E> for Ret<Thunk<E>, O> {
     fn eval(self, en: &mut E) -> Expr {
         let Thunk {
             frame_id, cache, ..
-        } = self.get();
+        } = self.inner();
 
         assert!(
             in_stack(frame_id),

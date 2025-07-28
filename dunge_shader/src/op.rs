@@ -13,11 +13,13 @@ pub struct Ret<A, O> {
 }
 
 impl<A, T> Ret<A, T> {
+    #[inline]
     pub(crate) const fn new(a: A) -> Self {
         Self { a, t: PhantomData }
     }
 
-    pub(crate) fn get(self) -> A {
+    #[inline]
+    pub(crate) fn inner(self) -> A {
         self.a
     }
 }
@@ -26,6 +28,7 @@ impl<A, O> Clone for Ret<A, O>
 where
     A: Clone,
 {
+    #[inline]
     fn clone(&self) -> Self {
         Self::new(self.a.clone())
     }
@@ -47,8 +50,9 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
-        let Unary { a, op } = self.get();
+        let Unary { a, op } = self.inner();
         let x = a.eval(en);
         en.get_entry().unary(op, x)
     }
@@ -59,6 +63,7 @@ macro_rules! impl_unary {
         impl<A> ops::$o for Operand<A, $a> {
             type Output = Operand<Unary<Self>, $r>;
 
+            #[inline]
             fn $f(self) -> Self::Output {
                 Ret::new(Unary {
                     a: self,
@@ -91,8 +96,9 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
-        let Binary { a, b, op } = self.get();
+        let Binary { a, b, op } = self.inner();
         let x = a.eval(en);
         let y = b.eval(en);
         en.get_entry().binary(op, x, y)
@@ -104,6 +110,7 @@ macro_rules! impl_binary {
         impl<A> ops::$o<Operand<A, $b>> for $a {
             type Output = Operand<Binary<Self, Operand<A, $b>>, $r>;
 
+            #[inline]
             fn $f(self, b: Operand<A, $b>) -> Self::Output {
                 Ret::new(Binary {
                     a: self,
@@ -116,6 +123,7 @@ macro_rules! impl_binary {
         impl<A> ops::$o<$a> for Operand<A, $b> {
             type Output = Operand<Binary<Self, $a>, $r>;
 
+            #[inline]
             fn $f(self, b: $a) -> Self::Output {
                 Ret::new(Binary {
                     a: self,
@@ -128,6 +136,7 @@ macro_rules! impl_binary {
         impl<A, B> ops::$o<Operand<B, $b>> for Operand<A, $a> {
             type Output = Operand<Binary<Self, Operand<B, $b>>, $r>;
 
+            #[inline]
             fn $f(self, b: Operand<B, $b>) -> Self::Output {
                 Ret::new(Binary {
                     a: self,
@@ -189,6 +198,7 @@ impl_binary!(Mul::mul(glam::Mat2, glam::Vec2) -> glam::Vec2);
 impl_binary!(Mul::mul(glam::Mat3, glam::Vec3) -> glam::Vec3);
 impl_binary!(Mul::mul(glam::Mat4, glam::Vec4) -> glam::Vec4);
 
+#[inline]
 pub const fn not<A, B, E>(a: A) -> Ret<Unary<A>, bool>
 where
     A: Eval<E, Out = bool>,
@@ -196,6 +206,7 @@ where
     Ret::new(Unary { a, op: Un::Not })
 }
 
+#[inline]
 pub const fn and<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out = bool>,
@@ -204,6 +215,7 @@ where
     Ret::new(Binary { a, b, op: Bi::And })
 }
 
+#[inline]
 pub const fn or<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out = bool>,
@@ -212,6 +224,7 @@ where
     Ret::new(Binary { a, b, op: Bi::Or })
 }
 
+#[inline]
 pub const fn eq<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Scalar>,
@@ -220,6 +233,7 @@ where
     Ret::new(Binary { a, b, op: Bi::Eq })
 }
 
+#[inline]
 pub const fn ne<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Scalar>,
@@ -228,6 +242,7 @@ where
     Ret::new(Binary { a, b, op: Bi::Ne })
 }
 
+#[inline]
 pub const fn lt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,
@@ -236,6 +251,7 @@ where
     Ret::new(Binary { a, b, op: Bi::Lt })
 }
 
+#[inline]
 pub const fn le<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,
@@ -244,6 +260,7 @@ where
     Ret::new(Binary { a, b, op: Bi::Le })
 }
 
+#[inline]
 pub const fn gt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,
@@ -252,6 +269,7 @@ where
     Ret::new(Binary { a, b, op: Bi::Gt })
 }
 
+#[inline]
 pub const fn ge<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,

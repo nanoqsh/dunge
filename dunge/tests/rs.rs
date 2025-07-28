@@ -186,7 +186,7 @@ fn rs_storage() -> Result<(), Error> {
     }
 
     let compute = |Groups(map): Groups<Map>, Index(index): Index| Render {
-        place: sl::splat_vec4(1.) * map.array.load(index).deref(),
+        place: sl::splat_vec4(1.) * map.array.get(index).deref(),
         color: sl::splat_vec4(1.),
     };
 

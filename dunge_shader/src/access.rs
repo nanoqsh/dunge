@@ -7,76 +7,40 @@ use {
     std::marker::PhantomData,
 };
 
-pub struct Take<A, E> {
-    index: u32,
-    a: A,
-    e: PhantomData<E>,
-}
-
-impl<A, E> Take<A, E> {
-    const fn new(index: u32, a: A) -> Self {
-        Self {
-            index,
-            a,
-            e: PhantomData,
-        }
-    }
-}
-
-impl<A, E, O> Eval<E> for Ret<Take<A, E>, O>
-where
-    A: Eval<E>,
-    E: GetEntry,
-{
-    type Out = O;
-
-    fn eval(self, en: &mut E) -> Expr {
-        let me = self.get();
-        let v = me.a.eval(en);
-
-        let en = en.get_entry();
-        let access = en.access_index(v, me.index);
-
-        // if const { types::is_value::<Self::Out>() } {
-        //     en.load(access)
-        // } else {
-        //     access
-        // }
-
-        access
-    }
-}
-
 impl<A, O> Ret<A, O>
 where
     O: Access,
 {
-    pub fn x<E>(self) -> Ret<Take<Self, E>, O::Member>
+    #[inline]
+    pub fn x<E>(self) -> Ret<IndexGetU32<Self, E>, O::Member>
     where
         O::Dimension: Has<0>,
     {
-        Ret::new(Take::new(0, self))
+        Ret::new(IndexGetU32::new(0, self))
     }
 
-    pub fn y<E>(self) -> Ret<Take<Self, E>, O::Member>
+    #[inline]
+    pub fn y<E>(self) -> Ret<IndexGetU32<Self, E>, O::Member>
     where
         O::Dimension: Has<1>,
     {
-        Ret::new(Take::new(1, self))
+        Ret::new(IndexGetU32::new(1, self))
     }
 
-    pub fn z<E>(self) -> Ret<Take<Self, E>, O::Member>
+    #[inline]
+    pub fn z<E>(self) -> Ret<IndexGetU32<Self, E>, O::Member>
     where
         O::Dimension: Has<2>,
     {
-        Ret::new(Take::new(2, self))
+        Ret::new(IndexGetU32::new(2, self))
     }
 
-    pub fn w<E>(self) -> Ret<Take<Self, E>, O::Member>
+    #[inline]
+    pub fn w<E>(self) -> Ret<IndexGetU32<Self, E>, O::Member>
     where
         O::Dimension: Has<3>,
     {
-        Ret::new(Take::new(3, self))
+        Ret::new(IndexGetU32::new(3, self))
     }
 }
 
@@ -100,6 +64,7 @@ pub trait Access {
 }
 
 impl<A, O> Ret<A, types::Pointer<O>> {
+    #[inline]
     pub fn deref<E>(self) -> Ret<DerefPointer<Self, E>, O> {
         Ret::new(DerefPointer {
             p: self,
@@ -120,8 +85,9 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
-        let DerefPointer { p, .. } = self.get();
+        let DerefPointer { p, .. } = self.inner();
         let ptr = p.eval(en);
         en.get_entry().load(ptr)
     }
@@ -163,115 +129,266 @@ impl<V> Indexable for types::DynamicArray<V> {
     type Write = V;
 }
 
-impl<A, O> Ret<A, O>
-where
-    O: Indexable,
-{
-    /// Loads a value from an array, using *computed* u32 index.
-    pub fn load<I, E>(self, index: I) -> Ret<IndexLoad<I, Self, E>, O::Read>
+impl<A, O> Ret<A, O> {
+    /// Loads a value from an array-like, using *computed* u32 index.
+    ///
+    /// If the index is known in advance, use the [`get_with_u32`](Ret::get_with_u32) method instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dunge::{
+    ///     sl::{Compute, Groups, Invocation},
+    ///     storage::{Storage, RwStorage},
+    /// };
+    ///
+    /// type Io = (Storage<[f32; 4]>, RwStorage<[f32; 4]>);
+    ///
+    /// let code = |Invocation(v): Invocation, Groups((i, o)): Groups<Io>| Compute {
+    ///     compute: o.set(v.x(), i.get(v.x()).deref()),
+    ///     workgroup_size: [1; 3],
+    /// };
+    /// ```
+    #[inline]
+    pub fn get<I, E>(self, index: I) -> Ret<IndexGet<I, Self, E>, O::Read>
     where
+        O: Indexable,
         I: Eval<E, Out = u32>,
     {
-        Ret::new(IndexLoad::new(index, self))
+        Ret::new(IndexGet::new(index, self))
     }
 
-    /// Loads a value from an array, using *direct* u32 index.
-    pub fn load_with_u32<E>(self, index: u32) -> Ret<Take<Self, E>, O::Read> {
-        Ret::new(Take::new(index, self))
+    /// Loads a value from an array-like, using *direct* u32 index.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dunge::{
+    ///     sl::{Compute, Groups, Invocation},
+    ///     storage::{Storage, RwStorage},
+    /// };
+    ///
+    /// type Io = (Storage<[f32; 4]>, RwStorage<[f32; 4]>);
+    ///
+    /// let code = |Groups((i, o)): Groups<Io>| Compute {
+    ///     compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+    ///     workgroup_size: [1; 3],
+    /// };
+    /// ```
+    #[inline]
+    pub fn get_with_u32<E>(self, index: u32) -> Ret<IndexGetU32<Self, E>, O::Read>
+    where
+        O: Indexable,
+    {
+        Ret::new(IndexGetU32::new(index, self))
     }
 }
 
-pub struct IndexLoad<I, A, E> {
+pub struct IndexGet<I, A, E> {
     index: I,
-    array: A,
+    a: A,
     e: PhantomData<E>,
 }
 
-impl<I, A, E> IndexLoad<I, A, E> {
-    const fn new(index: I, array: A) -> Self {
+impl<I, A, E> IndexGet<I, A, E> {
+    #[inline]
+    const fn new(index: I, a: A) -> Self {
         Self {
             index,
-            array,
+            a,
             e: PhantomData,
         }
     }
 }
 
-impl<I, A, E> Eval<E> for Ret<IndexLoad<I, A, E>, <A::Out as Indexable>::Read>
+impl<I, A, E, O> Eval<E> for Ret<IndexGet<I, A, E>, O>
 where
-    I: Eval<E, Out = u32>,
-    A: Eval<E, Out: Indexable>,
+    I: Eval<E>,
+    A: Eval<E>,
     E: GetEntry,
 {
-    type Out = <A::Out as Indexable>::Read;
+    type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
-        let me = self.get();
-        let array = me.array.eval(en);
+        let me = self.inner();
+
+        let expr = me.a.eval(en);
         let index = me.index.eval(en);
-
         let en = en.get_entry();
-        let access = en.access(array, index);
-
-        // if const { types::is_value::<Self::Out>() } {
-        //     en.load(access)
-        // } else {
-        //     access
-        // }
-
-        access
+        en.access(expr, index)
     }
 }
 
-impl<O> Ret<Global<types::Mutable>, O>
+pub struct IndexGetU32<A, E> {
+    index: u32,
+    a: A,
+    e: PhantomData<E>,
+}
+
+impl<A, E> IndexGetU32<A, E> {
+    #[inline]
+    const fn new(index: u32, a: A) -> Self {
+        Self {
+            index,
+            a,
+            e: PhantomData,
+        }
+    }
+}
+
+impl<A, E, O> Eval<E> for Ret<IndexGetU32<A, E>, O>
 where
-    O: Indexable,
+    A: Eval<E>,
+    E: GetEntry,
 {
-    /// Stores a value to an array, using a computed u32 index.
-    pub fn store<I, V, E>(self, index: I, value: V) -> Ret<IndexStore<I, Self, V, E>, O::Write>
+    type Out = O;
+
+    #[inline]
+    fn eval(self, en: &mut E) -> Expr {
+        let me = self.inner();
+
+        let expr = me.a.eval(en);
+        let en = en.get_entry();
+        en.access_index(expr, me.index)
+    }
+}
+
+impl<O> Ret<Global<types::Mutable>, O> {
+    /// Stores a value to an array-like, using *computed* u32 index.
+    ///
+    /// If the index is known in advance, use the [`set_with_u32`](Ret::set_with_u32) method instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dunge::{
+    ///     sl::{Compute, Groups, Invocation},
+    ///     storage::{Storage, RwStorage},
+    /// };
+    ///
+    /// type Io = (Storage<[f32; 4]>, RwStorage<[f32; 4]>);
+    ///
+    /// let code = |Invocation(v): Invocation, Groups((i, o)): Groups<Io>| Compute {
+    ///     compute: o.set(v.x(), i.get(v.x()).deref()),
+    ///     workgroup_size: [1; 3],
+    /// };
+    /// ```
+    #[inline]
+    pub fn set<I, V, E>(self, index: I, value: V) -> Ret<IndexSet<I, Self, V, E>, O::Write>
     where
+        O: Indexable,
         I: Eval<E, Out = u32>,
         V: Eval<E, Out = O::Write>,
     {
-        Ret::new(IndexStore::new(index, self, value))
+        Ret::new(IndexSet::new(index, self, value))
+    }
+
+    /// Stores a value to an array-like, using *direct* u32 index.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dunge::{
+    ///     sl::{Compute, Groups, Invocation},
+    ///     storage::{Storage, RwStorage},
+    /// };
+    ///
+    /// type Io = (Storage<[f32; 4]>, RwStorage<[f32; 4]>);
+    ///
+    /// let code = |Groups((i, o)): Groups<Io>| Compute {
+    ///     compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+    ///     workgroup_size: [1; 3],
+    /// };
+    /// ```
+    #[inline]
+    pub fn set_with_u32<V, E>(self, index: u32, value: V) -> Ret<IndexSetU32<Self, V, E>, O::Write>
+    where
+        O: Indexable,
+        V: Eval<E, Out = O::Write>,
+    {
+        Ret::new(IndexSetU32::new(index, self, value))
     }
 }
 
-pub struct IndexStore<I, A, V, E> {
+pub struct IndexSet<I, A, V, E> {
     index: I,
-    array: A,
-    value: V,
+    a: A,
+    v: V,
     e: PhantomData<E>,
 }
 
-impl<I, A, V, E> IndexStore<I, A, V, E> {
-    const fn new(index: I, array: A, value: V) -> Self {
+impl<I, A, V, E> IndexSet<I, A, V, E> {
+    #[inline]
+    const fn new(index: I, a: A, v: V) -> Self {
         Self {
             index,
-            array,
-            value,
+            a,
+            v,
             e: PhantomData,
         }
     }
 }
 
-impl<I, A, V, E> Eval<E> for Ret<IndexStore<I, A, V, E>, V::Out>
+impl<I, A, V, E, O> Eval<E> for Ret<IndexSet<I, A, V, E>, O>
 where
-    I: Eval<E, Out = u32>,
-    A: Eval<E, Out: Indexable>,
+    I: Eval<E>,
+    A: Eval<E>,
     V: Eval<E>,
     E: GetEntry,
 {
-    type Out = V::Out;
+    type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
-        let me = self.get();
+        let me = self.inner();
 
-        let array = me.array.eval(en);
+        let expr = me.a.eval(en);
         let index = me.index.eval(en);
-        let access = en.get_entry().access(array, index);
+        let access = en.get_entry().access(expr, index);
 
-        let value = me.value.eval(en);
+        let value = me.v.eval(en);
+        let en = en.get_entry();
+        en.store(access, value);
+        value
+    }
+}
+
+pub struct IndexSetU32<A, V, E> {
+    index: u32,
+    a: A,
+    v: V,
+    e: PhantomData<E>,
+}
+
+impl<A, V, E> IndexSetU32<A, V, E> {
+    #[inline]
+    const fn new(index: u32, a: A, v: V) -> Self {
+        Self {
+            index,
+            a,
+            v,
+            e: PhantomData,
+        }
+    }
+}
+
+impl<A, V, E, O> Eval<E> for Ret<IndexSetU32<A, V, E>, O>
+where
+    A: Eval<E>,
+    V: Eval<E>,
+    E: GetEntry,
+{
+    type Out = O;
+
+    #[inline]
+    fn eval(self, en: &mut E) -> Expr {
+        let me = self.inner();
+
+        let expr = me.a.eval(en);
+        let access = en.get_entry().access_index(expr, me.index);
+
+        let value = me.v.eval(en);
         let en = en.get_entry();
         en.store(access, value);
         value

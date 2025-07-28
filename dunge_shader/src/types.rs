@@ -529,14 +529,6 @@ impl MemberType {
     }
 }
 
-/// Some values require an indirect load to be read from a global variable.
-pub const fn is_value<M>() -> bool
-where
-    M: Member,
-{
-    !matches!(M::MEMBER_TYPE, MemberType::Tx2df | MemberType::Sampl,)
-}
-
 pub enum Immutable {}
 pub enum Mutable {}
 

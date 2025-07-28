@@ -55,7 +55,7 @@ where
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let v = self.get().a.eval(en);
+        let v = self.inner().a.eval(en);
         en.get_entry().convert(v, O::TYPE)
     }
 }

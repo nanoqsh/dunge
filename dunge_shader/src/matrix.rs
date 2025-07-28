@@ -104,7 +104,7 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
-        self.get().a.eval(en, &mut o);
+        self.inner().a.eval(en, &mut o);
         let en = en.get_entry();
         let ty = O::TYPE.ty(en);
         let components = o.into_iter().collect();

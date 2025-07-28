@@ -17,7 +17,7 @@ fn cs_array() -> Result<(), Error> {
     env_logger::init();
 
     let compute = |Groups(a): Groups<Storage<[f32; 4]>>| Compute {
-        compute: a.load(0u32),
+        compute: a.get(0u32),
         workgroup_size: [64, 1, 1],
     };
 
@@ -34,7 +34,7 @@ fn cs_array_rw() -> Result<(), Error> {
     };
 
     let compute = |Groups(a): Groups<RwStorage<[f32; 4]>>| Compute {
-        compute: a.store(0u32, 1.),
+        compute: a.set(0u32, 1.),
         workgroup_size: [64, 1, 1],
     };
 
@@ -51,7 +51,7 @@ fn cs_dynamic_array() -> Result<(), Error> {
     };
 
     let compute = |Groups(a): Groups<Storage<[f32]>>| Compute {
-        compute: a.load(0u32),
+        compute: a.get(0u32),
         workgroup_size: [64, 1, 1],
     };
 
@@ -68,7 +68,7 @@ fn cs_dynamic_array_rw() -> Result<(), Error> {
     };
 
     let compute = |Groups(a): Groups<RwStorage<[f32]>>| Compute {
-        compute: a.store(0u32, 1.),
+        compute: a.set(0u32, 1.),
         workgroup_size: [64, 1, 1],
     };
 
@@ -89,7 +89,7 @@ fn cs_array2d() -> Result<(), Error> {
     };
 
     let compute = |Groups(a): Groups<Storage<[[f32; 4]; 4]>>| Compute {
-        compute: a.load(0u32).load(0u32),
+        compute: a.get(0u32).get(0u32),
         workgroup_size: [64, 1, 1],
     };
 
@@ -107,7 +107,7 @@ fn cs_array_uniform() -> Result<(), Error> {
     };
 
     let compute = |Groups(a): Groups<Uniform<[Vec4; 4]>>| Compute {
-        compute: a.load(0u32),
+        compute: a.get(0u32),
         workgroup_size: [64, 1, 1],
     };
 

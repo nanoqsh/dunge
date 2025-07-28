@@ -214,7 +214,7 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
-        let Math { args, func, .. } = self.get();
+        let Math { args, func, .. } = self.inner();
         args.eval(en, &mut o);
         en.get_entry().math(func, o)
     }

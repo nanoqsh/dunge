@@ -18,5 +18,8 @@ glam.workspace = true
 log.workspace = true
 naga.workspace = true
 
+[dev-dependencies]
+dunge.workspace = true
+
 [lints]
 workspace = true

@@ -42,7 +42,7 @@ where
     type Out = X::Out;
 
     fn eval(self, en: &mut E) -> Expr {
-        let IfThenElse { c, a, b, .. } = self.get();
+        let IfThenElse { c, a, b, .. } = self.inner();
         let c = c.eval(en);
         let a = |en: &mut E| a().eval(en);
         let b = |branch: &mut Branch<'_, _>| Some(b().eval(branch.entry()));
@@ -100,7 +100,7 @@ impl<C, A, B, E, O> Ret<When<C, A, B, E>, O> {
         Ret::new(When {
             c: cond,
             a: expr,
-            b: self.get(),
+            b: self.inner(),
             e: PhantomData,
         })
     }
@@ -117,7 +117,7 @@ where
     type Out = X::Out;
 
     fn eval(self, en: &mut E) -> Expr {
-        let when = self.get();
+        let when = self.inner();
         let valty = <X::Out as types::Value>::VALUE_TYPE;
         let ty = valty.ty(en.get_entry());
         let mut branch = Branch::new(en, ty);

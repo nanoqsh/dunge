@@ -215,7 +215,7 @@ impl Context {
     /// // pass an invocation vector and a bound storage in the shader
     /// let program = |Invocation(v): Invocation, Groups(a): Groups<Array>| Compute {
     ///     // read values from the array and rewrite in back
-    ///     compute: a.store(v.x(), v.x()),
+    ///     compute: a.set(v.x(), v.x()),
     ///
     ///     // set the workgroup size
     ///     workgroup_size: [16, 1, 1],

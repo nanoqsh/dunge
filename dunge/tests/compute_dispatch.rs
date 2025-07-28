@@ -19,7 +19,7 @@ fn compute() -> Result<(), Error> {
     type Array = RwStorage<[u32; STORAGE_SIZE]>;
 
     let compute = |Invocation(v): Invocation, Groups(a): Groups<Array>| Compute {
-        compute: a.store(v.x(), v.x()),
+        compute: a.set(v.x(), v.x()),
         workgroup_size: [SIZE, 1, 1],
     };
 

@@ -107,7 +107,7 @@ where
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let val = self.get().a.eval(en);
+        let val = self.inner().a.eval(en);
         let en = en.get_entry();
         let ty = O::TYPE.ty(en);
         let components = (0..O::TYPE.dims()).map(|_| val).collect();
@@ -169,7 +169,7 @@ where
 
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
-        self.get().a.eval(en, &mut o);
+        self.inner().a.eval(en, &mut o);
         let en = en.get_entry();
         let ty = O::TYPE.ty(en);
         let components = o.into_iter().collect();
@@ -217,7 +217,7 @@ where
     type Out = O;
 
     fn eval(self, en: &mut E) -> Expr {
-        let Compose { a, b } = self.get();
+        let Compose { a, b } = self.inner();
         let x = a.eval(en).get();
         let y = b.eval(en).get();
         let en = en.get_entry();
