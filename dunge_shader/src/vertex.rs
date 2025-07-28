@@ -71,13 +71,13 @@ impl<T> Projection for Ret<ReadVertex, T> {
 /// Describes an input type projection.
 ///
 /// The trait is sealed because the derive macro relies on no new types being used.
-pub trait InputProjection: f::F32Aligned {
+pub trait InputProjection: f::Align4 {
     const TYPE: VectorType;
     type Field;
     fn input_projection(id: u32, index: u32) -> Self::Field;
 }
 
-impl f::F32Aligned for [f32; 2] {}
+impl f::Align4 for [f32; 2] {}
 
 impl InputProjection for [f32; 2] {
     const TYPE: VectorType = VectorType::Vec2f;
@@ -88,7 +88,7 @@ impl InputProjection for [f32; 2] {
     }
 }
 
-impl f::F32Aligned for [f32; 3] {}
+impl f::Align4 for [f32; 3] {}
 
 impl InputProjection for [f32; 3] {
     const TYPE: VectorType = VectorType::Vec3f;
@@ -99,7 +99,7 @@ impl InputProjection for [f32; 3] {
     }
 }
 
-impl f::F32Aligned for [f32; 4] {}
+impl f::Align4 for [f32; 4] {}
 
 impl InputProjection for [f32; 4] {
     const TYPE: VectorType = VectorType::Vec4f;
@@ -110,7 +110,7 @@ impl InputProjection for [f32; 4] {
     }
 }
 
-impl f::F32Aligned for glam::Vec2 {}
+impl f::Align4 for glam::Vec2 {}
 
 impl InputProjection for glam::Vec2 {
     const TYPE: VectorType = VectorType::Vec2f;
@@ -121,7 +121,7 @@ impl InputProjection for glam::Vec2 {
     }
 }
 
-impl f::F32Aligned for glam::Vec3 {}
+impl f::Align4 for glam::Vec3 {}
 
 impl InputProjection for glam::Vec3 {
     const TYPE: VectorType = VectorType::Vec3f;
@@ -134,10 +134,142 @@ impl InputProjection for glam::Vec3 {
 
 #[cfg(false)]
 mod ignore {
-    // glam::Vec4 is not f32 aligned
+    // glam::Vec4 is not 4 bytes aligned
     impl !InputProjection for glam::Vec4 {}
 }
 
+impl f::Align4 for [u32; 2] {}
+
+impl InputProjection for [u32; 2] {
+    const TYPE: VectorType = VectorType::Vec2u;
+    type Field = Ret<ReadVertex, types::Vec2<u32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for [u32; 3] {}
+
+impl InputProjection for [u32; 3] {
+    const TYPE: VectorType = VectorType::Vec3u;
+    type Field = Ret<ReadVertex, types::Vec3<u32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for [u32; 4] {}
+
+impl InputProjection for [u32; 4] {
+    const TYPE: VectorType = VectorType::Vec4u;
+    type Field = Ret<ReadVertex, types::Vec4<u32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for glam::UVec2 {}
+
+impl InputProjection for glam::UVec2 {
+    const TYPE: VectorType = VectorType::Vec2u;
+    type Field = Ret<ReadVertex, types::Vec2<u32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for glam::UVec3 {}
+
+impl InputProjection for glam::UVec3 {
+    const TYPE: VectorType = VectorType::Vec3u;
+    type Field = Ret<ReadVertex, types::Vec3<u32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for glam::UVec4 {}
+
+impl InputProjection for glam::UVec4 {
+    const TYPE: VectorType = VectorType::Vec4u;
+    type Field = Ret<ReadVertex, types::Vec4<u32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for [i32; 2] {}
+
+impl InputProjection for [i32; 2] {
+    const TYPE: VectorType = VectorType::Vec2i;
+    type Field = Ret<ReadVertex, types::Vec2<i32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for [i32; 3] {}
+
+impl InputProjection for [i32; 3] {
+    const TYPE: VectorType = VectorType::Vec3i;
+    type Field = Ret<ReadVertex, types::Vec3<i32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for [i32; 4] {}
+
+impl InputProjection for [i32; 4] {
+    const TYPE: VectorType = VectorType::Vec4i;
+    type Field = Ret<ReadVertex, types::Vec4<i32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for glam::IVec2 {}
+
+impl InputProjection for glam::IVec2 {
+    const TYPE: VectorType = VectorType::Vec2i;
+    type Field = Ret<ReadVertex, types::Vec2<i32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for glam::IVec3 {}
+
+impl InputProjection for glam::IVec3 {
+    const TYPE: VectorType = VectorType::Vec3i;
+    type Field = Ret<ReadVertex, types::Vec3<i32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
+impl f::Align4 for glam::IVec4 {}
+
+impl InputProjection for glam::IVec4 {
+    const TYPE: VectorType = VectorType::Vec4i;
+    type Field = Ret<ReadVertex, types::Vec4<i32>>;
+
+    fn input_projection(id: u32, index: u32) -> Self::Field {
+        ReadVertex::new(id, index)
+    }
+}
+
 mod f {
-    pub trait F32Aligned {}
+    pub trait Align4 {}
 }

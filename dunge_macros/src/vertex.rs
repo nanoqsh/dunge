@@ -85,7 +85,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         quote::quote! {
             const _: () = ::core::assert!(
                 ::core::mem::align_of::<#ty>() == ::core::mem::align_of::<f32>(),
-                "the type must be f32 aligned",
+                "the type must be 4 bytes aligned",
             );
         }
     });
@@ -156,12 +156,12 @@ mod tests {
 
             const _: () = ::core::assert!(
                 ::core::mem::align_of::<[f32; 2]>() == ::core::mem::align_of::<f32>(),
-                "the type must be f32 aligned",
+                "the type must be 4 bytes aligned",
             );
 
             const _: () = ::core::assert!(
                 ::core::mem::align_of::<[f32; 3]>() == ::core::mem::align_of::<f32>(),
-                "the type must be f32 aligned",
+                "the type must be 4 bytes aligned",
             );
 
             impl dunge::vertex::Projection for VertProj {
@@ -202,12 +202,12 @@ mod tests {
 
             const _: () = ::core::assert!(
                 ::core::mem::align_of::<[f32; 2]>() == ::core::mem::align_of::<f32>(),
-                "the type must be f32 aligned",
+                "the type must be 4 bytes aligned",
             );
 
             const _: () = ::core::assert!(
                 ::core::mem::align_of::<[f32; 3]>() == ::core::mem::align_of::<f32>(),
-                "the type must be f32 aligned",
+                "the type must be 4 bytes aligned",
             );
 
             impl dunge::vertex::Projection for VertProj {
