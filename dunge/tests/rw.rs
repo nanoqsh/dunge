@@ -37,7 +37,7 @@ fn rw_array_u32() -> Result<(), Error> {
     type Io = (Storage<[f32; 4]>, RwStorage<[f32; 4]>);
 
     let code = |Groups((i, o)): Groups<Io>| Compute {
-        compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+        compute: o.set_u32(0, i.get_u32(0).deref()),
         workgroup_size: [1; 3],
     };
 
@@ -77,7 +77,7 @@ fn rw_dyn_array_u32() -> Result<(), Error> {
     type Io = (Storage<[f32]>, RwStorage<[f32]>);
 
     let code = |Groups((i, o)): Groups<Io>| Compute {
-        compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+        compute: o.set_u32(0, i.get_u32(0).deref()),
         workgroup_size: [1; 3],
     };
 
@@ -119,7 +119,7 @@ fn rw_vec_u32() -> Result<(), Error> {
     type Io = (Storage<Vec3>, RwStorage<Vec3>);
 
     let code = |Groups((i, o)): Groups<Io>| Compute {
-        compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+        compute: o.set_u32(0, i.get_u32(0).deref()),
         workgroup_size: [1; 3],
     };
 
@@ -161,7 +161,7 @@ fn rw_mat_u32() -> Result<(), Error> {
     type Io = (Storage<Mat3>, RwStorage<Mat3>);
 
     let code = |Groups((i, o)): Groups<Io>| Compute {
-        compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+        compute: o.set_u32(0, i.get_u32(0).deref()),
         workgroup_size: [1; 3],
     };
 

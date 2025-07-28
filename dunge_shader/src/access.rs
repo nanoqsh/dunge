@@ -150,7 +150,7 @@ impl<A, O> Ret<A, O> {
     /// };
     /// ```
     #[inline]
-    pub fn get<I, E>(self, index: I) -> Ret<IndexGet<I, Self, E>, O::Read>
+    pub const fn get<I, E>(self, index: I) -> Ret<IndexGet<I, Self, E>, O::Read>
     where
         O: Indexable,
         I: Eval<E, Out = u32>,
@@ -171,12 +171,12 @@ impl<A, O> Ret<A, O> {
     /// type Io = (Storage<[f32; 4]>, RwStorage<[f32; 4]>);
     ///
     /// let code = |Groups((i, o)): Groups<Io>| Compute {
-    ///     compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+    ///     compute: o.set_u32(0, i.get_u32(0).deref()),
     ///     workgroup_size: [1; 3],
     /// };
     /// ```
     #[inline]
-    pub fn get_with_u32<E>(self, index: u32) -> Ret<IndexGetU32<Self, E>, O::Read>
+    pub const fn get_u32<E>(self, index: u32) -> Ret<IndexGetU32<Self, E>, O::Read>
     where
         O: Indexable,
     {
@@ -275,7 +275,7 @@ impl<O> Ret<Global<types::Mutable>, O> {
     /// };
     /// ```
     #[inline]
-    pub fn set<I, V, E>(self, index: I, value: V) -> Ret<IndexSet<I, Self, V, E>, O::Write>
+    pub const fn set<I, V, E>(self, index: I, value: V) -> Ret<IndexSet<I, Self, V, E>, O::Write>
     where
         O: Indexable,
         I: Eval<E, Out = u32>,
@@ -297,12 +297,12 @@ impl<O> Ret<Global<types::Mutable>, O> {
     /// type Io = (Storage<[f32; 4]>, RwStorage<[f32; 4]>);
     ///
     /// let code = |Groups((i, o)): Groups<Io>| Compute {
-    ///     compute: o.set_with_u32(0, i.get_with_u32(0).deref()),
+    ///     compute: o.set_u32(0, i.get_u32(0).deref()),
     ///     workgroup_size: [1; 3],
     /// };
     /// ```
     #[inline]
-    pub fn set_with_u32<V, E>(self, index: u32, value: V) -> Ret<IndexSetU32<Self, V, E>, O::Write>
+    pub const fn set_u32<V, E>(self, index: u32, value: V) -> Ret<IndexSetU32<Self, V, E>, O::Write>
     where
         O: Indexable,
         V: Eval<E, Out = O::Write>,
