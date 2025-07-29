@@ -1,5 +1,7 @@
 //! Color types.
 
+use bytemuck::{Pod, Zeroable};
+
 /// A linear RGB color.
 pub type Rgb = Color<3>;
 
@@ -7,6 +9,7 @@ pub type Rgb = Color<3>;
 pub type Rgba = Color<4>;
 
 /// A linear RGB(A) color.
+#[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct Color<const N: usize>(pub [f32; N]);
 
@@ -41,6 +44,14 @@ impl Color<4> {
         wgpu::Color { r, g, b, a }
     }
 }
+
+// SAFETY: `Color` is repr transparent
+// so if `[f32; N]: Zeroable` then `Color<N>: Zeroable`.
+unsafe impl<const N: usize> Zeroable for Color<N> where [f32; N]: Zeroable {}
+
+// SAFETY: `Color` is repr transparent
+// so if `[f32; N]: Pod` then `Color<N>: Pod`.
+unsafe impl<const N: usize> Pod for Color<N> where [f32; N]: Pod {}
 
 fn to_f32_color(c: u8) -> f32 {
     f32::from(c) / f32::from(u8::MAX)
