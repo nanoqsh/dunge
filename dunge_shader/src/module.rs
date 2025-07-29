@@ -1,11 +1,14 @@
 use {
     crate::{
-        context::{Context, FromContext, FromRender, TakeSet},
+        context::{Context, FromContext, FromRender, Info, TakeSet},
         eval::{self, Cs, Eval, Fs, Vs},
         types,
     },
     std::marker::PhantomData,
 };
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 macro_rules! tuple {
     () => {
@@ -147,13 +150,13 @@ where
 }
 
 pub struct Module {
-    pub cx: Context,
+    pub info: Info,
     pub nm: naga::Module,
     pub wgsl: String,
 }
 
 impl Module {
-    pub(crate) fn new(cx: Context, nm: naga::Module) -> Self {
+    pub(crate) fn new(info: Info, nm: naga::Module) -> Self {
         let wgsl;
 
         #[cfg(any(debug_assertions, feature = "wgsl"))]
@@ -203,6 +206,30 @@ impl Module {
             wgsl = String::new();
         }
 
-        Self { cx, nm, wgsl }
+        Self { info, nm, wgsl }
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DynamicModule {
+    info: Info,
+    nm: naga::Module,
+}
+
+impl IntoModule<(), RenderKind> for DynamicModule {
+    type Input = RenderInput<(), ()>;
+    type Set = ();
+
+    fn into_module(self) -> Module {
+        Module::new(self.info, self.nm)
+    }
+}
+
+impl IntoModule<(), ComputeKind> for DynamicModule {
+    type Input = ComputeInput;
+    type Set = ();
+
+    fn into_module(self) -> Module {
+        Module::new(self.info, self.nm)
     }
 }

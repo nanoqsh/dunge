@@ -72,7 +72,7 @@ pub(crate) struct ShaderData {
 }
 
 impl ShaderData {
-    fn new(state: &State, Module { cx, nm, .. }: Module) -> Self {
+    fn new(state: &State, Module { info, nm, .. }: Module) -> Self {
         let module = {
             let desc = wgpu::ShaderModuleDescriptor {
                 label: None,
@@ -92,13 +92,13 @@ impl ShaderData {
 
         let mut entries = vec![];
         let mut groups = vec![];
-        for info in cx.groups() {
+        for group in info.groups() {
             entries.clear();
-            for (binding, member) in iter::zip(0.., info.def) {
+            for (binding, member) in iter::zip(0.., group.def.iter()) {
                 let entry = match member.ty {
                     MemberType::Tx2df => wgpu::BindGroupLayoutEntry {
                         binding,
-                        visibility: visibility(info.stages),
+                        visibility: visibility(group.stages),
                         ty: wgpu::BindingType::Texture {
                             sample_type: wgpu::TextureSampleType::Float { filterable: true },
                             view_dimension: wgpu::TextureViewDimension::D2,
@@ -108,7 +108,7 @@ impl ShaderData {
                     },
                     MemberType::Sampl => wgpu::BindGroupLayoutEntry {
                         binding,
-                        visibility: visibility(info.stages),
+                        visibility: visibility(group.stages),
                         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     },
@@ -123,7 +123,7 @@ impl ShaderData {
 
                         wgpu::BindGroupLayoutEntry {
                             binding,
-                            visibility: visibility(info.stages),
+                            visibility: visibility(group.stages),
                             ty: wgpu::BindingType::Buffer {
                                 ty,
                                 has_dynamic_offset: false,
@@ -188,8 +188,8 @@ impl ShaderData {
             instance: 0,
         };
 
-        let mut vertex = Vec::with_capacity(cx.count_input());
-        for input in cx.input() {
+        let mut vertex = Vec::with_capacity(info.count_input());
+        for input in info.input() {
             match input {
                 InputInfo::Vert(v) => {
                     slots.vertex = vertex.len() as u32;
@@ -197,7 +197,7 @@ impl ShaderData {
                     let vert = {
                         let mut attr = make_attr();
                         let mut attrs = vec![];
-                        for vecty in v.def {
+                        for vecty in v.def.iter() {
                             attr(ValueType::Vector(vecty), &mut attrs);
                         }
 

@@ -2,11 +2,18 @@
 
 use std::{marker::PhantomData, num::NonZeroU32};
 
+#[cfg(feature = "serde")]
+use {
+    serde::{Deserialize, Serialize},
+    std::{collections::HashSet, sync::Mutex},
+};
+
 pub(crate) trait AddType {
     fn add_type(&mut self, ty: naga::Type) -> naga::Handle<naga::Type>;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ValueType {
     Scalar(ScalarType),
     Vector(VectorType),
@@ -58,6 +65,29 @@ impl ValueType {
     }
 }
 
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for &'static ValueType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        static TYPES: Mutex<Option<HashSet<&'static ValueType>>> = Mutex::new(None);
+
+        let ty: ValueType = ValueType::deserialize(deserializer)?;
+
+        let mut mu = TYPES.lock().expect("lock types set");
+        let set = mu.get_or_insert_with(HashSet::new);
+
+        if let Some(boxed) = set.get(&ty) {
+            Ok(boxed)
+        } else {
+            let boxed = Box::new(ty);
+            set.insert(Box::leak(boxed));
+            Ok(set.get(&ty).expect("get inseted type"))
+        }
+    }
+}
+
 /// The trait for types used inside a shader.
 pub trait Value {
     const VALUE_TYPE: ValueType;
@@ -96,7 +126,8 @@ impl Number for f32 {}
 impl Number for i32 {}
 impl Number for u32 {}
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ScalarType {
     Float,
     Sint,
@@ -142,7 +173,8 @@ pub struct Vec2<T>(PhantomData<T>);
 pub struct Vec3<T>(PhantomData<T>);
 pub struct Vec4<T>(PhantomData<T>);
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum VectorType {
     Vec2f,
     Vec3f,
@@ -282,7 +314,8 @@ pub struct Mat2;
 pub struct Mat3;
 pub struct Mat4;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MatrixType {
     Mat2,
     Mat3,
@@ -375,7 +408,8 @@ where
     });
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ArrayType {
     pub base: &'static ValueType,
     pub size: NonZeroU32,
@@ -437,6 +471,7 @@ where
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DynamicArrayType {
     pub base: &'static ValueType,
 }
@@ -473,6 +508,7 @@ impl Member for Sampler {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MemberType {
     Scalar(ScalarType),
     Vector(VectorType),
@@ -545,12 +581,14 @@ impl Mutability for Mutable {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MemberData {
     pub ty: MemberType,
     pub space: Space,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Space {
     Uniform,
     Storage { mutable: bool },

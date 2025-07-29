@@ -73,7 +73,7 @@ where
     };
 
     _ = pop;
-    Module::new(cx, nm)
+    Module::new(cx.into_info(), nm)
 }
 
 pub(crate) fn make_compute<F, C>(cx: Context, f: F) -> Module
@@ -117,14 +117,14 @@ where
     };
 
     _ = pop;
-    Module::new(cx, nm)
+    Module::new(cx.into_info(), nm)
 }
 
 fn make_input(cx: &Context, compl: &mut Compiler) -> Vec<Argument> {
     let mut binds = Bindings(0);
     let make = |info: &InputInfo| match info {
         InputInfo::Vert(VertInfo { def, .. }) => {
-            let mut new = def.into_iter().map(Member::from_vecty);
+            let mut new = def.iter().map(Member::from_vecty);
             Argument::from_type(compl.define_input(&mut new, &mut binds))
         }
         InputInfo::Inst(InstInfo { ty }) => Argument {
@@ -1174,8 +1174,8 @@ impl Compiler {
         }
     }
 
-    fn define_group(&mut self, group: u32, def: Define<MemberData>) {
-        for (binding, member) in iter::zip(0.., def) {
+    fn define_group(&mut self, group: u32, def: &Define<MemberData>) {
+        for (binding, member) in iter::zip(0.., def.iter()) {
             let space = member.space.address_space();
             let ty = member.ty.ty(&mut self.types);
             let res = naga::ResourceBinding { group, binding };
