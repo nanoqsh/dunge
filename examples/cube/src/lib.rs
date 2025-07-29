@@ -24,8 +24,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
     }
 
     let cube = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
-        place: m.deref() * sl::vec4_with(v.pos, 1.),
-        color: sl::vec4_with(sl::fragment(v.col), 1.),
+        place: m.load() * sl::vec4_append(v.pos, 1.),
+        color: sl::vec4_append(sl::fragment(v.col), 1.),
     };
 
     let cx = dunge::context().await?;

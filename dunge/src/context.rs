@@ -171,7 +171,7 @@ impl Context {
     /// // pass the vertex and a bound 4x4 matrix in the shader
     /// let program = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
     ///     // multiply the matrix and the vertex `pos` field  
-    ///     place: m.deref() * v.pos,
+    ///     place: m.load() * v.pos,
     ///
     ///     // pass `col` from the vertex to fragment stage and return as a final pixel color
     ///     color: sl::fragment(v.col),
@@ -266,7 +266,7 @@ impl Context {
     ///     // set vertex coordinates
     ///     place: v,
     ///     // pass color from the vertex stage to the fragment stage
-    ///     color: sl::fragment(color.deref()),
+    ///     color: sl::fragment(color.load()),
     /// };
     ///
     /// // create the context and shader

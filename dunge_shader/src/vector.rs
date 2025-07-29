@@ -1,6 +1,5 @@
 use {
     crate::{
-        access::{Access, Dimension},
         eval::{Eval, EvalTuple, Evaluated, Expr, Exprs, GetEntry},
         op::Ret,
         types::{self, Scalar, Vector},
@@ -42,45 +41,21 @@ impl_eval_vec!(glam::UVec2 => types::Vec2<u32>);
 impl_eval_vec!(glam::UVec3 => types::Vec3<u32>);
 impl_eval_vec!(glam::UVec4 => types::Vec4<u32>);
 
-impl<S> Access for types::Vec2<S>
-where
-    S: Scalar,
-{
-    type Dimension = Dimension<2>;
-    type Member = S;
-}
-
-impl<S> Access for types::Vec3<S>
-where
-    S: Scalar,
-{
-    type Dimension = Dimension<3>;
-    type Member = S;
-}
-
-impl<S> Access for types::Vec4<S>
-where
-    S: Scalar,
-{
-    type Dimension = Dimension<4>;
-    type Member = S;
-}
-
-pub const fn splat_vec2<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec2<A::Out>>
+pub const fn vec2_splat<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec2<A::Out>>
 where
     A: Eval<E, Out: Scalar>,
 {
     Ret::new(Splat::new(a))
 }
 
-pub const fn splat_vec3<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec3<A::Out>>
+pub const fn vec3_splat<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec3<A::Out>>
 where
     A: Eval<E, Out: Scalar>,
 {
     Ret::new(Splat::new(a))
 }
 
-pub const fn splat_vec4<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec4<A::Out>>
+pub const fn vec4_splat<A, E>(a: A) -> Ret<Splat<A, E>, types::Vec4<A::Out>>
 where
     A: Eval<E, Out: Scalar>,
 {
@@ -186,7 +161,7 @@ where
     Ret::new(Compose { a, b })
 }
 
-pub const fn vec3_with<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<B::Out>>
+pub const fn vec3_append<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<B::Out>>
 where
     A: Eval<E, Out = types::Vec2<B::Out>>,
     B: Eval<E, Out: Scalar>,
@@ -194,7 +169,7 @@ where
     Ret::new(Compose { a, b })
 }
 
-pub const fn vec4_with<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<B::Out>>
+pub const fn vec4_append<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec4<B::Out>>
 where
     A: Eval<E, Out = types::Vec3<B::Out>>,
     B: Eval<E, Out: Scalar>,

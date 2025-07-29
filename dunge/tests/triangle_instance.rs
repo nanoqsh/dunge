@@ -29,7 +29,7 @@ fn render() -> Result<(), Error> {
         let p = sl::vec2(sl::cos(i.clone()), sl::sin(i)) * triangle_size + t.0;
         Render {
             place: sl::vec4_concat(p, Vec2::new(0., 1.)),
-            color: sl::vec4_with(sl::fragment(t.1), 1.),
+            color: sl::vec4_append(sl::fragment(t.1), 1.),
         }
     };
 

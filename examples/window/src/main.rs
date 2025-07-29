@@ -32,7 +32,7 @@ async fn run(control: Control) -> Result<(), Error> {
     let triangle = |PassVertex(v): PassVertex<Vert>, Groups(u): Groups<Uniform<f32>>| {
         let place = sl::vec4_concat(v.pos, sl::vec2(0., 1.));
         let fragment_col = sl::fragment(v.col);
-        let color = sl::vec4_with(fragment_col * u.deref(), 1.);
+        let color = sl::vec4_append(fragment_col * u.load(), 1.);
         Render { place, color }
     };
 

@@ -20,7 +20,7 @@ mod zero;
 /// Shader generator functions.
 pub mod sl {
     pub use crate::{
-        branch::*, context::*, convert::*, define::*, discard::*, eval::*, math::*, matrix::*,
-        module::*, op::*, texture::*, vector::*, zero::*,
+        access::*, branch::*, context::*, convert::*, define::*, discard::*, eval::*, math::*,
+        matrix::*, module::*, op::*, texture::*, vector::*, zero::*,
     };
 }

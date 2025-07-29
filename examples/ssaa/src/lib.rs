@@ -24,7 +24,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
-        let i = sl::thunk(sl::f32(idx) * third + offset.deref());
+        let i = sl::thunk(sl::f32(idx) * third + offset.load());
         Render {
             place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
             color,
@@ -48,7 +48,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             let s = sl::thunk(sl::fragment(v.1));
             let tex = || map.tex.clone();
             let sam = || map.sam.clone();
-            let offset = || map.offset.clone().deref();
+            let offset = || map.offset.clone().load();
             let d0 = sl::vec2(offset().x(), offset().y());
             let d1 = sl::vec2(offset().x(), -offset().y());
             let d2 = sl::vec2(-offset().x(), offset().y());

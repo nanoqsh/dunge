@@ -22,7 +22,7 @@ fn render() -> Result<(), Error> {
 
     let code = |PassInstance(t): PassInstance<Transform>| Render {
         place: t.m * t.v * t.f,
-        color: sl::splat_vec4(1.),
+        color: sl::vec4_splat(1.),
     };
 
     let cx = dunge::block_on(dunge::context())?;

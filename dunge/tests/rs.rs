@@ -18,7 +18,7 @@ fn rs_calc() -> Result<(), Error> {
         let m = -sl::mat2(sl::vec2(1., 0.), sl::vec2(0., 1.));
         let mt = sl::thunk(m);
         let v = mt.clone().x() + mt.clone().y();
-        let z = sl::splat_vec3(1.).z();
+        let z = sl::vec3_splat(1.).z();
 
         Render {
             place: sl::vec4_concat(mt.x(), v) * sl::f32(1) * z,
@@ -39,8 +39,8 @@ fn rs_if() -> Result<(), Error> {
     };
 
     let compute = || Render {
-        place: sl::if_then_else(true, || Vec4::splat(3.), || sl::splat_vec4(2.) * 2.),
-        color: sl::splat_vec4(1.),
+        place: sl::if_then_else(true, || Vec4::splat(3.), || sl::vec4_splat(2.) * 2.),
+        color: sl::vec4_splat(1.),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -54,8 +54,8 @@ fn rs_branch() -> Result<(), Error> {
 
     let shader0 = {
         let compute = || Render {
-            place: sl::default(|| sl::splat_vec4(1.)).when(false, || sl::splat_vec4(2.)),
-            color: sl::splat_vec4(1.),
+            place: sl::default(|| sl::vec4_splat(1.)).when(false, || sl::vec4_splat(2.)),
+            color: sl::vec4_splat(1.),
         };
 
         CONTEXT.make_shader(compute)
@@ -63,10 +63,10 @@ fn rs_branch() -> Result<(), Error> {
 
     let shader1 = {
         let compute = || Render {
-            place: sl::default(|| sl::splat_vec4(1.))
-                .when(true, || sl::splat_vec4(2.))
-                .when(false, || sl::splat_vec4(3.)),
-            color: sl::splat_vec4(1.),
+            place: sl::default(|| sl::vec4_splat(1.))
+                .when(true, || sl::vec4_splat(2.))
+                .when(false, || sl::vec4_splat(3.)),
+            color: sl::vec4_splat(1.),
         };
 
         CONTEXT.make_shader(compute)
@@ -74,14 +74,14 @@ fn rs_branch() -> Result<(), Error> {
 
     let shader2 = {
         let compute = || {
-            let p = sl::default(|| sl::splat_vec4(1.))
-                .when(true, || sl::splat_vec4(2.))
-                .when(true, || sl::splat_vec4(3.))
-                .when(false, || sl::splat_vec4(4.));
+            let p = sl::default(|| sl::vec4_splat(1.))
+                .when(true, || sl::vec4_splat(2.))
+                .when(true, || sl::vec4_splat(3.))
+                .when(false, || sl::vec4_splat(4.));
 
             Render {
                 place: p,
-                color: sl::splat_vec4(1.),
+                color: sl::vec4_splat(1.),
             }
         };
 
@@ -99,7 +99,7 @@ fn rs_discard() -> Result<(), Error> {
     use dunge::sl::{self, Render};
 
     let compute = || Render {
-        place: sl::splat_vec4(1.),
+        place: sl::vec4_splat(1.),
         color: sl::discard(),
     };
 
@@ -113,8 +113,8 @@ fn rs_discard_if() -> Result<(), Error> {
     use dunge::sl::{self, Render};
 
     let compute = || Render {
-        place: sl::splat_vec4(1.),
-        color: sl::if_then_else(true, sl::discard, || sl::splat_vec4(1.)),
+        place: sl::vec4_splat(1.),
+        color: sl::if_then_else(true, sl::discard, || sl::vec4_splat(1.)),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -156,15 +156,15 @@ fn rs_reentrant() {
     let compute = {
         let cx = CONTEXT.clone();
         let inner = || Render {
-            place: sl::splat_vec4(1.),
-            color: sl::splat_vec4(1.),
+            place: sl::vec4_splat(1.),
+            color: sl::vec4_splat(1.),
         };
 
         move || {
             _ = cx.make_shader(inner);
             Render {
-                place: sl::splat_vec4(1.),
-                color: sl::splat_vec4(1.),
+                place: sl::vec4_splat(1.),
+                color: sl::vec4_splat(1.),
             }
         }
     };
@@ -186,8 +186,8 @@ fn rs_storage() -> Result<(), Error> {
     }
 
     let compute = |Groups(map): Groups<Map>, Index(index): Index| Render {
-        place: sl::splat_vec4(1.) * map.array.get(index).deref(),
-        color: sl::splat_vec4(1.),
+        place: sl::vec4_splat(1.) * map.array.get(index).load(),
+        color: sl::vec4_splat(1.),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -211,8 +211,8 @@ fn rs_dyn() -> Result<(), Error> {
             };
 
             Render {
-                place: sl::splat_vec4(new_val),
-                color: sl::splat_vec4(1.),
+                place: sl::vec4_splat(new_val),
+                color: sl::vec4_splat(1.),
             }
         };
 

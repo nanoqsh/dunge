@@ -22,7 +22,7 @@ fn render() -> Result<(), Error> {
 
     let triangle = |PassVertex(v): PassVertex<Vert>| Render {
         place: sl::vec4_concat(v.0, Vec2::new(0., 1.)),
-        color: sl::vec4_with(sl::fragment(v.1), 1.),
+        color: sl::vec4_append(sl::fragment(v.1), 1.),
     };
 
     let cx = dunge::block_on(dunge::context())?;
