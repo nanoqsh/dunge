@@ -210,12 +210,24 @@ impl Module {
     }
 }
 
+#[doc(hidden)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DynamicModule {
     info: Info,
     nm: naga::Module,
 }
 
+impl DynamicModule {
+    pub fn new<M, A, K>(module: M) -> Self
+    where
+        M: IntoModule<A, K>,
+    {
+        let Module { info, nm, .. } = module.into_module();
+        Self { info, nm }
+    }
+}
+
+#[doc(hidden)]
 impl IntoModule<(), RenderKind> for DynamicModule {
     type Input = RenderInput<(), ()>;
     type Set = ();
@@ -225,6 +237,7 @@ impl IntoModule<(), RenderKind> for DynamicModule {
     }
 }
 
+#[doc(hidden)]
 impl IntoModule<(), ComputeKind> for DynamicModule {
     type Input = ComputeInput;
     type Set = ();
