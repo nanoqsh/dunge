@@ -15,6 +15,7 @@ macro_rules! impl_eval_vec {
         {
             type Out = $t;
 
+            #[inline]
             fn eval(self, en: &mut E) -> Expr {
                 let mut components = Vec::with_capacity(<$t>::TYPE.dims() as usize);
                 self.into_vector(|scalar| {
@@ -81,6 +82,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         let val = self.inner().a.eval(en);
         let en = en.get_entry();
@@ -142,6 +144,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
         self.inner().a.eval(en, &mut o);
@@ -191,6 +194,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         let Compose { a, b } = self.inner();
         let x = a.eval(en).get();
@@ -212,6 +216,7 @@ trait IntoVector {
 impl IntoVector for glam::Vec2 {
     type Scalar = f32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -223,6 +228,7 @@ impl IntoVector for glam::Vec2 {
 impl IntoVector for glam::Vec3 {
     type Scalar = f32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -234,6 +240,7 @@ impl IntoVector for glam::Vec3 {
 impl IntoVector for glam::Vec3A {
     type Scalar = f32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -245,6 +252,7 @@ impl IntoVector for glam::Vec3A {
 impl IntoVector for glam::Vec4 {
     type Scalar = f32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -256,6 +264,7 @@ impl IntoVector for glam::Vec4 {
 impl IntoVector for glam::IVec2 {
     type Scalar = i32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -267,6 +276,7 @@ impl IntoVector for glam::IVec2 {
 impl IntoVector for glam::IVec3 {
     type Scalar = i32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -278,6 +288,7 @@ impl IntoVector for glam::IVec3 {
 impl IntoVector for glam::IVec4 {
     type Scalar = i32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -289,6 +300,7 @@ impl IntoVector for glam::IVec4 {
 impl IntoVector for glam::UVec2 {
     type Scalar = u32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -300,6 +312,7 @@ impl IntoVector for glam::UVec2 {
 impl IntoVector for glam::UVec3 {
     type Scalar = u32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),
@@ -311,6 +324,7 @@ impl IntoVector for glam::UVec3 {
 impl IntoVector for glam::UVec4 {
     type Scalar = u32;
 
+    #[inline]
     fn into_vector<F>(self, f: F)
     where
         F: FnMut(Self::Scalar),

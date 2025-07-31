@@ -21,6 +21,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut Fs) -> Expr {
         let en = en.get_entry();
         en.kill();

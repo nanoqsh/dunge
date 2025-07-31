@@ -8,7 +8,6 @@ use {
 };
 
 impl<A, O> Ret<A, O> {
-    #[inline]
     pub fn x<E>(self) -> Ret<IndexGetU32<Self, E>, O::Read>
     where
         O: Access<Dimension: Has<0>>,
@@ -16,7 +15,6 @@ impl<A, O> Ret<A, O> {
         Ret::new(IndexGetU32::new(0, self))
     }
 
-    #[inline]
     pub fn y<E>(self) -> Ret<IndexGetU32<Self, E>, O::Read>
     where
         O: Access<Dimension: Has<1>>,
@@ -24,7 +22,6 @@ impl<A, O> Ret<A, O> {
         Ret::new(IndexGetU32::new(1, self))
     }
 
-    #[inline]
     pub fn z<E>(self) -> Ret<IndexGetU32<Self, E>, O::Read>
     where
         O: Access<Dimension: Has<2>>,
@@ -32,7 +29,6 @@ impl<A, O> Ret<A, O> {
         Ret::new(IndexGetU32::new(2, self))
     }
 
-    #[inline]
     pub fn w<E>(self) -> Ret<IndexGetU32<Self, E>, O::Read>
     where
         O: Access<Dimension: Has<3>>,
@@ -59,7 +55,6 @@ impl<A, O> Ret<A, O> {
     ///     workgroup_size: [1; 3],
     /// };
     /// ```
-    #[inline]
     pub const fn get<I, E>(self, index: I) -> Ret<IndexGet<I, Self, E>, O::Read>
     where
         O: Access,
@@ -85,7 +80,6 @@ impl<A, O> Ret<A, O> {
     ///     workgroup_size: [1; 3],
     /// };
     /// ```
-    #[inline]
     pub const fn get_u32<E>(self, index: u32) -> Ret<IndexGetU32<Self, E>, O::Read>
     where
         O: Access,
@@ -112,7 +106,6 @@ impl<A, O> Ret<A, types::Pointer<O>> {
     ///     workgroup_size: [1; 3],
     /// };
     /// ```
-    #[inline]
     pub fn load<E>(self) -> Ret<Load<Self, E>, O> {
         Ret::new(Load {
             p: self,
@@ -226,7 +219,6 @@ pub struct IndexGet<I, A, E> {
 }
 
 impl<I, A, E> IndexGet<I, A, E> {
-    #[inline]
     const fn new(index: I, a: A) -> Self {
         Self {
             index,
@@ -262,7 +254,6 @@ pub struct IndexGetU32<A, E> {
 }
 
 impl<A, E> IndexGetU32<A, E> {
-    #[inline]
     const fn new(index: u32, a: A) -> Self {
         Self {
             index,
@@ -309,7 +300,6 @@ impl<O> Ret<Global<types::Mutable>, O> {
     ///     workgroup_size: [1; 3],
     /// };
     /// ```
-    #[inline]
     pub const fn set<I, V, E>(self, index: I, value: V) -> Ret<IndexSet<I, Self, V, E>, O::Write>
     where
         O: Access,
@@ -336,7 +326,6 @@ impl<O> Ret<Global<types::Mutable>, O> {
     ///     workgroup_size: [1; 3],
     /// };
     /// ```
-    #[inline]
     pub const fn set_u32<V, E>(self, index: u32, value: V) -> Ret<IndexSetU32<Self, V, E>, O::Write>
     where
         O: Access,
@@ -354,7 +343,6 @@ pub struct IndexSet<I, A, V, E> {
 }
 
 impl<I, A, V, E> IndexSet<I, A, V, E> {
-    #[inline]
     const fn new(index: I, a: A, v: V) -> Self {
         Self {
             index,
@@ -397,7 +385,6 @@ pub struct IndexSetU32<A, V, E> {
 }
 
 impl<A, V, E> IndexSetU32<A, V, E> {
-    #[inline]
     const fn new(index: u32, a: A, v: V) -> Self {
         Self {
             index,

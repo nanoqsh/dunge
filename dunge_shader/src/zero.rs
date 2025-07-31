@@ -20,6 +20,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         let en = en.get_entry();
         let ty = O::VALUE_TYPE.ty(en);

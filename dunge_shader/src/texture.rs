@@ -30,6 +30,7 @@ where
 {
     type Out = types::Vec4<F>;
 
+    #[inline]
     fn eval(self, en: &mut Fs) -> Expr {
         let Samp { tex, sam, crd, .. } = self.inner();
         let ex = Sampled {

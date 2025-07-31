@@ -15,6 +15,7 @@ macro_rules! impl_eval_mat {
         {
             type Out = $t;
 
+            #[inline]
             fn eval(self, en: &mut E) -> Expr {
                 let mut components = Vec::with_capacity(<$t>::TYPE.dims() as usize);
                 self.into_matrix(|vector| {
@@ -86,6 +87,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         let mut o = Evaluated::default();
         self.inner().a.eval(en, &mut o);
@@ -107,6 +109,7 @@ trait IntoMatrix {
 impl IntoMatrix for glam::Mat2 {
     type Vector = glam::Vec2;
 
+    #[inline]
     fn into_matrix<F>(self, mut f: F)
     where
         F: FnMut(Self::Vector),
@@ -118,6 +121,7 @@ impl IntoMatrix for glam::Mat2 {
 impl IntoMatrix for glam::Mat3 {
     type Vector = glam::Vec3;
 
+    #[inline]
     fn into_matrix<F>(self, mut f: F)
     where
         F: FnMut(Self::Vector),
@@ -129,6 +133,7 @@ impl IntoMatrix for glam::Mat3 {
 impl IntoMatrix for glam::Mat4 {
     type Vector = glam::Vec4;
 
+    #[inline]
     fn into_matrix<F>(self, mut f: F)
     where
         F: FnMut(Self::Vector),

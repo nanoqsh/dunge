@@ -13,12 +13,10 @@ pub struct Ret<A, O> {
 }
 
 impl<A, T> Ret<A, T> {
-    #[inline]
     pub(crate) const fn new(a: A) -> Self {
         Self { a, t: PhantomData }
     }
 
-    #[inline]
     pub(crate) fn inner(self) -> A {
         self.a
     }
@@ -198,7 +196,6 @@ impl_binary!(Mul::mul(glam::Mat2, glam::Vec2) -> glam::Vec2);
 impl_binary!(Mul::mul(glam::Mat3, glam::Vec3) -> glam::Vec3);
 impl_binary!(Mul::mul(glam::Mat4, glam::Vec4) -> glam::Vec4);
 
-#[inline]
 pub const fn not<A, B, E>(a: A) -> Ret<Unary<A>, bool>
 where
     A: Eval<E, Out = bool>,
@@ -206,7 +203,6 @@ where
     Ret::new(Unary { a, op: Un::Not })
 }
 
-#[inline]
 pub const fn and<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out = bool>,
@@ -215,7 +211,6 @@ where
     Ret::new(Binary { a, b, op: Bi::And })
 }
 
-#[inline]
 pub const fn or<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out = bool>,
@@ -224,7 +219,6 @@ where
     Ret::new(Binary { a, b, op: Bi::Or })
 }
 
-#[inline]
 pub const fn eq<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Scalar>,
@@ -233,7 +227,6 @@ where
     Ret::new(Binary { a, b, op: Bi::Eq })
 }
 
-#[inline]
 pub const fn ne<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Scalar>,
@@ -242,7 +235,6 @@ where
     Ret::new(Binary { a, b, op: Bi::Ne })
 }
 
-#[inline]
 pub const fn lt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,
@@ -251,7 +243,6 @@ where
     Ret::new(Binary { a, b, op: Bi::Lt })
 }
 
-#[inline]
 pub const fn le<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,
@@ -260,7 +251,6 @@ where
     Ret::new(Binary { a, b, op: Bi::Le })
 }
 
-#[inline]
 pub const fn gt<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,
@@ -269,7 +259,6 @@ where
     Ret::new(Binary { a, b, op: Bi::Gt })
 }
 
-#[inline]
 pub const fn ge<A, B, E>(a: A, b: B) -> Ret<Binary<A, B>, bool>
 where
     A: Eval<E, Out: Number>,

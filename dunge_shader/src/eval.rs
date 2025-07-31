@@ -152,6 +152,7 @@ fn make_input(cx: &Context, compl: &mut Compiler) -> Vec<Argument> {
 pub struct Expr(naga::Handle<naga::Expression>);
 
 impl Expr {
+    #[inline]
     pub(crate) fn get(self) -> naga::Handle<naga::Expression> {
         self.0
     }
@@ -180,6 +181,7 @@ where
 {
     type Out = Self;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         en.get_entry().literal(naga::Literal::F32(self))
     }
@@ -191,6 +193,7 @@ where
 {
     type Out = Self;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         en.get_entry().literal(naga::Literal::I32(self))
     }
@@ -202,6 +205,7 @@ where
 {
     type Out = Self;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         en.get_entry().literal(naga::Literal::U32(self))
     }
@@ -213,6 +217,7 @@ where
 {
     type Out = Self;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         en.get_entry().literal(naga::Literal::Bool(self))
     }
@@ -232,6 +237,7 @@ impl ReadIndex {
 impl Eval<Vs> for Ret<ReadIndex, u32> {
     type Out = u32;
 
+    #[inline]
     fn eval(self, en: &mut Vs) -> Expr {
         en.get_entry().argument(self.inner().id)
     }
@@ -252,6 +258,7 @@ impl ReadVertex {
 impl<O> Eval<Vs> for Ret<ReadVertex, O> {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut Vs) -> Expr {
         let en = en.get_entry();
         let arg = en.argument(self.inner().id);
@@ -276,6 +283,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut Vs) -> Expr {
         let en = en.get_entry();
         let id = self.inner().id;
@@ -309,6 +317,7 @@ impl ReadInvocation {
 impl Eval<Cs> for Ret<ReadInvocation, types::Vec3<u32>> {
     type Out = types::Vec3<u32>;
 
+    #[inline]
     fn eval(self, en: &mut Cs) -> Expr {
         en.get_entry().argument(self.inner().id)
     }
@@ -348,6 +357,7 @@ impl<M> Global<M> {
 }
 
 impl<M> Clone for Global<M> {
+    #[inline]
     fn clone(&self) -> Self {
         Self {
             id: self.id,
@@ -364,6 +374,7 @@ where
 {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         let Global {
             id, binding, out, ..
@@ -392,6 +403,7 @@ where
 {
     type Out = A::Out;
 
+    #[inline]
     fn eval(self, en: &mut Fs) -> Expr {
         let vecty = <A::Out as types::Vector>::TYPE;
         let index = en.push_evalf(vecty, |en| self.inner().0.eval(en));
@@ -466,6 +478,7 @@ pub struct Thunk<E> {
 }
 
 impl<E> Clone for Thunk<E> {
+    #[inline]
     fn clone(&self) -> Self {
         Self {
             frame_id: self.frame_id,
@@ -477,6 +490,7 @@ impl<E> Clone for Thunk<E> {
 impl<E, O> Eval<E> for Ret<Thunk<E>, O> {
     type Out = O;
 
+    #[inline]
     fn eval(self, en: &mut E) -> Expr {
         let Thunk {
             frame_id, cache, ..
@@ -507,6 +521,7 @@ impl<A, E> EvalCached<E> for Cache<A>
 where
     A: Eval<E>,
 {
+    #[inline]
     fn eval_cached(&self, en: &mut E) -> Expr {
         let ex = match self.0.replace(State::None) {
             State::None => unreachable!(),
@@ -523,6 +538,7 @@ where
 pub(crate) struct Evaluated([Option<Expr>; 4]);
 
 impl Evaluated {
+    #[inline]
     fn push(&mut self, expr: Expr) {
         let slot = self
             .0
@@ -533,6 +549,7 @@ impl Evaluated {
         *slot = Some(expr);
     }
 
+    #[inline]
     pub(crate) fn into_iter(self) -> impl Iterator<Item = Expr> {
         self.0.into_iter().flatten()
     }
@@ -550,6 +567,7 @@ macro_rules! impl_eval_tuple {
                 $t: Eval<E>,
             )*
         {
+            #[inline]
             #[allow(non_snake_case)]
             fn eval(self, en: &mut E, o: &mut Evaluated) {
                 let ($($t),*,) = self;
