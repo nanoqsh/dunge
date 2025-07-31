@@ -318,10 +318,12 @@ impl Eval<Cs> for Ret<ReadInvocation, types::Vec3<u32>> {
 pub struct GlobalOut(Rc<Cell<Stages>>);
 
 impl GlobalOut {
+    #[inline]
     fn with_stage(&self, stage: Stage) {
         self.0.set(self.0.get().with(stage));
     }
 
+    #[inline]
     pub fn get(&self) -> Stages {
         self.0.get()
     }
