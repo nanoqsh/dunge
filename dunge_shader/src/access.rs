@@ -42,7 +42,8 @@ impl<A, O> Ret<A, O> {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(doctest, doc = "```ignore")]
+    #[cfg_attr(not(doctest), doc = "```")]
     /// use dunge::{
     ///     sl::{Compute, Groups, Invocation},
     ///     storage::{Storage, RwStorage},
@@ -67,7 +68,8 @@ impl<A, O> Ret<A, O> {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(doctest, doc = "```ignore")]
+    #[cfg_attr(not(doctest), doc = "```")]
     /// use dunge::{
     ///     sl::{Compute, Groups, Invocation},
     ///     storage::{Storage, RwStorage},
@@ -93,7 +95,8 @@ impl<A, O> Ret<A, types::Pointer<O>> {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(doctest, doc = "```ignore")]
+    #[cfg_attr(not(doctest), doc = "```")]
     /// use dunge::{
     ///     sl::{Compute, Groups, Invocation},
     ///     storage::{Storage, RwStorage},
@@ -287,7 +290,8 @@ impl<O> Ret<Global<types::Mutable>, O> {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(doctest, doc = "```ignore")]
+    #[cfg_attr(not(doctest), doc = "```")]
     /// use dunge::{
     ///     sl::{Compute, Groups, Invocation},
     ///     storage::{Storage, RwStorage},
@@ -313,7 +317,8 @@ impl<O> Ret<Global<types::Mutable>, O> {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(doctest, doc = "```ignore")]
+    #[cfg_attr(not(doctest), doc = "```")]
     /// use dunge::{
     ///     sl::{Compute, Groups, Invocation},
     ///     storage::{Storage, RwStorage},

@@ -20,8 +20,5 @@ log.workspace = true
 naga.workspace = true
 serde = { workspace = true, features = ["derive"], optional = true }
 
-[dev-dependencies]
-dunge.workspace = true
-
 [lints]
 workspace = true
