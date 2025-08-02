@@ -150,11 +150,11 @@ enum Action {
     Process,
 }
 
-struct AppWaker {
+struct ActiveWaker {
     need_to_poll: AtomicBool,
 }
 
-impl task::Wake for AppWaker {
+impl task::Wake for ActiveWaker {
     #[inline]
     fn wake(self: Arc<Self>) {
         self.wake_by_ref();
@@ -171,7 +171,7 @@ struct App<F, R> {
     lifecycle: Rc<Lifecycle>,
     windows: HashMap<window::WindowId, AppWindow>,
     action: Action,
-    app_waker: Arc<AppWaker>,
+    app_waker: Arc<ActiveWaker>,
     scheduled: bool,
     context: task::Context<'static>,
     fu: Pin<Box<F>>,
@@ -182,22 +182,23 @@ impl<F> App<F, F::Output>
 where
     F: Future,
 {
-    const DEFAULT_SLEEP_DURATION: Duration = Duration::from_millis(50);
+    const DEFAULT_SLEEP_DURATION: Duration = Duration::from_millis(100);
 
     #[inline]
     fn process_timers(&mut self, el: &event_loop::ActiveEventLoop) {
-        // tick after wait
-        self.tick(el);
-
-        let next = loop {
-            match Reactor::get().process_timers() {
-                // ready to make progress
-                Process::Ready => self.tick(el),
-                // wait for next timer
-                Process::Wait(next) => break next,
-                // nothing to do, sleep some time
-                Process::Sleep => break Instant::now() + Self::DEFAULT_SLEEP_DURATION,
+        let next = 'process: {
+            for _ in 0..4 {
+                match Reactor::get().process_timers() {
+                    // ready to make progress
+                    Process::Ready => self.tick(el),
+                    // wait for next timer
+                    Process::Wait(next) => break 'process next,
+                    // nothing to do, sleep some time
+                    Process::Sleep => break,
+                }
             }
+
+            Instant::now() + Self::DEFAULT_SLEEP_DURATION
         };
 
         el.set_control_flow(event_loop::ControlFlow::WaitUntil(next));
@@ -205,7 +206,7 @@ where
 
     #[inline]
     fn tick(&mut self, el: &event_loop::ActiveEventLoop) {
-        while self.need_to_poll() {
+        if self.need_to_poll() {
             self.poll(el);
         }
     }
@@ -469,6 +470,8 @@ where
         }
 
         if let Action::Process = self.action {
+            // tick after wait
+            self.tick(el);
             self.process_timers(el);
         } else {
             self.tick(el);
@@ -476,7 +479,7 @@ where
     }
 }
 
-fn cached_waker(app_waker: Arc<AppWaker>) -> &'static Waker {
+fn cached_waker(app_waker: Arc<ActiveWaker>) -> &'static Waker {
     static CACHE: OnceLock<Waker> = OnceLock::new();
     CACHE.get_or_init(|| Waker::from(app_waker))
 }
@@ -506,7 +509,7 @@ where
         lifecycle: lifecycle.clone(),
     };
 
-    let app_waker = Arc::new(AppWaker {
+    let app_waker = Arc::new(ActiveWaker {
         need_to_poll: AtomicBool::new(false),
     });
 
@@ -565,7 +568,7 @@ where
         lifecycle: lifecycle.clone(),
     };
 
-    let app_waker = Arc::new(AppWaker {
+    let app_waker = Arc::new(ActiveWaker {
         need_to_poll: AtomicBool::new(false),
     });
 

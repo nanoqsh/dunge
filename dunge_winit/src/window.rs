@@ -386,6 +386,7 @@ impl Window {
     #[inline]
     pub async fn resized(&self) -> (u32, u32) {
         future::poll_fn(|_| self.shared.events.resize.active_poll()).await;
+
         self.shared.surface.size()
     }
 
@@ -393,8 +394,11 @@ impl Window {
     #[inline]
     pub async fn redraw(&self) -> Redraw<'_> {
         loop {
-            let delta_time =
-                future::poll_fn(|_| self.shared.events.redraw.active_poll_value()).await;
+            let delta_time = future::poll_fn(|cx| {
+                cx.waker().wake_by_ref();
+                self.shared.events.redraw.active_poll_value()
+            })
+            .await;
 
             let e = match self.shared.surface.output() {
                 Ok(output) => break Redraw { output, delta_time },
