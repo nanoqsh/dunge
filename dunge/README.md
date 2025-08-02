@@ -41,7 +41,7 @@ use dunge_winit::{
     prelude::*,
 };
 
-// create a vertex type
+// Create a vertex type
 #[repr(C)]
 #[derive(Vertex)]
 struct Vert {
@@ -55,21 +55,21 @@ To render something on GPU you need to program a shader. In dunge you can do thi
 ```rust
 use dunge_winit::sl::{PassVertex, Render},
 
-// create a shader program
+// Create a shader program
 let triangle = |PassVertex(v): PassVertex<Vert>| {
-    // describe the vertex position:
+    // Describe the vertex position:
     // take the vertex data as vec2 and expand it to vec4
     let place = sl::vec4_concat(v.pos, sl::vec2(0., 1.));
 
-    // then describe the vertex color:
+    // Then describe the vertex color:
     // first you need to pass the color from
     // vertex shader stage to fragment shader stage
     let fragment_col = sl::fragment(v.col);
 
-    // now create the final color by adding an alpha value
+    // Now create the final color by adding an alpha value
     let color = sl::vec4_with(fragment_col, 1.);
 
-    // as a result, return a program that describes how to
+    // As a result, return a program that describes how to
     // compute the vertex position and the fragment color
     Render { place, color }
 };
@@ -84,11 +84,11 @@ That's because this function doesn't actually compute anything. It is needed onl
 Now let's create the dunge context and other necessary things
 
 ```rust
-// create the dunge context
+// Create the dunge context
 let cx = dunge::context().await?;
 
-// you can use the context to manage dunge objects.
-// create a shader instance
+// You can use the context to manage dunge objects.
+// Create a shader instance
 let shader = cx.make_shader(triangle);
 ```
 
@@ -113,7 +113,7 @@ fn main() {
 Also create a triangle mesh that we're going to draw
 
 ```rust
-// create a mesh from vertices
+// Create a mesh from vertices
 let mesh = {
     const VERTS: [Vert; 3] = [
         Vert { pos: Vec2::new(-0.5, -0.5), col: Vec3::new(1., 0., 0.) },
@@ -128,7 +128,7 @@ let mesh = {
 We need to create the application window and a layer - the surface onto which the final scene will be rendered. The layer must use the same color format as the window, so we'll query the required format directly. Additionally, the layer needs to know which shader to use for rendering, so we'll specify our shader as well
 
 ```rust
-// the control object is created from the `(try_)block_on` function
+// The control object is created from the `(try_)block_on` function
 let window = control.make_window(&cx).await?;
 let layer = cx.make_layer(&shader, window.format());
 ```
@@ -136,25 +136,25 @@ let layer = cx.make_layer(&shader, window.format());
 Now we can create the render loop. It's described in a simple and straightforward way: it's literally a loop where we wait for the window's redraw event, schedule the rendering of the layer with a triangle mesh, and present the final result
 
 ```rust
-// specify a color of render background, it will be black
+// Specify a color of render background, it will be black
 let bg = layer.format().rgb_from_bytes([0; 3]);
 let render = async {
     loop {
-        // wait for window is going to redraw
+        // Wait for window is going to redraw
         let redraw = window.redraw().await;
 
-        // schedule the render
+        // Schedule the render
         cx.shed(|s| {
             s.render(&redraw, bg).layer(&layer).draw(&mesh);
         })
         .await;
 
-        // present rendered image on the window
+        // Present rendered image on the window
         redraw.present();
     }
 };
 
-// render is an infinite future, so we can await on it
+// Render is an infinite future, so we can await on it
 render.await;
 ```
 
@@ -169,11 +169,11 @@ use futures_concurrency::prelude::*;
 
 let render = async {/**/};
 
-// wait for close requested event
+// Wait for close requested event
 let close = window.close_requested();
 
-// race two futures
-// since render will never finish, this race will finish
+// Race two futures
+// Since render will never finish, this race will finish
 // as soon as close requested event will be emitted
 (render, close).race().await;
 ```

@@ -33,7 +33,7 @@ use {
 /// ```
 /// # fn f() -> Result<(), dunge::FailedMakeContext> {
 /// let cx = dunge::block_on(dunge::context())?;
-/// /* use the context */
+/// // Use the context
 /// # Ok(())
 /// # }
 /// ```
@@ -58,7 +58,7 @@ use {
 ///         Err(e) => panic!("failed to create dunge context: {e}"),
 ///     };
 ///
-///     /* use the context */
+///     // Use the context
 /// }
 /// ```
 ///
@@ -162,18 +162,18 @@ impl Context {
     ///
     /// type Vec4f = [f32; 4];
     ///
-    /// // describe a vertex type
+    /// // Describe a vertex type
     /// #[repr(C)]
     /// #[derive(Vertex)]
     /// struct Vert { pos: Vec4f, col: Vec4f }
     ///
     /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
-    /// // pass the vertex and a bound 4x4 matrix in the shader
+    /// // Pass the vertex and a bound 4x4 matrix in the shader
     /// let program = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
-    ///     // multiply the matrix and the vertex `pos` field  
+    ///     // Multiply the matrix and the vertex `pos` field  
     ///     place: m.load() * v.pos,
     ///
-    ///     // pass `col` from the vertex to fragment stage and return as a final pixel color
+    ///     // Pass `col` from the vertex to fragment stage and return as a final pixel color
     ///     color: sl::fragment(v.col),
     /// };
     ///
@@ -208,16 +208,16 @@ impl Context {
     ///     storage::RwStorage,
     /// };
     ///
-    /// // describe an input/output storage array
+    /// // Describe an input/output storage array
     /// type Array = RwStorage<[u32; 64]>;
     ///
     /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
-    /// // pass an invocation vector and a bound storage in the shader
+    /// // Pass an invocation vector and a bound storage in the shader
     /// let program = |Invocation(v): Invocation, Groups(a): Groups<Array>| Compute {
-    ///     // read values from the array and rewrite in back
+    ///     // Read values from the array and rewrite in back
     ///     compute: a.set(v.x(), v.x()),
     ///
-    ///     // set the workgroup size
+    ///     // Set the workgroup size
     ///     workgroup_size: [16, 1, 1],
     /// };
     ///
@@ -261,25 +261,25 @@ impl Context {
     /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Pointer<dunge::types::Vec4<f32>>>,)>>,
     /// #     mesh: dunge::mesh::Mesh<Vec4f>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
-    /// // pass the color value via a uniform
+    /// // Pass the color value via a uniform
     /// let filler = |PassVertex(v): PassVertex<Vec4f>, Groups(color): Groups<Uniform<Rgba>>| Render {
-    ///     // set vertex coordinates
+    ///     // Set vertex coordinates
     ///     place: v,
-    ///     // pass color from the vertex stage to the fragment stage
+    ///     // Pass color from the vertex stage to the fragment stage
     ///     color: sl::fragment(color.load()),
     /// };
     ///
-    /// // create the context and shader
+    /// // Create the context and shader
     /// let cx = dunge::context().await?;
     /// let shader = cx.make_shader(filler);
     ///
-    /// // create a color uniform in RGBA format - for example, red.
+    /// // Create a color uniform in RGBA format - for example, red.
     /// let color_uniform = cx.make_uniform(&Rgba::from_bytes([!0, 0, 0, !0]));
     ///
-    /// // create the set value from the uniform
+    /// // Create the set value from the uniform
     /// let set = cx.make_set(&shader, color_uniform);
     ///
-    /// // now you can bind this set on a render operation
+    /// // Now you can bind this set on a render operation
     /// # #[cfg(false)]
     /// # {
     /// let (target, opts, layer, mesh) = ..
@@ -384,7 +384,7 @@ impl Context {
     ///
     /// let cx = dunge::context().await?;
     ///
-    /// // create a buffer filled with four `i32` numbers
+    /// // Create a buffer filled with four `i32` numbers
     /// let data = BufferData::new(&[1, 2, 3, 4])
     ///     .read()     // set a usage to read from the buffer
     ///     .copy_to(); // set a usage to copy to the buffer
