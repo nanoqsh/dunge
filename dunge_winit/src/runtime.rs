@@ -15,10 +15,6 @@ use {
         error, fmt, future,
         pin::Pin,
         rc::Rc,
-        sync::{
-            Arc, OnceLock,
-            atomic::{AtomicBool, Ordering},
-        },
         task::{self, Poll, Waker},
         time::Duration,
     },
@@ -150,29 +146,11 @@ enum Action {
     Process,
 }
 
-struct ActiveWaker {
-    need_to_poll: AtomicBool,
-}
-
-impl task::Wake for ActiveWaker {
-    #[inline]
-    fn wake(self: Arc<Self>) {
-        self.wake_by_ref();
-    }
-
-    #[inline]
-    fn wake_by_ref(self: &Arc<Self>) {
-        self.need_to_poll.store(true, Ordering::Relaxed);
-    }
-}
-
 struct App<F, R> {
     req: Request,
     lifecycle: Rc<Lifecycle>,
     windows: HashMap<window::WindowId, AppWindow>,
     action: Action,
-    app_waker: Arc<ActiveWaker>,
-    scheduled: bool,
     context: task::Context<'static>,
     fu: Pin<Box<F>>,
     ret: Rc<Return<R>>,
@@ -190,7 +168,7 @@ where
             for _ in 0..4 {
                 match Reactor::get().process_timers() {
                     // ready to make progress
-                    Process::Ready => self.tick(el),
+                    Process::Ready => self.poll(el),
                     // wait for next timer
                     Process::Wait(next) => break 'process next,
                     // nothing to do, sleep some time
@@ -204,22 +182,7 @@ where
         el.set_control_flow(event_loop::ControlFlow::WaitUntil(next));
     }
 
-    #[inline]
-    fn tick(&mut self, el: &event_loop::ActiveEventLoop) {
-        if self.need_to_poll() {
-            self.poll(el);
-        }
-    }
-
-    #[inline]
-    fn need_to_poll(&mut self) -> bool {
-        let scheduled = self.scheduled;
-        self.scheduled = false;
-        let awakened = self.app_waker.need_to_poll.swap(false, Ordering::Relaxed);
-        scheduled || awakened
-    }
-
-    fn redraw(&mut self) -> bool {
+    fn need_redraw(&mut self) -> bool {
         if let LifecycleState::Inactive = self.lifecycle.state.get() {
             return false;
         }
@@ -236,11 +199,6 @@ where
         }
 
         redraw
-    }
-
-    #[inline]
-    fn schedule(&mut self) {
-        self.scheduled = true;
     }
 
     #[inline]
@@ -311,7 +269,6 @@ where
     fn suspended(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("suspended");
         self.lifecycle.set(LifecycleState::Inactive);
-        self.schedule();
     }
 
     #[inline]
@@ -337,7 +294,6 @@ where
                 }
 
                 _ = out.set(res);
-                self.schedule();
             }
             Message::RemoveWindow(id) => {
                 log::debug!("remove window {id:?}");
@@ -350,7 +306,6 @@ where
                 };
 
                 window.shared.resize();
-                self.schedule();
             }
             Message::SetFps(id, period) => {
                 log::debug!("set fps {id:?}");
@@ -386,12 +341,10 @@ where
                 window.shared.resize();
                 window.shared.events().resize.set();
                 window.shared.window().request_redraw();
-                self.schedule();
             }
             event::WindowEvent::CloseRequested => {
                 log::debug!("close requested {id:?}");
                 window.shared.events().close.set();
-                self.schedule();
             }
             event::WindowEvent::Focused(focused) => {
                 if focused {
@@ -427,8 +380,6 @@ where
                     event::ElementState::Pressed => events.press_keys.active(code),
                     event::ElementState::Released => events.release_keys.active(code),
                 }
-
-                self.schedule();
             }
             event::WindowEvent::CursorMoved {
                 position: dpi::PhysicalPosition { x, y },
@@ -442,8 +393,6 @@ where
                     event::ElementState::Pressed => events.press_buttons.active(button),
                     event::ElementState::Released => events.release_buttons.active(button),
                 }
-
-                self.schedule();
             }
             event::WindowEvent::RedrawRequested => {
                 let now = Instant::now();
@@ -454,8 +403,6 @@ where
                 if let Some(period) = window.set_fps.take() {
                     window.timer = Timer::interval(period);
                 }
-
-                self.schedule();
             }
             _ => {}
         }
@@ -463,25 +410,17 @@ where
 
     #[inline]
     fn about_to_wait(&mut self, el: &event_loop::ActiveEventLoop) {
-        if self.redraw() {
+        if self.need_redraw() {
             // poll on redraw event
             el.set_control_flow(event_loop::ControlFlow::Poll);
             return;
         }
 
+        self.poll(el);
         if let Action::Process = self.action {
-            // tick after wait
-            self.tick(el);
             self.process_timers(el);
-        } else {
-            self.tick(el);
         }
     }
-}
-
-fn cached_waker(app_waker: Arc<ActiveWaker>) -> &'static Waker {
-    static CACHE: OnceLock<Waker> = OnceLock::new();
-    CACHE.get_or_init(|| Waker::from(app_waker))
 }
 
 /// Runs an event loop on web.
@@ -509,19 +448,13 @@ where
         lifecycle: lifecycle.clone(),
     };
 
-    let app_waker = Arc::new(ActiveWaker {
-        need_to_poll: AtomicBool::new(false),
-    });
-
     let ret = Rc::new(Return::new());
     let app = App {
         req,
         lifecycle,
         windows: HashMap::new(),
         action: Action::Process,
-        app_waker: app_waker.clone(),
-        scheduled: false,
-        context: task::Context::from_waker(cached_waker(app_waker.clone())),
+        context: task::Context::from_waker(Waker::noop()),
         fu: Box::pin(async move { f(control).await }),
         ret: ret.clone(),
     };
@@ -568,19 +501,13 @@ where
         lifecycle: lifecycle.clone(),
     };
 
-    let app_waker = Arc::new(ActiveWaker {
-        need_to_poll: AtomicBool::new(false),
-    });
-
     let ret = Rc::new(Return::new());
     let mut app = App {
         req,
         lifecycle,
         windows: HashMap::new(),
         action: Action::Process,
-        app_waker: app_waker.clone(),
-        scheduled: false,
-        context: task::Context::from_waker(cached_waker(app_waker.clone())),
+        context: task::Context::from_waker(Waker::noop()),
         fu: Box::pin(f(control)),
         ret: ret.clone(),
     };
