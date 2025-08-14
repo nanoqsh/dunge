@@ -217,11 +217,13 @@ impl IntoVector for glam::Vec2 {
     type Scalar = f32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -229,11 +231,13 @@ impl IntoVector for glam::Vec3 {
     type Scalar = f32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -241,11 +245,13 @@ impl IntoVector for glam::Vec3A {
     type Scalar = f32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -253,11 +259,13 @@ impl IntoVector for glam::Vec4 {
     type Scalar = f32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -265,11 +273,13 @@ impl IntoVector for glam::IVec2 {
     type Scalar = i32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -277,11 +287,13 @@ impl IntoVector for glam::IVec3 {
     type Scalar = i32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -289,11 +301,13 @@ impl IntoVector for glam::IVec4 {
     type Scalar = i32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -301,11 +315,13 @@ impl IntoVector for glam::UVec2 {
     type Scalar = u32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -313,11 +329,13 @@ impl IntoVector for glam::UVec3 {
     type Scalar = u32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }
 
@@ -325,10 +343,12 @@ impl IntoVector for glam::UVec4 {
     type Scalar = u32;
 
     #[inline]
-    fn into_vector<F>(self, f: F)
+    fn into_vector<F>(self, mut f: F)
     where
         F: FnMut(Self::Scalar),
     {
-        self.to_array().map(f);
+        for v in self.to_array() {
+            f(v);
+        }
     }
 }

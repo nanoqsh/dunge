@@ -114,7 +114,9 @@ impl IntoMatrix for glam::Mat2 {
     where
         F: FnMut(Self::Vector),
     {
-        self.to_cols_array_2d().map(|v| f(Self::Vector::from(v)));
+        for v in self.to_cols_array_2d() {
+            f(Self::Vector::from(v));
+        }
     }
 }
 
@@ -126,7 +128,9 @@ impl IntoMatrix for glam::Mat3 {
     where
         F: FnMut(Self::Vector),
     {
-        self.to_cols_array_2d().map(|v| f(Self::Vector::from(v)));
+        for v in self.to_cols_array_2d() {
+            f(Self::Vector::from(v));
+        }
     }
 }
 
@@ -138,6 +142,8 @@ impl IntoMatrix for glam::Mat4 {
     where
         F: FnMut(Self::Vector),
     {
-        self.to_cols_array_2d().map(|v| f(Self::Vector::from(v)));
+        for v in self.to_cols_array_2d() {
+            f(Self::Vector::from(v));
+        }
     }
 }
