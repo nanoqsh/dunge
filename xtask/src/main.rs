@@ -80,8 +80,6 @@ fn build(opts: Opts) -> Result<(), Error> {
         "--no-typescript",
         "--target",
         "web",
-        // temporary disable optimizations due to bug
-        "--dev",
     ])
     .arg("--out-dir")
     .arg(root.join("xtask/web").join(&opts.module))
