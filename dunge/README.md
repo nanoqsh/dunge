@@ -25,10 +25,10 @@ Currently the library is for personal use only. Although, over time I plan to st
 
 ## Getting Started
 
-To start using the library, add the `dunge` crate to your project's dependencies. If you need the windowing extension, add the [`dunge_winit`](https://docs.rs/dunge_winit/latest/dunge_winit/) crate only - it directly re-exports everything from the `dunge` crate, so there's no need to include both
+To start using the library, add the `dunge` crate to your project's dependencies. If you need the windowing extension, add the [`dunge-winit`](https://docs.rs/dunge-winit/latest/dunge-winit/) crate only - it directly re-exports everything from the `dunge` crate, so there's no need to include both
 
 ```sh
-cargo add dunge_winit
+cargo add dunge-winit
 ```
 
 You can also opt out of window system support and render the scene directly into an image in RAM
@@ -94,7 +94,7 @@ let shader = cx.make_shader(triangle);
 
 You may notice that context creation requires async. Indeed, dunge is fundamentally **async**: scheduling GPU workloads, managing windows, handling real-time IO and working with timings - all of these are inherently asynchronous operations. This API also makes it easy to integrate existing ecosystem components into your project. For example, you can effortlessly add asynchronous network IO handling - whether you're targeting a desktop system or a browser runtime
 
-That's why dunge includes its own asynchronous runtime. If you're not using the `dunge_winit` windowing extension and simply want to work with the GPU, you can use the `dunge::block_on` function - it allows you to run an async routine on desktop platforms. For windowed applications, use `dunge_winit::block_on` or `dunge_winit::try_block_on`, which handle the event loop of a windowed app. A minimal usage example with error handling might look like this:
+That's why dunge includes its own asynchronous runtime. If you're not using the `dunge-winit` windowing extension and simply want to work with the GPU, you can use the `dunge::block_on` function - it allows you to run an async routine on desktop platforms. For windowed applications, use `dunge_winit::block_on` or `dunge_winit::try_block_on`, which handle the event loop of a windowed app. A minimal usage example with error handling might look like this:
 
 ```rust
 async fn run(control: Control) -> Result<(), dunge_winit::Error> {

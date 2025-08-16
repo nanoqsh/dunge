@@ -19,7 +19,7 @@ triangle = ["dep:triangle"]
 console_error_panic_hook.workspace = true
 console_log.workspace = true
 cube = { path = "../cube", optional = true }
-dunge_winit.workspace = true
+dunge-winit.workspace = true
 log.workspace = true
 ssaa = { path = "../ssaa", optional = true }
 triangle = { path = "../triangle", optional = true }
