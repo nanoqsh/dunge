@@ -1,7 +1,6 @@
 [package]
-name = "dunge_shader"
+name = "dunge-shade"
 description = "Shader generator for the dunge library"
-readme = "README.md"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,6 +9,16 @@ keywords.workspace = true
 documentation.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+
+[features]
+serde = ["dep:serde", "naga/serialize", "naga/deserialize"]
+wgsl = ["naga/wgsl-out"]
+
+[dependencies]
+glam.workspace = true
+log.workspace = true
+naga.workspace = true
+serde = { workspace = true, features = ["derive"], optional = true }
 
 [lints]
 workspace = true

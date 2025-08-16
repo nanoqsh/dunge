@@ -9,10 +9,10 @@ use {
         types::{self, MemberData, MemberType, Space},
         value::UniformValue,
     },
-    dunge_shader::group::Group,
+    dunge_shade::group::Group,
 };
 
-pub use dunge_shader::group::{Projection, Take};
+pub use dunge_shade::group::{Projection, Take};
 
 /// Describes a group member type projection.
 ///

@@ -1,7 +1,6 @@
 [package]
-name = "dunge_shader"
-description = "Shader generator for the dunge library"
-readme = "README.md"
+name = "dunge-macro"
+description = "Procmacro for the dunge library"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,6 +9,17 @@ keywords.workspace = true
 documentation.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote.workspace = true
+proc-macro2.workspace = true
+syn.workspace = true
+
+[dev-dependencies]
+helpers.workspace = true
 
 [lints]
 workspace = true

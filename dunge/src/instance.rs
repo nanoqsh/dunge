@@ -13,7 +13,7 @@ use {
     std::marker::PhantomData,
 };
 
-pub use dunge_shader::instance::Projection;
+pub use dunge_shade::instance::Projection;
 
 /// Describes an instance member type projection.
 ///

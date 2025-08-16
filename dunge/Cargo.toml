@@ -12,11 +12,11 @@ repository.workspace = true
 rust-version.workspace = true
 
 [features]
-wgsl = ["dunge_shader/wgsl"]
+wgsl = ["dunge-shade/wgsl"]
 
 [dependencies]
-dunge_macros.workspace = true
-dunge_shader.workspace = true
+dunge-macro.workspace = true
+dunge-shade.workspace = true
 bytemuck.workspace = true
 glam = { workspace = true, features = ["bytemuck"] }
 log.workspace = true
@@ -38,7 +38,7 @@ wgpu = { workspace = true, features = ["webgpu"] }
 parking.workspace = true
 
 [dev-dependencies]
-dunge_shader = { workspace = true, features = ["wgsl"] }
+dunge-shade = { workspace = true, features = ["wgsl"] }
 env_logger.workspace = true
 helpers = { workspace = true, features = ["png"] }
 

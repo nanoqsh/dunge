@@ -18,7 +18,7 @@ use {
         value::{StorageValue, UniformValue},
         workload::Workload,
     },
-    dunge_shader::group::Group,
+    dunge_shade::group::Group,
     std::{error, fmt, pin::Pin, sync::Arc},
 };
 

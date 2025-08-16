@@ -2,7 +2,9 @@
 resolver = "3"
 members = [
     "dunge",
+    "dunge-macro",
     "dunge_macros",
+    "dunge-shade",
     "dunge_shader",
     "dunge-winit",
     "examples/*",
@@ -23,7 +25,9 @@ rust-version = "1.88"
 [workspace.dependencies]
 # workspace
 dunge = { version = "=0.3.5", path = "dunge" }
+dunge-macro = { version = "=0.3.5", path = "dunge-macro" }
 dunge_macros = { version = "=0.3.5", path = "dunge_macros" }
+dunge-shade = { version = "=0.3.5", path = "dunge-shade" }
 dunge_shader = { version = "=0.3.5", path = "dunge_shader" }
 dunge-winit = { version = "=0.3.5", path = "dunge-winit" }
 helpers = { path = "helpers" }

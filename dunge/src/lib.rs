@@ -30,7 +30,7 @@ pub mod prelude {
 
 /// The vertex module.
 pub mod vertex {
-    pub use dunge_shader::vertex::{InputProjection, Projection, verts_as_bytes};
+    pub use dunge_shade::vertex::{InputProjection, Projection, verts_as_bytes};
 }
 
 pub use {
@@ -42,8 +42,8 @@ pub use {
         value::{ColorValue, StorageValue, UniformValue, Value},
         workload::Workload,
     },
-    dunge_macros::{Group, Instance, Vertex},
-    dunge_shader::{group::Group, instance::Instance, sl, types, vertex::Vertex},
+    dunge_macro::{Group, Instance, Vertex},
+    dunge_shade::{group::Group, instance::Instance, sl, types, vertex::Vertex},
     glam,
 };
 
