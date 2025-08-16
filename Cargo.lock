@@ -635,7 +635,6 @@ dependencies = [
  "glam",
  "log",
  "naga",
- "serde",
 ]
 
 [[package]]
@@ -961,7 +960,6 @@ dependencies = [
  "cfg-if",
  "crunchy",
  "num-traits",
- "serde",
 ]
 
 [[package]]
@@ -971,7 +969,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
  "foldhash",
- "serde",
 ]
 
 [[package]]
@@ -1074,7 +1071,6 @@ checksum = "fe4cd85333e22411419a0bcae1297d25e58c9443848b11dc6a86fefe8c78a661"
 dependencies = [
  "equivalent",
  "hashbrown",
- "serde",
 ]
 
 [[package]]
@@ -1333,7 +1329,6 @@ dependencies = [
  "num-traits",
  "once_cell",
  "rustc-hash 1.1.0",
- "serde",
  "spirv",
  "thiserror 2.0.14",
  "unicode-ident",

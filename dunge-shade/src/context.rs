@@ -9,18 +9,13 @@ use crate::{
     vertex::{self, Vertex},
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 #[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct GroupInfo {
     pub def: Define<MemberData>,
     pub stages: Stages,
 }
 
 #[derive(Clone, Copy, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Stages {
     pub vs: bool,
     pub fs: bool,
@@ -39,7 +34,6 @@ impl Stages {
 }
 
 #[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum InputInfo {
     Vert(VertInfo),
     Inst(InstInfo),
@@ -48,14 +42,12 @@ pub enum InputInfo {
 }
 
 #[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct VertInfo {
     pub def: Define<VectorType>,
     pub size: usize,
 }
 
 #[derive(Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct InstInfo {
     pub ty: ValueType,
 }
@@ -180,7 +172,6 @@ impl Context {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Info {
     inputs: Vec<InputInfo>,
     groups: Vec<GroupInfo>,

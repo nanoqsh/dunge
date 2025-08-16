@@ -1,11 +1,7 @@
 use std::borrow::Cow;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 /// Describes a layout for user types.
 #[derive(Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Define<T>(Cow<'static, [T]>)
 where
     T: Clone + 'static;

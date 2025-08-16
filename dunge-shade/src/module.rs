@@ -7,9 +7,6 @@ use {
     std::marker::PhantomData,
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 macro_rules! tuple {
     () => {
         ((), (), ())
@@ -210,8 +207,6 @@ impl Module {
     }
 }
 
-#[doc(hidden)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DynamicModule {
     info: Info,
     nm: naga::Module,

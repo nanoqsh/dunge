@@ -11,14 +11,12 @@ repository.workspace = true
 rust-version.workspace = true
 
 [features]
-serde = ["dep:serde", "naga/serialize", "naga/deserialize"]
 wgsl = ["naga/wgsl-out"]
 
 [dependencies]
 glam.workspace = true
 log.workspace = true
 naga.workspace = true
-serde = { workspace = true, features = ["derive"], optional = true }
 
 [lints]
 workspace = true
