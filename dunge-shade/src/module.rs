@@ -207,33 +207,46 @@ impl Module {
     }
 }
 
-pub struct DynamicModule {
-    info: Info,
-    nm: naga::Module,
+#[doc(hidden)]
+pub struct Dynamic<I> {
+    pub info: Info,
+    pub nm: naga::Module,
+    input: PhantomData<I>,
 }
 
-impl DynamicModule {
-    pub fn new<M, A, K>(module: M) -> Self
-    where
-        M: IntoModule<A, K>,
-    {
-        let Module { info, nm, .. } = module.into_module();
-        Self { info, nm }
+impl<V, I> Dynamic<RenderInput<V, I>> {
+    pub fn render(info: Info, nm: naga::Module) -> Self {
+        Self {
+            info,
+            nm,
+            input: PhantomData,
+        }
+    }
+}
+
+impl Dynamic<ComputeInput> {
+    pub fn compute(info: Info, nm: naga::Module) -> Self {
+        Self {
+            info,
+            nm,
+            input: PhantomData,
+        }
     }
 }
 
 #[doc(hidden)]
-impl IntoModule<(), RenderKind> for DynamicModule {
-    type Input = RenderInput<(), ()>;
+impl<V, I> IntoModule<(), RenderKind> for Dynamic<RenderInput<V, I>> {
+    type Input = RenderInput<V, I>;
     type Set = ();
 
+    #[inline]
     fn into_module(self) -> Module {
         Module::new(self.info, self.nm)
     }
 }
 
 #[doc(hidden)]
-impl IntoModule<(), ComputeKind> for DynamicModule {
+impl IntoModule<(), ComputeKind> for Dynamic<ComputeInput> {
     type Input = ComputeInput;
     type Set = ();
 
