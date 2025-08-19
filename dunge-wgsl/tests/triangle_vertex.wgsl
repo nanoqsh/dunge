@@ -3,17 +3,17 @@ struct Vert {
     @location(1) col: vec3f,
 }
 
-struct VertOutput {
+struct Output {
     @builtin(position) pos: vec4f,
     @location(0) col: vec3f,
 }
 
 @vertex 
-fn vs(param: Vert) -> VertOutput {
-    return VertOutput(vec4f(param.pos, vec2f(0f, 1f)), param.col);
+fn vs(v: Vert) -> Output {
+    return Output(vec4f(v.pos, vec2f(0f, 1f)), v.col);
 }
 
 @fragment 
-fn fs(out: VertOutput) -> @location(0) vec4f {
-    return vec4f(out.col, 1f);
+fn fs(o: Output) -> @location(0) vec4f {
+    return vec4f(o.col, 1f);
 }

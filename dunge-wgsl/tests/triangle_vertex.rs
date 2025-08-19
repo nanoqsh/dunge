@@ -28,8 +28,10 @@ fn render() -> Result<(), Error> {
 
     let cx = dunge::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);
-    // TODO
-    // helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_vertex.wgsl"));
+    helpers::eq_lines(
+        shader.debug_wgsl(),
+        include_str!("triangle_vertex_debug.wgsl"),
+    );
 
     let size = (300, 300);
     let layer = cx.make_layer(&shader, Format::SrgbAlpha);
