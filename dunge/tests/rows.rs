@@ -4,13 +4,11 @@ type Error = Box<dyn std::error::Error>;
 
 #[test]
 fn render() -> Result<(), Error> {
-    use {
-        dunge::{
-            instance::Row,
-            prelude::*,
-            sl::{self, PassInstance, Render},
-        },
+    use dunge::{
         glam::{Mat4, Vec4},
+        instance::Row,
+        prelude::*,
+        sl::{self, PassInstance, Render},
     };
 
     #[derive(Instance)]

@@ -2,6 +2,7 @@ use {
     crate::{
         context::{Context, FromContext, FromRender, Info, TakeSet},
         eval::{self, Cs, Eval, Fs, Vs},
+        sl::Stages,
         types,
     },
     std::marker::PhantomData,
@@ -208,7 +209,7 @@ impl Module {
 }
 
 pub struct Dynamic {
-    pub info: Info,
+    pub stages: Vec<Stages>,
     pub nm: naga::Module,
 }
 
@@ -218,7 +219,10 @@ impl IntoModule<(), RenderKind> for Dynamic {
 
     #[inline]
     fn into_module(self) -> Module {
-        Module::new(self.info, self.nm)
+        let cx = Context::new();
+        let mut info = cx.into_info();
+        info.set_stages(&self.stages);
+        Module::new(info, self.nm)
     }
 }
 
@@ -237,7 +241,15 @@ macro_rules! impl_into_dynamic_render_module {
 
             #[inline]
             fn into_module(self) -> Module {
-                Module::new(self.info, self.nm)
+                let mut cx = Context::new();
+                _ = A::from_render(&mut cx);
+                $(
+                    _ = $t::from_context(&mut cx);
+                )*
+
+                let mut info = cx.into_info();
+                info.set_stages(&self.stages);
+                Module::new(info, self.nm)
             }
         }
     };
@@ -250,7 +262,7 @@ impl_into_dynamic_render_module!(A X Y Z);
 
 macro_rules! impl_into_dynamic_compute_module {
     ($($t:ident)*) => {
-        #[allow(unused_parens)]
+        #[allow(unused_mut, unused_parens)]
         impl<$($t),*> IntoModule<($($t),*), ComputeKind> for Dynamic
         where
             $(
@@ -263,7 +275,14 @@ macro_rules! impl_into_dynamic_compute_module {
 
             #[inline]
             fn into_module(self) -> Module {
-                Module::new(self.info, self.nm)
+                let mut cx = Context::new();
+                $(
+                    _ = $t::from_context(&mut cx);
+                )*
+
+                let mut info = cx.into_info();
+                info.set_stages(&self.stages);
+                Module::new(info, self.nm)
             }
         }
     };

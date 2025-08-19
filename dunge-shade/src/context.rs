@@ -1,36 +1,22 @@
-use crate::{
-    define::Define,
-    eval::{GlobalOut, ReadIndex, ReadInvocation, Stage},
-    group::{self, Group},
-    instance::{self, Instance},
-    module::{ComputeKind, RenderKind},
-    op::Ret,
-    types::{self, MemberData, ValueType, VectorType},
-    vertex::{self, Vertex},
+use {
+    crate::{
+        define::Define,
+        eval::{GlobalOut, ReadIndex, ReadInvocation},
+        group::{self, Group},
+        instance::{self, Instance},
+        module::{ComputeKind, RenderKind},
+        op::Ret,
+        stage::Stages,
+        types::{self, MemberData, ValueType, VectorType},
+        vertex::{self, Vertex},
+    },
+    std::iter,
 };
 
 #[derive(Clone)]
 pub struct GroupInfo {
     pub def: Define<MemberData>,
     pub stages: Stages,
-}
-
-#[derive(Clone, Copy, Default)]
-pub struct Stages {
-    pub vs: bool,
-    pub fs: bool,
-    pub cs: bool,
-}
-
-impl Stages {
-    #[inline]
-    pub(crate) fn with(self, stage: Stage) -> Self {
-        match stage {
-            Stage::Vertex => Self { vs: true, ..self },
-            Stage::Fragment => Self { fs: true, ..self },
-            Stage::Compute => Self { cs: true, ..self },
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -197,6 +183,19 @@ impl Info {
     #[inline]
     pub fn groups(&self) -> impl Iterator<Item = &GroupInfo> {
         self.groups.iter()
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    pub fn set_stages(&mut self, stages: &[Stages]) {
+        let stages = stages
+            .iter()
+            .copied()
+            .chain(iter::repeat_with(Stages::default));
+
+        for (group, stage) in iter::zip(&mut self.groups, stages) {
+            group.stages = stage;
+        }
     }
 }
 

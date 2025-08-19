@@ -1,6 +1,6 @@
 use {
     crate::{
-        sl::{ComputeInput, InputInfo, IntoModule, Module, RenderInput, Stages},
+        sl::{ComputeInput, InputInfo, IntoModule, Module, RenderInput, Stage, Stages},
         state::State,
         types::{MemberType, ScalarType, Space, ValueType, VectorType},
     },
@@ -84,9 +84,9 @@ impl ShaderData {
 
         let visibility = |stages: Stages| {
             let mut out = wgpu::ShaderStages::empty();
-            out.set(wgpu::ShaderStages::VERTEX, stages.vs);
-            out.set(wgpu::ShaderStages::FRAGMENT, stages.fs);
-            out.set(wgpu::ShaderStages::COMPUTE, stages.cs);
+            out.set(wgpu::ShaderStages::VERTEX, stages.has(Stage::Vertex));
+            out.set(wgpu::ShaderStages::FRAGMENT, stages.has(Stage::Fragment));
+            out.set(wgpu::ShaderStages::COMPUTE, stages.has(Stage::Compute));
             out
         };
 

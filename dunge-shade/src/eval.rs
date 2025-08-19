@@ -1,10 +1,11 @@
 use {
     crate::{
-        context::{Context, InputInfo, InstInfo, Stages, VertInfo},
+        context::{Context, InputInfo, InstInfo, VertInfo},
         define::Define,
         math::Func,
         module::{Compute, CsOut, FsOut, Module, Render, VsOut},
         op::{Bi, Ret, Un},
+        stage::{Stage, Stages},
         texture::Sampled,
         types::{self, AddType, MemberData, ScalarType, ValueType, VectorType},
     },
@@ -329,7 +330,7 @@ pub struct GlobalOut(Rc<Cell<Stages>>);
 impl GlobalOut {
     #[inline]
     fn with_stage(&self, stage: Stage) {
-        self.0.set(self.0.get().with(stage));
+        self.0.set(self.0.get() | stage);
     }
 
     #[inline]
@@ -583,31 +584,6 @@ impl_eval_tuple!(X);
 impl_eval_tuple!(X, Y);
 impl_eval_tuple!(X, Y, Z);
 impl_eval_tuple!(X, Y, Z, W);
-
-#[derive(Clone, Copy)]
-pub(crate) enum Stage {
-    Vertex,
-    Fragment,
-    Compute,
-}
-
-impl Stage {
-    fn name(self) -> &'static str {
-        match self {
-            Self::Vertex => "vs",
-            Self::Fragment => "fs",
-            Self::Compute => "cs",
-        }
-    }
-
-    fn shader_stage(self) -> naga::ShaderStage {
-        match self {
-            Self::Vertex => naga::ShaderStage::Vertex,
-            Self::Fragment => naga::ShaderStage::Fragment,
-            Self::Compute => naga::ShaderStage::Compute,
-        }
-    }
-}
 
 pub(crate) trait GetEntry {
     const STAGE: Stage;

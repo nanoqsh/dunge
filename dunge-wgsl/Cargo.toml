@@ -1,0 +1,23 @@
+[package]
+name = "dunge-wgsl"
+description = "Extension of the dunge library to write .wgsl shaders"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+dunge.workspace = true
+naga = { workspace = true, features = ["wgsl-in"] }
+
+[dev-dependencies]
+dunge-shade = { workspace = true, features = ["wgsl"] }
+bytemuck.workspace = true
+helpers = { workspace = true, features = ["png"] }
+
+[lints]
+workspace = true

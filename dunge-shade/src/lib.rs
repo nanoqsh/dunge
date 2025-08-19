@@ -11,6 +11,7 @@ mod math;
 mod matrix;
 mod module;
 mod op;
+mod stage;
 mod texture;
 pub mod types;
 mod vector;
@@ -21,6 +22,6 @@ mod zero;
 pub mod sl {
     pub use crate::{
         access::*, branch::*, context::*, convert::*, define::*, discard::*, eval::*, math::*,
-        matrix::*, module::*, op::*, texture::*, vector::*, zero::*,
+        matrix::*, module::*, op::*, stage::*, texture::*, vector::*, zero::*,
     };
 }
