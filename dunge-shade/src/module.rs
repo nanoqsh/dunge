@@ -207,36 +207,13 @@ impl Module {
     }
 }
 
-#[doc(hidden)]
-pub struct Dynamic<I> {
+pub struct Dynamic {
     pub info: Info,
     pub nm: naga::Module,
-    input: PhantomData<I>,
 }
 
-impl<V, I> Dynamic<RenderInput<V, I>> {
-    pub fn render(info: Info, nm: naga::Module) -> Self {
-        Self {
-            info,
-            nm,
-            input: PhantomData,
-        }
-    }
-}
-
-impl Dynamic<ComputeInput> {
-    pub fn compute(info: Info, nm: naga::Module) -> Self {
-        Self {
-            info,
-            nm,
-            input: PhantomData,
-        }
-    }
-}
-
-#[doc(hidden)]
-impl<V, I> IntoModule<(), RenderKind> for Dynamic<RenderInput<V, I>> {
-    type Input = RenderInput<V, I>;
+impl IntoModule<(), RenderKind> for Dynamic {
+    type Input = RenderInput<(), ()>;
     type Set = ();
 
     #[inline]
@@ -245,12 +222,54 @@ impl<V, I> IntoModule<(), RenderKind> for Dynamic<RenderInput<V, I>> {
     }
 }
 
-#[doc(hidden)]
-impl IntoModule<(), ComputeKind> for Dynamic<ComputeInput> {
-    type Input = ComputeInput;
-    type Set = ();
+macro_rules! impl_into_dynamic_render_module {
+    (A $($t:ident)*) => {
+        impl<A, $($t),*> IntoModule<(A, $($t),*), RenderKind> for Dynamic
+        where
+            A: FromRender<RenderKind>,
+            $(
+                $t: FromContext<RenderKind>,
+            )*
+            tuple!($($t::Set),*): TakeSet,
+        {
+            type Input = RenderInput<A::Vertex, A::Instance>;
+            type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
 
-    fn into_module(self) -> Module {
-        Module::new(self.info, self.nm)
-    }
+            #[inline]
+            fn into_module(self) -> Module {
+                Module::new(self.info, self.nm)
+            }
+        }
+    };
 }
+
+impl_into_dynamic_render_module!(A);
+impl_into_dynamic_render_module!(A X);
+impl_into_dynamic_render_module!(A X Y);
+impl_into_dynamic_render_module!(A X Y Z);
+
+macro_rules! impl_into_dynamic_compute_module {
+    ($($t:ident)*) => {
+        #[allow(unused_parens)]
+        impl<$($t),*> IntoModule<($($t),*), ComputeKind> for Dynamic
+        where
+            $(
+                $t: FromContext<ComputeKind>,
+            )*
+            tuple!($($t::Set),*): TakeSet,
+        {
+            type Input = ComputeInput;
+            type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
+
+            #[inline]
+            fn into_module(self) -> Module {
+                Module::new(self.info, self.nm)
+            }
+        }
+    };
+}
+
+impl_into_dynamic_compute_module!();
+impl_into_dynamic_compute_module!(X);
+impl_into_dynamic_compute_module!(X Y);
+impl_into_dynamic_compute_module!(X Y Z);
