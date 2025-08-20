@@ -24,7 +24,7 @@ fn render() -> Result<(), Error> {
     }
 
     let triangle =
-        dunge_wgsl::make::<PassVertex<Vert>>().render(include_str!("triangle_vertex.wgsl"))?;
+        dunge_wgsl::render::<PassVertex<Vert>>().from_wgsl(include_str!("triangle_vertex.wgsl"))?;
 
     let cx = dunge::block_on(dunge::context())?;
     let shader = cx.make_shader(triangle);

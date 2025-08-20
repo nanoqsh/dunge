@@ -33,40 +33,19 @@ impl error::Error for Error {
     }
 }
 
-pub fn make<A>() -> Signature<(A,)> {
-    Signature {
+pub fn render<A>() -> Render<(A,)> {
+    Render {
         stages: vec![],
         args: PhantomData,
     }
 }
 
-pub fn make2<A, B>() -> Signature<(A, B)> {
-    Signature {
-        stages: vec![],
-        args: PhantomData,
-    }
-}
-
-pub fn make3<A, B, C>() -> Signature<(A, B, C)> {
-    Signature {
-        stages: vec![],
-        args: PhantomData,
-    }
-}
-
-pub fn make4<A, B, C, D>() -> Signature<(A, B, C, D)> {
-    Signature {
-        stages: vec![],
-        args: PhantomData,
-    }
-}
-
-pub struct Signature<A> {
+pub struct Render<A> {
     stages: Vec<Stages>,
     args: PhantomData<A>,
 }
 
-impl<A> Signature<A> {
+impl<A> Render<A> {
     pub fn add_stages<S>(mut self, stages: S) -> Self
     where
         S: Into<Stages>,
@@ -75,7 +54,7 @@ impl<A> Signature<A> {
         self
     }
 
-    pub fn render<V, I, S>(
+    pub fn from_wgsl<V, I, S>(
         self,
         src: &str,
     ) -> Result<
@@ -85,11 +64,11 @@ impl<A> Signature<A> {
     where
         Dynamic: sl::IntoModule<A, RenderKind, Input = RenderInput<V, I>, Set = S>,
     {
-        make_shader(src, self.stages)
+        shader(src, self.stages)
     }
 }
 
-fn make_shader<A, K, I, S>(
+fn shader<A, K, I, S>(
     src: &str,
     stages: Vec<Stages>,
 ) -> Result<impl sl::IntoModule<A, K, Input = I, Set = S> + use<A, K, I, S>, Error>
@@ -97,14 +76,13 @@ where
     Dynamic: sl::IntoModule<A, K, Input = I, Set = S>,
 {
     let nm = wgsl::parse_str(src).map_err(Error::Parse)?;
-
     let n_globals = nm.global_variables.len();
     if stages.len() > n_globals {
-        return Err(Error::TooManyStages {
+        Err(Error::TooManyStages {
             actual: n_globals,
             passed: stages.len(),
-        });
+        })
+    } else {
+        Ok(Dynamic { stages, nm })
     }
-
-    Ok(Dynamic { stages, nm })
 }
