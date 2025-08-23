@@ -67,7 +67,7 @@ let triangle = |PassVertex(v): PassVertex<Vert>| {
     let fragment_col = sl::fragment(v.col);
 
     // Now create the final color by adding an alpha value
-    let color = sl::vec4_with(fragment_col, 1.);
+    let color = sl::vec4_append(fragment_col, 1.);
 
     // As a result, return a program that describes how to
     // compute the vertex position and the fragment color
