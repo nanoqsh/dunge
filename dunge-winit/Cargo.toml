@@ -15,7 +15,7 @@ wgsl = ["dunge/wgsl"]
 
 [dependencies]
 dunge.workspace = true
-futures-core.workspace = true
+futures-lite.workspace = true
 glam.workspace = true
 log.workspace = true
 winit = { workspace = true, features = ["rwh_06", "x11"] }

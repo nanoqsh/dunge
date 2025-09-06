@@ -653,7 +653,7 @@ name = "dunge-winit"
 version = "0.3.8"
 dependencies = [
  "dunge",
- "futures-core",
+ "futures-lite",
  "glam",
  "log",
  "wasm-bindgen",

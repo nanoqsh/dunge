@@ -176,6 +176,7 @@ impl_binary!(Sub::sub(glam::Vec4, glam::Vec4) -> glam::Vec4);
 impl_binary!(Mul::mul(glam::Vec2, glam::Vec2) -> glam::Vec2);
 impl_binary!(Mul::mul(glam::Vec3, glam::Vec3) -> glam::Vec3);
 impl_binary!(Mul::mul(glam::Vec4, glam::Vec4) -> glam::Vec4);
+
 impl_binary!(Mul::mul(f32, glam::Vec2) -> glam::Vec2);
 impl_binary!(Mul::mul(glam::Vec2, f32) -> glam::Vec2);
 impl_binary!(Mul::mul(f32, glam::Vec3) -> glam::Vec3);

@@ -1,5 +1,5 @@
 use {
-    futures_core::Stream,
+    futures_lite::Stream,
     std::{
         collections::BTreeMap,
         mem,

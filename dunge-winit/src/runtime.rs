@@ -7,7 +7,7 @@ use {
         Context, FailedMakeContext, buffer, mesh,
         surface::{CreateSurfaceError, SurfaceError},
     },
-    futures_core::Stream,
+    futures_lite::Stream,
     std::{
         cell::{Cell, OnceCell, RefCell},
         collections::HashMap,
@@ -431,7 +431,7 @@ where
     F: AsyncFnMut(Control) -> R + 'static,
     R: 'static,
 {
-    use winit::platform::web::EventLoopExtWebSys;
+    use {futures_lite::future, winit::platform::web::EventLoopExtWebSys};
 
     let el = event_loop::EventLoop::with_user_event()
         .build()
@@ -455,7 +455,7 @@ where
         windows: HashMap::new(),
         action: Action::Process,
         context: task::Context::from_waker(Waker::noop()),
-        fu: Box::pin(async move { f(control).await }),
+        fu: Box::pin(future::fuse(async move { f(control).await })),
         ret: ret.clone(),
     };
 
@@ -486,6 +486,8 @@ pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
 where
     F: AsyncFnMut(Control) -> R,
 {
+    use futures_lite::future;
+
     let el = event_loop::EventLoop::with_user_event()
         .build()
         .map_err(Error::EventLoop)?;
@@ -508,7 +510,7 @@ where
         windows: HashMap::new(),
         action: Action::Process,
         context: task::Context::from_waker(Waker::noop()),
-        fu: Box::pin(f(control)),
+        fu: Box::pin(future::fuse(f(control))),
         ret: ret.clone(),
     };
 
