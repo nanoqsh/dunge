@@ -11,7 +11,13 @@ use {
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
         },
     },
-    std::{error, fmt, marker::PhantomData, num::NonZeroU32, ops, sync::Arc},
+    std::{
+        error, fmt,
+        marker::PhantomData,
+        num::{NonZeroU16, NonZeroU32},
+        ops,
+        sync::Arc,
+    },
 };
 
 /// The texture format type.
@@ -124,6 +130,49 @@ impl Size {
         };
 
         make().expect("non zero sized")
+    }
+}
+
+impl TryFrom<u16> for Size {
+    type Error = ZeroSized;
+
+    #[inline]
+    fn try_from(width: u16) -> Result<Self, Self::Error> {
+        let width = NonZeroU32::new(u32::from(width)).ok_or(ZeroSized)?;
+        Ok(Self::from(width))
+    }
+}
+
+impl From<NonZeroU16> for Size {
+    #[inline]
+    fn from(width: NonZeroU16) -> Self {
+        Self {
+            width: NonZeroU32::from(width),
+            height: NonZeroU32::MIN,
+            depth: NonZeroU32::MIN,
+        }
+    }
+}
+
+impl TryFrom<(u16, u16)> for Size {
+    type Error = ZeroSized;
+
+    #[inline]
+    fn try_from((width, height): (u16, u16)) -> Result<Self, Self::Error> {
+        let width = NonZeroU32::new(u32::from(width)).ok_or(ZeroSized)?;
+        let height = NonZeroU32::new(u32::from(height)).ok_or(ZeroSized)?;
+        Ok(Self::from((width, height)))
+    }
+}
+
+impl From<(NonZeroU16, NonZeroU16)> for Size {
+    #[inline]
+    fn from((width, height): (NonZeroU16, NonZeroU16)) -> Self {
+        Self {
+            width: NonZeroU32::from(width),
+            height: NonZeroU32::from(height),
+            depth: NonZeroU32::MIN,
+        }
     }
 }
 
