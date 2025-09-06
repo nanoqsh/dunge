@@ -108,6 +108,7 @@ impl<R> Return<R> {
         }
     }
 
+    #[cold]
     fn set(&self, res: Result<R, Error>) {
         let out = match res {
             Ok(r) => Out::Done(r),
