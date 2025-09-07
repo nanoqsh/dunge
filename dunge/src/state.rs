@@ -331,7 +331,7 @@ where
     }
 }
 
-impl<U, V> AsTarget for RenderBuffer<U, V>
+impl<U, V> AsTarget for RenderBuffer<Texture2d<U>, V>
 where
     U: u::Render,
     V: u::Render,
@@ -345,12 +345,12 @@ where
 }
 
 /// Pair of color and depth buffer.
-pub struct RenderBuffer<U, V> {
-    color: Texture2d<U>,
+pub struct RenderBuffer<C, V> {
+    color: C,
     depth: Texture2d<V>,
 }
 
-impl<U, V> RenderBuffer<U, V> {
+impl<U, V> RenderBuffer<Texture2d<U>, V> {
     pub fn new(color: Texture2d<U>, depth: Texture2d<V>) -> Self
     where
         U: u::Render,
@@ -378,9 +378,11 @@ impl<U, V> RenderBuffer<U, V> {
     pub fn size(&self) -> Size {
         self.color.size()
     }
+}
 
+impl<C, V> RenderBuffer<C, V> {
     #[inline]
-    pub fn color(&self) -> &Texture2d<U> {
+    pub fn color(&self) -> &C {
         &self.color
     }
 
