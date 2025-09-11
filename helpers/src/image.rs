@@ -24,11 +24,14 @@ impl Image {
     }
 
     pub fn decode(bytes: &[u8]) -> Self {
-        use png::{ColorType, Decoder};
+        use {
+            png::{ColorType, Decoder},
+            std::io::Cursor,
+        };
 
-        let decoder = Decoder::new(bytes);
+        let decoder = Decoder::new(Cursor::new(bytes));
         let mut reader = decoder.read_info().expect("png reader");
-        let mut data = Box::from(vec![0; reader.output_buffer_size()]);
+        let mut data = Box::from(vec![0; reader.output_buffer_size().expect("buffer size")]);
         let info = reader.next_frame(&mut data).expect("read image");
 
         assert!(
