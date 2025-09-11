@@ -164,7 +164,7 @@ where
     Ret::new(Compose { a, b })
 }
 
-pub const fn vec3_append<A, B, S, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<B::Out>>
+pub const fn vec3_append<A, B, E>(a: A, b: B) -> Ret<Compose<A, B>, types::Vec3<B::Out>>
 where
     A: Eval<E, Out = types::Vec2<B::Out>>,
     B: Eval<E, Out: Scalar>,

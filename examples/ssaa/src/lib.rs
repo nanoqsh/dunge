@@ -1,4 +1,4 @@
-use dunge_winit::prelude::*;
+use dunge_winit::{dunge::glam::UVec2, prelude::*};
 
 type Error = Box<dyn std::error::Error>;
 
@@ -74,26 +74,22 @@ pub async fn run(control: Control) -> Result<(), Error> {
         offset.update(&cx, &t);
     };
 
-    let make_render_buffer = |(width, height)| {
-        let size = (
-            u32::max(width, 1) * SCREEN_FACTOR,
-            u32::max(height, 1) * SCREEN_FACTOR,
-        );
+    let make_render_buffer = |size: UVec2| {
+        let buffer_size = size.max(UVec2::ONE) * SCREEN_FACTOR;
+        let buffer_size = Size::try_from(buffer_size).expect("non-zero size");
+        let data = TextureData::empty(buffer_size, Format::SrgbAlpha)
+            .render()
+            .bind();
 
-        let size = Size::try_from(size).expect("non-zero size");
-        let data = TextureData::empty(size, Format::SrgbAlpha).render().bind();
         RefCell::new(cx.make_texture(data))
     };
 
-    let make_offset = |Size { width, height, .. }: Size| {
+    let make_offset = |size: Size| {
         let screen_inv = const { 1. / SCREEN_FACTOR as f32 };
-        Vec2::new(
-            screen_inv / width.get() as f32,
-            screen_inv / height.get() as f32,
-        )
+        screen_inv / size.as_uvec2().as_vec2()
     };
 
-    let render_buffer = make_render_buffer((1, 1));
+    let render_buffer = make_render_buffer(UVec2::ONE);
     let mut map = Map {
         tex: render_buffer.borrow().bind(),
         sam: cx.make_sampler(Filter::Nearest),

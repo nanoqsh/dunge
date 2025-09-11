@@ -6,7 +6,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             Config,
-            glam::{Mat4, Quat, Vec3},
+            glam::{Mat4, Quat, UVec2, Vec3},
             sl::{Groups, PassVertex, Render},
             storage::Uniform,
         },
@@ -34,7 +34,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     let set = cx.make_set(&shader, &transform);
 
     let mut time = Duration::ZERO;
-    let mut update_scene = |(width, height), delta_time| {
+    let mut update_scene = |size: UVec2, delta_time| {
         time += delta_time;
 
         let model = {
@@ -46,7 +46,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         };
 
         let projection = {
-            let ratio = width as f32 / height as f32;
+            let ratio = size.x as f32 / size.y as f32;
             Mat4::perspective_rh(1.6, ratio, 0.1, 100.)
         };
 

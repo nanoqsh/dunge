@@ -11,6 +11,7 @@ use {
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
         },
     },
+    glam::{UVec2, UVec3},
     std::{
         error, fmt,
         marker::PhantomData,
@@ -131,6 +132,16 @@ impl Size {
 
         make().expect("non zero sized")
     }
+
+    #[inline]
+    pub fn as_uvec2(self) -> UVec2 {
+        UVec2::new(self.width.get(), self.height.get())
+    }
+
+    #[inline]
+    pub fn as_uvec3(self) -> UVec3 {
+        UVec3::new(self.width.get(), self.height.get(), self.depth.get())
+    }
 }
 
 impl TryFrom<u16> for Size {
@@ -204,6 +215,17 @@ impl TryFrom<(u32, u32)> for Size {
     fn try_from((width, height): (u32, u32)) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(width).ok_or(ZeroSized)?;
         let height = NonZeroU32::new(height).ok_or(ZeroSized)?;
+        Ok(Self::from((width, height)))
+    }
+}
+
+impl TryFrom<UVec2> for Size {
+    type Error = ZeroSized;
+
+    #[inline]
+    fn try_from(v: UVec2) -> Result<Self, Self::Error> {
+        let width = NonZeroU32::new(v.x).ok_or(ZeroSized)?;
+        let height = NonZeroU32::new(v.y).ok_or(ZeroSized)?;
         Ok(Self::from((width, height)))
     }
 }

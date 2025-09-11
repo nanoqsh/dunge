@@ -97,8 +97,8 @@ async fn run(control: Control) -> Result<(), Error> {
 
     let resize = async {
         loop {
-            let (width, height) = window.resized().await;
-            println!("resized: {width} {height}");
+            let new_size = window.resized().await;
+            println!("resized: {new_size}");
         }
     };
 

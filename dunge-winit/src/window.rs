@@ -8,7 +8,7 @@ use {
         buffer::Format,
         surface::{Action, Output, Surface, WindowOps},
     },
-    glam::DVec2,
+    glam::{DVec2, UVec2},
     std::{
         cell::{Cell, RefCell},
         collections::{HashMap, hash_map::Entry},
@@ -340,8 +340,8 @@ impl Window {
 
     /// Returns the size of the window in pixels.
     #[inline]
-    pub fn size(&self) -> (u32, u32) {
-        self.shared.surface.size()
+    pub fn size(&self) -> UVec2 {
+        self.shared.surface.size().into()
     }
 
     /// Returns the cursor position on the window.
@@ -384,10 +384,10 @@ impl Window {
 
     /// Waits for a window resize event.
     #[inline]
-    pub async fn resized(&self) -> (u32, u32) {
+    pub async fn resized(&self) -> UVec2 {
         future::poll_fn(|_| self.shared.events.resize.active_poll()).await;
 
-        self.shared.surface.size()
+        self.shared.surface.size().into()
     }
 
     /// Waits for a redraw event.
