@@ -9,7 +9,7 @@ use {
         state::State,
         storage::{Storage, Uniform},
     },
-    std::{marker::PhantomData, sync::Arc},
+    std::{cell, marker::PhantomData, sync::Arc},
 };
 
 pub trait Visit {
@@ -84,6 +84,24 @@ pub struct GroupHandler<S, P> {
 
 pub trait Bind<S> {
     fn bind(&self) -> Bindings<'_>;
+}
+
+impl<S, B> Bind<S> for &B
+where
+    B: Bind<S>,
+{
+    fn bind(&self) -> Bindings<'_> {
+        (**self).bind()
+    }
+}
+
+impl<S, B> Bind<S> for cell::Ref<'_, B>
+where
+    B: Bind<S>,
+{
+    fn bind(&self) -> Bindings<'_> {
+        (**self).bind()
+    }
 }
 
 pub struct Bindings<'group> {

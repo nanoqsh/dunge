@@ -184,7 +184,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
 
     #[inline]
     #[must_use]
-    pub fn set<S>(mut self, set: &S) -> On<'ren, 'layer, I, state::Set>
+    pub fn set<S>(mut self, set: S) -> On<'ren, 'layer, I, state::Set>
     where
         I: To<A, state::Set> + Types,
         S: Bind<I::Set>,

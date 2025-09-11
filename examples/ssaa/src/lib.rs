@@ -128,7 +128,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
             cx.shed(|s| {
                 // draw the frame to the render buffer
-                s.render(&*render_buffer.borrow(), bg)
+                s.render(render_buffer.borrow(), bg)
                     .layer(&triangle_layer)
                     .set(&set)
                     .draw_points(3);
@@ -136,7 +136,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
                 // draw from the render buffer to the window
                 s.render(&redraw, Options::default())
                     .layer(&screen_layer)
-                    .set(&*map_set.borrow())
+                    .set(map_set.borrow())
                     .draw(&screen_mesh);
             })
             .await;

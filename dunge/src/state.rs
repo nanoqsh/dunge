@@ -8,7 +8,7 @@ use {
         runtime::{self, Ticket, Worker},
         usage::u,
     },
-    std::sync::Arc,
+    std::{cell, sync::Arc},
 };
 
 const DEFAULT_BACKEND: wgpu::Backends = {
@@ -311,6 +311,16 @@ pub trait AsTarget {
 }
 
 impl<A> AsTarget for &A
+where
+    A: AsTarget,
+{
+    #[inline]
+    fn as_target(&self) -> Target<'_> {
+        (**self).as_target()
+    }
+}
+
+impl<A> AsTarget for cell::Ref<'_, A>
 where
     A: AsTarget,
 {

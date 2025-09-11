@@ -691,8 +691,8 @@ impl Control {
     ///
     /// // wait for some window events
     /// loop {
-    ///     let (width, height) = window.resized().await;
-    ///     println!("resized: {width} {height}");
+    ///     let new_size = window.resized().await;
+    ///     println!("resized: {new_size}");
     /// }
     /// # }
     /// ```

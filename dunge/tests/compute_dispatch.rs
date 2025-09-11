@@ -43,7 +43,7 @@ fn compute() -> Result<(), Error> {
         cx.shed(|s| {
             s.compute()
                 .workload(&workload)
-                .set(&set)
+                .set(set)
                 .dispatch(SIZE, 1, 1);
 
             s.copy(&array, &download);

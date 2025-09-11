@@ -116,7 +116,7 @@ impl<'com, 'work, I, A> On<'com, 'work, I, A> {
 
     #[inline]
     #[must_use]
-    pub fn set<S>(mut self, set: &S) -> On<'com, 'work, I, state::Set>
+    pub fn set<S>(mut self, set: S) -> On<'com, 'work, I, state::Set>
     where
         I: To<A, state::Set> + Types,
         S: Bind<I::Set>,
