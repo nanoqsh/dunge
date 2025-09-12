@@ -189,7 +189,6 @@ impl<V> Row<V> {
 
         RowSlice {
             slice,
-            byte_offset: slice.offset(),
             len,
             ty: PhantomData,
         }
@@ -208,7 +207,6 @@ impl<V> Row<V> {
 
 pub struct RowSlice<'slice, V> {
     slice: wgpu::BufferSlice<'slice>,
-    byte_offset: u64,
     len: u32,
     ty: PhantomData<V>,
 }
@@ -231,7 +229,7 @@ impl<V> RowSlice<'_, V> {
         );
 
         let queue = cx.state().queue();
-        queue.write_buffer(self.slice.buffer(), self.byte_offset, V::row_value(data));
+        queue.write_buffer(self.slice.buffer(), self.slice.offset(), V::row_value(data));
     }
 
     #[inline]
@@ -244,6 +242,14 @@ impl<V> RowSlice<'_, V> {
         self.len == 0
     }
 }
+
+impl<V> Clone for RowSlice<'_, V> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<V> Copy for RowSlice<'_, V> {}
 
 mod s {
     pub trait Sealed {}
