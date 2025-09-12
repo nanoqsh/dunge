@@ -226,8 +226,7 @@ pub(crate) struct VertexSetter<'ren, 'layer>(&'layer mut wgpu::RenderPass<'ren>)
 
 impl VertexSetter<'_, '_> {
     #[inline]
-    pub(crate) fn set(&mut self, buf: &wgpu::Buffer, slot: u32) {
-        let slice = buf.slice(..);
+    pub(crate) fn set(&mut self, slice: wgpu::BufferSlice<'_>, slot: u32) {
         self.0.set_vertex_buffer(slot, slice);
     }
 }

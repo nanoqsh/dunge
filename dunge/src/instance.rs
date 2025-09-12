@@ -10,7 +10,7 @@ use {
         types::{self, ValueType},
         value::Value,
     },
-    std::marker::PhantomData,
+    std::{marker::PhantomData, ops::RangeBounds},
 };
 
 pub use dunge_shade::instance::Projection;
@@ -43,6 +43,20 @@ where
 impl<V> s::Sealed for Row<V> where V: RowValue<Type: types::Value> {}
 
 impl<V> MemberProjection for Row<V>
+where
+    V: RowValue<Type: types::Value>,
+{
+    const TYPE: ValueType = <V::Type as types::Value>::VALUE_TYPE;
+    type Field = Ret<ReadInstance, V::Type>;
+
+    fn member_projection(id: u32) -> Self::Field {
+        ReadInstance::new(id)
+    }
+}
+
+impl<V> s::Sealed for RowSlice<'_, V> where V: RowValue<Type: types::Value> {}
+
+impl<V> MemberProjection for RowSlice<'_, V>
 where
     V: RowValue<Type: types::Value>,
 {
@@ -99,7 +113,15 @@ impl<V> SetMember for Row<V> {
     fn set_member(&self, setter: &mut Setter<'_, '_>) {
         setter.update_len(self.len);
         let slot = setter.next_slot();
-        setter.vs.set(&self.buf, slot);
+        setter.vs.set(self.buf.slice(..), slot);
+    }
+}
+
+impl<V> SetMember for RowSlice<'_, V> {
+    fn set_member(&self, setter: &mut Setter<'_, '_>) {
+        setter.update_len(self.len);
+        let slot = setter.next_slot();
+        setter.vs.set(self.slice, slot);
     }
 }
 
@@ -153,6 +175,63 @@ impl<V> Row<V> {
 
         let queue = cx.state().queue();
         queue.write_buffer(&self.buf, 0, V::row_value(data));
+    }
+
+    pub fn slice<S>(&self, bounds: S) -> RowSlice<'_, V>
+    where
+        S: RangeBounds<usize>,
+    {
+        let byte_start = bounds.start_bound().map(|&n| (n * size_of::<V>()) as u64);
+        let byte_end = bounds.end_bound().map(|&n| (n * size_of::<V>()) as u64);
+
+        let slice = self.buf.slice((byte_start, byte_end));
+        let len = slice.size().get() as u32 / size_of::<V>() as u32;
+
+        RowSlice {
+            slice,
+            byte_offset: slice.offset(),
+            len,
+            ty: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len as usize
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+}
+
+pub struct RowSlice<'slice, V> {
+    slice: wgpu::BufferSlice<'slice>,
+    byte_offset: u64,
+    len: u32,
+    ty: PhantomData<V>,
+}
+
+impl<V> RowSlice<'_, V> {
+    /// Updates the row data.
+    ///
+    /// # Panics
+    /// Panics if the row length is not equal to the length of the new value.
+    pub fn update(&self, cx: &Context, data: &[V])
+    where
+        V: RowValue,
+    {
+        assert_eq!(
+            data.len(),
+            self.len(),
+            "cannot update row slice of length {} with value of length {}",
+            self.len(),
+            data.len(),
+        );
+
+        let queue = cx.state().queue();
+        queue.write_buffer(self.slice.buffer(), self.byte_offset, V::row_value(data));
     }
 
     #[inline]

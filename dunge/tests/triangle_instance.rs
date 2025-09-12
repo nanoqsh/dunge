@@ -9,7 +9,7 @@ fn render() -> Result<(), Error> {
             buffer::{Format, Size},
             color::Rgb,
             glam::{Vec2, Vec3},
-            instance::Row,
+            instance::{Row, RowSlice},
             prelude::*,
             sl::{self, Index, PassInstance, Render},
         },
@@ -18,9 +18,9 @@ fn render() -> Result<(), Error> {
     };
 
     #[derive(Instance)]
-    struct Transform(Row<Vec2>, Row<Vec3>);
+    struct Transform<'slice>(Row<Vec2>, RowSlice<'slice, Vec3>);
 
-    let triangle = |PassInstance(t): PassInstance<Transform>, Index(index): Index| {
+    let triangle = |PassInstance(t): PassInstance<Transform<'_>>, Index(index): Index| {
         let triangle_size = 0.4;
         let third = const { consts::TAU / 3. };
         let r_offset = const { -consts::TAU / 4. };
@@ -48,6 +48,7 @@ fn render() -> Result<(), Error> {
         cx.make_texture(data)
     };
 
+    let cols;
     let transform = {
         const POSS: [Vec2; 3] = [
             Vec2::new(0., -0.375),
@@ -61,7 +62,9 @@ fn render() -> Result<(), Error> {
             Vec3::new(0., 0., 1.),
         ];
 
-        Transform(cx.make_row(&POSS), cx.make_row(&COLS))
+        cols = cx.make_row(&COLS);
+
+        Transform(cx.make_row(&POSS), cols.slice(..))
     };
 
     let mut buf = {
