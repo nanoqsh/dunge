@@ -325,7 +325,7 @@ impl Context {
     #[inline]
     pub fn make_layer<V, I, S, C>(
         &self,
-        shader: &RenderShader<V, I, S>,
+        shader: &RenderShader<S, V, I>,
         conf: C,
     ) -> Layer<render::Input<V, I, S>>
     where

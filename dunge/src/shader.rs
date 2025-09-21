@@ -8,10 +8,10 @@ use {
 };
 
 /// Alias of render [shader](Shader).
-pub type RenderShader<V, I, S> = Shader<RenderInput<V, I>, S>;
+pub type RenderShader<S = (), V = (), I = ()> = Shader<RenderInput<V, I>, S>;
 
 /// Alias of compute [shader](Shader).
-pub type ComputeShader<S> = Shader<ComputeInput, S>;
+pub type ComputeShader<S = ()> = Shader<ComputeInput, S>;
 
 /// The shader type.
 ///
