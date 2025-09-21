@@ -142,7 +142,7 @@ impl<V> Row<V> {
             let desc = util::BufferInitDescriptor {
                 label: None,
                 contents: V::row_value(data),
-                usage: wgpu::BufferUsages::VERTEX,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             };
 
             state.device().create_buffer_init(&desc)
