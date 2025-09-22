@@ -80,12 +80,13 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     });
 
     let instance_fields = iter::zip(0.., &fields).map(|(index, field)| {
+        let vis = &field.vis;
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         if named {
-            quote::quote! { #ident: <#ty as dunge::instance::MemberProjection>::Field }
+            quote::quote! { #vis #ident: <#ty as dunge::instance::MemberProjection>::Field }
         } else {
-            quote::quote! { <#ty as dunge::instance::MemberProjection>::Field }
+            quote::quote! { #vis <#ty as dunge::instance::MemberProjection>::Field }
         }
     });
 
@@ -143,8 +144,8 @@ mod tests {
     fn derive_instance() {
         let input = quote::quote! {
             struct Transform<'slice> {
-                pos: Row<[f32; 2]>,
-                col: RowSlice<'slice, [f32; 3]>,
+                pub pos: Row<[f32; 2]>,
+                pub col: RowSlice<'slice, [f32; 3]>,
             }
         };
 
@@ -167,8 +168,8 @@ mod tests {
             }
 
             pub struct TransformProj<'slice> {
-                pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
-                col: <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::Field,
+                pub pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
+                pub col: <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::Field,
             }
 
             impl<'slice> dunge::instance::Projection for TransformProj<'slice> {

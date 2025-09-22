@@ -57,7 +57,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         if named {
             quote::quote! { #vis #ident: <#ty as dunge::vertex::InputProjection>::Field }
         } else {
-            quote::quote! { <#ty as dunge::vertex::InputProjection>::Field }
+            quote::quote! { #vis <#ty as dunge::vertex::InputProjection>::Field }
         }
     });
 
@@ -182,7 +182,7 @@ mod tests {
     fn derive_tuple_vertex() {
         let input = quote::quote! {
             #[repr(C)]
-            struct Vert([f32; 2], [f32; 3]);
+            struct Vert(pub [f32; 2], pub [f32; 3]);
         };
 
         let input = syn::parse2(input).expect("parse input");
@@ -197,8 +197,8 @@ mod tests {
             }
 
             pub struct VertProj(
-                <[f32; 2] as dunge::vertex::InputProjection>::Field,
-                <[f32; 3] as dunge::vertex::InputProjection>::Field,
+                pub <[f32; 2] as dunge::vertex::InputProjection>::Field,
+                pub <[f32; 3] as dunge::vertex::InputProjection>::Field,
             );
 
             const _: () = ::core::assert!(

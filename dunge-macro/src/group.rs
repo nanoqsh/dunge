@@ -81,12 +81,13 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     });
 
     let group_fields = iter::zip(0.., &fields).map(|(index, field)| {
+        let vis = &field.vis;
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         if named {
-            quote::quote! { #ident: <#ty as dunge::group::MemberProjection>::Field }
+            quote::quote! { #vis #ident: <#ty as dunge::group::MemberProjection>::Field }
         } else {
-            quote::quote! { <#ty as dunge::group::MemberProjection>::Field }
+            quote::quote! { #vis <#ty as dunge::group::MemberProjection>::Field }
         }
     });
 
@@ -145,8 +146,8 @@ mod tests {
     fn derive_group() {
         let input = quote::quote! {
             struct Map<'tx> {
-                tex: BoundTexture,
-                sam: &'tx Sampler,
+                pub tex: BoundTexture,
+                pub sam: &'tx Sampler,
             }
         };
 
@@ -170,8 +171,8 @@ mod tests {
             }
 
             pub struct MapProj<'tx> {
-                tex: <BoundTexture as dunge::group::MemberProjection>::Field,
-                sam: <&'tx Sampler as dunge::group::MemberProjection>::Field,
+                pub tex: <BoundTexture as dunge::group::MemberProjection>::Field,
+                pub sam: <&'tx Sampler as dunge::group::MemberProjection>::Field,
             }
 
             impl<'tx> dunge::group::Projection for MapProj<'tx> {
