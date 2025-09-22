@@ -94,9 +94,9 @@ impl<'com, 'work, I, A> On<'com, 'work, I, A> {
     }
 
     #[inline]
-    fn to<B>(self) -> On<'com, 'work, I, B>
+    fn to<J, B>(self) -> On<'com, 'work, J, B>
     where
-        I: To<A, B>,
+        J: To<A, B>,
     {
         On {
             run: self.run,
@@ -106,9 +106,9 @@ impl<'com, 'work, I, A> On<'com, 'work, I, A> {
 
     #[inline]
     #[must_use]
-    pub fn workload(mut self, workload: &Workload<I>) -> On<'com, 'work, I, state::Workload>
+    pub fn workload<J>(mut self, workload: &Workload<J>) -> On<'com, 'work, J, state::Workload>
     where
-        I: To<A, state::Workload>,
+        J: To<A, state::Workload>,
     {
         self.run.workload(workload.compute());
         self.to()

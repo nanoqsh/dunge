@@ -101,9 +101,9 @@ impl<V, I, S> To<state::Draw, state::Set> for Input<V, I, S> {}
 impl<V, I, S> To<state::Draw, state::Inst> for Input<V, I, S> {}
 impl<V, I, S> To<state::Draw, state::Draw> for Input<V, I, S> {}
 
-impl<I, S> To<state::DrawPoints, state::Layer> for Input<(), I, S> {}
-impl<I, S> To<state::DrawPoints, state::Set> for Input<(), I, S> {}
-impl<I, S> To<state::DrawPoints, state::Inst> for Input<(), I, S> {}
+impl<V, I, S> To<state::DrawPoints, state::Layer> for Input<V, I, S> {}
+impl<V, I, S> To<state::DrawPoints, state::Set> for Input<V, I, S> {}
+impl<V, I, S> To<state::DrawPoints, state::Inst> for Input<V, I, S> {}
 impl<I, S> To<state::DrawPoints, state::DrawPoints> for Input<(), I, S> {}
 
 struct Runner<'ren, 'layer> {
@@ -161,9 +161,9 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
     }
 
     #[inline]
-    fn to<B>(self) -> On<'ren, 'layer, I, B>
+    fn to<J, B>(self) -> On<'ren, 'layer, J, B>
     where
-        I: To<A, B>,
+        J: To<A, B>,
     {
         On {
             run: self.run,
@@ -173,10 +173,13 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
 
     #[inline]
     #[must_use]
-    pub fn layer(mut self, layer: &Layer<I>) -> On<'ren, 'layer, I, state::Layer>
+    pub fn layer<J>(mut self, layer: &Layer<J>) -> On<'ren, 'layer, J, state::Layer>
     where
-        I: To<A, state::Layer>,
+        J: To<A, state::Layer>,
     {
+        self.run.slots = layer.slots();
+        self.run.count = 1;
+
         self.run.target.check_layer(layer);
         self.run.layer(layer.render());
         self.to()
