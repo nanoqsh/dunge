@@ -904,7 +904,7 @@ impl Drop for Unmap<'_> {
 }
 
 pub struct Read<'buf> {
-    view: wgpu::BufferView<'buf>,
+    view: wgpu::BufferView,
 
     // drop order is important here!
     // `Unmap` unmaps the view in drop
@@ -940,7 +940,7 @@ impl fmt::Display for ReadFailed {
 impl error::Error for ReadFailed {}
 
 pub struct Write<'buf> {
-    view: wgpu::BufferViewMut<'buf>,
+    view: wgpu::BufferViewMut,
 
     // drop order is important here!
     // `Unmap` unmaps the view in drop
