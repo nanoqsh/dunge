@@ -51,6 +51,7 @@ impl<S> To<state::Workload, state::Set> for Input<S> {}
 impl To<state::Workload, state::Dispatch> for Input<()> {}
 
 impl<S> To<state::Set, state::Dispatch> for Input<S> {}
+impl<S> To<state::Set, state::Set> for Input<S> {}
 
 impl<S> To<state::Dispatch, state::Workload> for Input<S> {}
 impl<S> To<state::Dispatch, state::Set> for Input<S> {}

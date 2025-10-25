@@ -92,6 +92,7 @@ impl To<state::Layer, state::DrawPoints> for Input<(), (), ()> {}
 impl<V, I, S> To<state::Set, state::Inst> for Input<V, I, S> {}
 impl<V, S> To<state::Set, state::Draw> for Input<V, (), S> {}
 impl<S> To<state::Set, state::DrawPoints> for Input<(), (), S> {}
+impl<V, I, S> To<state::Set, state::Set> for Input<V, I, S> {}
 
 impl<V, I, S> To<state::Inst, state::Draw> for Input<V, I, S> {}
 impl<I, S> To<state::Inst, state::DrawPoints> for Input<(), I, S> {}
