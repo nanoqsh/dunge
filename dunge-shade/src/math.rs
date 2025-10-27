@@ -132,6 +132,13 @@ where
     Ret::new(Math::new((x,), naga::MathFunction::Floor))
 }
 
+pub const fn length<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
+where
+    X: Eval<E, Out: types::Vector<Scalar = f32>>,
+{
+    Ret::new(Math::new((x,), naga::MathFunction::Length))
+}
+
 pub const fn log<X, E>(x: X) -> Ret<Math<(X,), E>, f32>
 where
     X: Eval<E, Out = f32>,
@@ -144,6 +151,24 @@ where
     X: Eval<E, Out = f32>,
 {
     Ret::new(Math::new((x,), naga::MathFunction::Log2))
+}
+
+pub const fn mix<X, Y, T, E>(x: X, y: Y, t: T) -> Ret<Math<(X, Y, T), E>, X::Out>
+where
+    X: Eval<E, Out: types::Vector<Scalar = f32>>,
+    Y: Eval<E, Out = X::Out>,
+    T: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((x, y, t), naga::MathFunction::Mix))
+}
+
+pub const fn mix_scalars<X, Y, T, E>(x: X, y: Y, t: T) -> Ret<Math<(X, Y, T), E>, f32>
+where
+    X: Eval<E, Out = f32>,
+    Y: Eval<E, Out = f32>,
+    T: Eval<E, Out = f32>,
+{
+    Ret::new(Math::new((x, y, t), naga::MathFunction::Mix))
 }
 
 pub const fn pow<B, X, E>(base: B, exp: X) -> Ret<Math<(B, X), E>, f32>
