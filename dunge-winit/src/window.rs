@@ -13,12 +13,13 @@ use {
         cell::{Cell, RefCell},
         collections::{HashMap, hash_map::Entry},
         future,
+        hash::Hash,
         num::NonZeroU32,
         ops,
         pin::Pin,
         rc::Rc,
         sync::Arc,
-        task::Poll,
+        task::{self, Poll, Waker},
         time::Duration,
     },
     winit::{dpi, event, event_loop, keyboard, window},
@@ -175,71 +176,82 @@ enum State {
     Active,
 }
 
-pub(crate) struct Keys(RefCell<HashMap<keyboard::KeyCode, State>>);
+struct WaitState {
+    state: State,
+    wait_counter: usize,
+    waker: Option<Waker>,
+}
 
-impl Keys {
-    #[inline]
-    fn new() -> Self {
-        Self(RefCell::new(HashMap::new()))
-    }
-
-    #[inline]
-    fn wait(&self, code: keyboard::KeyCode) {
-        self.0.borrow_mut().insert(code, State::Wait);
-    }
-
-    #[inline]
-    pub(crate) fn active(&self, code: keyboard::KeyCode) {
-        if let Some(state @ State::Wait) = self.0.borrow_mut().get_mut(&code) {
-            *state = State::Active;
+impl WaitState {
+    fn active(&mut self) {
+        self.state = State::Active;
+        if let Some(waker) = self.waker.take() {
+            waker.wake();
         }
     }
 
-    #[inline]
-    fn active_poll(&self, code: keyboard::KeyCode) -> Poll<()> {
-        if let Entry::Occupied(en) = self.0.borrow_mut().entry(code)
-            && let State::Active = en.get()
-        {
-            en.remove();
-            Poll::Ready(())
-        } else {
-            Poll::Pending
+    fn poll(&mut self, cx: &mut task::Context<'_>) -> Poll<bool> {
+        match self.state {
+            State::Wait => {
+                match &mut self.waker {
+                    Some(waker) => waker.clone_from(cx.waker()),
+                    None => self.waker = Some(cx.waker().clone()),
+                }
+
+                Poll::Pending
+            }
+            State::Active => {
+                self.wait_counter -= 1;
+                Poll::Ready(self.wait_counter == 0)
+            }
         }
     }
 }
 
-pub(crate) struct Buttons(RefCell<HashMap<event::MouseButton, State>>);
+pub(crate) struct EventMap<K>(RefCell<HashMap<K, WaitState>>);
 
-impl Buttons {
-    #[inline]
+impl<K> EventMap<K>
+where
+    K: Eq + Hash,
+{
     fn new() -> Self {
-        Self(RefCell::new(HashMap::new()))
+        Self(RefCell::default())
     }
 
-    #[inline]
-    fn wait(&self, button: event::MouseButton) {
-        self.0.borrow_mut().insert(button, State::Wait);
+    fn wait(&self, code: K) {
+        self.0
+            .borrow_mut()
+            .entry(code)
+            .and_modify(|w| w.wait_counter += 1)
+            .or_insert_with(|| WaitState {
+                state: State::Wait,
+                wait_counter: 1,
+                waker: None,
+            });
     }
 
-    #[inline]
-    pub(crate) fn active(&self, button: event::MouseButton) {
-        if let Some(state @ State::Wait) = self.0.borrow_mut().get_mut(&button) {
-            *state = State::Active;
+    pub(crate) fn active(&self, code: K) {
+        if let Some(w) = self.0.borrow_mut().get_mut(&code) {
+            w.active();
         }
     }
 
-    #[inline]
-    fn active_poll(&self, button: event::MouseButton) -> Poll<()> {
-        if let Entry::Occupied(en) = self.0.borrow_mut().entry(button)
-            && let State::Active = en.get()
-        {
+    fn poll(&self, code: K, cx: &mut task::Context<'_>) -> Poll<()> {
+        let mut map = self.0.borrow_mut();
+        let Entry::Occupied(mut en) = map.entry(code) else {
+            panic!("polling after complition")
+        };
+
+        if task::ready!(en.get_mut().poll(cx)) {
             en.remove();
-            Poll::Ready(())
-        } else {
-            Poll::Pending
         }
+
+        Poll::Ready(())
     }
 }
+
+pub(crate) type Keys = EventMap<keyboard::KeyCode>;
+pub(crate) type Buttons = EventMap<event::MouseButton>;
 
 pub(crate) struct Events {
     pub(crate) press_buttons: Buttons,
@@ -355,7 +367,7 @@ impl Window {
     pub async fn button_pressed(&self, button: event::MouseButton) {
         let buttons = &self.shared.events.press_buttons;
         buttons.wait(button);
-        future::poll_fn(|_| buttons.active_poll(button)).await;
+        future::poll_fn(|cx| buttons.poll(button, cx)).await;
     }
 
     /// Waits for a button release event.
@@ -363,7 +375,7 @@ impl Window {
     pub async fn button_released(&self, button: event::MouseButton) {
         let buttons = &self.shared.events.release_buttons;
         buttons.wait(button);
-        future::poll_fn(|_| buttons.active_poll(button)).await;
+        future::poll_fn(|cx| buttons.poll(button, cx)).await;
     }
 
     /// Waits for a key press event.
@@ -371,7 +383,7 @@ impl Window {
     pub async fn key_pressed(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.press_keys;
         keys.wait(code);
-        future::poll_fn(|_| keys.active_poll(code)).await;
+        future::poll_fn(|cx| keys.poll(code, cx)).await;
     }
 
     /// Waits for a key release event.
@@ -379,7 +391,7 @@ impl Window {
     pub async fn key_released(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.release_keys;
         keys.wait(code);
-        future::poll_fn(|_| keys.active_poll(code)).await;
+        future::poll_fn(|cx| keys.poll(code, cx)).await;
     }
 
     /// Waits for a window resize event.

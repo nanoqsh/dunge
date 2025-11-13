@@ -19,7 +19,7 @@ async fn run(control: Control) -> Result<(), Error> {
         futures_concurrency::prelude::*,
         futures_lite::prelude::*,
         std::{cell::Cell, time::Duration},
-        winit::{keyboard::KeyCode, window},
+        winit::{event::MouseButton, keyboard::KeyCode, window},
     };
 
     #[repr(C)]
@@ -102,6 +102,15 @@ async fn run(control: Control) -> Result<(), Error> {
         }
     };
 
+    let mut click_counter = 0;
+    let click = async {
+        loop {
+            window.button_pressed(MouseButton::Left).await;
+            click_counter += 1;
+            println!("clicked {click_counter} times");
+        }
+    };
+
     let toggle_fullscreen = async {
         let mut fullscreen = false;
         loop {
@@ -120,10 +129,11 @@ async fn run(control: Control) -> Result<(), Error> {
     let esc_pressed = window.key_pressed(KeyCode::Escape);
 
     (
-        fps_counter,
-        render,
-        resize,
-        toggle_fullscreen,
+        async {
+            match (fps_counter, render, resize, click, toggle_fullscreen)
+                .join()
+                .await {}
+        },
         close,
         esc_pressed,
     )
