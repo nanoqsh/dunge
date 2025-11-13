@@ -102,7 +102,6 @@ where
     Ret::new(Math::new((x, y), naga::MathFunction::Cross))
 }
 
-#[allow(clippy::type_complexity)]
 pub const fn dot<X, Y, E>(x: X, y: Y) -> Ret<Math<(X, Y), E>, <X::Out as types::Vector>::Scalar>
 where
     X: Eval<E, Out: types::Vector<Scalar: types::Number>>,

@@ -90,7 +90,6 @@ pub struct When<C, A, B, E> {
 }
 
 impl<C, A, B, E, O> Ret<When<C, A, B, E>, O> {
-    #[allow(clippy::type_complexity)]
     pub fn when<D, F, Z>(self, cond: D, expr: F) -> Ret<When<D, F, When<C, A, B, E>, E>, O>
     where
         D: Eval<E, Out = bool>,
