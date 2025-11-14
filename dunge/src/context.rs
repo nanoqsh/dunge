@@ -104,7 +104,6 @@ impl IntoFuture for Builder {
 pub struct Context(Arc<State>);
 
 impl Context {
-    #[inline]
     pub(crate) fn state(&self) -> &State {
         &self.0
     }
@@ -226,7 +225,6 @@ impl Context {
     /// # Ok(())
     /// # }
     /// ```
-    #[inline]
     pub fn make_shader<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
     where
         M: sl::IntoModule<A, K>,
@@ -293,7 +291,6 @@ impl Context {
     /// # Ok(())
     /// # }
     /// ```
-    #[inline]
     pub fn make_set<K, S, D>(&self, shader: &Shader<K, S>, set: D) -> UniqueSet<S>
     where
         D: Data<Set = S>,
@@ -302,7 +299,6 @@ impl Context {
     }
 
     /// Creates a [uniform](Uniform) from the given value.
-    #[inline]
     pub fn make_uniform<V>(&self, val: &V) -> Uniform<V>
     where
         V: UniformValue,
@@ -311,7 +307,6 @@ impl Context {
     }
 
     /// Creates a [storage](Storage) from the given value.
-    #[inline]
     pub fn make_storage<V>(&self, val: &V) -> Storage<V>
     where
         V: StorageValue + ?Sized,
@@ -322,7 +317,6 @@ impl Context {
     /// Creates a [layer](Layer) for the given [render shader](RenderShader).
     ///
     /// This method also accepts a [config](Config) which defines the layer's properties.
-    #[inline]
     pub fn make_layer<V, I, S, C>(
         &self,
         shader: &RenderShader<S, V, I>,
@@ -336,13 +330,11 @@ impl Context {
     }
 
     /// Creates a [workload](Workload) for the given [compute shader](ComputeShader).
-    #[inline]
     pub fn make_workload<S>(&self, shader: &ComputeShader<S>) -> Workload<compute::Input<S>> {
         Workload::new(&self.0, shader.data())
     }
 
     /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
-    #[inline]
     pub fn make_mesh<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
     where
         V: Vertex,
@@ -351,7 +343,6 @@ impl Context {
     }
 
     /// Creates a [row](Row) with the given data.
-    #[inline]
     pub fn make_row<V>(&self, data: &[V]) -> Row<V>
     where
         V: RowValue,
@@ -360,7 +351,6 @@ impl Context {
     }
 
     /// Creates a [2D texture](Texture2d) with the given [data](buffer::TextureData).
-    #[inline]
     pub fn make_texture<U>(&self, data: buffer::TextureData<'_, U>) -> Texture2d<U>
     where
         U: u::TextureUsages,
@@ -369,7 +359,6 @@ impl Context {
     }
 
     /// Creates a [sampler](Sampler) with the [filter](Filter) value.
-    #[inline]
     pub fn make_sampler(&self, filter: Filter) -> Sampler {
         Sampler::new(&self.0, filter)
     }
@@ -393,7 +382,6 @@ impl Context {
     /// # Ok(())
     /// # }
     /// ```
-    #[inline]
     pub fn make_buffer<U>(&self, data: buffer::BufferData<'_, U>) -> Buffer<U>
     where
         U: u::BufferUsages,
@@ -481,7 +469,6 @@ impl Context {
         self.0.run(f).await;
     }
 
-    #[inline]
     pub fn update_group<S, G>(
         &self,
         set: &mut UniqueSet<S>,

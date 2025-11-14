@@ -35,7 +35,6 @@ pub enum Format {
 
 impl Format {
     /// Returns the number of bytes per pixel for this format.
-    #[inline]
     pub const fn bytes(self) -> u32 {
         match self {
             Self::SrgbAlpha | Self::SbgrAlpha | Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
@@ -44,12 +43,10 @@ impl Format {
     }
 
     /// Returns `true` if the format is a standard sRGB variant.
-    #[inline]
     pub const fn is_standard(self) -> bool {
         matches!(self, Self::SrgbAlpha | Self::SbgrAlpha)
     }
 
-    #[inline]
     pub(crate) const fn wgpu(self) -> wgpu::TextureFormat {
         match self {
             Self::SrgbAlpha => wgpu::TextureFormat::Rgba8UnormSrgb,
@@ -61,7 +58,6 @@ impl Format {
         }
     }
 
-    #[inline]
     pub(crate) const fn from_wgpu(format: wgpu::TextureFormat) -> Self {
         match format {
             wgpu::TextureFormat::Rgba8UnormSrgb => Self::SrgbAlpha,
@@ -76,7 +72,6 @@ impl Format {
 }
 
 impl ColorExt for Format {
-    #[inline]
     fn rgb_from_bytes(self, rgb: [u8; 3]) -> Rgb {
         if self.is_standard() {
             Rgb::from_standard_bytes(rgb)
@@ -85,7 +80,6 @@ impl ColorExt for Format {
         }
     }
 
-    #[inline]
     fn rgba_from_bytes(self, rgba: [u8; 4]) -> Rgba {
         if self.is_standard() {
             Rgba::from_standard_bytes(rgba)
@@ -103,7 +97,6 @@ pub struct Size {
 }
 
 impl Size {
-    #[inline]
     fn volume(self) -> usize {
         let width = self.width.get() as usize;
         let height = self.height.get() as usize;
@@ -111,7 +104,6 @@ impl Size {
         width * height * depth
     }
 
-    #[inline]
     fn wgpu(self) -> wgpu::Extent3d {
         wgpu::Extent3d {
             width: self.width.get(),
@@ -120,7 +112,6 @@ impl Size {
         }
     }
 
-    #[inline]
     fn from_wgpu(ex: wgpu::Extent3d) -> Self {
         let make = || {
             Some(Self {
@@ -133,12 +124,10 @@ impl Size {
         make().expect("non zero sized")
     }
 
-    #[inline]
     pub fn as_uvec2(self) -> UVec2 {
         UVec2::new(self.width.get(), self.height.get())
     }
 
-    #[inline]
     pub fn as_uvec3(self) -> UVec3 {
         UVec3::new(self.width.get(), self.height.get(), self.depth.get())
     }
@@ -147,7 +136,6 @@ impl Size {
 impl TryFrom<u16> for Size {
     type Error = ZeroSized;
 
-    #[inline]
     fn try_from(width: u16) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(u32::from(width)).ok_or(ZeroSized)?;
         Ok(Self::from(width))
@@ -155,7 +143,6 @@ impl TryFrom<u16> for Size {
 }
 
 impl From<NonZeroU16> for Size {
-    #[inline]
     fn from(width: NonZeroU16) -> Self {
         Self {
             width: NonZeroU32::from(width),
@@ -168,7 +155,6 @@ impl From<NonZeroU16> for Size {
 impl TryFrom<(u16, u16)> for Size {
     type Error = ZeroSized;
 
-    #[inline]
     fn try_from((width, height): (u16, u16)) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(u32::from(width)).ok_or(ZeroSized)?;
         let height = NonZeroU32::new(u32::from(height)).ok_or(ZeroSized)?;
@@ -177,7 +163,6 @@ impl TryFrom<(u16, u16)> for Size {
 }
 
 impl From<(NonZeroU16, NonZeroU16)> for Size {
-    #[inline]
     fn from((width, height): (NonZeroU16, NonZeroU16)) -> Self {
         Self {
             width: NonZeroU32::from(width),
@@ -190,7 +175,6 @@ impl From<(NonZeroU16, NonZeroU16)> for Size {
 impl TryFrom<u32> for Size {
     type Error = ZeroSized;
 
-    #[inline]
     fn try_from(width: u32) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(width).ok_or(ZeroSized)?;
         Ok(Self::from(width))
@@ -198,7 +182,6 @@ impl TryFrom<u32> for Size {
 }
 
 impl From<NonZeroU32> for Size {
-    #[inline]
     fn from(width: NonZeroU32) -> Self {
         Self {
             width,
@@ -211,7 +194,6 @@ impl From<NonZeroU32> for Size {
 impl TryFrom<(u32, u32)> for Size {
     type Error = ZeroSized;
 
-    #[inline]
     fn try_from((width, height): (u32, u32)) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(width).ok_or(ZeroSized)?;
         let height = NonZeroU32::new(height).ok_or(ZeroSized)?;
@@ -222,7 +204,6 @@ impl TryFrom<(u32, u32)> for Size {
 impl TryFrom<UVec2> for Size {
     type Error = ZeroSized;
 
-    #[inline]
     fn try_from(v: UVec2) -> Result<Self, Self::Error> {
         let width = NonZeroU32::new(v.x).ok_or(ZeroSized)?;
         let height = NonZeroU32::new(v.y).ok_or(ZeroSized)?;
@@ -231,7 +212,6 @@ impl TryFrom<UVec2> for Size {
 }
 
 impl From<(NonZeroU32, NonZeroU32)> for Size {
-    #[inline]
     fn from((width, height): (NonZeroU32, NonZeroU32)) -> Self {
         Self {
             width,
@@ -245,7 +225,6 @@ impl From<(NonZeroU32, NonZeroU32)> for Size {
 pub struct ZeroSized;
 
 impl fmt::Display for ZeroSized {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "zero sized data")
     }
@@ -262,7 +241,6 @@ pub struct TextureData<'data, U = DynamicTextureUsages> {
 }
 
 impl<'data> TextureData<'data, TextureNoUsages> {
-    #[inline]
     pub fn empty<S>(size: S, format: Format) -> Self
     where
         S: Into<Size>,
@@ -275,7 +253,6 @@ impl<'data> TextureData<'data, TextureNoUsages> {
         }
     }
 
-    #[inline]
     pub fn new<S>(size: S, format: Format, data: &'data [u8]) -> Result<Self, InvalidLen>
     where
         S: Into<Size>,
@@ -407,7 +384,6 @@ impl<'data, U> TextureData<'data, U> {
 pub struct InvalidLen;
 
 impl fmt::Display for InvalidLen {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "invalid data length")
     }
@@ -422,7 +398,6 @@ pub enum DimensionsNumber {
 }
 
 impl DimensionsNumber {
-    #[inline]
     fn wgpu(self) -> wgpu::TextureDimension {
         match self {
             Self::D1 => wgpu::TextureDimension::D1,
@@ -449,7 +424,6 @@ pub struct Texture<D, U = DynamicTextureUsages> {
 }
 
 impl<D, U> Texture<D, U> {
-    #[inline]
     pub(crate) fn new(state: &State, data: TextureData<'_, U>) -> Self
     where
         D: Dimension,
@@ -470,7 +444,6 @@ impl<D, U> Texture<D, U> {
         }
     }
 
-    #[inline]
     pub(crate) fn render(&self)
     where
         U: u::Render,
@@ -478,27 +451,22 @@ impl<D, U> Texture<D, U> {
         self.usage.render();
     }
 
-    #[inline]
     pub fn size(&self) -> Size {
         Size::from_wgpu(self.inner.texture.size())
     }
 
-    #[inline]
     pub fn format(&self) -> Format {
         Format::from_wgpu(self.inner.texture.format())
     }
 
-    #[inline]
     pub fn bytes_per_row_aligned(&self) -> u32 {
         self.inner.bytes_per_row_aligned
     }
 
-    #[inline]
     pub(crate) fn view(&self) -> &wgpu::TextureView {
         &self.inner.view
     }
 
-    #[inline]
     pub fn copy_buffer_data<'data>(&self) -> BufferData<'data, BufferCopyTo> {
         let size = self.inner.texture.size();
         let size = self.inner.bytes_per_row_aligned * size.height * size.depth_or_array_layers;
@@ -650,7 +618,6 @@ pub struct BufferData<'data, U = DynamicBufferUsages> {
 }
 
 impl<'data> BufferData<'data, BufferNoUsages> {
-    #[inline]
     pub fn empty(size: u32) -> Self {
         Self {
             data: &[],
@@ -659,7 +626,6 @@ impl<'data> BufferData<'data, BufferNoUsages> {
         }
     }
 
-    #[inline]
     pub fn new(data: &'data [u8]) -> Self {
         let Ok(size) = data.len().try_into() else {
             panic!("the buffer size doesn't fit into u32");
@@ -762,7 +728,6 @@ pub struct Buffer<U = DynamicBufferUsages> {
 }
 
 impl<U> Buffer<U> {
-    #[inline]
     pub(crate) fn new(state: &State, data: BufferData<'_, U>) -> Self
     where
         U: u::BufferUsages,
@@ -915,14 +880,12 @@ pub struct Read<'buf> {
 impl ops::Deref for Read<'_> {
     type Target = [u8];
 
-    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.view
     }
 }
 
 impl AsRef<[u8]> for Read<'_> {
-    #[inline]
     fn as_ref(&self) -> &[u8] {
         &self.view
     }
@@ -951,28 +914,24 @@ pub struct Write<'buf> {
 impl ops::Deref for Write<'_> {
     type Target = [u8];
 
-    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.view
     }
 }
 
 impl ops::DerefMut for Write<'_> {
-    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.view
     }
 }
 
 impl AsRef<[u8]> for Write<'_> {
-    #[inline]
     fn as_ref(&self) -> &[u8] {
         &self.view
     }
 }
 
 impl AsMut<[u8]> for Write<'_> {
-    #[inline]
     fn as_mut(&mut self) -> &mut [u8] {
         &mut self.view
     }
@@ -1099,7 +1058,6 @@ where
 impl<V, M> Destination for Storage<V, M> where V: ?Sized {}
 impl<V> Destination for Uniform<V> {}
 
-#[inline]
 pub(crate) fn try_copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder) -> Result<(), SizeError>
 where
     S: Source,

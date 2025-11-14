@@ -39,7 +39,6 @@ pub struct WindowBuilder<'req> {
 }
 
 impl<'req> WindowBuilder<'req> {
-    #[inline]
     pub(crate) fn new(req: &'req Request, cx: Context) -> Self {
         Self {
             req,
@@ -52,7 +51,6 @@ impl<'req> WindowBuilder<'req> {
     }
 
     /// Sets the window title.
-    #[inline]
     pub fn with_title<S>(mut self, title: S) -> Self
     where
         S: Into<String>,
@@ -62,14 +60,12 @@ impl<'req> WindowBuilder<'req> {
     }
 
     /// Sets the window inner physical size.
-    #[inline]
     pub fn with_physical_size(mut self, width: u32, height: u32) -> Self {
         self.attr.winit.inner_size = Some(dpi::Size::Physical(dpi::PhysicalSize { width, height }));
         self
     }
 
     /// Sets the window [canvas](Canvas).
-    #[inline]
     pub fn with_canvas<C>(mut self, canvas: C) -> Self
     where
         C: Into<Option<Canvas>>,
@@ -79,7 +75,6 @@ impl<'req> WindowBuilder<'req> {
     }
 
     /// Sets the [winit attributes](window::WindowAttributes).
-    #[inline]
     pub fn with_winit<A>(mut self, winit: A) -> Self
     where
         A: Into<Box<window::WindowAttributes>>,
@@ -93,7 +88,6 @@ impl<'req> IntoFuture for WindowBuilder<'req> {
     type Output = Result<Window, Error>;
     type IntoFuture = Pin<Box<dyn Future<Output = Result<Window, Error>> + 'req>>;
 
-    #[inline]
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(self.req.make_window(self.cx, self.attr))
     }
@@ -107,7 +101,6 @@ pub(crate) struct Attributes {
 }
 
 impl Attributes {
-    #[inline]
     pub(crate) fn winit(mut self) -> Box<window::WindowAttributes> {
         let mut winit = *self.winit;
         if let Some(canvas) = self.canvas.take() {
@@ -121,7 +114,6 @@ impl Attributes {
 pub(crate) struct Event<T = bool>(Cell<T>);
 
 impl<T> Event<T> {
-    #[inline]
     fn new() -> Self
     where
         T: Default,
@@ -271,27 +263,22 @@ pub(crate) struct Shared {
 }
 
 impl Shared {
-    #[inline]
     pub(crate) fn window(&self) -> &window::Window {
         self.surface.window()
     }
 
-    #[inline]
     pub(crate) fn resize(&self) {
         self.surface.resize(&self.cx);
     }
 
-    #[inline]
     pub(crate) fn events(&self) -> &Events {
         &self.events
     }
 
-    #[inline]
     pub(crate) fn cursor_moved(&self, x: f64, y: f64) {
         self.cursor_position.set(Some(DVec2::new(x, y)));
     }
 
-    #[inline]
     pub(crate) fn cursor_left(&self) {
         self.cursor_position.set(None);
     }
@@ -305,7 +292,6 @@ pub struct Window {
 }
 
 impl Window {
-    #[inline]
     pub(crate) fn new(
         cx: Context,
         req: Request,
@@ -333,37 +319,31 @@ impl Window {
         Ok(Self { shared, req })
     }
 
-    #[inline]
     pub(crate) fn shared(&self) -> &Rc<Shared> {
         &self.shared
     }
 
     /// Returns the internal `winit` window.
-    #[inline]
     pub fn winit(&self) -> &Arc<window::Window> {
         self.shared.surface.window()
     }
 
     /// Returns the surface format of the window.
-    #[inline]
     pub fn format(&self) -> Format {
         self.shared.surface.format()
     }
 
     /// Returns the size of the window in pixels.
-    #[inline]
     pub fn size(&self) -> UVec2 {
         self.shared.surface.size().into()
     }
 
     /// Returns the cursor position on the window.
-    #[inline]
     pub fn cursor_position(&self) -> Option<DVec2> {
         self.shared.cursor_position.get()
     }
 
     /// Waits for a button press event.
-    #[inline]
     pub async fn button_pressed(&self, button: event::MouseButton) {
         let buttons = &self.shared.events.press_buttons;
         buttons.wait(button);
@@ -371,7 +351,6 @@ impl Window {
     }
 
     /// Waits for a button release event.
-    #[inline]
     pub async fn button_released(&self, button: event::MouseButton) {
         let buttons = &self.shared.events.release_buttons;
         buttons.wait(button);
@@ -379,7 +358,6 @@ impl Window {
     }
 
     /// Waits for a key press event.
-    #[inline]
     pub async fn key_pressed(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.press_keys;
         keys.wait(code);
@@ -387,7 +365,6 @@ impl Window {
     }
 
     /// Waits for a key release event.
-    #[inline]
     pub async fn key_released(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.release_keys;
         keys.wait(code);
@@ -395,7 +372,6 @@ impl Window {
     }
 
     /// Waits for a window resize event.
-    #[inline]
     pub async fn resized(&self) -> UVec2 {
         future::poll_fn(|_| self.shared.events.resize.active_poll()).await;
 
@@ -403,7 +379,6 @@ impl Window {
     }
 
     /// Waits for a redraw event.
-    #[inline]
     pub async fn redraw(&self) -> Redraw<'_> {
         loop {
             let delta_time = future::poll_fn(|cx| {
@@ -429,12 +404,10 @@ impl Window {
     }
 
     /// Waits for a window close request event.
-    #[inline]
     pub async fn close_requested(&self) {
         future::poll_fn(|_| self.shared.events.close.active_poll()).await;
     }
 
-    #[inline]
     pub fn set_fps(&self, fps: NonZeroU32) {
         const NANO: u32 = 1_000_000_000;
 
@@ -445,7 +418,6 @@ impl Window {
 }
 
 impl Drop for Window {
-    #[inline]
     fn drop(&mut self) {
         let id = self.shared.surface.window().id();
         self.req.remove_window(id);
@@ -460,20 +432,17 @@ pub struct Redraw<'surface> {
 
 impl Redraw<'_> {
     /// Returns the delta time since the last redraw.
-    #[inline]
     pub fn delta_time(&self) -> Duration {
         self.delta_time
     }
 
     /// Presents the redrawed frame on the screen.
-    #[inline]
     pub fn present(self) {
         self.output.present();
     }
 }
 
 impl AsTarget for Redraw<'_> {
-    #[inline]
     fn as_target(&self) -> Target<'_> {
         self.output.as_target()
     }
@@ -482,7 +451,6 @@ impl AsTarget for Redraw<'_> {
 struct Ops;
 
 impl WindowOps<window::Window> for Ops {
-    #[inline]
     fn size(window: &window::Window) -> (u32, u32) {
         window.inner_size().into()
     }

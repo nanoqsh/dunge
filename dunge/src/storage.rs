@@ -61,7 +61,6 @@ impl<V, M> Storage<V, M>
 where
     V: ?Sized,
 {
-    #[inline]
     pub(crate) fn new(cx: &Context, val: &V) -> Self
     where
         V: StorageValue,
@@ -85,7 +84,6 @@ where
     ///
     /// # Panics
     /// Panics if the buffer size is not equal to the size of the new value.
-    #[inline]
     pub fn update(&self, cx: &Context, val: &V)
     where
         V: StorageValue,
@@ -93,7 +91,6 @@ where
         self.data.update(cx.state(), val.storage_value());
     }
 
-    #[inline]
     pub fn size(&self) -> usize {
         self.data.size
     }
@@ -125,7 +122,6 @@ pub struct Uniform<V> {
 }
 
 impl<V> Uniform<V> {
-    #[inline]
     pub(crate) fn new(cx: &Context, val: &V) -> Self
     where
         V: UniformValue,
@@ -146,7 +142,6 @@ impl<V> Uniform<V> {
     ///
     /// # Panics
     /// Panics if the buffer size is not equal to the size of the new value.
-    #[inline]
     pub fn update(&self, cx: &Context, val: &V)
     where
         V: UniformValue,
@@ -154,7 +149,6 @@ impl<V> Uniform<V> {
         self.data.update(cx.state(), val.uniform_value());
     }
 
-    #[inline]
     pub fn size(&self) -> usize {
         self.data.size
     }

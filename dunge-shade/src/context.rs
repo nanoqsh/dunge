@@ -44,7 +44,6 @@ pub(crate) struct GroupEntry {
 }
 
 impl GroupEntry {
-    #[inline]
     pub(crate) fn def(&self) -> &Define<MemberData> {
         &self.def
     }
@@ -57,7 +56,6 @@ struct Limits {
     group: u8,
 }
 
-#[inline]
 fn countdown(v: &mut u8, msg: &str) {
     match v.checked_sub(1) {
         Some(n) => *v = n,
@@ -72,7 +70,6 @@ pub struct Context {
 }
 
 impl Context {
-    #[inline]
     pub(crate) fn new() -> Self {
         Self {
             inputs: vec![],
@@ -86,7 +83,6 @@ impl Context {
         }
     }
 
-    #[inline]
     fn add_index(&mut self) -> u32 {
         countdown(&mut self.limits.index, "too many indices in the shader");
         let id = self.inputs.len() as u32;
@@ -94,7 +90,6 @@ impl Context {
         id
     }
 
-    #[inline]
     fn add_global_invocation_id(&mut self) -> u32 {
         countdown(
             &mut self.limits.index,
@@ -106,7 +101,6 @@ impl Context {
         id
     }
 
-    #[inline]
     fn add_vertex(&mut self, def: Define<VectorType>, size: usize) -> u32 {
         countdown(&mut self.limits.verts, "too many vertices in the shader");
         let id = self.inputs.len() as u32;
@@ -115,7 +109,6 @@ impl Context {
         id
     }
 
-    #[inline]
     fn add_instance(&mut self, ty: ValueType) -> u32 {
         countdown(&mut self.limits.insts, "too many instances in the shader");
         let id = self.inputs.len() as u32;
@@ -124,12 +117,10 @@ impl Context {
         id
     }
 
-    #[inline]
     fn add_group_set(&mut self) {
         countdown(&mut self.limits.group, "too many groups in the shader");
     }
 
-    #[inline]
     fn add_group(&mut self, def: Define<MemberData>) -> (u32, GlobalOut) {
         let out = GlobalOut::default();
         let en = GroupEntry {
@@ -142,7 +133,6 @@ impl Context {
         (id, out)
     }
 
-    #[inline]
     pub(crate) fn into_info(self) -> Info {
         Info {
             inputs: self.inputs,
@@ -165,7 +155,6 @@ pub struct Info {
 
 impl Info {
     #[doc(hidden)]
-    #[inline]
     pub fn count_input(&self) -> usize {
         self.inputs
             .iter()
@@ -174,19 +163,16 @@ impl Info {
     }
 
     #[doc(hidden)]
-    #[inline]
     pub fn input(&self) -> impl Iterator<Item = &InputInfo> {
         self.inputs.iter()
     }
 
     #[doc(hidden)]
-    #[inline]
     pub fn groups(&self) -> impl Iterator<Item = &GroupInfo> {
         self.groups.iter()
     }
 
     #[doc(hidden)]
-    #[inline]
     pub fn set_stages(&mut self, stages: &[Stages]) {
         let stages = stages
             .iter()
@@ -212,7 +198,6 @@ where
     type Vertex = ();
     type Instance = ();
 
-    #[inline]
     fn from_render(cx: &mut Context) -> Self {
         V::from_context(cx)
     }
@@ -229,7 +214,6 @@ where
     type Vertex = V;
     type Instance = ();
 
-    #[inline]
     fn from_render(cx: &mut Context) -> Self {
         let id = cx.add_vertex(V::DEF, size_of::<V>());
         Self(vertex::Projection::projection(id))
@@ -247,7 +231,6 @@ where
     type Vertex = ();
     type Instance = I;
 
-    #[inline]
     fn from_render(cx: &mut Context) -> Self {
         let mut id = None;
         for ty in I::DEF.iter() {
@@ -272,7 +255,6 @@ where
     type Vertex = V;
     type Instance = I;
 
-    #[inline]
     fn from_render(cx: &mut Context) -> Self {
         let PassVertex(vert) = <PassVertex<V> as FromRender<O>>::from_render(cx);
         let PassInstance(inst) = <PassInstance<I> as FromRender<O>>::from_render(cx);
@@ -286,7 +268,6 @@ pub struct Index(pub Ret<ReadIndex, u32>);
 impl FromContext<RenderKind> for Index {
     type Set = ();
 
-    #[inline]
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
         Self(ReadIndex::new(id))
@@ -299,7 +280,6 @@ pub struct Invocation(pub Ret<ReadInvocation, types::Vec3<u32>>);
 impl FromContext<ComputeKind> for Invocation {
     type Set = ();
 
-    #[inline]
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_global_invocation_id();
         Self(ReadInvocation::new(id))
@@ -325,7 +305,6 @@ where
     type Set = (A::Projection,);
     type Projection = A::Projection;
 
-    #[inline]
     fn from_context(cx: &mut Context) -> Self::Projection {
         cx.add_group_set();
         let (id, out) = cx.add_group(A::DEF);
@@ -344,7 +323,6 @@ macro_rules! impl_projection_from_context {
             type Set = ($($t::Projection),*,);
             type Projection = ($($t::Projection),*,);
 
-            #[inline]
             fn from_context(cx: &mut Context) -> Self::Projection {
                 cx.add_group_set();
 
@@ -374,7 +352,6 @@ where
 {
     type Set = G::Set;
 
-    #[inline]
     fn from_context(cx: &mut Context) -> Self {
         Self(G::from_context(cx))
     }

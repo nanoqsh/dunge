@@ -194,12 +194,10 @@ impl<V> Row<V> {
         }
     }
 
-    #[inline]
     pub fn len(&self) -> usize {
         self.len as usize
     }
 
-    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -232,12 +230,10 @@ impl<V> RowSlice<'_, V> {
         queue.write_buffer(self.slice.buffer(), self.slice.offset(), V::row_value(data));
     }
 
-    #[inline]
     pub fn len(&self) -> usize {
         self.len as usize
     }
 
-    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
