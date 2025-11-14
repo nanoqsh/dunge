@@ -199,38 +199,31 @@ impl WaitState {
 }
 
 enum Ids {
-    Empty,
-    One(u64),
-    Many(Vec<u64>),
+    Inline(u64),
+    Vec(Vec<u64>),
 }
 
 impl Ids {
-    fn new(id: u64) -> Self {
-        Self::One(id)
-    }
-
     fn push(&mut self, new: u64) {
-        *self = match mem::replace(self, Self::Empty) {
-            Self::Empty => unreachable!(),
-            Self::One(id) => Self::Many(vec![id, new]),
-            Self::Many(mut ids) => {
+        *self = match mem::replace(self, Self::Inline(0)) {
+            Self::Inline(id) => Self::Vec(vec![id, new]),
+            Self::Vec(mut ids) => {
                 ids.push(new);
-                Self::Many(ids)
+                Self::Vec(ids)
             }
         };
     }
 
     fn get(&self) -> &[u64] {
         match self {
-            Self::Empty => unreachable!(),
-            Self::One(id) => slice::from_ref(id),
-            Self::Many(ids) => ids,
+            Self::Inline(id) => slice::from_ref(id),
+            Self::Vec(ids) => ids,
         }
     }
 }
 
 pub(crate) struct EventMap<K> {
-    waiters: RefCell<HashMap<u64, WaitState>>,
+    waits: RefCell<HashMap<u64, WaitState>>,
     codes: RefCell<HashMap<K, Ids>>,
     id_counter: Cell<u64>,
 }
@@ -241,7 +234,7 @@ where
 {
     fn new() -> Self {
         Self {
-            waiters: RefCell::default(),
+            waits: RefCell::default(),
             codes: RefCell::default(),
             id_counter: Cell::default(),
         }
@@ -251,7 +244,7 @@ where
         let id = self.id_counter.get();
         self.id_counter.update(|id| id + 1);
 
-        self.waiters.borrow_mut().insert(
+        self.waits.borrow_mut().insert(
             id,
             WaitState {
                 state: State::Wait,
@@ -263,19 +256,19 @@ where
             .borrow_mut()
             .entry(code)
             .and_modify(|ids| ids.push(id))
-            .or_insert(Ids::new(id));
+            .or_insert(Ids::Inline(id));
 
         WaitFuture {
-            waiters: &self.waiters,
+            waits: &self.waits,
             id,
         }
     }
 
     pub(crate) fn active(&self, code: K) {
-        let mut waiters = self.waiters.borrow_mut();
+        let mut waits = self.waits.borrow_mut();
         if let Some(ids) = self.codes.borrow_mut().get_mut(&code) {
             for id in ids.get() {
-                if let Some(state) = waiters.get_mut(id) {
+                if let Some(state) = waits.get_mut(id) {
                     state.active();
                 }
             }
@@ -284,7 +277,7 @@ where
 }
 
 struct WaitFuture<'map> {
-    waiters: &'map RefCell<HashMap<u64, WaitState>>,
+    waits: &'map RefCell<HashMap<u64, WaitState>>,
     id: u64,
 }
 
@@ -293,9 +286,10 @@ impl Future for WaitFuture<'_> {
 
     fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
         let me = self.get_mut();
-        let mut waiters = me.waiters.borrow_mut();
-        let Entry::Occupied(mut en) = waiters.entry(me.id) else {
-            panic!("polling after complition")
+        let mut waits = me.waits.borrow_mut();
+        let Entry::Occupied(mut en) = waits.entry(me.id) else {
+            debug_assert!(false, "polling after complition");
+            return Poll::Ready(());
         };
 
         en.get_mut().poll(cx)
@@ -304,7 +298,7 @@ impl Future for WaitFuture<'_> {
 
 impl Drop for WaitFuture<'_> {
     fn drop(&mut self) {
-        self.waiters.borrow_mut().remove(&self.id);
+        self.waits.borrow_mut().remove(&self.id);
     }
 }
 
