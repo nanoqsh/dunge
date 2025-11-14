@@ -14,10 +14,12 @@ use {
         collections::{HashMap, hash_map::Entry},
         future,
         hash::Hash,
+        mem,
         num::NonZeroU32,
         ops,
         pin::Pin,
         rc::Rc,
+        slice,
         sync::Arc,
         task::{self, Poll, Waker},
         time::Duration,
@@ -170,7 +172,6 @@ enum State {
 
 struct WaitState {
     state: State,
-    wait_counter: usize,
     waker: Option<Waker>,
 }
 
@@ -182,7 +183,7 @@ impl WaitState {
         }
     }
 
-    fn poll(&mut self, cx: &mut task::Context<'_>) -> Poll<bool> {
+    fn poll(&mut self, cx: &mut task::Context<'_>) -> Poll<()> {
         match self.state {
             State::Wait => {
                 match &mut self.waker {
@@ -192,53 +193,118 @@ impl WaitState {
 
                 Poll::Pending
             }
-            State::Active => {
-                self.wait_counter -= 1;
-                Poll::Ready(self.wait_counter == 0)
-            }
+            State::Active => Poll::Ready(()),
         }
     }
 }
 
-pub(crate) struct EventMap<K>(RefCell<HashMap<K, WaitState>>);
+enum Ids {
+    Empty,
+    One(u64),
+    Many(Vec<u64>),
+}
+
+impl Ids {
+    fn new(id: u64) -> Self {
+        Self::One(id)
+    }
+
+    fn push(&mut self, new: u64) {
+        *self = match mem::replace(self, Self::Empty) {
+            Self::Empty => unreachable!(),
+            Self::One(id) => Self::Many(vec![id, new]),
+            Self::Many(mut ids) => {
+                ids.push(new);
+                Self::Many(ids)
+            }
+        };
+    }
+
+    fn get(&self) -> &[u64] {
+        match self {
+            Self::Empty => unreachable!(),
+            Self::One(id) => slice::from_ref(id),
+            Self::Many(ids) => ids,
+        }
+    }
+}
+
+pub(crate) struct EventMap<K> {
+    waiters: RefCell<HashMap<u64, WaitState>>,
+    codes: RefCell<HashMap<K, Ids>>,
+    id_counter: Cell<u64>,
+}
 
 impl<K> EventMap<K>
 where
     K: Eq + Hash,
 {
     fn new() -> Self {
-        Self(RefCell::default())
+        Self {
+            waiters: RefCell::default(),
+            codes: RefCell::default(),
+            id_counter: Cell::default(),
+        }
     }
 
-    fn wait(&self, code: K) {
-        self.0
+    fn wait(&self, code: K) -> WaitFuture<'_> {
+        let id = self.id_counter.get();
+        self.id_counter.update(|id| id + 1);
+
+        self.waiters.borrow_mut().insert(
+            id,
+            WaitState {
+                state: State::Wait,
+                waker: None,
+            },
+        );
+
+        self.codes
             .borrow_mut()
             .entry(code)
-            .and_modify(|w| w.wait_counter += 1)
-            .or_insert_with(|| WaitState {
-                state: State::Wait,
-                wait_counter: 1,
-                waker: None,
-            });
+            .and_modify(|ids| ids.push(id))
+            .or_insert(Ids::new(id));
+
+        WaitFuture {
+            waiters: &self.waiters,
+            id,
+        }
     }
 
     pub(crate) fn active(&self, code: K) {
-        if let Some(w) = self.0.borrow_mut().get_mut(&code) {
-            w.active();
+        let mut waiters = self.waiters.borrow_mut();
+        if let Some(ids) = self.codes.borrow_mut().get_mut(&code) {
+            for id in ids.get() {
+                if let Some(state) = waiters.get_mut(id) {
+                    state.active();
+                }
+            }
         }
     }
+}
 
-    fn poll(&self, code: K, cx: &mut task::Context<'_>) -> Poll<()> {
-        let mut map = self.0.borrow_mut();
-        let Entry::Occupied(mut en) = map.entry(code) else {
+struct WaitFuture<'map> {
+    waiters: &'map RefCell<HashMap<u64, WaitState>>,
+    id: u64,
+}
+
+impl Future for WaitFuture<'_> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
+        let me = self.get_mut();
+        let mut waiters = me.waiters.borrow_mut();
+        let Entry::Occupied(mut en) = waiters.entry(me.id) else {
             panic!("polling after complition")
         };
 
-        if task::ready!(en.get_mut().poll(cx)) {
-            en.remove();
-        }
+        en.get_mut().poll(cx)
+    }
+}
 
-        Poll::Ready(())
+impl Drop for WaitFuture<'_> {
+    fn drop(&mut self) {
+        self.waiters.borrow_mut().remove(&self.id);
     }
 }
 
@@ -346,29 +412,25 @@ impl Window {
     /// Waits for a button press event.
     pub async fn button_pressed(&self, button: event::MouseButton) {
         let buttons = &self.shared.events.press_buttons;
-        buttons.wait(button);
-        future::poll_fn(|cx| buttons.poll(button, cx)).await;
+        buttons.wait(button).await;
     }
 
     /// Waits for a button release event.
     pub async fn button_released(&self, button: event::MouseButton) {
         let buttons = &self.shared.events.release_buttons;
-        buttons.wait(button);
-        future::poll_fn(|cx| buttons.poll(button, cx)).await;
+        buttons.wait(button).await;
     }
 
     /// Waits for a key press event.
     pub async fn key_pressed(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.press_keys;
-        keys.wait(code);
-        future::poll_fn(|cx| keys.poll(code, cx)).await;
+        keys.wait(code).await;
     }
 
     /// Waits for a key release event.
     pub async fn key_released(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.release_keys;
-        keys.wait(code);
-        future::poll_fn(|cx| keys.poll(code, cx)).await;
+        keys.wait(code).await;
     }
 
     /// Waits for a window resize event.

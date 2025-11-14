@@ -111,6 +111,19 @@ async fn run(control: Control) -> Result<(), Error> {
         }
     };
 
+    let click_more = async {
+        loop {
+            (
+                window.button_pressed(MouseButton::Left),
+                window.button_pressed(MouseButton::Right),
+            )
+                .race()
+                .await;
+
+            println!("clicked");
+        }
+    };
+
     let toggle_fullscreen = async {
         let mut fullscreen = false;
         loop {
@@ -130,7 +143,14 @@ async fn run(control: Control) -> Result<(), Error> {
 
     (
         async {
-            match (fps_counter, render, resize, click, toggle_fullscreen)
+            match (
+                fps_counter,
+                render,
+                resize,
+                click,
+                click_more,
+                toggle_fullscreen,
+            )
                 .join()
                 .await {}
         },
