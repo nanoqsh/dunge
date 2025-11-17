@@ -152,11 +152,13 @@ impl Context {
     /// # Examples
     ///
     /// ```
-    /// use dunge::{
-    ///     prelude::*,
+    /// use {
+    ///     dunge::{
+    ///         prelude::*,
+    ///         sl::{Groups, PassVertex, Render},
+    ///         storage::Uniform,
+    ///     },
     ///     glam::Mat4,
-    ///     sl::{Groups, PassVertex, Render},
-    ///     storage::Uniform,
     /// };
     ///
     /// type Vec4f = [f32; 4];
