@@ -6,12 +6,12 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             Config,
-            glam::{Mat4, Quat, UVec2, Vec3},
             sl::{Groups, PassVertex, Render},
             storage::Uniform,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
+        glam::{Mat4, Quat, UVec2, Vec3},
         std::time::Duration,
         winit::{event::MouseButton, keyboard::KeyCode},
     };

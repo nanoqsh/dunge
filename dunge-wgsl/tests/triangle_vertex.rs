@@ -8,10 +8,10 @@ fn render() -> Result<(), Error> {
         dunge::{
             buffer::{Format, Size},
             color::Rgb,
-            glam::{Vec2, Vec3},
             prelude::*,
             sl::PassVertex,
         },
+        glam::{Vec2, Vec3},
         helpers::image::Image,
         std::{env, fs},
     };

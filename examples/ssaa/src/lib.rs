@@ -1,4 +1,4 @@
-use dunge_winit::{dunge::glam::UVec2, prelude::*};
+use dunge_winit::prelude::*;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -7,13 +7,13 @@ pub async fn run(control: Control) -> Result<(), Error> {
         dunge::{
             Options,
             buffer::{Filter, Format, Sampler, Size},
-            glam::{Vec2, Vec4},
             group::BoundTexture,
             sl::{Groups, Index, PassVertex, Render},
             storage::Uniform,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
+        glam::{UVec2, Vec2, Vec4},
         std::{cell::RefCell, f32::consts, time::Duration},
         winit::keyboard::KeyCode,
     };

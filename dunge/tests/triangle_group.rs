@@ -8,11 +8,11 @@ fn render() -> Result<(), Error> {
         dunge::{
             buffer::{Filter, Format, Sampler, Size},
             color::Rgb,
-            glam::Vec2,
             group::BoundTexture,
             prelude::*,
             sl::{self, Groups, PassVertex, Render},
         },
+        glam::Vec2,
         helpers::image::Image,
         std::{env, fs},
     };

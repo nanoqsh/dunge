@@ -555,6 +555,7 @@ dependencies = [
  "dunge-winit",
  "env_logger",
  "futures-concurrency",
+ "glam",
  "log",
  "winit",
 ]
@@ -642,6 +643,7 @@ dependencies = [
  "bytemuck",
  "dunge",
  "dunge-shade",
+ "glam",
  "helpers",
  "naga",
 ]
@@ -2086,6 +2088,7 @@ dependencies = [
  "dunge-winit",
  "env_logger",
  "futures-concurrency",
+ "glam",
  "winit",
 ]
 
@@ -2263,6 +2266,7 @@ dependencies = [
  "dunge-winit",
  "env_logger",
  "futures-concurrency",
+ "glam",
  "winit",
 ]
 
@@ -2581,6 +2585,7 @@ dependencies = [
  "env_logger",
  "futures-concurrency",
  "futures-lite",
+ "glam",
  "winit",
 ]
 

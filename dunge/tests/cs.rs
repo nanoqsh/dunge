@@ -100,10 +100,12 @@ fn cs_array2d() -> Result<(), Error> {
 
 #[test]
 fn cs_array_uniform() -> Result<(), Error> {
-    use dunge::{
+    use {
+        dunge::{
+            sl::{Compute, Groups},
+            storage::Uniform,
+        },
         glam::Vec4,
-        sl::{Compute, Groups},
-        storage::Uniform,
     };
 
     let compute = |Groups(a): Groups<Uniform<[Vec4; 4]>>| Compute {

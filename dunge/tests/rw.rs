@@ -117,11 +117,13 @@ fn rw_dyn_array_u32() -> Result<(), Error> {
 
 #[test]
 fn rw_vec() -> Result<(), Error> {
-    use dunge::{
+    use {
+        dunge::{
+            sl::{Compute, Groups, Ret},
+            storage::{RwStorage, Storage},
+            types,
+        },
         glam::Vec3,
-        sl::{Compute, Groups, Ret},
-        storage::{RwStorage, Storage},
-        types,
     };
 
     type Io = (Storage<Vec3>, RwStorage<Vec3>);
@@ -145,11 +147,13 @@ fn rw_vec() -> Result<(), Error> {
 
 #[test]
 fn rw_vec_u32() -> Result<(), Error> {
-    use dunge::{
+    use {
+        dunge::{
+            sl::{Compute, Groups, Ret},
+            storage::{RwStorage, Storage},
+            types,
+        },
         glam::Vec3,
-        sl::{Compute, Groups, Ret},
-        storage::{RwStorage, Storage},
-        types,
     };
 
     type Io = (Storage<Vec3>, RwStorage<Vec3>);
@@ -173,11 +177,13 @@ fn rw_vec_u32() -> Result<(), Error> {
 
 #[test]
 fn rw_mat() -> Result<(), Error> {
-    use dunge::{
+    use {
+        dunge::{
+            sl::{Compute, Groups, Ret},
+            storage::{RwStorage, Storage},
+            types,
+        },
         glam::Mat3,
-        sl::{Compute, Groups, Ret},
-        storage::{RwStorage, Storage},
-        types,
     };
 
     type Io = (Storage<Mat3>, RwStorage<Mat3>);
@@ -201,11 +207,13 @@ fn rw_mat() -> Result<(), Error> {
 
 #[test]
 fn rw_mat_u32() -> Result<(), Error> {
-    use dunge::{
+    use {
+        dunge::{
+            sl::{Compute, Groups, Ret},
+            storage::{RwStorage, Storage},
+            types,
+        },
         glam::Mat3,
-        sl::{Compute, Groups, Ret},
-        storage::{RwStorage, Storage},
-        types,
     };
 
     type Io = (Storage<Mat3>, RwStorage<Mat3>);

@@ -44,7 +44,6 @@ pub use {
     },
     dunge_macro::{Group, Instance, Vertex},
     dunge_shade::{group::Group, instance::Instance, sl, types, vertex::Vertex},
-    glam,
 };
 
 #[cfg(not(target_family = "wasm"))]

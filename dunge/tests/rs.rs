@@ -9,9 +9,9 @@ type Error = Box<dyn std::error::Error>;
 
 #[test]
 fn rs_calc() -> Result<(), Error> {
-    use dunge::{
+    use {
+        dunge::sl::{self, Render},
         glam::Vec4,
-        sl::{self, Render},
     };
 
     let compute = || {
@@ -33,9 +33,9 @@ fn rs_calc() -> Result<(), Error> {
 
 #[test]
 fn rs_if() -> Result<(), Error> {
-    use dunge::{
+    use {
+        dunge::sl::{self, Render},
         glam::Vec4,
-        sl::{self, Render},
     };
 
     let compute = || Render {

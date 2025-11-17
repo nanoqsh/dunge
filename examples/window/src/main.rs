@@ -12,12 +12,12 @@ fn main() {
 async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
-            glam::{Vec2, Vec3},
             sl::{Groups, PassVertex, Render},
             storage::Uniform,
         },
         futures_concurrency::prelude::*,
         futures_lite::prelude::*,
+        glam::{Vec2, Vec3},
         std::{cell::Cell, time::Duration},
         winit::{event::MouseButton, keyboard::KeyCode, window},
     };

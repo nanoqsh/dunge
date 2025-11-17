@@ -17,6 +17,7 @@ naga = { workspace = true, features = ["wgsl-in"] }
 [dev-dependencies]
 dunge-shade = { workspace = true, features = ["wgsl"] }
 bytemuck.workspace = true
+glam.workspace = true
 helpers = { workspace = true, features = ["png"] }
 
 [lints]

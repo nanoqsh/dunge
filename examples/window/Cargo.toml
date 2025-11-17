@@ -9,6 +9,7 @@ dunge-winit.workspace = true
 env_logger.workspace = true
 futures-concurrency.workspace = true
 futures-lite.workspace = true
+glam.workspace = true
 winit.workspace = true
 
 [lints]
