@@ -138,6 +138,8 @@ async fn run(control: Control) -> Result<(), Error> {
         }
     };
 
+    let input = window.text_input().for_each(|s| println!("input: {s}"));
+
     let close = window.close_requested();
     let esc_pressed = window.key_pressed(KeyCode::Escape);
 
@@ -150,6 +152,7 @@ async fn run(control: Control) -> Result<(), Error> {
                 click,
                 click_more,
                 toggle_fullscreen,
+                input,
             )
                 .join()
                 .await {}

@@ -8,13 +8,14 @@ use {
         buffer::Format,
         surface::{Action, Output, Surface, WindowOps},
     },
+    futures_lite::Stream,
     glam::{DVec2, UVec2},
     std::{
         cell::{Cell, RefCell},
-        collections::{HashMap, hash_map::Entry},
+        collections::{HashMap, VecDeque, hash_map::Entry},
         future,
         hash::Hash,
-        mem,
+        iter, mem,
         num::NonZeroU32,
         ops,
         pin::Pin,
@@ -24,7 +25,11 @@ use {
         task::{self, Poll, Waker},
         time::Duration,
     },
-    winit::{dpi, event, event_loop, keyboard, window},
+    winit::{
+        dpi, event, event_loop,
+        keyboard::{self, SmolStr},
+        window,
+    },
 };
 
 /// The [window](Window) builder returned from
@@ -302,14 +307,112 @@ impl Drop for WaitFuture<'_> {
     }
 }
 
-pub(crate) type Keys = EventMap<keyboard::KeyCode>;
+struct StreamState<E> {
+    queue: VecDeque<E>,
+    waker: Option<Waker>,
+}
+
+impl<E> StreamState<E> {
+    fn active(&mut self, new: E) {
+        if let Some(waker) = self.waker.take() {
+            waker.wake();
+        }
+
+        self.queue.push_back(new);
+    }
+
+    fn poll(&mut self, cx: &mut task::Context<'_>) -> Poll<E> {
+        if let Some(event) = self.queue.pop_front() {
+            Poll::Ready(event)
+        } else {
+            match &mut self.waker {
+                Some(waker) => waker.clone_from(cx.waker()),
+                None => self.waker = Some(cx.waker().clone()),
+            };
+
+            Poll::Pending
+        }
+    }
+}
+
+pub(crate) struct EventStream<E> {
+    waits: RefCell<HashMap<u64, StreamState<E>>>,
+    id_counter: Cell<u64>,
+}
+
+impl<E> EventStream<E> {
+    fn new() -> Self {
+        Self {
+            waits: RefCell::default(),
+            id_counter: Cell::default(),
+        }
+    }
+
+    fn wait(&self) -> WaitStream<'_, E> {
+        let id = self.id_counter.get();
+        self.id_counter.update(|id| id + 1);
+
+        self.waits.borrow_mut().insert(
+            id,
+            StreamState {
+                queue: VecDeque::new(),
+                waker: None,
+            },
+        );
+
+        WaitStream {
+            waits: &self.waits,
+            id,
+        }
+    }
+
+    pub(crate) fn active(&self, event: E)
+    where
+        E: Clone,
+    {
+        let mut waits = self.waits.borrow_mut();
+        let events = iter::repeat_n(event, waits.len());
+        for (state, event) in iter::zip(waits.values_mut(), events) {
+            state.active(event);
+        }
+    }
+}
+
+struct WaitStream<'map, E> {
+    waits: &'map RefCell<HashMap<u64, StreamState<E>>>,
+    id: u64,
+}
+
+impl<E> Stream for WaitStream<'_, E> {
+    type Item = E;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
+        let me = self.get_mut();
+        let mut waits = me.waits.borrow_mut();
+        let Entry::Occupied(mut en) = waits.entry(me.id) else {
+            return Poll::Ready(None);
+        };
+
+        en.get_mut().poll(cx).map(Some)
+    }
+}
+
+impl<E> Drop for WaitStream<'_, E> {
+    fn drop(&mut self) {
+        self.waits.borrow_mut().remove(&self.id);
+    }
+}
+
 pub(crate) type Buttons = EventMap<event::MouseButton>;
+pub(crate) type Keys = EventMap<keyboard::KeyCode>;
+pub(crate) type Text = EventStream<SmolStr>;
 
 pub(crate) struct Events {
     pub(crate) press_buttons: Buttons,
     pub(crate) release_buttons: Buttons,
     pub(crate) press_keys: Keys,
     pub(crate) release_keys: Keys,
+    pub(crate) text: Text,
     pub(crate) resize: Event,
     pub(crate) redraw: Event<Option<Duration>>,
     pub(crate) close: Event,
@@ -369,6 +472,7 @@ impl Window {
                 release_buttons: Buttons::new(),
                 press_keys: Keys::new(),
                 release_keys: Keys::new(),
+                text: Text::new(),
                 resize: Event::new(),
                 redraw: Event::new(),
                 close: Event::new(),
@@ -425,6 +529,11 @@ impl Window {
     pub async fn key_released(&self, code: keyboard::KeyCode) {
         let keys = &self.shared.events.release_keys;
         keys.wait(code).await;
+    }
+
+    /// Reads a text input from keyboard.
+    pub fn text_input(&self) -> impl Stream<Item = SmolStr> {
+        self.shared.events.text.wait()
     }
 
     /// Waits for a window resize event.

@@ -358,6 +358,7 @@ where
                 event:
                     event::KeyEvent {
                         physical_key,
+                        text,
                         state,
                         repeat: false,
                         ..
@@ -378,7 +379,13 @@ where
 
                 let events = window.shared.events();
                 match state {
-                    event::ElementState::Pressed => events.press_keys.active(code),
+                    event::ElementState::Pressed => {
+                        events.press_keys.active(code);
+
+                        if let Some(s) = text {
+                            events.text.active(s);
+                        }
+                    }
                     event::ElementState::Released => events.release_keys.active(code),
                 }
             }
