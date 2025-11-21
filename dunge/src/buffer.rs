@@ -587,22 +587,19 @@ impl Filter {
     }
 }
 
+#[derive(Clone)]
 pub struct Sampler(wgpu::Sampler);
 
 impl Sampler {
     pub(crate) fn new(state: &State, filter: Filter) -> Self {
-        let inner = {
-            let filter = filter.wgpu();
-            let desc = wgpu::SamplerDescriptor {
-                mag_filter: filter,
-                min_filter: filter,
-                ..Default::default()
-            };
-
-            state.device().create_sampler(&desc)
+        let filter = filter.wgpu();
+        let desc = wgpu::SamplerDescriptor {
+            mag_filter: filter,
+            min_filter: filter,
+            ..Default::default()
         };
 
-        Self(inner)
+        Self(state.device().create_sampler(&desc))
     }
 
     pub(crate) fn inner(&self) -> &wgpu::Sampler {
