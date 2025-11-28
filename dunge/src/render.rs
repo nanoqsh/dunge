@@ -92,7 +92,6 @@ impl To<state::Layer, state::DrawPoints> for Input<(), (), ()> {}
 impl<V, I, S> To<state::Set, state::Inst> for Input<V, I, S> {}
 impl<V, S> To<state::Set, state::Draw> for Input<V, (), S> {}
 impl<S> To<state::Set, state::DrawPoints> for Input<(), (), S> {}
-impl<V, I, S> To<state::Set, state::Set> for Input<V, I, S> {}
 
 impl<V, I, S> To<state::Inst, state::Draw> for Input<V, I, S> {}
 impl<I, S> To<state::Inst, state::DrawPoints> for Input<(), I, S> {}
@@ -223,6 +222,24 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
     {
         self.run.draw_points(n);
         self.to()
+    }
+}
+
+impl<'ren, 'layer, I> On<'ren, 'layer, I, state::Set> {
+    #[inline]
+    pub fn to_draw(self) -> On<'ren, 'layer, I, state::Draw> {
+        On {
+            run: self.run,
+            inp: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn to_draw_points(self) -> On<'ren, 'layer, I, state::Draw> {
+        On {
+            run: self.run,
+            inp: PhantomData,
+        }
     }
 }
 
