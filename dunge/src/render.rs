@@ -148,7 +148,7 @@ impl Runner<'_, '_> {
 
 pub struct On<'ren, 'layer, I, A> {
     run: Runner<'ren, 'layer>,
-    inp: PhantomData<(I, A)>,
+    inp: PhantomData<fn(I, A)>,
 }
 
 impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
