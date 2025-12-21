@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        buffer::Format,
+        color::Format,
         shader::{ShaderData, SlotNumbers},
         state::State,
     },

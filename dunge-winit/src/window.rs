@@ -5,7 +5,7 @@ use {
     },
     dunge::{
         AsTarget, Context, Target,
-        buffer::Format,
+        color::Format,
         surface::{Action, Output, Surface, WindowOps},
     },
     futures_lite::Stream,

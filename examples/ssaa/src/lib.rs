@@ -6,7 +6,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             Options,
-            buffer::{Filter, Format, Sampler, Size},
+            buffer::{Filter, Sampler, Size},
+            color::Format,
             group::BoundTexture,
             sl::{Groups, Index, PassVertex, Render},
             storage::Uniform,

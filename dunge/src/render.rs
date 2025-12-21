@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        buffer::Format,
+        color::Format,
         instance::{self, Set},
         layer::Layer,
         mesh::Mesh,

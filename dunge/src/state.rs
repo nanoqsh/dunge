@@ -1,7 +1,7 @@
 use {
     crate::{
-        buffer::{self, Destination, Format, Size, Source, Texture2d},
-        color::{Color, Rgb, Rgba},
+        buffer::{self, Destination, Size, Source, Texture2d},
+        color::{Color, Format, Rgb, Rgba},
         compute::Compute,
         context::FailedMakeContext,
         render::{Render, TargetState},

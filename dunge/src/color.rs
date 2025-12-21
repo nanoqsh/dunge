@@ -57,7 +57,75 @@ fn to_f32_color(c: u8) -> f32 {
     f32::from(c) / f32::from(u8::MAX)
 }
 
+/// The texture format type.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Format {
+    #[default]
+    SrgbAlpha,
+    SbgrAlpha,
+    RgbAlpha,
+    BgrAlpha,
+    Depth,
+    Byte,
+}
+
+impl Format {
+    /// Returns the number of bytes per pixel for this format.
+    pub const fn bytes(self) -> u32 {
+        match self {
+            Self::SrgbAlpha | Self::SbgrAlpha | Self::RgbAlpha | Self::BgrAlpha | Self::Depth => 4,
+            Self::Byte => 1,
+        }
+    }
+
+    /// Returns `true` if the format is a standard sRGB variant.
+    pub const fn is_standard(self) -> bool {
+        matches!(self, Self::SrgbAlpha | Self::SbgrAlpha)
+    }
+
+    pub(crate) const fn wgpu(self) -> wgpu::TextureFormat {
+        match self {
+            Self::SrgbAlpha => wgpu::TextureFormat::Rgba8UnormSrgb,
+            Self::SbgrAlpha => wgpu::TextureFormat::Bgra8UnormSrgb,
+            Self::RgbAlpha => wgpu::TextureFormat::Rgba8Unorm,
+            Self::BgrAlpha => wgpu::TextureFormat::Bgra8Unorm,
+            Self::Depth => wgpu::TextureFormat::Depth32Float,
+            Self::Byte => wgpu::TextureFormat::R8Uint,
+        }
+    }
+
+    pub(crate) const fn from_wgpu(format: wgpu::TextureFormat) -> Self {
+        match format {
+            wgpu::TextureFormat::Rgba8UnormSrgb => Self::SrgbAlpha,
+            wgpu::TextureFormat::Bgra8UnormSrgb => Self::SbgrAlpha,
+            wgpu::TextureFormat::Rgba8Unorm => Self::RgbAlpha,
+            wgpu::TextureFormat::Bgra8Unorm => Self::BgrAlpha,
+            wgpu::TextureFormat::Depth32Float => Self::Depth,
+            wgpu::TextureFormat::R8Uint => Self::Byte,
+            _ => panic!("unsupported format"),
+        }
+    }
+}
+
 pub trait ColorExt {
     fn rgb_from_bytes(self, rgb: [u8; 3]) -> Rgb;
     fn rgba_from_bytes(self, rgba: [u8; 4]) -> Rgba;
+}
+
+impl ColorExt for Format {
+    fn rgb_from_bytes(self, rgb: [u8; 3]) -> Rgb {
+        if self.is_standard() {
+            Rgb::from_standard_bytes(rgb)
+        } else {
+            Rgb::from_bytes(rgb)
+        }
+    }
+
+    fn rgba_from_bytes(self, rgba: [u8; 4]) -> Rgba {
+        if self.is_standard() {
+            Rgba::from_standard_bytes(rgba)
+        } else {
+            Rgba::from_bytes(rgba)
+        }
+    }
 }
