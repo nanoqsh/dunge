@@ -637,18 +637,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dunge-wgsl"
-version = "0.3.10"
-dependencies = [
- "bytemuck",
- "dunge",
- "dunge-shade",
- "glam",
- "helpers",
- "naga",
-]
-
-[[package]]
 name = "dunge-winit"
 version = "0.3.10"
 dependencies = [

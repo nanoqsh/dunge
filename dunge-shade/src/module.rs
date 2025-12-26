@@ -2,7 +2,6 @@ use {
     crate::{
         context::{Context, FromContext, FromRender, Info, TakeSet},
         eval::{self, Cs, Eval, Fs, Vs},
-        sl::Stages,
         types,
     },
     std::marker::PhantomData,
@@ -207,88 +206,3 @@ impl Module {
         Self { info, nm, wgsl }
     }
 }
-
-pub struct Dynamic {
-    pub stages: Vec<Stages>,
-    pub nm: naga::Module,
-}
-
-impl IntoModule<(), RenderKind> for Dynamic {
-    type Input = RenderInput<(), ()>;
-    type Set = ();
-
-    #[inline]
-    fn into_module(self) -> Module {
-        let cx = Context::new();
-        let mut info = cx.into_info();
-        info.set_stages(&self.stages);
-        Module::new(info, self.nm)
-    }
-}
-
-macro_rules! impl_into_dynamic_render_module {
-    (A $($t:ident)*) => {
-        impl<A, $($t),*> IntoModule<(A, $($t),*), RenderKind> for Dynamic
-        where
-            A: FromRender<RenderKind>,
-            $(
-                $t: FromContext<RenderKind>,
-            )*
-            tuple!($($t::Set),*): TakeSet,
-        {
-            type Input = RenderInput<A::Vertex, A::Instance>;
-            type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
-
-            #[inline]
-            fn into_module(self) -> Module {
-                let mut cx = Context::new();
-                _ = A::from_render(&mut cx);
-                $(
-                    _ = $t::from_context(&mut cx);
-                )*
-
-                let mut info = cx.into_info();
-                info.set_stages(&self.stages);
-                Module::new(info, self.nm)
-            }
-        }
-    };
-}
-
-impl_into_dynamic_render_module!(A);
-impl_into_dynamic_render_module!(A X);
-impl_into_dynamic_render_module!(A X Y);
-impl_into_dynamic_render_module!(A X Y Z);
-
-macro_rules! impl_into_dynamic_compute_module {
-    ($($t:ident)*) => {
-        #[allow(unused_mut, unused_parens)]
-        impl<$($t),*> IntoModule<($($t),*), ComputeKind> for Dynamic
-        where
-            $(
-                $t: FromContext<ComputeKind>,
-            )*
-            tuple!($($t::Set),*): TakeSet,
-        {
-            type Input = ComputeInput;
-            type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
-
-            #[inline]
-            fn into_module(self) -> Module {
-                let mut cx = Context::new();
-                $(
-                    _ = $t::from_context(&mut cx);
-                )*
-
-                let mut info = cx.into_info();
-                info.set_stages(&self.stages);
-                Module::new(info, self.nm)
-            }
-        }
-    };
-}
-
-impl_into_dynamic_compute_module!();
-impl_into_dynamic_compute_module!(X);
-impl_into_dynamic_compute_module!(X Y);
-impl_into_dynamic_compute_module!(X Y Z);

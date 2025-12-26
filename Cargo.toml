@@ -4,7 +4,6 @@ members = [
     "dunge",
     "dunge-macro",
     "dunge-shade",
-    "dunge-wgsl",
     "dunge-winit",
     "examples/*",
     "helpers",
@@ -27,7 +26,6 @@ dunge = { version = "=0.3.10", path = "dunge" }
 dunge-macro = { version = "=0.3.10", path = "dunge-macro" }
 dunge-shade = { version = "=0.3.10", path = "dunge-shade" }
 dunge-winit = { version = "=0.3.10", path = "dunge-winit" }
-dunge-wgsl = { version = "=0.3.10", path = "dunge-wgsl" }
 helpers = { path = "helpers" }
 # third-party
 askama = { version = "0.14", default-features = false }
