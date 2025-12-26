@@ -11,7 +11,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.10"
+version = "0.3.11"
 edition = "2024"
 license = "MIT"
 authors = ["nanoqsh"]
@@ -22,10 +22,10 @@ rust-version = "1.88"
 
 [workspace.dependencies]
 # workspace
-dunge = { version = "=0.3.10", path = "dunge" }
-dunge-macro = { version = "=0.3.10", path = "dunge-macro" }
-dunge-shade = { version = "=0.3.10", path = "dunge-shade" }
-dunge-winit = { version = "=0.3.10", path = "dunge-winit" }
+dunge = { version = "=0.3.11", path = "dunge" }
+dunge-macro = { version = "=0.3.11", path = "dunge-macro" }
+dunge-shade = { version = "=0.3.11", path = "dunge-shade" }
+dunge-winit = { version = "=0.3.11", path = "dunge-winit" }
 helpers = { path = "helpers" }
 # third-party
 askama = { version = "0.14", default-features = false }
