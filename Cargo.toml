@@ -28,7 +28,7 @@ dunge-shade = { version = "=0.3.11", path = "dunge-shade" }
 dunge-winit = { version = "=0.3.11", path = "dunge-winit" }
 helpers = { path = "helpers" }
 # third-party
-askama = { version = "0.14", default-features = false }
+askama = { version = "0.15", default-features = false }
 async-channel = "2.1"
 async-executor = "1.8"
 async-net = "2.0"
