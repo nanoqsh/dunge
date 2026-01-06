@@ -1,7 +1,7 @@
 use {
     crate::{
         context::{Context, FromContext, FromRender, Info, TakeSet},
-        eval::{self, Cs, Eval, Fs, Vs},
+        eval::{self, Eval, Fs, Vs},
         types,
     },
     std::marker::PhantomData,
@@ -85,41 +85,6 @@ impl_into_render_module!(A X);
 impl_into_render_module!(A X Y);
 impl_into_render_module!(A X Y Z);
 
-pub enum ComputeKind {}
-pub struct ComputeInput(());
-
-macro_rules! impl_into_compute_module {
-    ($($t:ident)*) => {
-        #[allow(non_snake_case, unused_mut, unused_parens)]
-        impl<M, C, $($t),*> IntoModule<($($t),*), ComputeKind> for M
-        where
-            M: FnOnce($($t),*) -> Compute<C>,
-            C: CsOut,
-            $(
-                $t: FromContext<ComputeKind>,
-            )*
-            tuple!($($t::Set),*): TakeSet,
-        {
-            type Input = ComputeInput;
-            type Set = <tuple!($($t::Set),*) as TakeSet>::Set;
-
-            #[inline]
-            fn into_module(self) -> Module {
-                let mut cx = Context::new();
-                $(
-                    let $t = $t::from_context(&mut cx);
-                )*
-                eval::make_compute(cx, || self($($t),*))
-            }
-        }
-    };
-}
-
-impl_into_compute_module!();
-impl_into_compute_module!(X);
-impl_into_compute_module!(X Y);
-impl_into_compute_module!(X Y Z);
-
 pub trait VsOut: Eval<Vs, Out = types::Vec4<f32>> {}
 impl<E> VsOut for E where E: Eval<Vs, Out = types::Vec4<f32>> {}
 
@@ -133,17 +98,6 @@ where
 {
     pub place: P,
     pub color: C,
-}
-
-pub trait CsOut: Eval<Cs> {}
-impl<E> CsOut for E where E: Eval<Cs> {}
-
-pub struct Compute<C>
-where
-    C: CsOut,
-{
-    pub compute: C,
-    pub workgroup_size: [u32; 3],
 }
 
 pub struct Module {

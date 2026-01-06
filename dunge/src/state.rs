@@ -2,7 +2,6 @@ use {
     crate::{
         buffer::{self, Destination, Size, Source, Texture2d},
         color::{Color, Format, Rgb, Rgba},
-        compute::Compute,
         context::FailedMakeContext,
         render::{Render, TargetState},
         runtime::{self, Ticket, Worker},
@@ -160,18 +159,6 @@ impl State {
 pub struct Scheduler(wgpu::CommandEncoder);
 
 impl Scheduler {
-    #[inline]
-    #[must_use]
-    pub fn compute(&mut self) -> Compute<'_> {
-        let desc = wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        };
-
-        let pass = self.0.begin_compute_pass(&desc);
-        Compute { pass }
-    }
-
     #[inline]
     #[must_use]
     pub fn render<T, O>(&mut self, target: T, opts: O) -> Render<'_>

@@ -3,7 +3,7 @@ use {
         context::{Context, InputInfo, InstInfo, VertInfo},
         define::Define,
         math::Func,
-        module::{Compute, CsOut, FsOut, Module, Render, VsOut},
+        module::{FsOut, Module, Render, VsOut},
         op::{Bi, Ret, Un},
         stage::{Stage, Stages},
         texture::Sampled,
@@ -70,50 +70,6 @@ where
         types: vs.compl.types.0,
         global_variables: vs.compl.globs.vars,
         entry_points: vec![vs.point, fs.point],
-        ..Default::default()
-    };
-
-    _ = pop;
-    Module::new(cx.into_info(), nm)
-}
-
-pub(crate) fn make_compute<F, C>(cx: Context, f: F) -> Module
-where
-    F: FnOnce() -> Compute<C>,
-    C: CsOut,
-{
-    assert!(
-        top().is_none(),
-        "reentrant in a shader function isn't allowed",
-    );
-
-    let pop = push();
-    let Compute {
-        compute,
-        workgroup_size,
-    } = f();
-
-    for i in workgroup_size {
-        assert_ne!(i, 0, "workgroup size cannot be empty");
-    }
-
-    let mut compl = Compiler::default();
-    let inputs = make_input(&cx, &mut compl);
-    for (id, en) in iter::zip(0.., &cx.groups) {
-        compl.define_group(id, en.def());
-    }
-
-    let cs = {
-        let mut cs = Cs::new(compl);
-        _ = compute.eval(&mut cs);
-        let mut args = inputs.into_iter();
-        cs.0.build(Stage::Compute, &mut args, Return::Unit, workgroup_size)
-    };
-
-    let nm = naga::Module {
-        types: cs.compl.types.0,
-        global_variables: cs.compl.globs.vars,
-        entry_points: vec![cs.point],
         ..Default::default()
     };
 
@@ -301,26 +257,6 @@ where
             }
             ValueType::Array(_) => en.argument(id),
         }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct ReadInvocation {
-    id: u32,
-}
-
-impl ReadInvocation {
-    pub(crate) const fn new(id: u32) -> Ret<Self, types::Vec3<u32>> {
-        Ret::new(Self { id })
-    }
-}
-
-impl Eval<Cs> for Ret<ReadInvocation, types::Vec3<u32>> {
-    type Out = types::Vec3<u32>;
-
-    #[inline]
-    fn eval(self, en: &mut Cs) -> Expr {
-        en.get_entry().argument(self.inner().id)
     }
 }
 
@@ -680,22 +616,6 @@ impl GetEntry for Fs {
     }
 }
 
-pub struct Cs(Entry);
-
-impl Cs {
-    fn new(compl: Compiler) -> Self {
-        Self(Entry::new(compl))
-    }
-}
-
-impl GetEntry for Cs {
-    const STAGE: Stage = Stage::Compute;
-
-    fn get_entry(&mut self) -> &mut Entry {
-        &mut self.0
-    }
-}
-
 struct Built {
     compl: Compiler,
     point: naga::EntryPoint,
@@ -705,7 +625,6 @@ struct Built {
 enum Return {
     Ty(naga::Handle<naga::Type>),
     Color,
-    Unit,
 }
 
 struct Argument {
@@ -923,7 +842,6 @@ impl Entry {
                     binding: Some(binds.next(&color_type.naga())),
                 })
             }
-            Return::Unit => None,
         };
 
         let point = naga::EntryPoint {

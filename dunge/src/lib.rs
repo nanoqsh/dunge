@@ -2,7 +2,6 @@
 
 pub mod buffer;
 pub mod color;
-pub mod compute;
 mod context;
 pub mod group;
 pub mod instance;
@@ -18,7 +17,6 @@ pub mod storage;
 pub mod surface;
 pub mod usage;
 mod value;
-mod workload;
 
 /// The dunge prelude.
 pub mod prelude {
@@ -37,10 +35,9 @@ pub use {
     crate::{
         context::{Builder, Context, FailedMakeContext, context},
         layer::{Blend, Config, Layer, Polygon, Topology},
-        shader::{ComputeShader, RenderShader, Shader},
+        shader::{RenderShader, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
         value::{ColorValue, StorageValue, UniformValue, Value},
-        workload::Workload,
     },
     dunge_macro::{Group, Instance, Vertex},
     dunge_shade::{group::Group, instance::Instance, sl, types, vertex::Vertex},

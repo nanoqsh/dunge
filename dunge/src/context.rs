@@ -4,19 +4,17 @@ use {
         buffer::{
             self, Buffer, Filter, Read, ReadFailed, Sampler, Texture, Texture2d, Write, WriteFailed,
         },
-        compute,
         instance::{Row, RowValue},
         layer::{Config, Layer},
         mesh::{self, Mesh},
         render,
         set::{self, Data, GroupHandler, UniqueSet, Visit},
-        shader::{ComputeShader, RenderShader, Shader},
+        shader::{RenderShader, Shader},
         sl,
         state::{Scheduler, State},
         storage::{Storage, Uniform},
         usage::u,
         value::{StorageValue, UniformValue},
-        workload::Workload,
     },
     dunge_shade::group::Group,
     std::{error, fmt, pin::Pin, sync::Arc},
@@ -111,7 +109,7 @@ impl Context {
     /// Creates a [shader](Shader) program from a function.
     ///
     /// The provided function defines the GPU computation, which is then compiled into a shader
-    /// for the current backend. There are two types of shaders: render shaders and compute shaders.
+    /// for the current backend.
     ///
     /// No actual computation is performed inside the function itself (aside from compile-time
     /// from the shader's perspective). Instead, the computation is described declaratively
@@ -176,50 +174,6 @@ impl Context {
     ///
     ///     // Pass `col` from the vertex to fragment stage and return as a final pixel color
     ///     color: sl::fragment(v.col),
-    /// };
-    ///
-    /// let cx = dunge::context().await?;
-    /// let shader = cx.make_shader(program);
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Compute shader
-    ///
-    /// Compute shaders can accept the following input types:
-    ///
-    /// | Type                                      | Semantics in shader         |
-    /// | :---------------------------------------- | :-------------------------- |
-    /// | [`Invocation`](crate::sl::Invocation)     | Passes an invocation vector |
-    /// | [`Groups`](crate::sl::Groups)             | Passes group data           |
-    ///
-    /// The return type of a compute shader must be the [`Compute`](crate::sl::Compute) struct.
-    /// This struct requires two things: an expression in the `compute` field, which will be executed
-    /// on each shader invocation, and the workgroup size specified in the `workgroup_size` field.
-    /// The `compute` expression can have any type, but its value is not used in the final result.
-    /// Instead, the expression is expected to produce side effects - for example,
-    /// writing output data to a buffer that can be [read](Context::read) later.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use dunge::{
-    ///     prelude::*,
-    ///     sl::{Compute, Groups, Invocation},
-    ///     storage::RwStorage,
-    /// };
-    ///
-    /// // Describe an input/output storage array
-    /// type Array = RwStorage<[u32; 64]>;
-    ///
-    /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
-    /// // Pass an invocation vector and a bound storage in the shader
-    /// let program = |Invocation(v): Invocation, Groups(a): Groups<Array>| Compute {
-    ///     // Read values from the array and rewrite in back
-    ///     compute: a.set(v.x(), v.x()),
-    ///
-    ///     // Set the workgroup size
-    ///     workgroup_size: [16, 1, 1],
     /// };
     ///
     /// let cx = dunge::context().await?;
@@ -329,11 +283,6 @@ impl Context {
     {
         let conf = conf.into();
         Layer::new(&self.0, shader.data(), conf)
-    }
-
-    /// Creates a [workload](Workload) for the given [compute shader](ComputeShader).
-    pub fn make_workload<S>(&self, shader: &ComputeShader<S>) -> Workload<compute::Input<S>> {
-        Workload::new(&self.0, shader.data())
     }
 
     /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).

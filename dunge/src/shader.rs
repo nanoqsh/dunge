@@ -1,6 +1,6 @@
 use {
     crate::{
-        sl::{ComputeInput, InputInfo, IntoModule, Module, RenderInput, Stage, Stages},
+        sl::{InputInfo, IntoModule, Module, RenderInput, Stage, Stages},
         state::State,
         types::{MemberType, ScalarType, Space, ValueType, VectorType},
     },
@@ -9,9 +9,6 @@ use {
 
 /// Alias of render [shader](Shader).
 pub type RenderShader<S = (), V = (), I = ()> = Shader<RenderInput<V, I>, S>;
-
-/// Alias of compute [shader](Shader).
-pub type ComputeShader<S = ()> = Shader<ComputeInput, S>;
 
 /// The shader type.
 ///

@@ -1,13 +1,13 @@
 use {
     crate::{
         define::Define,
-        eval::{GlobalOut, ReadIndex, ReadInvocation},
+        eval::{GlobalOut, ReadIndex},
         group::{self, Group},
         instance::{self, Instance},
-        module::{ComputeKind, RenderKind},
+        module::RenderKind,
         op::Ret,
         stage::Stages,
-        types::{self, MemberData, ValueType, VectorType},
+        types::{MemberData, ValueType, VectorType},
         vertex::{self, Vertex},
     },
     std::iter,
@@ -90,17 +90,6 @@ impl Context {
         id
     }
 
-    fn add_global_invocation_id(&mut self) -> u32 {
-        countdown(
-            &mut self.limits.index,
-            "too many global invocation ids in the shader",
-        );
-
-        let id = self.inputs.len() as u32;
-        self.inputs.push(InputInfo::GlobalInvocationId);
-        id
-    }
-
     fn add_vertex(&mut self, def: Define<VectorType>, size: usize) -> u32 {
         countdown(&mut self.limits.verts, "too many vertices in the shader");
         let id = self.inputs.len() as u32;
@@ -154,7 +143,6 @@ pub struct Info {
 }
 
 impl Info {
-    #[doc(hidden)]
     pub fn count_input(&self) -> usize {
         self.inputs
             .iter()
@@ -162,17 +150,14 @@ impl Info {
             .count()
     }
 
-    #[doc(hidden)]
     pub fn input(&self) -> impl Iterator<Item = &InputInfo> {
         self.inputs.iter()
     }
 
-    #[doc(hidden)]
     pub fn groups(&self) -> impl Iterator<Item = &GroupInfo> {
         self.groups.iter()
     }
 
-    #[doc(hidden)]
     pub fn set_stages(&mut self, stages: &[Stages]) {
         let stages = stages
             .iter()
@@ -271,18 +256,6 @@ impl FromContext<RenderKind> for Index {
     fn from_context(cx: &mut Context) -> Self {
         let id = cx.add_index();
         Self(ReadIndex::new(id))
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Invocation(pub Ret<ReadInvocation, types::Vec3<u32>>);
-
-impl FromContext<ComputeKind> for Invocation {
-    type Set = ();
-
-    fn from_context(cx: &mut Context) -> Self {
-        let id = cx.add_global_invocation_id();
-        Self(ReadInvocation::new(id))
     }
 }
 
