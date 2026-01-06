@@ -155,7 +155,7 @@ impl<I> Layer<I> {
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 targets: &targets,
             }),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         };
 

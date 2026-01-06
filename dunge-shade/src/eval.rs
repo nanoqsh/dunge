@@ -940,6 +940,8 @@ impl Entry {
                 body: self.stack.pop().0.into(),
                 ..Default::default()
             },
+            mesh_info: None,
+            task_payload: None,
         };
 
         Built {
@@ -1220,6 +1222,7 @@ impl Bindings {
             interpolation: None,
             sampling: None,
             blend_src: None,
+            per_primitive: false,
         };
 
         self.0 += 1;

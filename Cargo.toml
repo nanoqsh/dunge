@@ -43,7 +43,7 @@ gloo-timers = { version = "0.3", default-features = false }
 http-body-util = "0.1"
 hyper = "1"
 log = "0.4"
-naga = "27.0"
+naga = "28.0"
 parking = "2.2"
 png = "0.18"
 proc-macro2 = "1.0"
@@ -52,7 +52,7 @@ smol-hyper = "0.1"
 syn = "2.0"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-wgpu = { version = "27.0", default-features = false }
+wgpu = { version = "28.0", default-features = false }
 web-sys = "0.3"
 web-time = "1.1"
 winit = { version = "0.30", default-features = false }
