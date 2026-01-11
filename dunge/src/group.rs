@@ -5,7 +5,7 @@ use {
         StorageValue,
         buffer::Sampler,
         sl::{Define, Global, GlobalOut, Ret},
-        storage::{Storage, Uniform},
+        store::{Storage, Uniform},
         types::{self, MemberData, MemberType, Space},
         value::UniformValue,
     },

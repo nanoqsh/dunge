@@ -87,7 +87,7 @@ where
         self.data.update(cx.state(), val.storage_value());
     }
 
-    pub fn size(&self) -> usize {
+    pub fn byte_size(&self) -> usize {
         self.data.size
     }
 
@@ -132,7 +132,7 @@ impl<V> Uniform<V> {
         self.data.update(cx.state(), val.uniform_value());
     }
 
-    pub fn size(&self) -> usize {
+    pub fn bytes_size(&self) -> usize {
         self.data.size
     }
 

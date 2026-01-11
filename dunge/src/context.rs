@@ -12,7 +12,7 @@ use {
         shader::{RenderShader, Shader},
         sl,
         state::{Scheduler, State},
-        storage::{Storage, Uniform},
+        store::{Storage, Uniform},
         usage::u,
         value::{StorageValue, UniformValue},
     },
@@ -154,7 +154,7 @@ impl Context {
     ///     dunge::{
     ///         prelude::*,
     ///         sl::{Groups, PassVertex, Render},
-    ///         storage::Uniform,
+    ///         store::Uniform,
     ///     },
     ///     glam::Mat4,
     /// };
@@ -204,7 +204,7 @@ impl Context {
     ///     prelude::*,
     ///     color::Rgba,
     ///     sl::{Groups, PassVertex, Render},
-    ///     storage::Uniform,
+    ///     store::Uniform,
     /// };
     ///
     /// type Vec4f = [f32; 4];

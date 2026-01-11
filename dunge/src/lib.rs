@@ -12,7 +12,7 @@ mod runtime;
 pub mod set;
 mod shader;
 mod state;
-pub mod storage;
+pub mod store;
 #[doc(hidden)]
 pub mod surface;
 pub mod usage;

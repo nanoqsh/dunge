@@ -6,7 +6,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             sl::{Groups, Index, Render},
-            storage::Uniform,
+            store::Uniform,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,

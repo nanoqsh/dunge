@@ -177,7 +177,7 @@ fn rs_storage() -> Result<(), Error> {
     use dunge::{
         Group,
         sl::{self, Groups, Index, Render},
-        storage::Storage,
+        store::Storage,
     };
 
     #[derive(Group)]

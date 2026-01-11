@@ -6,7 +6,7 @@ use {
         group::BoundTexture,
         runtime::Ticket,
         state::State,
-        storage::{Storage, Uniform},
+        store::{Storage, Uniform},
         usage::{
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
         },

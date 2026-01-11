@@ -10,7 +10,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             color::Format,
             group::BoundTexture,
             sl::{Groups, Index, PassVertex, Render},
-            storage::Uniform,
+            store::Uniform,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,

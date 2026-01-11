@@ -7,7 +7,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         dunge::{
             Config,
             sl::{Groups, PassVertex, Render},
-            storage::Uniform,
+            store::Uniform,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,

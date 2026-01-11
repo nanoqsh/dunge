@@ -13,7 +13,7 @@ async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             sl::{Groups, PassVertex, Render},
-            storage::Uniform,
+            store::Uniform,
         },
         futures_concurrency::prelude::*,
         futures_lite::prelude::*,

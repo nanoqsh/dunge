@@ -7,7 +7,7 @@ use {
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
-        storage::{Storage, Uniform},
+        store::{Storage, Uniform},
     },
     std::{cell, marker::PhantomData, sync::Arc},
 };
