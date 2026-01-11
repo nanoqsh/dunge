@@ -128,17 +128,17 @@ impl<V> Mesh<V> {
         }
     }
 
-    pub(crate) fn draw(&self, pass: &mut wgpu::RenderPass<'_>, slot: u32, count: u32) {
+    pub(crate) fn draw(&self, pass: &mut wgpu::RenderPass<'_>, slot: u32, instances: u32) {
         pass.set_vertex_buffer(slot, self.verts.slice(..));
         match &self.indxs {
             Some(indxs) => {
                 pass.set_index_buffer(indxs.slice(..), wgpu::IndexFormat::Uint32);
                 let len = indxs.size() as u32 / size_of::<u32>() as u32;
-                pass.draw_indexed(0..len, 0, 0..count);
+                pass.draw_indexed(0..len, 0, 0..instances);
             }
             None => {
                 let len = self.verts.size() as u32 / size_of::<V>() as u32;
-                pass.draw(0..len, 0..count);
+                pass.draw(0..len, 0..instances);
             }
         }
     }

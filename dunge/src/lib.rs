@@ -5,6 +5,7 @@ pub mod color;
 mod context;
 pub mod group;
 pub mod instance;
+pub mod instance2;
 mod layer;
 pub mod mesh;
 pub mod render;

@@ -4,6 +4,7 @@ use {
     crate::{
         color::Format,
         instance::{self, Set},
+        instance2::{self, Rows},
         layer::Layer,
         mesh::Mesh,
         set::{Bind, Bindings},
@@ -47,7 +48,7 @@ impl<'ren> Render<'ren> {
             pass: &mut self.pass,
             target: self.target,
             slots: layer.slots(),
-            count: 1,
+            instances: 1,
         });
 
         on.run.target.check_layer(layer);
@@ -110,7 +111,7 @@ struct Runner<'ren, 'layer> {
     pass: &'layer mut wgpu::RenderPass<'ren>,
     target: TargetState,
     slots: SlotNumbers,
-    count: u32,
+    instances: u32,
 }
 
 impl Runner<'_, '_> {
@@ -132,17 +133,25 @@ impl Runner<'_, '_> {
         S: Set,
     {
         let vs = VertexSetter(self.pass);
-        self.count = instance::set(vs, self.slots.instance, instance);
+        self.instances = instance::set(vs, self.slots.instance, instance);
+    }
+
+    #[inline]
+    fn instance2<R, const N: usize>(&mut self, rows: R)
+    where
+        R: Rows<N>,
+    {
+        self.instances = instance2::set(rows, self.slots.instance, self.pass);
     }
 
     #[inline]
     fn draw<V>(&mut self, mesh: &Mesh<V>) {
-        mesh.draw(self.pass, self.slots.vertex, self.count);
+        mesh.draw(self.pass, self.slots.vertex, self.instances);
     }
 
     #[inline]
     fn draw_points(&mut self, n: u32) {
-        self.pass.draw(0..n, 0..self.count);
+        self.pass.draw(0..n, 0..self.instances);
     }
 }
 
@@ -178,7 +187,7 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         J: To<A, state::Layer>,
     {
         self.run.slots = layer.slots();
-        self.run.count = 1;
+        self.run.instances = 1;
 
         self.run.target.check_layer(layer);
         self.run.layer(layer.render());
@@ -203,6 +212,17 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         I: To<A, state::Inst> + Types<Instance: Set>,
     {
         self.run.instance(instance);
+        self.to()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn instance2<R, const N: usize>(mut self, rows: R) -> On<'ren, 'layer, I, state::Inst>
+    where
+        R: Rows<N>,
+        I: To<A, state::Inst> + Types<Instance = R::Inner>,
+    {
+        self.run.instance2(rows);
         self.to()
     }
 
