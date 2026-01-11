@@ -24,7 +24,7 @@ pub trait Projection {
     fn projection(id: u32, out: GlobalOut) -> Self;
 }
 
-impl<M, O> Projection for Ret<Global<M>, O> {
+impl<O> Projection for Ret<Global, O> {
     fn projection(id: u32, out: GlobalOut) -> Self {
         Global::new(id, 0, out)
     }

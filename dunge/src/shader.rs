@@ -109,9 +109,7 @@ impl ShaderData {
                     _ => {
                         let ty = match member.space {
                             Space::Uniform => wgpu::BufferBindingType::Uniform,
-                            Space::Storage { mutable } => wgpu::BufferBindingType::Storage {
-                                read_only: !mutable,
-                            },
+                            Space::Storage => wgpu::BufferBindingType::Storage { read_only: true },
                             Space::Handle => unreachable!(),
                         };
 

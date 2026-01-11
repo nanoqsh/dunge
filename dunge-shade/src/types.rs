@@ -529,21 +529,6 @@ impl MemberType {
     }
 }
 
-pub enum Immutable {}
-pub enum Mutable {}
-
-pub trait Mutability {
-    const MUTABLE: bool;
-}
-
-impl Mutability for Immutable {
-    const MUTABLE: bool = false;
-}
-
-impl Mutability for Mutable {
-    const MUTABLE: bool = true;
-}
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct MemberData {
     pub ty: MemberType,
@@ -553,7 +538,7 @@ pub struct MemberData {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Space {
     Uniform,
-    Storage { mutable: bool },
+    Storage,
     Handle,
 }
 
@@ -561,9 +546,8 @@ impl Space {
     pub(crate) fn address_space(self) -> naga::AddressSpace {
         match self {
             Self::Uniform => naga::AddressSpace::Uniform,
-            Self::Storage { mutable } => {
-                let mut access = naga::StorageAccess::LOAD;
-                access.set(naga::StorageAccess::STORE, mutable);
+            Self::Storage => {
+                let access = naga::StorageAccess::LOAD;
                 naga::AddressSpace::Storage { access }
             }
             Self::Handle => naga::AddressSpace::Handle,

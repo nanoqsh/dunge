@@ -911,7 +911,7 @@ impl<U> i::AsInner for Buffer<U> {
     }
 }
 
-impl<V, M> i::AsInner for Storage<V, M>
+impl<V> i::AsInner for Storage<V>
 where
     V: ?Sized,
 {
@@ -954,7 +954,7 @@ where
     }
 }
 
-impl<V, M> Source for Storage<V, M> where V: ?Sized {}
+impl<V> Source for Storage<V> where V: ?Sized {}
 
 pub trait Destination: i::AsInner {
     #[doc(hidden)]
@@ -984,7 +984,7 @@ where
     }
 }
 
-impl<V, M> Destination for Storage<V, M> where V: ?Sized {}
+impl<V> Destination for Storage<V> where V: ?Sized {}
 impl<V> Destination for Uniform<V> {}
 
 pub(crate) fn try_copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder) -> Result<(), SizeError>

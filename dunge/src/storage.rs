@@ -3,7 +3,7 @@
 //! Must be used with data that can be directly casted to the GPU buffer.
 
 use {
-    crate::{UniformValue, context::Context, state::State, types, value::StorageValue},
+    crate::{UniformValue, context::Context, state::State, value::StorageValue},
     std::marker::PhantomData,
 };
 
@@ -43,21 +43,18 @@ impl Data {
     }
 }
 
-pub type RwStorage<V> = Storage<V, types::Mutable>;
-
 /// Storage buffer data.
 ///
 /// Can be created using the context's [`make_storage`](crate::Context::make_storage) function.
-pub struct Storage<V, M = types::Immutable>
+pub struct Storage<V>
 where
     V: ?Sized,
 {
     data: Data,
     ty: PhantomData<V>,
-    mu: PhantomData<M>,
 }
 
-impl<V, M> Storage<V, M>
+impl<V> Storage<V>
 where
     V: ?Sized,
 {
@@ -76,7 +73,6 @@ where
         Self {
             data,
             ty: PhantomData,
-            mu: PhantomData,
         }
     }
 
@@ -97,19 +93,6 @@ where
 
     pub(crate) fn buffer(&self) -> &wgpu::Buffer {
         &self.data.buf
-    }
-}
-
-impl<V> Storage<V>
-where
-    V: ?Sized,
-{
-    pub fn rw(self) -> RwStorage<V> {
-        RwStorage {
-            data: self.data,
-            ty: PhantomData,
-            mu: PhantomData,
-        }
     }
 }
 

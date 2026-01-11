@@ -14,7 +14,7 @@
 
 * Typesafe and flexible API
 * Customizable vertices, groups and instances
-* Render and compute shaders described as a single rust function
+* Render shaders described as a single rust function
 * High degree of typesafety with minimal runtime checks
 * Desktop and WASM support
 * Optional windowing extension

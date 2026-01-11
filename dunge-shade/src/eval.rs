@@ -13,7 +13,6 @@ use {
         cell::{Cell, RefCell},
         collections::HashMap,
         iter,
-        marker::PhantomData,
         rc::Rc,
     },
 };
@@ -275,37 +274,30 @@ impl GlobalOut {
     }
 }
 
-pub struct Global<M = types::Immutable> {
+pub struct Global {
     id: u32,
     binding: u32,
     out: GlobalOut,
-    mu: PhantomData<M>,
 }
 
-impl<M> Global<M> {
+impl Global {
     pub const fn new<O>(id: u32, binding: u32, out: GlobalOut) -> Ret<Self, O> {
-        Ret::new(Self {
-            id,
-            binding,
-            out,
-            mu: PhantomData,
-        })
+        Ret::new(Self { id, binding, out })
     }
 }
 
-impl<M> Clone for Global<M> {
+impl Clone for Global {
     #[inline]
     fn clone(&self) -> Self {
         Self {
             id: self.id,
             binding: self.binding,
             out: self.out.clone(),
-            mu: PhantomData,
         }
     }
 }
 
-impl<M, O, E> Eval<E> for Ret<Global<M>, O>
+impl<O, E> Eval<E> for Ret<Global, O>
 where
     E: GetEntry,
 {
@@ -724,15 +716,6 @@ impl Entry {
         let ex = naga::Expression::Load { pointer: ptr.0 };
         let handle = self.exprs.append(ex, naga::Span::UNDEFINED);
         self.emit(handle)
-    }
-
-    pub(crate) fn store(&mut self, ptr: Expr, val: Expr) {
-        let st = naga::Statement::Store {
-            pointer: ptr.0,
-            value: val.0,
-        };
-
-        self.stack.insert(st, &self.exprs);
     }
 
     pub(crate) fn access(&mut self, base: Expr, index: Expr) -> Expr {

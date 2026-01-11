@@ -47,7 +47,7 @@ impl<'visit> Visitor<'visit> {
     }
 }
 
-impl<V, M> Visit for Storage<V, M>
+impl<V> Visit for Storage<V>
 where
     V: ?Sized,
 {

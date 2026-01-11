@@ -63,33 +63,25 @@ where
     const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
 }
 
-impl<V, M> s::Sealed for Storage<V, M>
-where
-    V: StorageValue + ?Sized,
-    M: types::Mutability,
-{
-}
+impl<V> s::Sealed for Storage<V> where V: StorageValue + ?Sized {}
 
-impl<V, M> MemberProjection for Storage<V, M>
+impl<V> MemberProjection for Storage<V>
 where
     V: StorageValue<Type: types::Member> + ?Sized,
-    M: types::Mutability,
 {
     const MEMBER: MemberData = MemberData {
         ty: <V::Type as types::Member>::MEMBER_TYPE,
-        space: Space::Storage {
-            mutable: M::MUTABLE,
-        },
+        space: Space::Storage,
     };
 
-    type Field = Ret<Global<M>, V::GlobalType>;
+    type Field = Ret<Global, V::GlobalType>;
 
     fn member_projection(id: u32, binding: u32, out: GlobalOut) -> Self::Field {
         Global::new(id, binding, out)
     }
 }
 
-impl<V, M> Group for Storage<V, M>
+impl<V> Group for Storage<V>
 where
     V: ?Sized,
     Self: MemberProjection<Field: Projection>,
