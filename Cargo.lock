@@ -588,7 +588,10 @@ name = "dunge"
 version = "0.3.11"
 dependencies = [
  "bytemuck",
+ "dunge-irgen",
+ "dunge-macro",
  "dunge-macro-old",
+ "dunge-shade",
  "dunge-shade-old",
  "env_logger",
  "glam",
@@ -599,6 +602,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dunge-irgen"
+version = "0.3.11"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "dunge-macro"
+version = "0.3.11"
+dependencies = [
+ "dunge-irgen",
+]
+
+[[package]]
 name = "dunge-macro-old"
 version = "0.3.11"
 dependencies = [
@@ -606,6 +625,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "dunge-shade"
+version = "0.3.11"
+dependencies = [
+ "glam",
+ "naga",
 ]
 
 [[package]]
@@ -868,9 +895,9 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.30.9"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd47b05dddf0005d850e5644cae7f2b14ac3df487979dbfff3b56f20b1a6ae46"
+checksum = "74a4d85559e2637d3d839438b5b3d75c31e655276f9544d72475c36b92fabbed"
 dependencies = [
  "bytemuck",
 ]

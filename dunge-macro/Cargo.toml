@@ -1,0 +1,20 @@
+[package]
+name = "dunge-macro"
+description = "Procmacro for the dunge library"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+dunge-irgen.workspace = true
+
+[lints]
+workspace = true

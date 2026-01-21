@@ -1,0 +1,105 @@
+use {
+    crate::{
+        derive::{self, Reorder},
+        error, func, gener, render, translate,
+    },
+    proc_macro2::TokenStream,
+};
+
+pub fn make_render(item: TokenStream) -> TokenStream {
+    let rt = match render::parse(item) {
+        Ok(rt) => rt,
+        Err(e) => return e.into_compile_error(),
+    };
+
+    render::make(&rt, quote::quote! { dunge_shade })
+}
+
+pub fn derive_bytes(item: TokenStream) -> TokenStream {
+    let s = match derive::parse(item) {
+        Ok(s) => s,
+        Err(e) => return e.into_compile_error(),
+    };
+
+    match derive::derive_bytes(&s, quote::quote! { dunge_shade }) {
+        Ok(res) => res,
+        Err(e) => error::into_compile_error(e),
+    }
+}
+
+pub fn derive_value(item: TokenStream) -> TokenStream {
+    let s = match derive::parse(item) {
+        Ok(s) => s,
+        Err(e) => return e.into_compile_error(),
+    };
+
+    let value = match derive::derive_value(&s, quote::quote! { dunge_shade }) {
+        Ok(value) => value,
+        Err(e) => error::into_compile_error(e),
+    };
+
+    let fields = match derive::derive_fields(&s, Reorder::Yes, quote::quote! { dunge_shade }) {
+        Ok(fields) => fields,
+        Err(e) => error::into_compile_error(e),
+    };
+
+    quote::quote! {
+        #value
+        #fields
+    }
+}
+
+pub fn derive_input(item: TokenStream) -> TokenStream {
+    let s = match derive::parse(item) {
+        Ok(s) => s,
+        Err(e) => return e.into_compile_error(),
+    };
+
+    let input = match derive::derive_input(&s, quote::quote! { dunge_shade }) {
+        Ok(value) => value,
+        Err(e) => error::into_compile_error(e),
+    };
+
+    let fields = match derive::derive_fields(&s, Reorder::No, quote::quote! { dunge_shade }) {
+        Ok(fields) => fields,
+        Err(e) => error::into_compile_error(e),
+    };
+
+    quote::quote! {
+        #input
+        #fields
+    }
+}
+
+pub fn shader(attr: TokenStream, code: TokenStream) -> TokenStream {
+    let stage = match func::parse_attr(attr) {
+        Ok(stage) => stage,
+        Err(e) => return e.into_compile_error(),
+    };
+
+    let mut events = vec![];
+    if let Err(e) = func::parse(code.clone(), |event| events.push(event)) {
+        return e.into_compile_error();
+    }
+
+    let events = translate::translate(events);
+    match gener::produce(events, stage, quote::quote! { dunge_shade }) {
+        Ok(res) => quote::quote! {
+            #res
+
+            #[allow(unused)]
+            #code
+        },
+        Err(e) => error::into_compile_error(e),
+    }
+}
+
+#[cfg(debug_assertions)]
+pub fn debug(code: TokenStream) -> Result<impl Iterator<Item = String>, TokenStream> {
+    let mut events = vec![];
+    func::parse(code, |event| events.push(event)).map_err(|e| e.into_compile_error())?;
+
+    Ok(translate::translate(events)
+        .into_iter()
+        .map(|event| event.debug().to_string()))
+}
