@@ -1,5 +1,5 @@
 [package]
-name = "dunge-macro"
+name = "dunge-macro-old"
 description = "Procmacro for the dunge library"
 version.workspace = true
 edition.workspace = true

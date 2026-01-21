@@ -16,7 +16,7 @@ use {
         usage::u,
         value::{StorageValue, UniformValue},
     },
-    dunge_shade::group::Group,
+    dunge_shade_old::group::Group,
     std::{error, fmt, pin::Pin, sync::Arc},
 };
 
@@ -191,7 +191,7 @@ impl Context {
     /// Creates a [set](UniqueSet) of data for the shader.
     ///
     /// A set is a collection of associated data that you can [bind](crate::set::Bind::bind) during
-    /// [render](Scheduler::render) or [compute](Scheduler::compute) operations and access from within the shader.
+    /// [render](Scheduler::render) operations and access from within the shader.
     /// A set can be created from any value that implements the [`Group`] trait, or from a tuple of such types.
     /// You can also derive an implementation of [`Group`](derive@crate::Group) for your custom types.
     ///

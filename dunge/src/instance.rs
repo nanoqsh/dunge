@@ -13,7 +13,7 @@ use {
     std::{marker::PhantomData, ops::RangeBounds},
 };
 
-pub use dunge_shade::instance::Projection;
+pub use dunge_shade_old::instance::Projection;
 
 /// Describes an instance member type projection.
 ///

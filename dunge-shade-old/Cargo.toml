@@ -1,5 +1,5 @@
 [package]
-name = "dunge-shade"
+name = "dunge-shade-old"
 description = "Shader generator for the dunge library"
 version.workspace = true
 edition.workspace = true

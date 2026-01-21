@@ -588,8 +588,8 @@ name = "dunge"
 version = "0.3.11"
 dependencies = [
  "bytemuck",
- "dunge-macro",
- "dunge-shade",
+ "dunge-macro-old",
+ "dunge-shade-old",
  "env_logger",
  "glam",
  "helpers",
@@ -599,7 +599,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dunge-macro"
+name = "dunge-macro-old"
 version = "0.3.11"
 dependencies = [
  "helpers",
@@ -609,7 +609,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dunge-shade"
+name = "dunge-shade-old"
 version = "0.3.11"
 dependencies = [
  "glam",

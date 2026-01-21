@@ -29,7 +29,7 @@ pub mod prelude {
 
 /// The vertex module.
 pub mod vertex {
-    pub use dunge_shade::vertex::{InputProjection, Projection, verts_as_bytes};
+    pub use dunge_shade_old::vertex::{InputProjection, Projection, verts_as_bytes};
 }
 
 pub use {
@@ -40,8 +40,8 @@ pub use {
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
         value::{ColorValue, StorageValue, UniformValue, Value},
     },
-    dunge_macro::{Group, Instance, Vertex},
-    dunge_shade::{group::Group, instance::Instance, sl, types, vertex::Vertex},
+    dunge_macro_old::{Group, Instance, Vertex},
+    dunge_shade_old::{group::Group, instance::Instance, sl, types, vertex::Vertex},
 };
 
 #[cfg(not(target_family = "wasm"))]
