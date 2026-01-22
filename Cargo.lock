@@ -588,7 +588,6 @@ name = "dunge"
 version = "0.3.11"
 dependencies = [
  "bytemuck",
- "dunge-irgen",
  "dunge-macro",
  "dunge-macro-old",
  "dunge-shade",

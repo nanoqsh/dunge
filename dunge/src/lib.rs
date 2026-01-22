@@ -14,6 +14,7 @@ pub mod set;
 mod shader;
 mod state;
 pub mod store;
+pub mod store2;
 #[doc(hidden)]
 pub mod surface;
 pub mod usage;

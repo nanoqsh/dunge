@@ -7,18 +7,15 @@ use {
         },
         module::GroupFormat,
     },
-    std::{marker::PhantomData, ops, slice},
+    std::{marker::PhantomData, num::NonZeroU32, ops, slice},
 };
 
+#[allow(clippy::len_without_is_empty)]
 pub trait Data {
     type Context;
     fn update(&self, cx: &Self::Context, bytes: &[u8]);
-    fn byte_size(&self) -> usize;
-    fn len(&self) -> u32;
-
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
+    fn byte_size(&self) -> u64;
+    fn len(&self) -> NonZeroU32;
 }
 
 #[derive(Clone)]
@@ -49,7 +46,7 @@ where
         self.data.update(cx, bytes::as_bytes(slice::from_ref(new)));
     }
 
-    pub fn byte_size(&self) -> usize {
+    pub fn byte_size(&self) -> u64 {
         self.data.byte_size()
     }
 }
@@ -59,12 +56,8 @@ where
     D: Data,
     Self: Composite,
 {
-    pub fn len(&self) -> u32 {
+    pub fn len(&self) -> NonZeroU32 {
         self.data.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
     }
 }
 
@@ -179,7 +172,7 @@ where
         self.data.update(cx, new.storage_bytes());
     }
 
-    pub fn byte_size(&self) -> usize {
+    pub fn byte_size(&self) -> u64 {
         self.data.byte_size()
     }
 }
@@ -189,12 +182,8 @@ where
     D: Data,
     Self: Composite,
 {
-    pub fn len(&self) -> u32 {
+    pub fn len(&self) -> NonZeroU32 {
         self.data.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
     }
 }
 
@@ -298,16 +287,12 @@ where
         self.data.update(cx, bytes::as_bytes(new));
     }
 
-    pub fn byte_size(&self) -> usize {
+    pub fn byte_size(&self) -> u64 {
         self.data.byte_size()
     }
 
-    pub fn len(&self) -> u32 {
+    pub fn len(&self) -> NonZeroU32 {
         self.data.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
     }
 }
 

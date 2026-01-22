@@ -15,7 +15,6 @@ rust-version.workspace = true
 wgsl = ["dunge-shade/wgsl"]
 
 [dependencies]
-dunge-irgen.workspace = true
 dunge-macro.workspace = true
 dunge-shade.workspace = true
 dunge-macro-old.workspace = true

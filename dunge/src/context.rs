@@ -13,9 +13,11 @@ use {
         sl,
         state::{Scheduler, State},
         store::{Storage, Uniform},
+        store2,
         usage::u,
         value::{StorageValue, UniformValue},
     },
+    dunge_shade::{bytes::Bytes, irc::Value},
     dunge_shade_old::group::Group,
     std::{error, fmt, pin::Pin, sync::Arc},
 };
@@ -255,19 +257,27 @@ impl Context {
     }
 
     /// Creates a [uniform](Uniform) from the given value.
-    pub fn make_uniform<V>(&self, val: &V) -> Uniform<V>
+    pub fn make_uniform<V>(&self, value: &V) -> Uniform<V>
     where
         V: UniformValue,
     {
-        Uniform::new(self, val)
+        Uniform::new(self, value)
+    }
+
+    /// Creates a [uniform](store2::Uniform) from the given value.
+    pub fn make_uniform2<V>(&self, value: &V) -> store2::Uniform<V>
+    where
+        V: Value + Bytes,
+    {
+        store2::uniform(value, self)
     }
 
     /// Creates a [storage](Storage) from the given value.
-    pub fn make_storage<V>(&self, val: &V) -> Storage<V>
+    pub fn make_storage<V>(&self, value: &V) -> Storage<V>
     where
         V: StorageValue + ?Sized,
     {
-        Storage::new(self, val)
+        Storage::new(self, value)
     }
 
     /// Creates a [layer](Layer) for the given [render shader](RenderShader).
