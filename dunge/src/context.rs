@@ -199,7 +199,7 @@ impl Context {
     ///
     /// # Examples
     ///
-    /// For example, here is a shader that fills each fragment with a color passed to it
+    /// For example, here is a shader that fills each fragment with a color passed to it:
     ///
     /// ```
     /// use dunge::{
