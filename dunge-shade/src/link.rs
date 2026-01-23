@@ -31,42 +31,36 @@ impl<I, S> Render<I, S> {
     pub fn debug(&self) -> impl fmt::Display {
         #[cfg(feature = "wgsl")]
         {
-            struct Print<'module>(&'module Module);
-
-            impl fmt::Display for Print<'_> {
-                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    let info = &self.0.info;
-                    let mut count = 0;
-                    for vertex in info.vertex() {
-                        writeln!(f, "// vert  {count}: {vertex:?}")?;
-                        count += 1;
-                    }
-
-                    for instance in info.instance() {
-                        writeln!(f, "// inst  {count}: {instance:?}")?;
-                        count += 1;
-                    }
-
-                    count = 0;
-                    for group in info.groups() {
-                        write!(f, "// group {count}: ")?;
-                        count += 1;
-                        for stage in group.stages() {
-                            write!(f, "{stage:?} ")?;
-                        }
-
-                        writeln!(f)?;
-                        for (bind_count, bind) in group.bindings().enumerate() {
-                            writeln!(f, "// \tbind {bind_count}: {bind:?}")?;
-                        }
-                    }
-
-                    write!(f, "\n{}", self.0.wgsl)?;
-                    Ok(())
+            fmt::from_fn(|f| {
+                let info = &self.module.info;
+                let mut count = 0;
+                for vertex in info.vertex() {
+                    writeln!(f, "// vert  {count}: {vertex:?}")?;
+                    count += 1;
                 }
-            }
 
-            Print(&self.module)
+                for instance in info.instance() {
+                    writeln!(f, "// inst  {count}: {instance:?}")?;
+                    count += 1;
+                }
+
+                count = 0;
+                for group in info.groups() {
+                    write!(f, "// group {count}: ")?;
+                    count += 1;
+                    for stage in group.stages() {
+                        write!(f, "{stage:?} ")?;
+                    }
+
+                    writeln!(f)?;
+                    for (bind_count, bind) in group.bindings().enumerate() {
+                        writeln!(f, "// \tbind {bind_count}: {bind:?}")?;
+                    }
+                }
+
+                write!(f, "\n{}", self.module.wgsl)?;
+                Ok(())
+            })
         }
 
         #[cfg(not(feature = "wgsl"))]

@@ -1,6 +1,6 @@
 use crate::{event::Event, func, gener};
 
-pub(crate) fn translate<I>(events: I) -> Vec<Event<gener::Control>>
+pub(crate) fn translate<I>(events: I) -> Vec<Event>
 where
     I: IntoIterator<Item = Event<func::Control>>,
 {
@@ -56,7 +56,7 @@ where
     code
 }
 
-fn pop(code: &mut Vec<Event<gener::Control>>) -> Vec<Event<gener::Control>> {
+fn pop(code: &mut Vec<Event>) -> Vec<Event> {
     let mut block = 0;
     let mut take = 1;
 

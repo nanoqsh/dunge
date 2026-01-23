@@ -3,7 +3,7 @@ use {
     proc_macro2::{Ident, TokenStream},
 };
 
-pub(crate) enum Event<C> {
+pub(crate) enum Event<C = gener::Control> {
     Fn(Box<Fn>),
     BlockStart,
     BlockEnd,
@@ -25,7 +25,7 @@ pub(crate) enum Event<C> {
     Control(C),
 }
 
-impl Event<gener::Control> {
+impl Event {
     pub(crate) fn arity(&self) -> usize {
         match self {
             Self::Fn(_) => 0,
@@ -54,71 +54,61 @@ impl Event<gener::Control> {
 
     #[cfg(debug_assertions)]
     pub(crate) fn debug(&self) -> impl std::fmt::Display {
-        use std::fmt;
-
-        struct Print<'event>(&'event Event<gener::Control>);
-
-        impl fmt::Display for Print<'_> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                match self.0 {
-                    Event::Fn(func) => {
-                        write!(f, "FN\t\t{}", func.ident)?;
-                        if !func.vis.is_empty() {
-                            write!(f, " ({})", func.vis)?;
-                        }
-
-                        for Input { ident, ty } in &func.inputs {
-                            write!(f, " {ident}: {ty}")?;
-                        }
-
-                        if let Some(ty) = &func.output.ty {
-                            write!(f, " -> {ty}")?;
-                        }
-
-                        Ok(())
-                    }
-                    Event::BlockStart => write!(f, "BLOCKSTART\t\t"),
-                    Event::BlockEnd => write!(f, "BLOCKEND\t\t"),
-                    Event::Semi => write!(f, "SEMI\t\t"),
-                    Event::Local(local) => {
-                        write!(f, "LOCAL\t\t{}", local.ident)?;
-                        if let Some(ty) = &local.ty {
-                            write!(f, ": {ty}")?;
-                        }
-
-                        Ok(())
-                    }
-                    Event::Name(name) => write!(f, "NAME\t\t{name}"),
-                    Event::Lit(lit) => write!(f, "LIT\t\t{lit}"),
-                    Event::Array { len } => write!(f, "ARRAY\t\t{len}"),
-                    Event::Assign => write!(f, "ASSIGN\t\t"),
-                    Event::BinOp(binop) => {
-                        write!(f, "BINOP\t\t")?;
-                        binop.debug().fmt(f)
-                    }
-                    Event::Index => write!(f, "INDEX\t\t"),
-                    Event::Member(name) => write!(f, "MEMBER\t\t{name}"),
-                    Event::Method(name) => write!(f, "METHOD\t\t{name}"),
-                    Event::Call(arity) => write!(f, "CALL\t\t{}", arity.get()),
-                    Event::Cast(ty) => write!(f, "CAST\t\t{ty}"),
-                    Event::ConstExpr(_) => write!(f, "CONSTEXPR\t\t.."),
-                    Event::Return => write!(f, "RETURN\t\t"),
-                    Event::Struct(s) => {
-                        write!(f, "STRUCT\t\t{}", s.name)?;
-                        for member in &s.members {
-                            write!(f, "{member}, ")?;
-                        }
-
-                        Ok(())
-                    }
-                    Event::Control(gener::Control::BreakIf) => write!(f, "BREAKIF\t\t"),
-                    Event::Control(gener::Control::Loop) => write!(f, "LOOP\t\t"),
-                    Event::Control(gener::Control::IfElse) => write!(f, "IFELSE\t\t"),
+        std::fmt::from_fn(move |f| match self {
+            Self::Fn(func) => {
+                write!(f, "FN\t\t{}", func.ident)?;
+                if !func.vis.is_empty() {
+                    write!(f, " ({})", func.vis)?;
                 }
-            }
-        }
 
-        Print(self)
+                for Input { ident, ty } in &func.inputs {
+                    write!(f, " {ident}: {ty}")?;
+                }
+
+                if let Some(ty) = &func.output.ty {
+                    write!(f, " -> {ty}")?;
+                }
+
+                Ok(())
+            }
+            Self::BlockStart => write!(f, "BLOCKSTART\t\t"),
+            Self::BlockEnd => write!(f, "BLOCKEND\t\t"),
+            Self::Semi => write!(f, "SEMI\t\t"),
+            Self::Local(local) => {
+                write!(f, "LOCAL\t\t{}", local.ident)?;
+                if let Some(ty) = &local.ty {
+                    write!(f, ": {ty}")?;
+                }
+
+                Ok(())
+            }
+            Self::Name(name) => write!(f, "NAME\t\t{name}"),
+            Self::Lit(lit) => write!(f, "LIT\t\t{lit}"),
+            Self::Array { len } => write!(f, "ARRAY\t\t{len}"),
+            Self::Assign => write!(f, "ASSIGN\t\t"),
+            Self::BinOp(binop) => {
+                write!(f, "BINOP\t\t")?;
+                f.write_str(binop.debug())
+            }
+            Self::Index => write!(f, "INDEX\t\t"),
+            Self::Member(name) => write!(f, "MEMBER\t\t{name}"),
+            Self::Method(name) => write!(f, "METHOD\t\t{name}"),
+            Self::Call(arity) => write!(f, "CALL\t\t{}", arity.get()),
+            Self::Cast(ty) => write!(f, "CAST\t\t{ty}"),
+            Self::ConstExpr(_) => write!(f, "CONSTEXPR\t\t.."),
+            Self::Return => write!(f, "RETURN\t\t"),
+            Self::Struct(s) => {
+                write!(f, "STRUCT\t\t{}", s.name)?;
+                for member in &s.members {
+                    write!(f, "{member}, ")?;
+                }
+
+                Ok(())
+            }
+            Self::Control(gener::Control::BreakIf) => write!(f, "BREAKIF\t\t"),
+            Self::Control(gener::Control::Loop) => write!(f, "LOOP\t\t"),
+            Self::Control(gener::Control::IfElse) => write!(f, "IFELSE\t\t"),
+        })
     }
 }
 
@@ -222,7 +212,7 @@ impl BinOp {
     }
 
     #[cfg(debug_assertions)]
-    pub(crate) fn debug(&self) -> impl std::fmt::Display {
+    pub(crate) fn debug(self) -> &'static str {
         match self {
             Self::Add { assign: true } => "ADD (assign)",
             Self::Add { assign: false } => "ADD",
