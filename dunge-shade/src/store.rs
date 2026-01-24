@@ -14,10 +14,9 @@ pub trait Store {
     type Context;
     fn update(&self, cx: &Self::Context, bytes: &[u8]);
     fn byte_size(&self) -> u64;
-    fn len(&self) -> NonZeroU32;
+    fn len_non_zero(&self) -> NonZeroU32;
 }
 
-#[allow(clippy::len_without_is_empty)]
 pub trait Data: Store {
     type Slice<'slice>: Store<Context = Self::Context> + Copy
     where
@@ -289,7 +288,7 @@ where
     where
         S: ops::RangeBounds<u32>,
     {
-        let slice_bounds = non_zero_bounds(bounds, self.data.len().get())?;
+        let slice_bounds = non_zero_bounds(bounds, self.data.len_non_zero().get())?;
         let len = slice_bounds
             .len()
             .try_into()
@@ -313,7 +312,7 @@ where
     }
 
     pub fn len(&self) -> NonZeroU32 {
-        self.data.len()
+        self.data.len_non_zero()
     }
 }
 
@@ -373,7 +372,7 @@ where
     }
 
     pub fn len(&self) -> NonZeroU32 {
-        self.slice.len()
+        self.slice.len_non_zero()
     }
 }
 

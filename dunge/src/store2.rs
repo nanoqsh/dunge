@@ -56,7 +56,7 @@ impl Store for Dunge {
         self.buf.size()
     }
 
-    fn len(&self) -> NonZeroU32 {
+    fn len_non_zero(&self) -> NonZeroU32 {
         self.len
     }
 }
@@ -93,7 +93,7 @@ impl Store for DungeSlice<'_> {
         self.buf.size().get()
     }
 
-    fn len(&self) -> NonZeroU32 {
+    fn len_non_zero(&self) -> NonZeroU32 {
         self.len
     }
 }
