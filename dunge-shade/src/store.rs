@@ -10,12 +10,20 @@ use {
     std::{marker::PhantomData, num::NonZeroU32, ops, slice},
 };
 
-#[allow(clippy::len_without_is_empty)]
-pub trait Data {
+pub trait Store {
     type Context;
     fn update(&self, cx: &Self::Context, bytes: &[u8]);
     fn byte_size(&self) -> u64;
     fn len(&self) -> NonZeroU32;
+}
+
+#[allow(clippy::len_without_is_empty)]
+pub trait Data: Store {
+    type Slice<'slice>: Store<Context = Self::Context> + Copy
+    where
+        Self: 'slice;
+
+    fn slice(&self, bounds: ops::Range<u64>, len: NonZeroU32) -> Self::Slice<'_>;
 }
 
 #[derive(Clone)]
@@ -277,6 +285,29 @@ where
         self.data.update(cx, bytes::as_bytes(new));
     }
 
+    pub fn slice<S>(&self, bounds: S) -> Option<RowSlice<'_, V, D>>
+    where
+        S: ops::RangeBounds<u32>,
+    {
+        let slice_bounds = non_zero_bounds(bounds, self.data.len().get())?;
+        let len = slice_bounds
+            .len()
+            .try_into()
+            .ok()
+            .and_then(NonZeroU32::new)?;
+
+        let item_size = size_of::<V>() as u64;
+        let bytes_bounds =
+            u64::from(slice_bounds.start) * item_size..u64::from(slice_bounds.end) * item_size;
+
+        let slice = self.data.slice(bytes_bounds, len);
+
+        Some(RowSlice {
+            slice,
+            ty: PhantomData,
+        })
+    }
+
     pub fn byte_size(&self) -> u64 {
         self.data.byte_size()
     }
@@ -286,46 +317,126 @@ where
     }
 }
 
+fn non_zero_bounds<S>(bounds: S, upper: u32) -> Option<ops::Range<u32>>
+where
+    S: ops::RangeBounds<u32>,
+{
+    let (start, end) = match (bounds.start_bound(), bounds.end_bound()) {
+        (ops::Bound::Included(&start), ops::Bound::Included(&end)) => {
+            (start, u32::checked_sub(end, 1)?)
+        }
+        (ops::Bound::Included(&start), ops::Bound::Excluded(&end)) => (start, end),
+        (ops::Bound::Included(&start), ops::Bound::Unbounded) => (start, upper),
+        (ops::Bound::Excluded(&start), ops::Bound::Included(&end)) => {
+            (u32::checked_add(start, 1)?, u32::checked_sub(end, 1)?)
+        }
+        (ops::Bound::Excluded(&start), ops::Bound::Excluded(&end)) => {
+            (u32::checked_add(start, 1)?, end)
+        }
+        (ops::Bound::Excluded(&start), ops::Bound::Unbounded) => {
+            (u32::checked_add(start, 1)?, upper)
+        }
+        (ops::Bound::Unbounded, ops::Bound::Included(&end)) => (0, u32::checked_sub(end, 1)?),
+        (ops::Bound::Unbounded, ops::Bound::Excluded(&end)) => (0, end),
+        (ops::Bound::Unbounded, ops::Bound::Unbounded) => (0, upper),
+    };
+
+    if (start..end).is_empty() {
+        None
+    } else {
+        Some(start..end)
+    }
+}
+
+pub struct RowSlice<'slice, V, D>
+where
+    D: Data + 'slice,
+{
+    slice: D::Slice<'slice>,
+    ty: PhantomData<[V]>,
+}
+
+impl<V, D> RowSlice<'_, V, D>
+where
+    D: Data,
+{
+    /// Updates the row data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the buffer size is not equal to the size of the new value.
+    pub fn update(&self, cx: &D::Context, new: &[V])
+    where
+        V: Bytes,
+    {
+        self.slice.update(cx, bytes::as_bytes(new));
+    }
+
+    pub fn len(&self) -> NonZeroU32 {
+        self.slice.len()
+    }
+}
+
+impl<V, D> Clone for RowSlice<'_, V, D>
+where
+    D: Data,
+{
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<V, D> Copy for RowSlice<'_, V, D> where D: Data {}
+
 #[doc(hidden)]
 pub mod internal {
     use super::*;
 
-    pub fn uniform<V, F, D>(value: &V, f: F) -> Uniform<V, D>
+    pub fn uniform<V, F, D>(value: &V, f: F) -> Option<Uniform<V, D>>
     where
         V: Value + Bytes,
         F: FnOnce(&[u8]) -> D,
     {
         let bytes = bytes::as_bytes(slice::from_ref(value));
+        if bytes.is_empty() {
+            return None;
+        }
 
-        Uniform {
+        Some(Uniform {
             data: f(bytes),
             ty: PhantomData,
-        }
+        })
     }
 
-    pub fn storage<V, F, D>(value: &V, f: F) -> Storage<V, D>
+    pub fn storage<V, F, D>(value: &V, f: F) -> Option<Storage<V, D>>
     where
         V: StorageValue + ?Sized,
         F: FnOnce(&[u8]) -> D,
     {
         let bytes = value.storage_bytes();
+        if bytes.is_empty() {
+            return None;
+        }
 
-        Storage {
+        Some(Storage {
             data: f(bytes),
             ty: PhantomData,
-        }
+        })
     }
 
-    pub fn row<V, F, D>(values: &[V], f: F) -> Row<V, D>
+    pub fn row<V, F, D>(values: &[V], f: F) -> Option<Row<V, D>>
     where
         V: Value + Bytes,
         F: FnOnce(&[u8]) -> D,
     {
         let bytes = bytes::as_bytes(values);
+        if bytes.is_empty() {
+            return None;
+        }
 
-        Row {
+        Some(Row {
             data: f(bytes),
             ty: PhantomData,
-        }
+        })
     }
 }

@@ -3,9 +3,9 @@ use {
     dunge_shade::{
         bytes::Bytes,
         irc::Value,
-        store::{self, Data, StorageValue},
+        store::{self, Data, StorageValue, Store},
     },
-    std::num::NonZeroU32,
+    std::{num::NonZeroU32, ops},
 };
 
 pub struct Dunge {
@@ -14,7 +14,7 @@ pub struct Dunge {
 }
 
 impl Dunge {
-    fn new(cx: &Context, len: NonZeroU32, bytes: &[u8], usage: wgpu::BufferUsages) -> Self {
+    fn new(cx: &Context, bytes: &[u8], len: NonZeroU32, usage: wgpu::BufferUsages) -> Self {
         use wgpu::util::{self, DeviceExt};
 
         let buf = {
@@ -30,12 +30,16 @@ impl Dunge {
         Self { buf, len }
     }
 
+    fn store(cx: &Context, bytes: &[u8], usage: wgpu::BufferUsages) -> Self {
+        Self::new(cx, bytes, NonZeroU32::MIN, usage)
+    }
+
     pub(crate) fn buffer(&self) -> &wgpu::Buffer {
         &self.buf
     }
 }
 
-impl Data for Dunge {
+impl Store for Dunge {
     type Context = Context;
 
     fn update(&self, cx: &Self::Context, bytes: &[u8]) {
@@ -57,6 +61,43 @@ impl Data for Dunge {
     }
 }
 
+impl Data for Dunge {
+    type Slice<'slice> = DungeSlice<'slice>;
+
+    fn slice(&self, bounds: ops::Range<u64>, len: NonZeroU32) -> Self::Slice<'_> {
+        let buf = self.buf.slice(bounds);
+        DungeSlice { buf, len }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct DungeSlice<'slice> {
+    buf: wgpu::BufferSlice<'slice>,
+    len: NonZeroU32,
+}
+
+impl Store for DungeSlice<'_> {
+    type Context = Context;
+
+    fn update(&self, cx: &Self::Context, bytes: &[u8]) {
+        assert_eq!(
+            bytes.len() as u64,
+            self.buf.size().get(),
+            "bytes length must be the same as the buffer size",
+        );
+
+        cx.state().queue().write_buffer(self.buf.buffer(), 0, bytes);
+    }
+
+    fn byte_size(&self) -> u64 {
+        self.buf.size().get()
+    }
+
+    fn len(&self) -> NonZeroU32 {
+        self.len
+    }
+}
+
 pub type Uniform<V> = store::Uniform<V, Dunge>;
 
 pub(crate) fn uniform<V>(value: &V, cx: &Context) -> Uniform<V>
@@ -64,26 +105,45 @@ where
     V: Value + Bytes,
 {
     store::internal::uniform(value, |bytes| {
-        Dunge::new(
+        Dunge::store(
             cx,
-            NonZeroU32::MIN, // unused
             bytes,
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         )
     })
+    .expect("non zero sized value")
 }
 
 pub type Storage<V> = store::Storage<V, Dunge>;
 
-pub(crate) fn storage<V>(value: &V, cx: &Context) -> Storage<V>
+pub(crate) fn storage<V>(value: &V, cx: &Context) -> Option<Storage<V>>
 where
     V: StorageValue + ?Sized,
 {
     store::internal::storage(value, |bytes| {
+        Dunge::store(
+            cx,
+            bytes,
+            wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+        )
+    })
+}
+
+pub type Row<V> = store::Row<V, Dunge>;
+pub type RowSlice<'slice, V> = store::RowSlice<'slice, V, Dunge>;
+
+pub(crate) fn row<V>(value: &[V], cx: &Context) -> Option<Row<V>>
+where
+    V: Value + Bytes,
+{
+    let len = value.len().try_into().ok().and_then(NonZeroU32::new)?;
+    store::internal::row(value, |bytes| {
         Dunge::new(
             cx,
-            NonZeroU32::MIN, // unused
             bytes,
+            len,
             wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST,

@@ -269,6 +269,7 @@ impl Context {
     where
         V: Value + Bytes,
     {
+        const { assert!(size_of::<V>() > 0, "value cannot be zero sized") }
         store2::uniform(value, self)
     }
 
@@ -281,7 +282,7 @@ impl Context {
     }
 
     /// Creates a [storage](store2::Storage) from the given value.
-    pub fn make_storage2<V>(&self, value: &V) -> store2::Storage<V>
+    pub fn make_storage2<V>(&self, value: &V) -> Option<store2::Storage<V>>
     where
         V: dunge_shade::store::StorageValue + ?Sized,
     {
@@ -317,6 +318,14 @@ impl Context {
         V: RowValue,
     {
         Row::new(&self.0, data)
+    }
+
+    /// Creates a [row](store2::Row) with the given data.
+    pub fn make_row2<V>(&self, value: &[V]) -> Option<store2::Row<V>>
+    where
+        V: Value + Bytes,
+    {
+        store2::row(value, self)
     }
 
     /// Creates a [2D texture](Texture2d) with the given [data](buffer::TextureData).
