@@ -6,13 +6,17 @@ use {
     proc_macro2::TokenStream,
 };
 
+fn root() -> TokenStream {
+    quote::quote! { dunge::sh }
+}
+
 pub fn make_render(item: TokenStream) -> TokenStream {
     let rt = match render::parse(item) {
         Ok(rt) => rt,
         Err(e) => return e.into_compile_error(),
     };
 
-    render::make(&rt, quote::quote! { dunge_shade })
+    render::make(&rt, root())
 }
 
 pub fn derive_bytes(item: TokenStream) -> TokenStream {
@@ -21,7 +25,7 @@ pub fn derive_bytes(item: TokenStream) -> TokenStream {
         Err(e) => return e.into_compile_error(),
     };
 
-    match derive::derive_bytes(&s, quote::quote! { dunge_shade }) {
+    match derive::derive_bytes(&s, &root()) {
         Ok(res) => res,
         Err(e) => error::into_compile_error(e),
     }
@@ -33,12 +37,13 @@ pub fn derive_value(item: TokenStream) -> TokenStream {
         Err(e) => return e.into_compile_error(),
     };
 
-    let value = match derive::derive_value(&s, quote::quote! { dunge_shade }) {
+    let root = root();
+    let value = match derive::derive_value(&s, &root) {
         Ok(value) => value,
         Err(e) => error::into_compile_error(e),
     };
 
-    let fields = match derive::derive_fields(&s, Reorder::Yes, quote::quote! { dunge_shade }) {
+    let fields = match derive::derive_fields(&s, Reorder::Yes, &root) {
         Ok(fields) => fields,
         Err(e) => error::into_compile_error(e),
     };
@@ -55,12 +60,13 @@ pub fn derive_input(item: TokenStream) -> TokenStream {
         Err(e) => return e.into_compile_error(),
     };
 
-    let input = match derive::derive_input(&s, quote::quote! { dunge_shade }) {
+    let root = root();
+    let input = match derive::derive_input(&s, &root) {
         Ok(value) => value,
         Err(e) => error::into_compile_error(e),
     };
 
-    let fields = match derive::derive_fields(&s, Reorder::No, quote::quote! { dunge_shade }) {
+    let fields = match derive::derive_fields(&s, Reorder::No, &root) {
         Ok(fields) => fields,
         Err(e) => error::into_compile_error(e),
     };
@@ -83,7 +89,7 @@ pub fn shader(attr: TokenStream, code: TokenStream) -> TokenStream {
     }
 
     let events = translate::translate(events);
-    match gener::produce(events, stage, quote::quote! { dunge_shade }) {
+    match gener::produce(events, stage, &root()) {
         Ok(res) => quote::quote! {
             #res
 

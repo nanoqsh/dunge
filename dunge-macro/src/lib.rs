@@ -15,7 +15,7 @@ pub fn derive_bytes(item: TokenStream) -> TokenStream {
     dunge_irgen::derive_bytes(item.into()).into()
 }
 
-#[proc_macro_derive(Value)]
+#[proc_macro_derive(Value, attributes(position, index))]
 pub fn derive_value(item: TokenStream) -> TokenStream {
     dunge_irgen::derive_value(item.into()).into()
 }

@@ -33,6 +33,10 @@ pub mod vertex {
     pub use dunge_shade_old::vertex::{InputProjection, Projection, verts_as_bytes};
 }
 
+pub mod sh {
+    pub use dunge_shade::*;
+}
+
 pub use {
     crate::{
         context::{Builder, Context, FailedMakeContext, context},

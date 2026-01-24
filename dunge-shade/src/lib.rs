@@ -1,3 +1,4 @@
+pub mod attr;
 pub mod bytes;
 pub mod irc;
 pub mod link;

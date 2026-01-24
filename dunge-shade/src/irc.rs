@@ -1978,6 +1978,7 @@ pub enum Binding {
     None,
     Location(u32),
     Position,
+    Index,
 }
 
 impl Binding {
@@ -2005,6 +2006,7 @@ impl Binding {
             Self::Position => Some(naga::Binding::BuiltIn(naga::BuiltIn::Position {
                 invariant: false,
             })),
+            Self::Index => Some(naga::Binding::BuiltIn(naga::BuiltIn::VertexIndex)),
         }
     }
 }

@@ -19,7 +19,7 @@ pub(crate) enum Control {
 
 type Gener<T> = Result<T, Error>;
 
-pub(crate) fn produce<I>(events: I, stage: Stage, path: TokenStream) -> Gener<TokenStream>
+pub(crate) fn produce<I>(events: I, stage: Stage, path: &TokenStream) -> Gener<TokenStream>
 where
     I: IntoIterator<Item = Event<Control>>,
 {

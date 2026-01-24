@@ -26,8 +26,22 @@ pub(crate) fn parse(stream: TokenStream) -> Parse<Struct> {
                 match f.span().err()? {}
             };
 
+            let attr = match f.attrs.as_slice() {
+                [attr] => {
+                    let path = attr.path();
+                    if path.is_ident("position") {
+                        Attribute::Position
+                    } else if path.is_ident("index") {
+                        Attribute::Index
+                    } else {
+                        Attribute::None
+                    }
+                }
+                _ => Attribute::None,
+            };
+
             Ok(Field {
-                attrs: f.attrs,
+                attr,
                 vis: f.vis,
                 ident,
                 ty: f.ty,
@@ -56,15 +70,20 @@ pub(crate) struct Struct {
     fields: Vec<Field>,
 }
 
+enum Attribute {
+    None,
+    Position,
+    Index,
+}
+
 struct Field {
-    #[expect(dead_code)]
-    attrs: Vec<syn::Attribute>,
+    attr: Attribute,
     vis: syn::Visibility,
     ident: Ident,
     ty: syn::Type,
 }
 
-pub(crate) fn derive_bytes(input: &Struct, path: TokenStream) -> Derive<TokenStream> {
+pub(crate) fn derive_bytes(input: &Struct, path: &TokenStream) -> Derive<TokenStream> {
     let bytes = quote::quote! { #path::bytes };
 
     let ident = &input.ident;
@@ -88,7 +107,8 @@ pub(crate) fn derive_bytes(input: &Struct, path: TokenStream) -> Derive<TokenStr
     })
 }
 
-pub(crate) fn derive_value(input: &Struct, path: TokenStream) -> Derive<TokenStream> {
+pub(crate) fn derive_value(input: &Struct, path: &TokenStream) -> Derive<TokenStream> {
+    let attr = quote::quote! { #path::attr };
     let irc = quote::quote! { #path::irc };
 
     let ident = &input.ident;
@@ -97,10 +117,22 @@ pub(crate) fn derive_value(input: &Struct, path: TokenStream) -> Derive<TokenStr
         let ident = &f.ident;
         let ident_string = ident.to_string();
 
+        let binding = match f.attr {
+            Attribute::None => quote::quote! { #irc::Binding::None },
+            Attribute::Position => quote::quote! {{
+                #attr::is_position::<#ty>();
+                #irc::Binding::Position
+            }},
+            Attribute::Index => quote::quote! {{
+                #attr::is_index::<#ty>();
+                #irc::Binding::Index
+            }},
+        };
+
         quote::quote! {
             .add_member::<#ty>(
                 #ident_string,
-                #irc::Binding::None,
+                #binding,
                 ::std::mem::offset_of!(Self, #ident) as ::std::primitive::u32,
             )
         }
@@ -145,7 +177,7 @@ pub(crate) fn derive_value(input: &Struct, path: TokenStream) -> Derive<TokenStr
     })
 }
 
-pub(crate) fn derive_input(input: &Struct, path: TokenStream) -> Derive<TokenStream> {
+pub(crate) fn derive_input(input: &Struct, path: &TokenStream) -> Derive<TokenStream> {
     let irc = quote::quote! { #path::irc };
 
     let ident = &input.ident;
@@ -173,7 +205,11 @@ pub(crate) enum Reorder {
     Yes,
 }
 
-pub(crate) fn derive_fields(input: &Struct, re: Reorder, path: TokenStream) -> Derive<TokenStream> {
+pub(crate) fn derive_fields(
+    input: &Struct,
+    re: Reorder,
+    path: &TokenStream,
+) -> Derive<TokenStream> {
     let irc = quote::quote! { #path::irc };
 
     let vis = &input.vis;

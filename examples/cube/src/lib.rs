@@ -1,29 +1,56 @@
-use dunge_winit::prelude::*;
+use {
+    dunge::{sh, store2::Uniform},
+    dunge_winit::prelude::*,
+    glam::{Mat4, Quat, UVec2, Vec3, Vec4},
+};
 
 type Error = Box<dyn std::error::Error>;
+
+#[derive(Clone, Copy, Value, Bytes)]
+struct Vert {
+    pos: Vec3,
+    col: Vec3,
+}
+
+#[derive(Clone, Copy, Value)]
+struct Io {
+    #[position]
+    pos: Vec4,
+    col: Vec3,
+}
+
+#[derive(Input)]
+struct Group {
+    m: Uniform<Mat4>,
+}
+
+#[dunge(vertex)]
+fn vs(v: Vert, group: Group) -> Io {
+    let pos = group.m.read() * sh::sl::append(v.pos, 1.);
+    Io { pos, col: v.col }
+}
 
 pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             Config,
             sl::{Groups, PassVertex, Render},
-            store::Uniform,
+            store::Uniform as UniformOld,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
-        glam::{Mat4, Quat, UVec2, Vec3},
         std::time::Duration,
         winit::{event::MouseButton, keyboard::KeyCode},
     };
 
     #[repr(C)]
     #[derive(Vertex)]
-    struct Vert {
+    struct VertOld {
         pos: Vec3,
         col: Vec3,
     }
 
-    let cube = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
+    let cube = |PassVertex(v): PassVertex<VertOld>, Groups(m): Groups<UniformOld<Mat4>>| Render {
         place: m.load() * sl::vec4_append(v.pos, 1.),
         color: sl::vec4_append(sl::fragment(v.col), 1.),
     };
@@ -55,39 +82,39 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let mesh = {
-        const VERTS: [Vert; 8] = {
+        const VERTS: [VertOld; 8] = {
             let p = 0.5;
 
             [
-                Vert {
+                VertOld {
                     pos: Vec3::new(-p, -p, -p),
                     col: Vec3::new(0., 0., 0.),
                 },
-                Vert {
+                VertOld {
                     pos: Vec3::new(-p, -p, p),
                     col: Vec3::new(0., 0., 1.),
                 },
-                Vert {
+                VertOld {
                     pos: Vec3::new(-p, p, p),
                     col: Vec3::new(0., 1., 1.),
                 },
-                Vert {
+                VertOld {
                     pos: Vec3::new(-p, p, -p),
                     col: Vec3::new(0., 1., 0.),
                 },
-                Vert {
+                VertOld {
                     pos: Vec3::new(p, -p, -p),
                     col: Vec3::new(1., 0., 0.),
                 },
-                Vert {
+                VertOld {
                     pos: Vec3::new(p, p, -p),
                     col: Vec3::new(1., 1., 0.),
                 },
-                Vert {
+                VertOld {
                     pos: Vec3::new(p, p, p),
                     col: Vec3::new(1., 1., 1.),
                 },
-                Vert {
+                VertOld {
                     pos: Vec3::new(p, -p, p),
                     col: Vec3::new(1., 0., 1.),
                 },
