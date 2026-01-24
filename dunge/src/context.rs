@@ -280,6 +280,14 @@ impl Context {
         Storage::new(self, value)
     }
 
+    /// Creates a [storage](store2::Storage) from the given value.
+    pub fn make_storage2<V>(&self, value: &V) -> store2::Storage<V>
+    where
+        V: dunge_shade::store::StorageValue + ?Sized,
+    {
+        store2::storage(value, self)
+    }
+
     /// Creates a [layer](Layer) for the given [render shader](RenderShader).
     ///
     /// This method also accepts a [config](Config) which defines the layer's properties.

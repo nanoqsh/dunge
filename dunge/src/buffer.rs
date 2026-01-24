@@ -7,6 +7,7 @@ use {
         runtime::Ticket,
         state::State,
         store::{Storage, Uniform},
+        store2,
         usage::{
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
         },
@@ -920,9 +921,24 @@ where
     }
 }
 
+impl<V> i::AsInner for store2::Storage<V>
+where
+    V: ?Sized,
+{
+    fn as_inner(&self) -> i::Wrap<'_> {
+        i::Wrap(Inner::Buffer(self.data().buffer()))
+    }
+}
+
 impl<V> i::AsInner for Uniform<V> {
     fn as_inner(&self) -> i::Wrap<'_> {
         i::Wrap(Inner::Buffer(self.buffer()))
+    }
+}
+
+impl<V> i::AsInner for store2::Uniform<V> {
+    fn as_inner(&self) -> i::Wrap<'_> {
+        i::Wrap(Inner::Buffer(self.data().buffer()))
     }
 }
 
@@ -955,6 +971,7 @@ where
 }
 
 impl<V> Source for Storage<V> where V: ?Sized {}
+impl<V> Source for store2::Storage<V> where V: ?Sized {}
 
 pub trait Destination: i::AsInner {
     #[doc(hidden)]
@@ -986,6 +1003,8 @@ where
 
 impl<V> Destination for Storage<V> where V: ?Sized {}
 impl<V> Destination for Uniform<V> {}
+impl<V> Destination for store2::Storage<V> where V: ?Sized {}
+impl<V> Destination for store2::Uniform<V> {}
 
 pub(crate) fn try_copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder) -> Result<(), SizeError>
 where

@@ -49,15 +49,10 @@ where
     pub fn byte_size(&self) -> u64 {
         self.data.byte_size()
     }
-}
 
-impl<V, D> Uniform<V, D>
-where
-    D: Data,
-    Self: Composite,
-{
-    pub fn len(&self) -> NonZeroU32 {
-        self.data.len()
+    #[doc(hidden)]
+    pub fn data(&self) -> &D {
+        &self.data
     }
 }
 
@@ -175,15 +170,10 @@ where
     pub fn byte_size(&self) -> u64 {
         self.data.byte_size()
     }
-}
 
-impl<V, D> Storage<V, D>
-where
-    D: Data,
-    Self: Composite,
-{
-    pub fn len(&self) -> NonZeroU32 {
-        self.data.len()
+    #[doc(hidden)]
+    pub fn data(&self) -> &D {
+        &self.data
     }
 }
 

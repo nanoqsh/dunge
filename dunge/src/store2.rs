@@ -3,7 +3,7 @@ use {
     dunge_shade::{
         bytes::Bytes,
         irc::Value,
-        store::{self, Data},
+        store::{self, Data, StorageValue},
     },
     std::num::NonZeroU32,
 };
@@ -29,6 +29,10 @@ impl Dunge {
 
         Self { buf, len }
     }
+
+    pub(crate) fn buffer(&self) -> &wgpu::Buffer {
+        &self.buf
+    }
 }
 
 impl Data for Dunge {
@@ -53,6 +57,8 @@ impl Data for Dunge {
     }
 }
 
+pub type Uniform<V> = store::Uniform<V, Dunge>;
+
 pub(crate) fn uniform<V>(value: &V, cx: &Context) -> Uniform<V>
 where
     V: Value + Bytes,
@@ -60,11 +66,27 @@ where
     store::internal::uniform(value, |bytes| {
         Dunge::new(
             cx,
-            NonZeroU32::MIN,
+            NonZeroU32::MIN, // unused
             bytes,
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         )
     })
 }
 
-pub type Uniform<V> = store::Uniform<V, Dunge>;
+pub type Storage<V> = store::Storage<V, Dunge>;
+
+pub(crate) fn storage<V>(value: &V, cx: &Context) -> Storage<V>
+where
+    V: StorageValue + ?Sized,
+{
+    store::internal::storage(value, |bytes| {
+        Dunge::new(
+            cx,
+            NonZeroU32::MIN, // unused
+            bytes,
+            wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+        )
+    })
+}
