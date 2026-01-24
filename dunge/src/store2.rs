@@ -76,6 +76,12 @@ pub struct DungeSlice<'slice> {
     len: NonZeroU32,
 }
 
+impl<'slice> DungeSlice<'slice> {
+    pub(crate) fn slice(self) -> wgpu::BufferSlice<'slice> {
+        self.buf
+    }
+}
+
 impl Store for DungeSlice<'_> {
     type Context = Context;
 

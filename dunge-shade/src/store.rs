@@ -314,6 +314,11 @@ where
     pub fn len(&self) -> NonZeroU32 {
         self.data.len_non_zero()
     }
+
+    #[doc(hidden)]
+    pub fn data(&self) -> &D {
+        &self.data
+    }
 }
 
 fn non_zero_bounds<S>(bounds: S, upper: u32) -> Option<ops::Range<u32>>
@@ -355,7 +360,7 @@ where
     ty: PhantomData<[V]>,
 }
 
-impl<V, D> RowSlice<'_, V, D>
+impl<'slice, V, D> RowSlice<'slice, V, D>
 where
     D: Data,
 {
@@ -373,6 +378,11 @@ where
 
     pub fn len(&self) -> NonZeroU32 {
         self.slice.len_non_zero()
+    }
+
+    #[doc(hidden)]
+    pub fn slice(&self) -> D::Slice<'slice> {
+        self.slice
     }
 }
 

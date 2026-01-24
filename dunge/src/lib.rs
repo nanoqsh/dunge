@@ -23,8 +23,8 @@ mod value;
 /// The dunge prelude.
 pub mod prelude {
     pub use crate::{
-        Group, Instance, Vertex, buffer::TextureData, color::ColorExt as _, context::Context,
-        mesh::MeshData, sl, types,
+        Bytes, Group, Input, Instance, Value, Vertex, buffer::TextureData, color::ColorExt as _,
+        context::Context, dunge, mesh::MeshData, render, sl, types,
     };
 }
 
@@ -39,9 +39,14 @@ pub use {
         layer::{Blend, Config, Layer, Polygon, Topology},
         shader::{RenderShader, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
-        value::{ColorValue, StorageValue, UniformValue, Value},
+        value::{ColorValue, StorageValue, UniformValue},
     },
+    dunge_macro::{Bytes, Input, Value, dunge, render},
     dunge_macro_old::{Group, Instance, Vertex},
+    dunge_shade::{
+        bytes::Bytes,
+        irc::{Input, Value},
+    },
     dunge_shade_old::{group::Group, instance::Instance, sl, types, vertex::Vertex},
 };
 

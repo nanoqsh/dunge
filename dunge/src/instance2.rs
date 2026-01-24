@@ -1,6 +1,7 @@
 //! Shader instance types and traits.
 
-#[inline]
+use crate::store2::{Row, RowSlice};
+
 pub(crate) fn set<R, const N: usize>(rows: R, mut slot: u32, pass: &mut wgpu::RenderPass<'_>) -> u32
 where
     R: Rows<N>,
@@ -34,6 +35,26 @@ where
 
     fn buffer(&self) -> Slice<'_> {
         (**self).buffer()
+    }
+}
+
+impl<V> Buffer for Row<V> {
+    type Inner = V;
+
+    fn buffer(&self) -> Slice<'_> {
+        let buffer = self.data().buffer().slice(..);
+        let len = self.len().get();
+        Slice { buffer, len }
+    }
+}
+
+impl<V> Buffer for RowSlice<'_, V> {
+    type Inner = V;
+
+    fn buffer(&self) -> Slice<'_> {
+        let buffer = self.slice().slice();
+        let len = self.len().get();
+        Slice { buffer, len }
     }
 }
 
@@ -94,5 +115,24 @@ where
 
     fn rows(&self) -> [Slice<'_>; 3] {
         [self.0.buffer(), self.1.buffer(), self.2.buffer()]
+    }
+}
+
+impl<A, B, C, D> Rows<4> for (A, B, C, D)
+where
+    A: Buffer,
+    B: Buffer,
+    C: Buffer,
+    D: Buffer,
+{
+    type Inner = (A::Inner, B::Inner, C::Inner, D::Inner);
+
+    fn rows(&self) -> [Slice<'_>; 4] {
+        [
+            self.0.buffer(),
+            self.1.buffer(),
+            self.2.buffer(),
+            self.3.buffer(),
+        ]
     }
 }

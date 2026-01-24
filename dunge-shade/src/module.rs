@@ -13,11 +13,11 @@ pub struct Info {
 impl Info {
     pub(crate) const MAX_GROUPS: usize = 6;
 
-    pub fn vertex(&self) -> impl Iterator<Item = VertexFormat> {
+    pub fn vertex(&self) -> impl ExactSizeIterator<Item = VertexFormat> {
         self.vertex.iter().copied()
     }
 
-    pub fn instance(&self) -> impl Iterator<Item = VertexFormat> {
+    pub fn instance(&self) -> impl ExactSizeIterator<Item = VertexFormat> {
         self.instance.iter().copied()
     }
 

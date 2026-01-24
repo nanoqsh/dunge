@@ -17,7 +17,7 @@ use {
         usage::u,
         value::{StorageValue, UniformValue},
     },
-    dunge_shade::{bytes::Bytes, irc::Value},
+    dunge_shade::{bytes::Bytes, irc::Value, link::Render},
     dunge_shade_old::group::Group,
     std::{error, fmt, pin::Pin, sync::Arc},
 };
@@ -187,7 +187,11 @@ impl Context {
     where
         M: sl::IntoModule<A, K>,
     {
-        Shader::new(&self.0, module)
+        Shader::from_module(&self.0, module)
+    }
+
+    pub fn make_shader2<I, S>(&self, render: Render<I, S>) -> Shader<I, S> {
+        Shader::new(&self.0, render)
     }
 
     /// Creates a [set](UniqueSet) of data for the shader.
@@ -249,7 +253,7 @@ impl Context {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn make_set<K, S, D>(&self, shader: &Shader<K, S>, set: D) -> UniqueSet<S>
+    pub fn make_set<I, S, D>(&self, shader: &Shader<I, S>, set: D) -> UniqueSet<S>
     where
         D: Data<Set = S>,
     {
