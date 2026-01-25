@@ -6,14 +6,14 @@ use crate::{
 };
 
 /// The group type description.
-pub trait Group {
+pub trait GroupLegacy {
     type Projection: Projection;
     const DEF: Define<types::MemberData>;
 }
 
-impl<G> Group for &G
+impl<G> GroupLegacy for &G
 where
-    G: Group,
+    G: GroupLegacy,
 {
     type Projection = G::Projection;
     const DEF: Define<types::MemberData> = G::DEF;

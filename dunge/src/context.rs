@@ -18,7 +18,7 @@ use {
         value::{StorageValue, UniformValue},
     },
     dunge_shade::{bytes::Bytes, irc::Value, link::Render},
-    dunge_shade_old::group::Group,
+    dunge_shade_old::group::GroupLegacy,
     std::{error, fmt, pin::Pin, sync::Arc},
 };
 
@@ -457,7 +457,7 @@ impl Context {
         handler: &GroupHandler<S, G::Projection>,
         group: G,
     ) where
-        G: Visit + Group,
+        G: Visit + GroupLegacy,
     {
         set::update(&self.0, set, handler, group);
     }

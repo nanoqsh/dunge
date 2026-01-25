@@ -9,7 +9,7 @@ use {
         types::{self, MemberData, MemberType, Space},
         value::UniformValue,
     },
-    dunge_shade_old::group::Group,
+    dunge_shade_old::group::GroupLegacy,
 };
 
 pub use dunge_shade_old::group::{Projection, Take};
@@ -55,7 +55,7 @@ where
     }
 }
 
-impl<V> Group for Uniform<V>
+impl<V> GroupLegacy for Uniform<V>
 where
     Self: MemberProjection<Field: Projection>,
 {
@@ -81,7 +81,7 @@ where
     }
 }
 
-impl<V> Group for Storage<V>
+impl<V> GroupLegacy for Storage<V>
 where
     V: ?Sized,
     Self: MemberProjection<Field: Projection>,
@@ -108,7 +108,7 @@ impl MemberProjection for BoundTexture {
     }
 }
 
-impl Group for BoundTexture {
+impl GroupLegacy for BoundTexture {
     type Projection = <Self as MemberProjection>::Field;
     const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
 }
@@ -128,7 +128,7 @@ impl MemberProjection for Sampler {
     }
 }
 
-impl Group for Sampler {
+impl GroupLegacy for Sampler {
     type Projection = <Self as MemberProjection>::Field;
     const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
 }

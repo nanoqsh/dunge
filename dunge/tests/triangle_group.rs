@@ -24,7 +24,7 @@ fn render() -> Result<(), Error> {
         tex: Vec2,
     }
 
-    #[derive(Group)]
+    #[derive(GroupLegacy)]
     struct Map {
         tex: BoundTexture,
         sam: Sampler,

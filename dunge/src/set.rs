@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        Group,
+        GroupLegacy,
         buffer::Sampler,
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
@@ -114,7 +114,7 @@ pub(crate) fn update<S, G>(
     handler: &GroupHandler<S, G::Projection>,
     group: G,
 ) where
-    G: Visit + Group,
+    G: Visit + GroupLegacy,
 {
     let device = state.device();
     group.set(|_, visitor| {
@@ -196,6 +196,48 @@ impl<S> Bind<S> for UniqueSet<S> {
     }
 }
 
+pub trait Group {
+    //
+}
+
+struct EntriesBuilder<'entry> {
+    binding: u32,
+    entries: Vec<wgpu::BindGroupEntry<'entry>>,
+}
+
+impl<'entry> EntriesBuilder<'entry> {
+    #[expect(dead_code)]
+    fn add_buffer(&mut self, buffer: wgpu::BufferBinding<'entry>) {
+        let binding = self.binding;
+        self.entries.push(wgpu::BindGroupEntry {
+            binding,
+            resource: wgpu::BindingResource::Buffer(buffer),
+        });
+
+        self.binding += 1;
+    }
+}
+
+#[expect(dead_code)]
+fn make(state: &State, shader: &ShaderData) -> Arc<[wgpu::BindGroup]> {
+    let groups = shader.groups();
+    let mut bind_groups = Vec::with_capacity(groups.len());
+
+    let entries = vec![];
+
+    for layout in groups {
+        let desc = wgpu::BindGroupDescriptor {
+            label: None,
+            layout,
+            entries: &entries,
+        };
+
+        bind_groups.push(state.device().create_bind_group(&desc));
+    }
+
+    Arc::from(bind_groups)
+}
+
 #[derive(Clone)]
 pub struct SharedSet<S> {
     bind_groups: Arc<[wgpu::BindGroup]>,
@@ -220,7 +262,7 @@ pub trait Data {
 
 impl<G> Data for G
 where
-    G: Visit + Group,
+    G: Visit + GroupLegacy,
 {
     type Set = (G::Projection,);
 
@@ -236,7 +278,7 @@ where
 
 impl<A> Data for (A,)
 where
-    A: Visit + Group,
+    A: Visit + GroupLegacy,
 {
     type Set = (A::Projection,);
 
@@ -252,8 +294,8 @@ where
 
 impl<A, B> Data for (A, B)
 where
-    A: Visit + Group,
-    B: Visit + Group,
+    A: Visit + GroupLegacy,
+    B: Visit + GroupLegacy,
 {
     type Set = (A::Projection, B::Projection);
 
@@ -274,9 +316,9 @@ where
 
 impl<A, B, C> Data for (A, B, C)
 where
-    A: Visit + Group,
-    B: Visit + Group,
-    C: Visit + Group,
+    A: Visit + GroupLegacy,
+    B: Visit + GroupLegacy,
+    C: Visit + GroupLegacy,
 {
     type Set = (A::Projection, B::Projection, C::Projection);
 
@@ -301,10 +343,10 @@ where
 
 impl<A, B, C, D> Data for (A, B, C, D)
 where
-    A: Visit + Group,
-    B: Visit + Group,
-    C: Visit + Group,
-    D: Visit + Group,
+    A: Visit + GroupLegacy,
+    B: Visit + GroupLegacy,
+    C: Visit + GroupLegacy,
+    D: Visit + GroupLegacy,
 {
     type Set = (A::Projection, B::Projection, C::Projection, D::Projection);
 

@@ -175,12 +175,12 @@ fn rs_reentrant() {
 #[test]
 fn rs_storage() -> Result<(), Error> {
     use dunge::{
-        Group,
+        GroupLegacy,
         sl::{self, Groups, Index, Render},
         store::Storage,
     };
 
-    #[derive(Group)]
+    #[derive(GroupLegacy)]
     struct Map {
         array: Storage<[f32; 4]>,
     }

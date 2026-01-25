@@ -36,7 +36,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     #[derive(Vertex)]
     struct Screen(Vec2, Vec2);
 
-    #[derive(Group)]
+    #[derive(GroupLegacy)]
     struct Map {
         tex: BoundTexture,
         sam: Sampler,

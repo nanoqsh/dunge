@@ -23,8 +23,8 @@ mod value;
 /// The dunge prelude.
 pub mod prelude {
     pub use crate::{
-        Bytes, Group, Input, Instance, Value, Vertex, buffer::TextureData, color::ColorExt as _,
-        context::Context, dunge, mesh::MeshData, render, sl, types,
+        Bytes, GroupLegacy, Input, Instance, Value, Vertex, buffer::TextureData,
+        color::ColorExt as _, context::Context, dunge, mesh::MeshData, render, sl, types,
     };
 }
 
@@ -46,12 +46,12 @@ pub use {
         value::{ColorValue, StorageValue, UniformValue},
     },
     dunge_macro::{Bytes, Input, Value, dunge, render},
-    dunge_macro_old::{Group, Instance, Vertex},
+    dunge_macro_old::{GroupLegacy, Instance, Vertex},
     dunge_shade::{
         bytes::Bytes,
         irc::{Input, Value},
     },
-    dunge_shade_old::{group::Group, instance::Instance, sl, types, vertex::Vertex},
+    dunge_shade_old::{group::GroupLegacy, instance::Instance, sl, types, vertex::Vertex},
 };
 
 #[cfg(not(target_family = "wasm"))]

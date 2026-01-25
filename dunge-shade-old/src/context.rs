@@ -2,7 +2,7 @@ use {
     crate::{
         define::Define,
         eval::{GlobalOut, ReadIndex},
-        group::{self, Group},
+        group::{self, GroupLegacy},
         instance::{self, Instance},
         module::RenderKind,
         op::Ret,
@@ -273,7 +273,7 @@ impl ProjectionFromContext for () {
 
 impl<A> ProjectionFromContext for A
 where
-    A: Group,
+    A: GroupLegacy,
 {
     type Set = (A::Projection,);
     type Projection = A::Projection;
@@ -290,7 +290,7 @@ macro_rules! impl_projection_from_context {
         impl<$($t),*> ProjectionFromContext for ($($t),*,)
         where
             $(
-                $t: Group,
+                $t: GroupLegacy,
             )*
         {
             type Set = ($($t::Projection),*,);
