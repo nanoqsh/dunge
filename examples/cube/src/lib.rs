@@ -19,14 +19,9 @@ struct Io {
     col: Vec3,
 }
 
-#[derive(Input)]
-struct Group {
-    m: Uniform<Mat4>,
-}
-
 #[dunge(vertex)]
-fn vs(v: Vert, g: Group) -> Io {
-    let pos = g.m.read() * sh::sl::append(v.pos, 1.);
+fn vs(v: Vert, m: Uniform<Mat4>) -> Io {
+    let pos = m.read() * sh::sl::append(v.pos, 1.);
     Io { pos, col: v.col }
 }
 
@@ -62,7 +57,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let render = render! {
         vertex: Vert,
-        groups: [Group],
+        groups: [Uniform<Mat4>],
         shaders: [vs, fs],
     }
     .expect("compile shader");

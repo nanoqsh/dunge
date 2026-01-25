@@ -112,11 +112,7 @@ impl<'irc> Fnc<'irc> {
             }
             TakeReference::GlobalVariable(var) => {
                 let pointer = self.add_expr(naga::Expression::GlobalVariable(var.var));
-                if var.indirect {
-                    Pointer::Noop(expr(pointer))
-                } else {
-                    Pointer::Load(expr(pointer))
-                }
+                Pointer::Noop(expr(pointer))
             }
             TakeReference::GlobalVariables(vars) => Pointer::GlobalVariables(vars),
         }
@@ -241,13 +237,12 @@ impl<'irc> Fnc<'irc> {
         }))
     }
 
-    fn do_index_pointer<B, I, O>(&mut self, base: Pointer<B>, index: Expr<I>) -> Pointer<O>
+    fn do_load_by_index<B, I, O>(&mut self, base: Pointer<B>, index: Expr<I>) -> Pointer<O>
     where
         B: ?Sized,
     {
         match base {
-            Pointer::Load(ex) => Pointer::Load(self.do_index_expr(ex, index)),
-            Pointer::Noop(ex) => Pointer::Noop(self.do_index_expr(ex, index)),
+            Pointer::Load(ex) | Pointer::Noop(ex) => Pointer::Load(self.do_index_expr(ex, index)),
             Pointer::GlobalVariables(_) => unreachable!(),
         }
     }
@@ -282,11 +277,7 @@ impl<'irc> Fnc<'irc> {
                 let map = self.irc.global_map.get(&vars).expect("get global map");
                 let entry = map[index];
                 let pointer = self.add_expr(naga::Expression::GlobalVariable(entry.var));
-                if entry.indirect {
-                    Pointer::Noop(expr(pointer))
-                } else {
-                    Pointer::Load(expr(pointer))
-                }
+                Pointer::Noop(expr(pointer))
             }
         }
     }
@@ -520,7 +511,7 @@ impl<'irc> Fnc<'irc> {
             }
         };
 
-        debug_assert!(self.irc.location.is_none());
+        // set locations for vertex output
         if stage == Stage::Vertex {
             self.irc.location = Some(0);
         }
@@ -1006,7 +997,6 @@ impl Default for Imports {
 #[derive(Clone, Copy)]
 struct GlobalVariableEntry {
     var: Handle<naga::GlobalVariable>,
-    indirect: bool,
 }
 
 enum MakeGroup {
@@ -1095,7 +1085,6 @@ impl Irc {
         let var = self.add_global(ty, naga::AddressSpace::Uniform, binding);
         GlobalVariable {
             var,
-            indirect: true,
             ty: PhantomData,
         }
     }
@@ -1115,7 +1104,6 @@ impl Irc {
 
         GlobalVariable {
             var,
-            indirect: true,
             ty: PhantomData,
         }
     }
@@ -1154,12 +1142,12 @@ impl Irc {
 
         let global = naga::GlobalVariable {
             name: None,
-            space: space,
+            space,
             binding: Some(naga::ResourceBinding {
                 group: self.group,
-                binding: binding,
+                binding,
             }),
-            ty: ty,
+            ty,
             init: None,
         };
 
@@ -1185,7 +1173,6 @@ impl Irc {
         let var = self.global_variables.append(global, Span::UNDEFINED);
         GlobalVariable {
             var,
-            indirect: true,
             ty: PhantomData,
         }
     }
@@ -1619,7 +1606,6 @@ where
     T: ?Sized,
 {
     var: Handle<naga::GlobalVariable>,
-    indirect: bool,
     ty: PhantomData<T>,
 }
 
@@ -1628,10 +1614,7 @@ where
     T: ?Sized,
 {
     fn entry(self) -> GlobalVariableEntry {
-        GlobalVariableEntry {
-            var: self.var,
-            indirect: self.indirect,
-        }
+        GlobalVariableEntry { var: self.var }
     }
 }
 
@@ -1730,6 +1713,19 @@ where
     Load(Expr<T>),
     Noop(Expr<T>),
     GlobalVariables(u32),
+}
+
+impl<T> fmt::Debug for Pointer<T>
+where
+    T: ?Sized,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Load(_) => f.debug_tuple("Load").field(&"..").finish(),
+            Self::Noop(_) => f.debug_tuple("Noop").field(&"..").finish(),
+            Self::GlobalVariables(arg0) => f.debug_tuple("GlobalVariables").field(arg0).finish(),
+        }
+    }
 }
 
 impl<T> Clone for Pointer<T>
@@ -2497,7 +2493,7 @@ where
     }
 
     fn base_index<O, I>(self, index: Expr<I>, fnc: &mut Fnc<'_>) -> Self::Output<O> {
-        fnc.do_index_pointer(self, index)
+        fnc.do_load_by_index(self, index)
     }
 }
 
