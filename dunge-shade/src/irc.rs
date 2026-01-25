@@ -2,6 +2,7 @@ use {
     crate::{
         module::{Boot, Format, GroupFormat, Hook, TextureDimension},
         sl,
+        store::{Storage, Uniform},
     },
     glam::{IVec2, IVec3, IVec4, Mat2, Mat3, Mat4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec4},
     naga::{Arena, Handle, Range, Span, Statement, UniqueArena},
@@ -396,7 +397,9 @@ impl<'irc> Fnc<'irc> {
         match f(B::METHODS) {
             Method::Swizzle(swizzle) => self.do_swizzle(base, swizzle),
             Method::Expr(e) => e(self, base),
-            Method::Noop => expr(base.get()),
+            Method::Load => expr(self.add_expr(naga::Expression::Load {
+                pointer: base.get(),
+            })),
         }
     }
 
@@ -499,11 +502,32 @@ impl<'irc> Fnc<'irc> {
         T::output(self, stage);
     }
 
-    fn add_result_type<T>(&mut self, binding: Binding)
+    fn add_result_type<T>(&mut self, stage: Stage)
     where
         T: Value,
     {
+        let binding = 'bind: {
+            if !T::NAGA.eq_types(<Vec4 as Value>::NAGA) {
+                break 'bind Binding::None;
+            }
+
+            if stage == Stage::Vertex {
+                Binding::Position
+            } else if stage == Stage::Fragment {
+                Binding::Location(0)
+            } else {
+                Binding::None
+            }
+        };
+
+        debug_assert!(self.irc.location.is_none());
+        if stage == Stage::Vertex {
+            self.irc.location = Some(0);
+        }
+
         let ty = self.irc.add_type(T::NAGA);
+        self.irc.location = None;
+
         let res = naga::FunctionResult {
             ty,
             binding: binding.naga::<T>(),
@@ -1063,82 +1087,83 @@ impl Irc {
         self.group += 1;
     }
 
-    pub(crate) fn add_uniform<V>(&mut self, binding: u32) -> GlobalVariable<V>
+    pub(crate) fn add_uniform<V, D>(&mut self, binding: u32) -> GlobalVariable<Uniform<V, D>>
     where
         V: Value,
     {
-        self.add_global::<V>(naga::AddressSpace::Uniform, binding)
+        let ty = self.add_type(V::NAGA);
+        let var = self.add_global(ty, naga::AddressSpace::Uniform, binding);
+        GlobalVariable {
+            var,
+            indirect: true,
+            ty: PhantomData,
+        }
     }
 
-    pub(crate) fn add_storage<V>(&mut self, binding: u32) -> GlobalVariable<V>
+    pub(crate) fn add_storage<V, D>(&mut self, binding: u32) -> GlobalVariable<Storage<V, D>>
     where
         V: MaybeSizedValue + ?Sized,
     {
-        self.add_global::<V>(
+        let ty = self.add_type(V::NAGA);
+        let var = self.add_global(
+            ty,
             naga::AddressSpace::Storage {
                 access: naga::StorageAccess::LOAD,
             },
             binding,
-        )
-    }
+        );
 
-    fn add_global<V>(&mut self, space: naga::AddressSpace, binding: u32) -> GlobalVariable<V>
-    where
-        V: MaybeSizedValue + ?Sized,
-    {
-        fn add(
-            irc: &mut Irc,
-            space: naga::AddressSpace,
-            binding: u32,
-            ty: Handle<naga::Type>,
-        ) -> Handle<naga::GlobalVariable> {
-            if let naga::AddressSpace::Uniform = space
-                && let Ok(naga::Type {
-                    inner: naga::TypeInner::Array { stride, .. },
-                    ..
-                }) = irc.types.get_handle(ty)
-                && !stride.is_multiple_of(16)
-            {
-                irc.error = Some(IrcError::ArrayStride {
-                    actual: *stride,
-                    required: 16,
-                });
-            }
-
-            if let naga::AddressSpace::Storage { .. } = space
-                && let Ok(naga::Type {
-                    inner: naga::TypeInner::Struct { span, .. },
-                    ..
-                }) = irc.types.get_handle(ty)
-                && !span.is_multiple_of(8)
-            {
-                irc.error = Some(IrcError::StructSpan {
-                    actual: *span,
-                    required: 8,
-                });
-            }
-
-            let global = naga::GlobalVariable {
-                name: None,
-                space,
-                binding: Some(naga::ResourceBinding {
-                    group: irc.group,
-                    binding,
-                }),
-                ty,
-                init: None,
-            };
-
-            irc.global_variables.append(global, Span::UNDEFINED)
-        }
-
-        let ty = self.add_type(V::NAGA);
-        let var = add(self, space, binding, ty);
         GlobalVariable {
             var,
-            indirect: false,
+            indirect: true,
             ty: PhantomData,
         }
+    }
+
+    fn add_global(
+        &mut self,
+        ty: Handle<naga::Type>,
+        space: naga::AddressSpace,
+        binding: u32,
+    ) -> Handle<naga::GlobalVariable> {
+        if let naga::AddressSpace::Uniform = space
+            && let Ok(naga::Type {
+                inner: naga::TypeInner::Array { stride, .. },
+                ..
+            }) = self.types.get_handle(ty)
+            && !stride.is_multiple_of(16)
+        {
+            self.error = Some(IrcError::ArrayStride {
+                actual: *stride,
+                required: 16,
+            });
+        }
+
+        if let naga::AddressSpace::Storage { .. } = space
+            && let Ok(naga::Type {
+                inner: naga::TypeInner::Struct { span, .. },
+                ..
+            }) = self.types.get_handle(ty)
+            && !span.is_multiple_of(8)
+        {
+            self.error = Some(IrcError::StructSpan {
+                actual: *span,
+                required: 8,
+            });
+        }
+
+        let global = naga::GlobalVariable {
+            name: None,
+            space: space,
+            binding: Some(naga::ResourceBinding {
+                group: self.group,
+                binding: binding,
+            }),
+            ty: ty,
+            init: None,
+        };
+
+        self.global_variables.append(global, Span::UNDEFINED)
     }
 
     fn add_global_descriptor<T>(&mut self, binding: u32) -> GlobalVariable<T>
@@ -1316,21 +1341,7 @@ where
     V: Value,
 {
     fn output(fnc: &mut Fnc<'_>, stage: Stage) {
-        let binding = 'bind: {
-            if !V::NAGA.eq_types(<Vec4 as Value>::NAGA) {
-                break 'bind Binding::None;
-            }
-
-            if stage == Stage::Vertex {
-                Binding::Position
-            } else if stage == Stage::Fragment {
-                Binding::Location(0)
-            } else {
-                Binding::None
-            }
-        };
-
-        fnc.add_result_type::<V>(binding);
+        fnc.add_result_type::<V>(stage);
     }
 }
 
@@ -2780,7 +2791,7 @@ where
 {
     Swizzle(Swizzle<B, O>),
     Expr(fn(&mut Fnc<'_>, Expr<B>) -> Expr<O>),
-    Noop,
+    Load,
 }
 
 const fn swizzle<B, O>(swizzle: Swizzle<B, O>) -> Method<B, O>

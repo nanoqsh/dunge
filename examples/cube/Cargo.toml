@@ -9,7 +9,7 @@ name = "cube_bin"
 path = "src/main.rs"
 
 [dependencies]
-dunge-winit.workspace = true
+dunge-winit = { workspace = true, features = ["wgsl"] }
 env_logger.workspace = true
 futures-concurrency.workspace = true
 glam.workspace = true

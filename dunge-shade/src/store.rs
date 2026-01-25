@@ -80,9 +80,9 @@ where
     V: Value,
 {
     const KIND: InputKind = InputKind::Group;
-    type Ref = V;
+    type Ref = Self;
 
-    fn input(fnc: &mut Fnc<'_>) -> impl Reference<V> + use<V, D> {
+    fn input(fnc: &mut Fnc<'_>) -> impl Reference<Self> + use<V, D> {
         let global = fnc.irc().add_uniform(0);
         fnc.irc().new_group();
         global
@@ -94,7 +94,7 @@ where
     V: Value,
 {
     const FORMAT: GroupFormat = GroupFormat::Uniform;
-    type Global = V;
+    type Global = Self;
 
     fn global(irc: &mut Irc, binding: u32) -> GlobalVariable<Self::Global> {
         irc.add_uniform(binding)
@@ -113,7 +113,7 @@ impl<V, D> Fields for Uniform<V, D> {
 impl<V, D> Methods for Uniform<V, D> {
     type Methods = UniformMethods<V, D>;
 
-    const METHODS: UniformMethods<V, D> = UniformMethods { read: Method::Noop };
+    const METHODS: UniformMethods<V, D> = UniformMethods { read: Method::Load };
 }
 
 pub struct UniformMethods<V, D> {
@@ -213,9 +213,9 @@ where
     V: StorageValue + ?Sized,
 {
     const KIND: InputKind = InputKind::Group;
-    type Ref = V;
+    type Ref = Self;
 
-    fn input(fnc: &mut Fnc<'_>) -> impl Reference<V> + use<V, D> {
+    fn input(fnc: &mut Fnc<'_>) -> impl Reference<Self> + use<V, D> {
         let global = fnc.irc().add_storage(0);
         fnc.irc().new_group();
         global
@@ -227,7 +227,7 @@ where
     V: StorageValue + ?Sized,
 {
     const FORMAT: GroupFormat = GroupFormat::Storage;
-    type Global = V;
+    type Global = Self;
 
     fn global(irc: &mut Irc, binding: u32) -> GlobalVariable<Self::Global> {
         irc.add_storage(binding)
@@ -252,7 +252,7 @@ where
 {
     type Methods = StorageMethods<V, D>;
 
-    const METHODS: StorageMethods<V, D> = StorageMethods { read: Method::Noop };
+    const METHODS: StorageMethods<V, D> = StorageMethods { read: Method::Load };
 }
 
 pub struct StorageMethods<V, D>

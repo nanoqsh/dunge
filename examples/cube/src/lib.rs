@@ -25,9 +25,14 @@ struct Group {
 }
 
 #[dunge(vertex)]
-fn vs(v: Vert, group: Group) -> Io {
-    let pos = group.m.read() * sh::sl::append(v.pos, 1.);
+fn vs(v: Vert, g: Group) -> Io {
+    let pos = g.m.read() * sh::sl::append(v.pos, 1.);
     Io { pos, col: v.col }
+}
+
+#[dunge(fragment)]
+fn fs(io: Io) -> Vec4 {
+    sh::sl::append(io.col, 1.)
 }
 
 pub async fn run(control: Control) -> Result<(), Error> {
@@ -54,6 +59,15 @@ pub async fn run(control: Control) -> Result<(), Error> {
         place: m.load() * sl::vec4_append(v.pos, 1.),
         color: sl::vec4_append(sl::fragment(v.col), 1.),
     };
+
+    let render = render! {
+        vertex: Vert,
+        groups: [Group],
+        shaders: [vs, fs],
+    }
+    .expect("compile shader");
+
+    println!("{}", render.debug());
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader(cube);
