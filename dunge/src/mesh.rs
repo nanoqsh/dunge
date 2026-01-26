@@ -94,7 +94,7 @@ pub struct Mesh<V> {
 }
 
 impl<V> Mesh<V> {
-    pub(crate) fn new(state: &State, data: &MeshData<'_, V>) -> Self
+    pub(crate) fn from_vertex(state: &State, data: &MeshData<'_, V>) -> Self
     where
         V: Vertex,
     {

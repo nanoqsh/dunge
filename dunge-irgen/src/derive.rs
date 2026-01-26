@@ -283,6 +283,25 @@ pub(crate) fn derive_fields(
     })
 }
 
+pub(crate) fn derive_group(input: &Struct, path: &TokenStream) -> Derive<TokenStream> {
+    let set = quote::quote! { #path::set };
+
+    let ident = &input.ident;
+    let members = non_empty_fields(&input.fields)?.map(|f| {
+        let ident = &f.ident;
+        let ty = &f.ty;
+        quote::quote! { <#ty as #set::Group>::group(&self.#ident, e) }
+    });
+
+    Ok(quote::quote! {
+        impl #set::Group for #ident {
+            fn group<'group>(&'group self, e: &mut dunge::set::Entries<'group>) {
+                #(#members;)*
+            }
+        }
+    })
+}
+
 type Derive<T> = Result<T, DeriveError>;
 
 pub(crate) enum DeriveError {

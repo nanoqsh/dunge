@@ -74,14 +74,6 @@ where
     }
 }
 
-impl Rows<0> for () {
-    type Inner = ();
-
-    fn rows(&self) -> [Slice<'_>; 0] {
-        []
-    }
-}
-
 impl<A> Rows<1> for (A,)
 where
     A: Buffer,

@@ -7,9 +7,10 @@ use {
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
-        store::{Storage, Uniform},
+        store,
+        store2::{Storage, Uniform},
     },
-    std::{cell, marker::PhantomData, sync::Arc},
+    std::{cell, iter, marker::PhantomData, sync::Arc},
 };
 
 pub trait Visit {
@@ -47,7 +48,7 @@ impl<'visit> Visitor<'visit> {
     }
 }
 
-impl<V> Visit for Storage<V>
+impl<V> Visit for store::Storage<V>
 where
     V: ?Sized,
 {
@@ -57,7 +58,7 @@ where
     }
 }
 
-impl<V> Visit for Uniform<V> {
+impl<V> Visit for store::Uniform<V> {
     fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(wgpu::BindingResource::Buffer(binding));
@@ -134,7 +135,18 @@ pub(crate) fn update<S, G>(
 pub struct UniqueSet<S>(SharedSet<S>);
 
 impl<S> UniqueSet<S> {
-    pub(crate) fn new<D>(state: &State, shader: &ShaderData, set: D) -> Self
+    pub(crate) fn new<G, const N: usize>(state: &State, shader: &ShaderData, set: G) -> Self
+    where
+        G: Groups<N, Inner = S>,
+    {
+        let bind_groups = make(state, shader, &set.groups());
+        Self(SharedSet {
+            bind_groups,
+            ty: PhantomData,
+        })
+    }
+
+    pub(crate) fn from_data<D>(state: &State, shader: &ShaderData, set: D) -> Self
     where
         D: Data<Set = S>,
     {
@@ -197,17 +209,52 @@ impl<S> Bind<S> for UniqueSet<S> {
 }
 
 pub trait Group {
-    //
+    fn group<'group>(&'group self, e: &mut Entries<'group>);
 }
 
-struct EntriesBuilder<'entry> {
+impl<G> Group for &G
+where
+    G: Group,
+{
+    fn group<'group>(&'group self, e: &mut Entries<'group>) {
+        (&**self).group(e);
+    }
+}
+
+impl<V> Group for Uniform<V> {
+    fn group<'group>(&'group self, e: &mut Entries<'group>) {
+        e.add_buffer(self.data().buffer().as_entire_buffer_binding());
+    }
+}
+
+impl<V> Group for Storage<V>
+where
+    V: ?Sized,
+{
+    fn group<'group>(&'group self, e: &mut Entries<'group>) {
+        e.add_buffer(self.data().buffer().as_entire_buffer_binding());
+    }
+}
+
+pub struct Entries<'group> {
     binding: u32,
-    entries: Vec<wgpu::BindGroupEntry<'entry>>,
+    entries: Vec<wgpu::BindGroupEntry<'group>>,
 }
 
-impl<'entry> EntriesBuilder<'entry> {
-    #[expect(dead_code)]
-    fn add_buffer(&mut self, buffer: wgpu::BufferBinding<'entry>) {
+impl<'group> Entries<'group> {
+    fn new() -> Self {
+        Self {
+            binding: 0,
+            entries: Vec::with_capacity(4),
+        }
+    }
+
+    fn clear(&mut self) {
+        self.binding = 0;
+        self.entries.clear();
+    }
+
+    fn add_buffer(&mut self, buffer: wgpu::BufferBinding<'group>) {
         let binding = self.binding;
         self.entries.push(wgpu::BindGroupEntry {
             binding,
@@ -218,18 +265,19 @@ impl<'entry> EntriesBuilder<'entry> {
     }
 }
 
-#[expect(dead_code)]
-fn make(state: &State, shader: &ShaderData) -> Arc<[wgpu::BindGroup]> {
+fn make(state: &State, shader: &ShaderData, set: &[&dyn Group]) -> Arc<[wgpu::BindGroup]> {
     let groups = shader.groups();
     let mut bind_groups = Vec::with_capacity(groups.len());
 
-    let entries = vec![];
+    let mut entries = Entries::new();
+    for (layout, group) in iter::zip(groups, set) {
+        entries.clear();
+        group.group(&mut entries);
 
-    for layout in groups {
         let desc = wgpu::BindGroupDescriptor {
             label: None,
             layout,
-            entries: &entries,
+            entries: &entries.entries,
         };
 
         bind_groups.push(state.device().create_bind_group(&desc));
@@ -249,6 +297,72 @@ impl<S> Bind<S> for SharedSet<S> {
         Bindings {
             bind_groups: &self.bind_groups,
         }
+    }
+}
+
+pub trait Groups<const N: usize> {
+    type Inner;
+    fn groups(&self) -> [&dyn Group; N];
+}
+
+impl<G> Groups<1> for G
+where
+    G: Group,
+{
+    type Inner = (G,);
+
+    fn groups(&self) -> [&dyn Group; 1] {
+        [self]
+    }
+}
+
+impl<A> Groups<1> for (A,)
+where
+    A: Group,
+{
+    type Inner = Self;
+
+    fn groups(&self) -> [&dyn Group; 1] {
+        [&self.0]
+    }
+}
+
+impl<A, B> Groups<2> for (A, B)
+where
+    A: Group,
+    B: Group,
+{
+    type Inner = Self;
+
+    fn groups(&self) -> [&dyn Group; 2] {
+        [&self.0, &self.1]
+    }
+}
+
+impl<A, B, C> Groups<3> for (A, B, C)
+where
+    A: Group,
+    B: Group,
+    C: Group,
+{
+    type Inner = Self;
+
+    fn groups(&self) -> [&dyn Group; 3] {
+        [&self.0, &self.1, &self.2]
+    }
+}
+
+impl<A, B, C, D> Groups<4> for (A, B, C, D)
+where
+    A: Group,
+    B: Group,
+    C: Group,
+    D: Group,
+{
+    type Inner = Self;
+
+    fn groups(&self) -> [&dyn Group; 4] {
+        [&self.0, &self.1, &self.2, &self.3]
     }
 }
 

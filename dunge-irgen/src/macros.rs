@@ -7,6 +7,10 @@ use {
 };
 
 fn root() -> TokenStream {
+    quote::quote! { dunge }
+}
+
+fn sh() -> TokenStream {
     quote::quote! { dunge::sh }
 }
 
@@ -16,7 +20,7 @@ pub fn make_render(item: TokenStream) -> TokenStream {
         Err(e) => return e.into_compile_error(),
     };
 
-    render::make(&rt, root())
+    render::make(&rt, sh())
 }
 
 pub fn derive_bytes(item: TokenStream) -> TokenStream {
@@ -25,7 +29,7 @@ pub fn derive_bytes(item: TokenStream) -> TokenStream {
         Err(e) => return e.into_compile_error(),
     };
 
-    match derive::derive_bytes(&s, &root()) {
+    match derive::derive_bytes(&s, &sh()) {
         Ok(res) => res,
         Err(e) => error::into_compile_error(e),
     }
@@ -37,15 +41,15 @@ pub fn derive_value(item: TokenStream) -> TokenStream {
         Err(e) => return e.into_compile_error(),
     };
 
-    let root = root();
-    let value = match derive::derive_value(&s, &root) {
+    let sh = sh();
+    let value = match derive::derive_value(&s, &sh) {
         Ok(value) => value,
-        Err(e) => error::into_compile_error(e),
+        Err(e) => return error::into_compile_error(e),
     };
 
-    let fields = match derive::derive_fields(&s, Reorder::Yes, &root) {
+    let fields = match derive::derive_fields(&s, Reorder::Yes, &sh) {
         Ok(fields) => fields,
-        Err(e) => error::into_compile_error(e),
+        Err(e) => return error::into_compile_error(e),
     };
 
     quote::quote! {
@@ -60,20 +64,26 @@ pub fn derive_input(item: TokenStream) -> TokenStream {
         Err(e) => return e.into_compile_error(),
     };
 
-    let root = root();
-    let input = match derive::derive_input(&s, &root) {
+    let sh = sh();
+    let input = match derive::derive_input(&s, &sh) {
         Ok(value) => value,
-        Err(e) => error::into_compile_error(e),
+        Err(e) => return error::into_compile_error(e),
     };
 
-    let fields = match derive::derive_fields(&s, Reorder::No, &root) {
+    let fields = match derive::derive_fields(&s, Reorder::No, &sh) {
         Ok(fields) => fields,
-        Err(e) => error::into_compile_error(e),
+        Err(e) => return error::into_compile_error(e),
+    };
+
+    let group = match derive::derive_group(&s, &root()) {
+        Ok(group) => group,
+        Err(e) => return error::into_compile_error(e),
     };
 
     quote::quote! {
         #input
         #fields
+        #group
     }
 }
 
@@ -89,7 +99,7 @@ pub fn shader(attr: TokenStream, code: TokenStream) -> TokenStream {
     }
 
     let events = translate::translate(events);
-    match gener::produce(events, stage, &root()) {
+    match gener::produce(events, stage, &sh()) {
         Ok(res) => quote::quote! {
             #res
 

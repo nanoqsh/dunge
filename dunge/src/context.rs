@@ -8,7 +8,7 @@ use {
         layer::{Config, Layer},
         mesh::{self, Mesh},
         render,
-        set::{self, Data, GroupHandler, UniqueSet, Visit},
+        set::{self, Data, GroupHandler, Groups, UniqueSet, Visit},
         shader::{RenderShader, Shader},
         sl,
         state::{Scheduler, State},
@@ -257,6 +257,17 @@ impl Context {
     where
         D: Data<Set = S>,
     {
+        UniqueSet::from_data(&self.0, shader.data(), set)
+    }
+
+    pub fn make_set2<I, G, const N: usize>(
+        &self,
+        shader: &Shader<I, G::Inner>,
+        set: G,
+    ) -> UniqueSet<G::Inner>
+    where
+        G: Groups<N>,
+    {
         UniqueSet::new(&self.0, shader.data(), set)
     }
 
@@ -313,7 +324,7 @@ impl Context {
     where
         V: Vertex,
     {
-        Mesh::new(&self.0, data)
+        Mesh::from_vertex(&self.0, data)
     }
 
     /// Creates a [row](Row) with the given data.

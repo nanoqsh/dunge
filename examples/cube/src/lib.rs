@@ -19,9 +19,14 @@ struct Io {
     col: Vec3,
 }
 
+#[derive(Input)]
+struct Group {
+    m: Uniform<Mat4>,
+}
+
 #[dunge(vertex)]
-fn vs(v: Vert, m: Uniform<Mat4>) -> Io {
-    let pos = m.read() * sh::sl::append(v.pos, 1.);
+fn vs(v: Vert, g: Group) -> Io {
+    let pos = g.m.read() * sh::sl::append(v.pos, 1.);
     Io { pos, col: v.col }
 }
 
@@ -57,7 +62,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let render = render! {
         vertex: Vert,
-        groups: [Uniform<Mat4>],
+        groups: [Group],
         shaders: [vs, fs],
     }
     .expect("compile shader");
@@ -65,6 +70,10 @@ pub async fn run(control: Control) -> Result<(), Error> {
     println!("{}", render.debug());
 
     let cx = dunge::context().await?;
+    let shader2 = cx.make_shader2(render);
+    let m = cx.make_uniform2(&Mat4::IDENTITY);
+    let _set2 = cx.make_set2(&shader2, Group { m });
+
     let shader = cx.make_shader(cube);
     let transform = cx.make_uniform(&Mat4::IDENTITY);
     let set = cx.make_set(&shader, &transform);
