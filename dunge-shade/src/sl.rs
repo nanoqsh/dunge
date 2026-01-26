@@ -1,5 +1,8 @@
 use {
-    crate::irc::{Dim, Sampler, Texture},
+    crate::{
+        desc::{Sampler, Texture},
+        irc::Dim,
+    },
     glam::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec4},
 };
 

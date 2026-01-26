@@ -6,7 +6,7 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
-            buffer::{Filter, Sampler, Size},
+            buffer::{Filter, Size, TextureSampler},
             color::{Format, Rgb},
             group::BoundTexture,
             prelude::*,
@@ -27,7 +27,7 @@ fn render() -> Result<(), Error> {
     #[derive(GroupLegacy)]
     struct Map {
         tex: BoundTexture,
-        sam: Sampler,
+        sam: TextureSampler,
     }
 
     let triangle = |PassVertex(v): PassVertex<Vert>, Groups(map): Groups<Map>| {

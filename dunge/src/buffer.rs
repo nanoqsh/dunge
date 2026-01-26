@@ -350,13 +350,13 @@ impl Dimension for D2 {
     const N: DimensionsNumber = DimensionsNumber::D2;
 }
 
-pub struct Texture<D, U = DynamicTextureUsages> {
+pub struct TextureBuffer<D, U = DynamicTextureUsages> {
     inner: TextureInner,
     usage: U,
     dim: PhantomData<D>,
 }
 
-impl<D, U> Texture<D, U> {
+impl<D, U> TextureBuffer<D, U> {
     pub(crate) fn new(state: &State, data: TextureData<'_, U>) -> Self
     where
         D: Dimension,
@@ -409,7 +409,7 @@ impl<D, U> Texture<D, U> {
 
 type BufferCopyTo = <BufferNoUsages as Use<dyn u::CopyTo>>::Out;
 
-pub type Texture2d<U = DynamicTextureUsages> = Texture<D2, U>;
+pub type Texture2d<U = DynamicTextureUsages> = TextureBuffer<D2, U>;
 
 impl<U> Texture2d<U> {
     #[inline]
@@ -521,9 +521,9 @@ impl Filter {
 }
 
 #[derive(Clone)]
-pub struct Sampler(wgpu::Sampler);
+pub struct TextureSampler(wgpu::Sampler);
 
-impl Sampler {
+impl TextureSampler {
     pub(crate) fn new(state: &State, filter: Filter) -> Self {
         let filter = filter.wgpu();
         let desc = wgpu::SamplerDescriptor {
@@ -900,7 +900,7 @@ where
     }
 }
 
-impl<D, U> i::AsInner for Texture<D, U> {
+impl<D, U> i::AsInner for TextureBuffer<D, U> {
     fn as_inner(&self) -> i::Wrap<'_> {
         i::Wrap(Inner::Texture(&self.inner))
     }
@@ -950,7 +950,7 @@ pub trait Source: i::AsInner {
 
 impl<S> Source for &S where S: Source {}
 
-impl<D, U> Source for Texture<D, U>
+impl<D, U> Source for TextureBuffer<D, U>
 where
     U: u::CopyFrom,
 {
@@ -981,7 +981,7 @@ pub trait Destination: i::AsInner {
 
 impl<D> Destination for &D where D: Destination {}
 
-impl<D, U> Destination for Texture<D, U>
+impl<D, U> Destination for TextureBuffer<D, U>
 where
     U: u::CopyTo,
 {

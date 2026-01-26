@@ -3,7 +3,7 @@
 use {
     crate::{
         GroupLegacy,
-        buffer::Sampler,
+        buffer::TextureSampler,
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
@@ -71,7 +71,7 @@ impl Visit for BoundTexture {
     }
 }
 
-impl Visit for Sampler {
+impl Visit for TextureSampler {
     fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         visitor.push(wgpu::BindingResource::Sampler(self.inner()));
     }
@@ -217,7 +217,7 @@ where
     G: Group,
 {
     fn group<'group>(&'group self, e: &mut Entries<'group>) {
-        (&**self).group(e);
+        (**self).group(e);
     }
 }
 
@@ -363,6 +363,37 @@ where
 
     fn groups(&self) -> [&dyn Group; 4] {
         [&self.0, &self.1, &self.2, &self.3]
+    }
+}
+
+impl<A, B, C, D, E> Groups<5> for (A, B, C, D, E)
+where
+    A: Group,
+    B: Group,
+    C: Group,
+    D: Group,
+    E: Group,
+{
+    type Inner = Self;
+
+    fn groups(&self) -> [&dyn Group; 5] {
+        [&self.0, &self.1, &self.2, &self.3, &self.4]
+    }
+}
+
+impl<A, B, C, D, E, F> Groups<6> for (A, B, C, D, E, F)
+where
+    A: Group,
+    B: Group,
+    C: Group,
+    D: Group,
+    E: Group,
+    F: Group,
+{
+    type Inner = Self;
+
+    fn groups(&self) -> [&dyn Group; 6] {
+        [&self.0, &self.1, &self.2, &self.3, &self.4, &self.5]
     }
 }
 

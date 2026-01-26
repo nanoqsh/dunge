@@ -63,14 +63,14 @@ pub trait Rows<const N: usize> {
     fn rows(&self) -> [Slice<'_>; N];
 }
 
-impl<R, const N: usize> Rows<N> for &R
+impl<B> Rows<1> for B
 where
-    R: Rows<N>,
+    B: Buffer,
 {
-    type Inner = R::Inner;
+    type Inner = (B::Inner,);
 
-    fn rows(&self) -> [Slice<'_>; N] {
-        (**self).rows()
+    fn rows(&self) -> [Slice<'_>; 1] {
+        [self.buffer()]
     }
 }
 

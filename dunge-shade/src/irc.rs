@@ -1,6 +1,7 @@
 use {
     crate::{
-        module::{Boot, Format, GroupFormat, Hook, TextureDimension},
+        desc::{Sampler, Texture},
+        module::{Boot, GroupFormat, Hook},
         sl,
         store::{Storage, Uniform},
     },
@@ -9,7 +10,6 @@ use {
     std::{
         any::TypeId,
         collections::HashMap,
-        convert::Infallible,
         error,
         fmt::{self, Write},
         marker::PhantomData,
@@ -1337,7 +1337,7 @@ pub trait Descriptor {
     const FORMAT: GroupFormat;
 }
 
-const fn dimension(d: usize) -> naga::ImageDimension {
+pub(crate) const fn dimension(d: usize) -> naga::ImageDimension {
     match d {
         1 => naga::ImageDimension::D1,
         2 => naga::ImageDimension::D2,
@@ -1445,52 +1445,6 @@ impl Dim<4> for u32 {
     fn splat(self) -> Self::Vec {
         UVec4::splat(self)
     }
-}
-
-pub struct Texture<S = f32, const D: usize = 2> {
-    never: Infallible,
-    scalar: PhantomData<S>,
-}
-
-impl<S, const D: usize> Texture<S, D> {
-    pub(crate) fn never<T>(self) -> T {
-        match self.never {}
-    }
-}
-
-impl<S, const D: usize> Clone for Texture<S, D> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<S, const D: usize> Copy for Texture<S, D> {}
-
-impl<S, const D: usize> Descriptor for Texture<S, D>
-where
-    S: Scalar,
-{
-    const NAGA: Type = Type::Image {
-        dim: dimension(D),
-        arrayed: false,
-        class: naga::ImageClass::Sampled {
-            kind: S::NAGA.kind,
-            multi: false,
-        },
-    };
-
-    const FORMAT: GroupFormat = GroupFormat::Texture {
-        dim: TextureDimension::new(D).expect("texture dimension"),
-        scalar: Format::from_naga(S::NAGA.kind).expect("scalar"),
-    };
-}
-
-#[derive(Clone, Copy)]
-pub enum Sampler {}
-
-impl Descriptor for Sampler {
-    const NAGA: Type = Type::Sampler { comparison: false };
-    const FORMAT: GroupFormat = GroupFormat::Sampler;
 }
 
 pub trait ExprTuple<const N: usize>: Sized {

@@ -6,7 +6,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             Options,
-            buffer::{Filter, Sampler, Size},
+            buffer::{Filter, TextureSampler, Size},
             color::Format,
             group::BoundTexture,
             sl::{Groups, Index, PassVertex, Render},
@@ -39,7 +39,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     #[derive(GroupLegacy)]
     struct Map {
         tex: BoundTexture,
-        sam: Sampler,
+        sam: TextureSampler,
         offset: Uniform<Vec2>,
     }
 

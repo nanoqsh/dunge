@@ -2,7 +2,8 @@ use {
     crate::{
         Vertex,
         buffer::{
-            self, Buffer, Filter, Read, ReadFailed, Sampler, Texture, Texture2d, Write, WriteFailed,
+            self, Buffer, Filter, Read, ReadFailed, Texture2d, TextureBuffer, TextureSampler,
+            Write, WriteFailed,
         },
         instance::{Row, RowValue},
         layer::{Config, Layer},
@@ -348,12 +349,12 @@ impl Context {
     where
         U: u::TextureUsages,
     {
-        Texture::new(&self.0, data)
+        TextureBuffer::new(&self.0, data)
     }
 
     /// Creates a [sampler](Sampler) with the [filter](Filter) value.
-    pub fn make_sampler(&self, filter: Filter) -> Sampler {
-        Sampler::new(&self.0, filter)
+    pub fn make_sampler(&self, filter: Filter) -> TextureSampler {
+        TextureSampler::new(&self.0, filter)
     }
 
     /// Creates a [buffer](Buffer) with the given [data](buffer::BufferData).

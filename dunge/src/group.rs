@@ -3,7 +3,7 @@
 use {
     crate::{
         StorageValue,
-        buffer::Sampler,
+        buffer::TextureSampler,
         sl::{Define, Global, GlobalOut, Ret},
         store::{Storage, Uniform},
         types::{self, MemberData, MemberType, Space},
@@ -113,9 +113,9 @@ impl GroupLegacy for BoundTexture {
     const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
 }
 
-impl s::Sealed for Sampler {}
+impl s::Sealed for TextureSampler {}
 
-impl MemberProjection for Sampler {
+impl MemberProjection for TextureSampler {
     const MEMBER: MemberData = MemberData {
         ty: MemberType::Sampl,
         space: Space::Handle,
@@ -128,7 +128,7 @@ impl MemberProjection for Sampler {
     }
 }
 
-impl GroupLegacy for Sampler {
+impl GroupLegacy for TextureSampler {
     type Projection = <Self as MemberProjection>::Field;
     const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
 }
