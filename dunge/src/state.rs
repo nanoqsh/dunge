@@ -1,6 +1,6 @@
 use {
     crate::{
-        buffer::{self, Destination, Size, Source, Texture2d},
+        buffer::{self, Destination, Size, Source, TextureBuffer},
         color::{Color, Format, Rgb, Rgba},
         context::FailedMakeContext,
         render::{Render, TargetState},
@@ -317,7 +317,7 @@ where
     }
 }
 
-impl<U> AsTarget for Texture2d<U>
+impl<U> AsTarget for TextureBuffer<2, U>
 where
     U: u::Render,
 {
@@ -328,7 +328,7 @@ where
     }
 }
 
-impl<U, V> AsTarget for RenderBuffer<Texture2d<U>, V>
+impl<U, V> AsTarget for RenderBuffer<TextureBuffer<2, U>, V>
 where
     U: u::Render,
     V: u::Render,
@@ -344,11 +344,11 @@ where
 /// Pair of color and depth buffer.
 pub struct RenderBuffer<C, V> {
     color: C,
-    depth: Texture2d<V>,
+    depth: TextureBuffer<2, V>,
 }
 
-impl<U, V> RenderBuffer<Texture2d<U>, V> {
-    pub fn new(color: Texture2d<U>, depth: Texture2d<V>) -> Self
+impl<U, V> RenderBuffer<TextureBuffer<2, U>, V> {
+    pub fn new(color: TextureBuffer<2, U>, depth: TextureBuffer<2, V>) -> Self
     where
         U: u::Render,
         V: u::Render,
@@ -384,7 +384,7 @@ impl<C, V> RenderBuffer<C, V> {
     }
 
     #[inline]
-    pub fn depth(&self) -> &Texture2d<V> {
+    pub fn depth(&self) -> &TextureBuffer<2, V> {
         &self.depth
     }
 }

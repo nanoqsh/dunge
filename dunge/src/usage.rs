@@ -49,7 +49,6 @@ pub(crate) mod u {
     }
 
     impl<const T: bool> BufferUsages for MapRead<T> {
-        #[inline]
         fn usages(&self) -> wgpu::BufferUsages {
             let mut u = wgpu::BufferUsages::MAP_READ;
             u.set(wgpu::BufferUsages::COPY_DST, T);
@@ -58,7 +57,6 @@ pub(crate) mod u {
     }
 
     impl<const F: bool> BufferUsages for MapWrite<F> {
-        #[inline]
         fn usages(&self) -> wgpu::BufferUsages {
             let mut u = wgpu::BufferUsages::MAP_WRITE;
             u.set(wgpu::BufferUsages::COPY_SRC, F);
@@ -67,7 +65,6 @@ pub(crate) mod u {
     }
 
     impl<const F: bool, const T: bool> BufferUsages for Copy<F, T> {
-        #[inline]
         fn usages(&self) -> wgpu::BufferUsages {
             let mut u = wgpu::BufferUsages::empty();
             u.set(wgpu::BufferUsages::COPY_SRC, F);
@@ -77,7 +74,6 @@ pub(crate) mod u {
     }
 
     impl BufferUsages for DynamicBufferUsages {
-        #[inline]
         fn usages(&self) -> wgpu::BufferUsages {
             self.0
         }
@@ -90,7 +86,6 @@ pub(crate) mod u {
     impl<const F: bool, const T: bool, const B: bool, const R: bool> TextureUsages
         for Texture<F, T, B, R>
     {
-        #[inline]
         fn usages(&self) -> wgpu::TextureUsages {
             let mut u = wgpu::TextureUsages::empty();
             u.set(wgpu::TextureUsages::COPY_SRC, F);
@@ -102,7 +97,6 @@ pub(crate) mod u {
     }
 
     impl TextureUsages for DynamicTextureUsages {
-        #[inline]
         fn usages(&self) -> wgpu::TextureUsages {
             self.0
         }
@@ -110,7 +104,6 @@ pub(crate) mod u {
 
     pub trait Read {
         #[doc(hidden)]
-        #[inline]
         fn read(&self) {}
     }
 
@@ -120,7 +113,6 @@ pub(crate) mod u {
     }
 
     impl Read for DynamicBufferUsages {
-        #[inline]
         fn read(&self) {
             assert!(
                 self.0.contains(wgpu::BufferUsages::MAP_READ),
@@ -131,7 +123,6 @@ pub(crate) mod u {
 
     pub trait Write {
         #[doc(hidden)]
-        #[inline]
         fn write(&self) {}
     }
 
@@ -141,7 +132,6 @@ pub(crate) mod u {
     }
 
     impl Write for DynamicBufferUsages {
-        #[inline]
         fn write(&self) {
             assert!(
                 self.0.contains(wgpu::BufferUsages::MAP_WRITE),
@@ -152,7 +142,6 @@ pub(crate) mod u {
 
     pub trait CopyFrom {
         #[doc(hidden)]
-        #[inline]
         fn copy_from(&self) {}
     }
 
@@ -172,7 +161,6 @@ pub(crate) mod u {
     }
 
     impl CopyFrom for DynamicBufferUsages {
-        #[inline]
         fn copy_from(&self) {
             assert!(
                 self.0.contains(wgpu::BufferUsages::COPY_SRC),
@@ -182,7 +170,6 @@ pub(crate) mod u {
     }
 
     impl CopyFrom for DynamicTextureUsages {
-        #[inline]
         fn copy_from(&self) {
             assert!(
                 self.0.contains(wgpu::TextureUsages::COPY_SRC),
@@ -193,7 +180,6 @@ pub(crate) mod u {
 
     pub trait CopyTo {
         #[doc(hidden)]
-        #[inline]
         fn copy_to(&self) {}
     }
 
@@ -213,7 +199,6 @@ pub(crate) mod u {
     }
 
     impl CopyTo for DynamicBufferUsages {
-        #[inline]
         fn copy_to(&self) {
             assert!(
                 self.0.contains(wgpu::BufferUsages::COPY_DST),
@@ -223,7 +208,6 @@ pub(crate) mod u {
     }
 
     impl CopyTo for DynamicTextureUsages {
-        #[inline]
         fn copy_to(&self) {
             assert!(
                 self.0.contains(wgpu::TextureUsages::COPY_DST),
@@ -234,7 +218,6 @@ pub(crate) mod u {
 
     pub trait Bind {
         #[doc(hidden)]
-        #[inline]
         fn bind(&self) {}
     }
 
@@ -244,7 +227,6 @@ pub(crate) mod u {
     }
 
     impl Bind for DynamicTextureUsages {
-        #[inline]
         fn bind(&self) {
             assert!(
                 self.0.contains(wgpu::TextureUsages::TEXTURE_BINDING),
@@ -255,7 +237,6 @@ pub(crate) mod u {
 
     pub trait Render {
         #[doc(hidden)]
-        #[inline]
         fn render(&self) {}
     }
 
@@ -265,7 +246,6 @@ pub(crate) mod u {
     }
 
     impl Render for DynamicTextureUsages {
-        #[inline]
         fn render(&self) {
             assert!(
                 self.0.contains(wgpu::TextureUsages::RENDER_ATTACHMENT),

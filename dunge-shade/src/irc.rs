@@ -391,6 +391,7 @@ impl<'irc> Fnc<'irc> {
             Method::Load => expr(self.add_expr(naga::Expression::Load {
                 pointer: base.get(),
             })),
+            Method::Noop => expr(base.get()),
         }
     }
 
@@ -2742,6 +2743,7 @@ where
     Swizzle(Swizzle<B, O>),
     Expr(fn(&mut Fnc<'_>, Expr<B>) -> Expr<O>),
     Load,
+    Noop,
 }
 
 const fn swizzle<B, O>(swizzle: Swizzle<B, O>) -> Method<B, O>

@@ -3,7 +3,7 @@
 use {
     crate::{
         GroupLegacy,
-        buffer::TextureSampler,
+        buffer::{self, Sampler, Texture, TextureSampler},
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
@@ -236,6 +236,18 @@ where
     }
 }
 
+impl<S, const D: usize> Group for Texture<S, D> {
+    fn group<'group>(&'group self, e: &mut Entries<'group>) {
+        e.add_texture(buffer::view(self));
+    }
+}
+
+impl Group for Sampler {
+    fn group<'group>(&'group self, e: &mut Entries<'group>) {
+        e.add_sampler(self.inner().downcast_ref().expect("sampler"));
+    }
+}
+
 pub struct Entries<'group> {
     binding: u32,
     entries: Vec<wgpu::BindGroupEntry<'group>>,
@@ -254,14 +266,34 @@ impl<'group> Entries<'group> {
         self.entries.clear();
     }
 
-    fn add_buffer(&mut self, buffer: wgpu::BufferBinding<'group>) {
+    fn bind(&mut self) -> u32 {
         let binding = self.binding;
+        self.binding += 1;
+        binding
+    }
+
+    fn add_buffer(&mut self, buffer: wgpu::BufferBinding<'group>) {
+        let binding = self.bind();
         self.entries.push(wgpu::BindGroupEntry {
             binding,
             resource: wgpu::BindingResource::Buffer(buffer),
         });
+    }
 
-        self.binding += 1;
+    fn add_texture(&mut self, view: &'group wgpu::TextureView) {
+        let binding = self.bind();
+        self.entries.push(wgpu::BindGroupEntry {
+            binding,
+            resource: wgpu::BindingResource::TextureView(view),
+        });
+    }
+
+    fn add_sampler(&mut self, sampler: &'group wgpu::Sampler) {
+        let binding = self.bind();
+        self.entries.push(wgpu::BindGroupEntry {
+            binding,
+            resource: wgpu::BindingResource::Sampler(sampler),
+        });
     }
 }
 

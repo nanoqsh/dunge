@@ -12,15 +12,17 @@ use {
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
         },
     },
+    dunge_shade::desc,
     glam::{UVec2, UVec3},
     std::{
         error, fmt,
-        marker::PhantomData,
         num::{NonZeroU16, NonZeroU32},
         ops,
         sync::Arc,
     },
 };
+
+pub use dunge_shade::desc::{Sampler, Texture};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Size {
@@ -324,57 +326,40 @@ impl fmt::Display for InvalidLen {
 
 impl error::Error for InvalidLen {}
 
-pub enum DimensionsNumber {
-    D1,
-    D2,
-    D3,
-}
-
-impl DimensionsNumber {
-    fn wgpu(self) -> wgpu::TextureDimension {
-        match self {
-            Self::D1 => wgpu::TextureDimension::D1,
-            Self::D2 => wgpu::TextureDimension::D2,
-            Self::D3 => wgpu::TextureDimension::D3,
-        }
-    }
-}
-
-pub trait Dimension {
-    const N: DimensionsNumber;
-}
-
-pub enum D2 {}
-
-impl Dimension for D2 {
-    const N: DimensionsNumber = DimensionsNumber::D2;
-}
-
-pub struct TextureBuffer<D, U = DynamicTextureUsages> {
-    inner: TextureInner,
+pub struct TextureBuffer<const D: usize, U = DynamicTextureUsages> {
+    inner: Texture<(), D>,
     usage: U,
-    dim: PhantomData<D>,
 }
 
-impl<D, U> TextureBuffer<D, U> {
+impl<U, const D: usize> TextureBuffer<D, U> {
     pub(crate) fn new(state: &State, data: TextureData<'_, U>) -> Self
     where
-        D: Dimension,
         U: u::TextureUsages,
     {
+        let dimension = const {
+            match D {
+                1 => wgpu::TextureDimension::D1,
+                2 => wgpu::TextureDimension::D2,
+                3 => wgpu::TextureDimension::D3,
+                _ => panic!("this texture dimension is unsupported"),
+            }
+        };
+
         let new = NewTexture {
             data: data.data,
             size: data.size,
             format: data.format,
-            dimension: D::N,
+            dimension,
             usage: data.usage.usages(),
         };
 
-        Self {
-            inner: TextureInner::new(state, new),
-            usage: data.usage,
-            dim: PhantomData,
-        }
+        let inner = desc::internal::texture(TextureInner::new(state, new));
+        let usage = data.usage;
+        Self { inner, usage }
+    }
+
+    fn inner(&self) -> &TextureInner {
+        self.inner.inner().downcast_ref().expect("texture")
     }
 
     pub(crate) fn render(&self)
@@ -385,33 +370,45 @@ impl<D, U> TextureBuffer<D, U> {
     }
 
     pub fn size(&self) -> Size {
-        Size::from_wgpu(self.inner.texture.size())
+        Size::from_wgpu(self.inner().texture.size())
     }
 
     pub fn format(&self) -> Format {
-        Format::from_wgpu(self.inner.texture.format())
+        Format::from_wgpu(self.inner().texture.format())
     }
 
     pub fn bytes_per_row_aligned(&self) -> u32 {
-        self.inner.bytes_per_row_aligned
+        self.inner().bytes_per_row_aligned
     }
 
     pub(crate) fn view(&self) -> &wgpu::TextureView {
-        &self.inner.view
+        &self.inner().view
     }
 
     pub fn copy_buffer_data<'data>(&self) -> BufferData<'data, BufferCopyTo> {
-        let size = self.inner.texture.size();
-        let size = self.inner.bytes_per_row_aligned * size.height * size.depth_or_array_layers;
+        let inner = self.inner();
+        let size = inner.texture.size();
+        let size = inner.bytes_per_row_aligned * size.height * size.depth_or_array_layers;
         BufferData::empty(size).copy_to()
     }
+
+    pub fn texture<S>(&self) -> Texture<S, D>
+    where
+        U: u::Bind,
+    {
+        self.usage.bind();
+        self.inner.with_scalar()
+    }
+}
+
+pub(crate) fn view<S, const D: usize>(texture: &Texture<S, D>) -> &wgpu::TextureView {
+    let inner: &TextureInner = texture.inner().downcast_ref().expect("texture");
+    &inner.view
 }
 
 type BufferCopyTo = <BufferNoUsages as Use<dyn u::CopyTo>>::Out;
 
-pub type Texture2d<U = DynamicTextureUsages> = TextureBuffer<D2, U>;
-
-impl<U> Texture2d<U> {
+impl<U> TextureBuffer<2, U> {
     #[inline]
     pub fn bind(&self) -> BoundTexture
     where
@@ -453,7 +450,7 @@ impl TextureInner {
                 size,
                 mip_level_count: 1,
                 sample_count: 1,
-                dimension: dimension.wgpu(),
+                dimension,
                 format: format.wgpu(),
                 usage,
                 view_formats: &[],
@@ -501,7 +498,7 @@ struct NewTexture<'data> {
     data: &'data [u8],
     size: Size,
     format: Format,
-    dimension: DimensionsNumber,
+    dimension: wgpu::TextureDimension,
     usage: wgpu::TextureUsages,
 }
 
@@ -521,7 +518,7 @@ impl Filter {
 }
 
 #[derive(Clone)]
-pub struct TextureSampler(wgpu::Sampler);
+pub struct TextureSampler(Sampler);
 
 impl TextureSampler {
     pub(crate) fn new(state: &State, filter: Filter) -> Self {
@@ -532,11 +529,16 @@ impl TextureSampler {
             ..Default::default()
         };
 
-        Self(state.device().create_sampler(&desc))
+        let sampler = desc::internal::sampler(state.device().create_sampler(&desc));
+        Self(sampler)
     }
 
     pub(crate) fn inner(&self) -> &wgpu::Sampler {
-        &self.0
+        self.0.inner().downcast_ref().expect("sampler")
+    }
+
+    pub fn sampler(&self) -> Sampler {
+        self.0.clone()
     }
 }
 
@@ -900,9 +902,9 @@ where
     }
 }
 
-impl<D, U> i::AsInner for TextureBuffer<D, U> {
+impl<U, const D: usize> i::AsInner for TextureBuffer<D, U> {
     fn as_inner(&self) -> i::Wrap<'_> {
-        i::Wrap(Inner::Texture(&self.inner))
+        i::Wrap(Inner::Texture(self.inner()))
     }
 }
 
@@ -950,7 +952,7 @@ pub trait Source: i::AsInner {
 
 impl<S> Source for &S where S: Source {}
 
-impl<D, U> Source for TextureBuffer<D, U>
+impl<U, const D: usize> Source for TextureBuffer<D, U>
 where
     U: u::CopyFrom,
 {
@@ -981,7 +983,7 @@ pub trait Destination: i::AsInner {
 
 impl<D> Destination for &D where D: Destination {}
 
-impl<D, U> Destination for TextureBuffer<D, U>
+impl<U, const D: usize> Destination for TextureBuffer<D, U>
 where
     U: u::CopyTo,
 {

@@ -2,8 +2,8 @@ use {
     crate::{
         Vertex,
         buffer::{
-            self, Buffer, Filter, Read, ReadFailed, Texture2d, TextureBuffer, TextureSampler,
-            Write, WriteFailed,
+            self, Buffer, Filter, Read, ReadFailed, TextureBuffer, TextureSampler, Write,
+            WriteFailed,
         },
         instance::{Row, RowValue},
         layer::{Config, Layer},
@@ -217,7 +217,7 @@ impl Context {
     /// type Vec4f = [f32; 4];
     ///
     /// # async fn f(
-    /// #     target: dunge::buffer::Texture2d,
+    /// #     target: dunge::buffer::TextureBuffer<2>,
     /// #     opts: dunge::Options,
     /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Pointer<dunge::types::Vec4<f32>>>,)>>,
     /// #     mesh: dunge::mesh::Mesh<Vec4f>,
@@ -345,7 +345,7 @@ impl Context {
     }
 
     /// Creates a [2D texture](Texture2d) with the given [data](buffer::TextureData).
-    pub fn make_texture<U>(&self, data: buffer::TextureData<'_, U>) -> Texture2d<U>
+    pub fn make_texture<U>(&self, data: buffer::TextureData<'_, U>) -> TextureBuffer<2, U>
     where
         U: u::TextureUsages,
     {

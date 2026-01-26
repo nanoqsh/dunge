@@ -110,7 +110,8 @@ pub fn texture_dimensions<S, const D: usize>(texture: Texture<S, D>) -> <u32 as 
 where
     u32: Dim<D>,
 {
-    texture.never()
+    _ = texture;
+    panic!()
 }
 
 pub fn texture_sample<const D: usize>(
@@ -121,8 +122,8 @@ pub fn texture_sample<const D: usize>(
 where
     f32: Dim<D>,
 {
-    _ = (sampler, point);
-    texture.never()
+    _ = (texture, sampler, point);
+    panic!()
 }
 
 pub fn texture_load<S, const D: usize>(
@@ -132,8 +133,8 @@ pub fn texture_load<S, const D: usize>(
 where
     S: Dim<D> + Dim<4>,
 {
-    _ = point;
-    texture.never()
+    _ = (texture, point);
+    panic!()
 }
 
 pub fn abs<X, const D: usize>(x: X) -> X
