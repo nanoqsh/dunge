@@ -635,6 +635,7 @@ impl<I, O> Export<I, O> {
     }
 }
 
+#[derive(PartialEq, Eq)]
 struct Math(usize);
 
 impl Math {
@@ -642,21 +643,27 @@ impl Math {
     const MIN: Self = Self(1);
     const MAX: Self = Self(2);
     const CLAMP: Self = Self(3);
+    const SIN: Self = Self(4);
+    const COS: Self = Self(5);
+    const TAN: Self = Self(6);
 
     const fn get(self) -> usize {
         self.0
     }
 
     const fn from_usize(n: usize) -> Option<Self> {
-        if n < 4 { Some(Self(n)) } else { None }
+        if n < 7 { Some(Self(n)) } else { None }
     }
 
     const fn naga(self) -> naga::MathFunction {
         match self {
-            Self(0) => naga::MathFunction::Abs,
-            Self(1) => naga::MathFunction::Min,
-            Self(2) => naga::MathFunction::Max,
-            Self(3) => naga::MathFunction::Clamp,
+            Self::ABS => naga::MathFunction::Abs,
+            Self::MIN => naga::MathFunction::Min,
+            Self::MAX => naga::MathFunction::Max,
+            Self::CLAMP => naga::MathFunction::Clamp,
+            Self::SIN => naga::MathFunction::Sin,
+            Self::COS => naga::MathFunction::Cos,
+            Self::TAN => naga::MathFunction::Tan,
             _ => unreachable!(),
         }
     }
@@ -693,29 +700,29 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(Vec2::new), make::<Vec2, f32, 2>);
     fns.insert(fnid(Vec3::new), make::<Vec3, f32, 3>);
     fns.insert(fnid(Vec4::new), make::<Vec4, f32, 4>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(glam::ivec2), make::<IVec2, i32, 2>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(IVec2::new), make::<IVec2, i32, 2>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(glam::ivec3), make::<IVec3, i32, 3>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(IVec3::new), make::<IVec3, i32, 3>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(glam::ivec4), make::<IVec4, i32, 4>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(IVec4::new), make::<IVec4, i32, 4>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(glam::uvec2), make::<UVec2, u32, 2>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(UVec2::new), make::<UVec2, u32, 2>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(glam::uvec3), make::<UVec3, u32, 3>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(UVec3::new), make::<UVec3, u32, 3>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(glam::uvec4), make::<UVec4, u32, 4>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(UVec4::new), make::<UVec4, u32, 4>);
 
     fns.insert(fnid(glam::mat2), make::<Mat2, Vec2, 2>);
@@ -737,13 +744,13 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
 
     fns.insert(fnid(sl::append::<Vec2>), append::<Vec2, f32, Vec3>);
     fns.insert(fnid(sl::append::<Vec3>), append::<Vec3, f32, Vec4>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::append::<IVec2>), append::<IVec2, i32, IVec3>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::append::<IVec3>), append::<IVec3, i32, IVec4>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::append::<UVec2>), append::<UVec2, u32, UVec3>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::append::<UVec3>), append::<UVec3, u32, UVec4>);
 
     fn prepend<V, S, R>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
@@ -758,13 +765,13 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
 
     fns.insert(fnid(sl::prepend::<Vec2>), prepend::<Vec2, f32, Vec3>);
     fns.insert(fnid(sl::prepend::<Vec3>), prepend::<Vec3, f32, Vec4>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::prepend::<IVec2>), prepend::<IVec2, i32, IVec3>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::prepend::<IVec3>), prepend::<IVec3, i32, IVec4>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::prepend::<UVec2>), prepend::<UVec2, u32, UVec3>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::prepend::<UVec3>), prepend::<UVec3, u32, UVec4>);
 
     fn concat<V, R>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
@@ -778,9 +785,9 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     }
 
     fns.insert(fnid(sl::concat::<Vec2>), concat::<Vec2, Vec4>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::concat::<IVec2>), concat::<IVec2, IVec4>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::concat::<UVec2>), concat::<UVec2, UVec4>);
 
     fn splat<V, S>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
@@ -794,17 +801,17 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::splat_vec2::<f32>), splat::<Vec2, f32>);
     fns.insert(fnid(sl::splat_vec3::<f32>), splat::<Vec3, f32>);
     fns.insert(fnid(sl::splat_vec4::<f32>), splat::<Vec4, f32>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::splat_vec2::<i32>), splat::<IVec2, i32>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::splat_vec3::<i32>), splat::<IVec3, i32>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::splat_vec4::<i32>), splat::<IVec4, i32>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::splat_vec2::<u32>), splat::<UVec2, u32>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::splat_vec3::<u32>), splat::<UVec3, u32>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::splat_vec4::<u32>), splat::<UVec4, u32>);
 
     fn tdim<S, const D: usize>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
@@ -821,17 +828,17 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::texture_dimensions::<f32, 1>), tdim::<f32, 1>);
     fns.insert(fnid(sl::texture_dimensions::<f32, 2>), tdim::<f32, 2>);
     fns.insert(fnid(sl::texture_dimensions::<f32, 3>), tdim::<f32, 3>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::texture_dimensions::<i32, 1>), tdim::<i32, 1>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::texture_dimensions::<i32, 2>), tdim::<i32, 2>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::texture_dimensions::<i32, 3>), tdim::<i32, 3>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::texture_dimensions::<u32, 1>), tdim::<u32, 1>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::texture_dimensions::<u32, 2>), tdim::<u32, 2>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::texture_dimensions::<u32, 3>), tdim::<u32, 3>);
 
     fn tsam<const D: usize>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
@@ -866,17 +873,17 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::texture_load::<f32, 1>), tload::<f32, 1>);
     fns.insert(fnid(sl::texture_load::<f32, 2>), tload::<f32, 2>);
     fns.insert(fnid(sl::texture_load::<f32, 3>), tload::<f32, 3>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::texture_load::<i32, 1>), tload::<i32, 1>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::texture_load::<i32, 2>), tload::<i32, 2>);
-    #[cfg(feature = "mathi")]
+    #[cfg(feature = "mi")]
     fns.insert(fnid(sl::texture_load::<i32, 3>), tload::<i32, 3>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::texture_load::<u32, 1>), tload::<u32, 1>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::texture_load::<u32, 2>), tload::<u32, 2>);
-    #[cfg(feature = "mathu")]
+    #[cfg(feature = "mu")]
     fns.insert(fnid(sl::texture_load::<u32, 3>), tload::<u32, 3>);
 
     fn discard(fnc: &mut Fnc<'_>, _: Args<'_>) -> FnRes {
@@ -891,89 +898,111 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
         Ok(fnc.do_math(fun, args.0))
     }
 
-    fns.insert(fnid(sl::abs::<f32, 1>), math::<{ Math::ABS.get() }>);
-    fns.insert(fnid(sl::abs::<f32, 2>), math::<{ Math::ABS.get() }>);
-    fns.insert(fnid(sl::abs::<f32, 3>), math::<{ Math::ABS.get() }>);
-    fns.insert(fnid(sl::abs::<f32, 4>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::abs::<i32, 1>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::abs::<i32, 2>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::abs::<i32, 3>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::abs::<i32, 4>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::abs::<u32, 1>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::abs::<u32, 2>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::abs::<u32, 3>), math::<{ Math::ABS.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::abs::<u32, 4>), math::<{ Math::ABS.get() }>);
+    fns.insert(fnid(sl::abs::<f32>), math::<{ Math::ABS.get() }>);
+    fns.insert(fnid(sl::abs::<Vec2>), math::<{ Math::ABS.get() }>);
+    fns.insert(fnid(sl::abs::<Vec3>), math::<{ Math::ABS.get() }>);
+    fns.insert(fnid(sl::abs::<Vec4>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::abs::<i32>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::abs::<IVec2>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::abs::<IVec3>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::abs::<IVec4>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::abs::<u32>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::abs::<UVec2>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::abs::<UVec3>), math::<{ Math::ABS.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::abs::<UVec4>), math::<{ Math::ABS.get() }>);
 
-    fns.insert(fnid(sl::min::<f32, 1>), math::<{ Math::MIN.get() }>);
-    fns.insert(fnid(sl::min::<f32, 2>), math::<{ Math::MIN.get() }>);
-    fns.insert(fnid(sl::min::<f32, 3>), math::<{ Math::MIN.get() }>);
-    fns.insert(fnid(sl::min::<f32, 4>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::min::<i32, 1>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::min::<i32, 2>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::min::<i32, 3>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::min::<i32, 4>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::min::<u32, 1>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::min::<u32, 2>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::min::<u32, 3>), math::<{ Math::MIN.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::min::<u32, 4>), math::<{ Math::MIN.get() }>);
+    fns.insert(fnid(sl::min::<f32>), math::<{ Math::MIN.get() }>);
+    fns.insert(fnid(sl::min::<Vec2>), math::<{ Math::MIN.get() }>);
+    fns.insert(fnid(sl::min::<Vec3>), math::<{ Math::MIN.get() }>);
+    fns.insert(fnid(sl::min::<Vec4>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::min::<i32>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::min::<IVec2>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::min::<IVec3>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::min::<IVec4>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::min::<u32>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::min::<UVec2>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::min::<UVec3>), math::<{ Math::MIN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::min::<UVec4>), math::<{ Math::MIN.get() }>);
 
-    fns.insert(fnid(sl::max::<f32, 1>), math::<{ Math::MAX.get() }>);
-    fns.insert(fnid(sl::max::<f32, 2>), math::<{ Math::MAX.get() }>);
-    fns.insert(fnid(sl::max::<f32, 3>), math::<{ Math::MAX.get() }>);
-    fns.insert(fnid(sl::max::<f32, 4>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::max::<i32, 1>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::max::<i32, 2>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::max::<i32, 3>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::max::<i32, 4>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::max::<u32, 1>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::max::<u32, 2>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::max::<u32, 3>), math::<{ Math::MAX.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::max::<u32, 4>), math::<{ Math::MAX.get() }>);
+    fns.insert(fnid(sl::max::<f32>), math::<{ Math::MAX.get() }>);
+    fns.insert(fnid(sl::max::<Vec2>), math::<{ Math::MAX.get() }>);
+    fns.insert(fnid(sl::max::<Vec3>), math::<{ Math::MAX.get() }>);
+    fns.insert(fnid(sl::max::<Vec4>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::max::<i32>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::max::<IVec2>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::max::<IVec3>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::max::<IVec4>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::max::<u32>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::max::<UVec2>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::max::<UVec3>), math::<{ Math::MAX.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::max::<UVec4>), math::<{ Math::MAX.get() }>);
 
-    fns.insert(fnid(sl::clamp::<f32, 1>), math::<{ Math::CLAMP.get() }>);
-    fns.insert(fnid(sl::clamp::<f32, 2>), math::<{ Math::CLAMP.get() }>);
-    fns.insert(fnid(sl::clamp::<f32, 3>), math::<{ Math::CLAMP.get() }>);
-    fns.insert(fnid(sl::clamp::<f32, 4>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::clamp::<i32, 1>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::clamp::<i32, 2>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::clamp::<i32, 3>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathi")]
-    fns.insert(fnid(sl::clamp::<i32, 4>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::clamp::<u32, 1>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::clamp::<u32, 2>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::clamp::<u32, 3>), math::<{ Math::CLAMP.get() }>);
-    #[cfg(feature = "mathu")]
-    fns.insert(fnid(sl::clamp::<u32, 4>), math::<{ Math::CLAMP.get() }>);
+    fns.insert(fnid(sl::clamp::<f32>), math::<{ Math::CLAMP.get() }>);
+    fns.insert(fnid(sl::clamp::<Vec2>), math::<{ Math::CLAMP.get() }>);
+    fns.insert(fnid(sl::clamp::<Vec3>), math::<{ Math::CLAMP.get() }>);
+    fns.insert(fnid(sl::clamp::<Vec4>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::clamp::<i32>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::clamp::<IVec2>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::clamp::<IVec3>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::clamp::<IVec4>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::clamp::<u32>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::clamp::<UVec2>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::clamp::<UVec3>), math::<{ Math::CLAMP.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::clamp::<UVec4>), math::<{ Math::CLAMP.get() }>);
+
+    fns.insert(fnid(sl::sin::<f32>), math::<{ Math::SIN.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::sin::<Vec2>), math::<{ Math::SIN.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::sin::<Vec3>), math::<{ Math::SIN.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::sin::<Vec4>), math::<{ Math::SIN.get() }>);
+    fns.insert(fnid(sl::cos::<f32>), math::<{ Math::COS.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::cos::<Vec2>), math::<{ Math::COS.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::cos::<Vec3>), math::<{ Math::COS.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::cos::<Vec4>), math::<{ Math::COS.get() }>);
+    fns.insert(fnid(sl::tan::<f32>), math::<{ Math::TAN.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::tan::<Vec2>), math::<{ Math::TAN.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::tan::<Vec3>), math::<{ Math::TAN.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::tan::<Vec4>), math::<{ Math::TAN.get() }>);
 
     fns
 }

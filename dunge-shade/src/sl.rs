@@ -137,34 +137,75 @@ where
     panic!()
 }
 
-pub fn abs<X, const D: usize>(x: X) -> X
+pub trait FloatParameter {}
+impl FloatParameter for f32 {}
+impl FloatParameter for Vec2 {}
+impl FloatParameter for Vec3 {}
+impl FloatParameter for Vec4 {}
+
+pub trait Parameter {}
+impl<F> Parameter for F where F: FloatParameter {}
+impl Parameter for i32 {}
+impl Parameter for u32 {}
+impl Parameter for IVec2 {}
+impl Parameter for IVec3 {}
+impl Parameter for IVec4 {}
+impl Parameter for UVec2 {}
+impl Parameter for UVec3 {}
+impl Parameter for UVec4 {}
+
+pub fn abs<X>(x: X) -> X
 where
-    X: Dim<D>,
+    X: Parameter,
 {
     _ = x;
     panic!()
 }
 
-pub fn min<X, const D: usize>(x: X) -> X
+pub fn min<X>(x: X) -> X
 where
-    X: Dim<D>,
+    X: Parameter,
 {
     _ = x;
     panic!()
 }
 
-pub fn max<X, const D: usize>(x: X) -> X
+pub fn max<X>(x: X) -> X
 where
-    X: Dim<D>,
+    X: Parameter,
 {
     _ = x;
     panic!()
 }
 
-pub fn clamp<X, const D: usize>(e: X, low: X, high: X) -> X
+pub fn clamp<X>(e: X, low: X, high: X) -> X
 where
-    X: Dim<D>,
+    X: Parameter,
 {
     _ = (e, low, high);
+    panic!()
+}
+
+pub fn sin<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn cos<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn tan<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
     panic!()
 }

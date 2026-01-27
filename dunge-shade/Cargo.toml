@@ -11,8 +11,9 @@ repository.workspace = true
 rust-version.workspace = true
 
 [features]
-mathu = []
-mathi = []
+mu = []
+mi = []
+mv = []
 wgsl = ["naga/wgsl-out"]
 
 [dependencies]
