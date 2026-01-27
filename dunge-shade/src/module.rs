@@ -135,7 +135,7 @@ impl Make {
 }
 
 pub(crate) fn make(info: Info, ms: &mut [Make]) -> Comp<Module> {
-    let imports = Imports::default();
+    let imports = const { Imports::new() };
     let mut irc = Irc::new(imports);
 
     for make in ms {

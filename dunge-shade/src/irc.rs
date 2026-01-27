@@ -1,6 +1,7 @@
 use {
     crate::{
         desc::{Sampler, Texture},
+        map::{self, Map},
         module::{Boot, GroupFormat, Hook},
         sl,
         store::{Storage, Uniform},
@@ -9,7 +10,6 @@ use {
     naga::{Arena, Handle, Range, Span, Statement, UniqueArena},
     std::{
         any::TypeId,
-        collections::HashMap,
         error,
         fmt::{self, Write},
         marker::PhantomData,
@@ -73,7 +73,7 @@ pub struct Fnc<'irc> {
 }
 
 impl<'irc> Fnc<'irc> {
-    pub fn new(irc: &'irc mut Irc) -> Self {
+    pub const fn new(irc: &'irc mut Irc) -> Self {
         Self {
             irc,
             arguments: vec![],
@@ -676,8 +676,8 @@ struct BuildFnError;
 type FnRes = Result<Handle<naga::Expression>, BuildFnError>;
 type BuildFnCall = fn(&mut Fnc<'_>, Args<'_>) -> FnRes;
 
-fn builtins() -> HashMap<TypeId, BuildFnCall> {
-    let mut fns: HashMap<TypeId, BuildFnCall> = HashMap::new();
+fn builtins() -> Map<TypeId, BuildFnCall> {
+    let mut fns: Map<TypeId, BuildFnCall> = map::make();
 
     fn make<V, S, const N: usize>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
     where
@@ -806,7 +806,7 @@ fn builtins() -> HashMap<TypeId, BuildFnCall> {
     #[cfg(feature = "mathu")]
     fns.insert(fnid(sl::splat_vec4::<u32>), splat::<UVec4, u32>);
 
-    fn insert_texture_dimensions<S, const D: usize>(fns: &mut HashMap<TypeId, BuildFnCall>)
+    fn insert_texture_dimensions<S, const D: usize>(fns: &mut Map<TypeId, BuildFnCall>)
     where
         S: 'static,
         u32: Dim<D>,
@@ -836,7 +836,7 @@ fn builtins() -> HashMap<TypeId, BuildFnCall> {
     #[cfg(feature = "mathu")]
     insert_texture_dimensions::<u32, 3>(&mut fns);
 
-    fn insert_texture_sample<const D: usize>(fns: &mut HashMap<TypeId, BuildFnCall>)
+    fn insert_texture_sample<const D: usize>(fns: &mut Map<TypeId, BuildFnCall>)
     where
         f32: Dim<D>,
     {
@@ -855,7 +855,7 @@ fn builtins() -> HashMap<TypeId, BuildFnCall> {
     insert_texture_sample::<2>(&mut fns);
     insert_texture_sample::<3>(&mut fns);
 
-    fn insert_texture_load<S, const D: usize>(fns: &mut HashMap<TypeId, BuildFnCall>)
+    fn insert_texture_load<S, const D: usize>(fns: &mut Map<TypeId, BuildFnCall>)
     where
         S: Scalar + Dim<D> + Dim<4> + 'static,
     {
@@ -985,31 +985,20 @@ fn builtins() -> HashMap<TypeId, BuildFnCall> {
 }
 
 pub struct Imports {
-    builtins: &'static HashMap<TypeId, BuildFnCall>,
-    export: HashMap<TypeId, BuildFnCall>,
+    export: Map<TypeId, BuildFnCall>,
 }
 
 impl Imports {
-    fn new() -> Self {
-        static BUILTINS: LazyLock<HashMap<TypeId, BuildFnCall>> = LazyLock::new(builtins);
-
+    pub(crate) const fn new() -> Self {
         Self {
-            builtins: &*BUILTINS,
-            export: HashMap::new(),
+            export: map::make(),
         }
     }
 
     fn get(&self, id: TypeId) -> Option<BuildFnCall> {
-        self.builtins
-            .get(&id)
-            .or_else(|| self.export.get(&id))
-            .copied()
-    }
-}
+        static BUILTINS: LazyLock<Map<TypeId, BuildFnCall>> = LazyLock::new(builtins);
 
-impl Default for Imports {
-    fn default() -> Self {
-        Self::new()
+        BUILTINS.get(&id).or_else(|| self.export.get(&id)).copied()
     }
 }
 
@@ -1026,12 +1015,12 @@ enum MakeGroup {
 pub struct Irc {
     imports: Imports,
     group: u32,
-    group_globals: HashMap<TypeId, u32>,
+    group_globals: Map<TypeId, u32>,
     location: Option<u32>,
     types: UniqueArena<naga::Type>,
-    named_types: HashMap<TypeId, Handle<naga::Type>>,
+    named_types: Map<TypeId, Handle<naga::Type>>,
     global_variables: Arena<naga::GlobalVariable>,
-    global_map: HashMap<u32, Box<[GlobalVariableEntry]>>,
+    global_map: Map<u32, Box<[GlobalVariableEntry]>>,
     global_count: u32,
     functions: Arena<naga::Function>,
     entries: Vec<naga::EntryPoint>,
@@ -1043,12 +1032,12 @@ impl Irc {
         Self {
             imports,
             group: 0,
-            group_globals: HashMap::new(),
+            group_globals: map::make(),
             location: None,
             types: UniqueArena::new(),
-            named_types: HashMap::new(),
+            named_types: map::make(),
             global_variables: Arena::new(),
-            global_map: HashMap::new(),
+            global_map: map::make(),
             global_count: 0,
             functions: Arena::new(),
             entries: vec![],

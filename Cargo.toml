@@ -34,6 +34,7 @@ dunge-shade-old = { version = "=0.3.11", path = "dunge-shade-old" }
 dunge-winit = { version = "=0.3.11", path = "dunge-winit" }
 helpers.path = "helpers"
 # third-party
+ahash = { version = "0.8", default-features = false }
 askama = { version = "0.15", default-features = false }
 async-channel = "2.1"
 async-executor = "1.8"

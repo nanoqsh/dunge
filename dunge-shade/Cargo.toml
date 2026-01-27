@@ -16,6 +16,7 @@ mathi = []
 wgsl = ["naga/wgsl-out"]
 
 [dependencies]
+ahash = { workspace = true, features = ["compile-time-rng"] }
 glam.workspace = true
 naga.workspace = true
 
