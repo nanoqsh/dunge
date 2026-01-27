@@ -646,13 +646,24 @@ impl Math {
     const SIN: Self = Self(4);
     const COS: Self = Self(5);
     const TAN: Self = Self(6);
+    const SATURATE: Self = Self(7);
+    const CEIL: Self = Self(8);
+    const FLOOR: Self = Self(9);
+    const ROUND: Self = Self(10);
+    const FRACT: Self = Self(11);
+    const TRUNC: Self = Self(12);
+    const EXP: Self = Self(13);
+    const EXP2: Self = Self(14);
+    const LOG: Self = Self(15);
+    const LOG2: Self = Self(16);
+    const POW: Self = Self(17);
 
     const fn get(self) -> usize {
         self.0
     }
 
     const fn from_usize(n: usize) -> Option<Self> {
-        if n < 7 { Some(Self(n)) } else { None }
+        if n < 18 { Some(Self(n)) } else { None }
     }
 
     const fn naga(self) -> naga::MathFunction {
@@ -664,6 +675,17 @@ impl Math {
             Self::SIN => naga::MathFunction::Sin,
             Self::COS => naga::MathFunction::Cos,
             Self::TAN => naga::MathFunction::Tan,
+            Self::SATURATE => naga::MathFunction::Saturate,
+            Self::CEIL => naga::MathFunction::Ceil,
+            Self::FLOOR => naga::MathFunction::Floor,
+            Self::ROUND => naga::MathFunction::Round,
+            Self::FRACT => naga::MathFunction::Fract,
+            Self::TRUNC => naga::MathFunction::Trunc,
+            Self::EXP => naga::MathFunction::Exp,
+            Self::EXP2 => naga::MathFunction::Exp2,
+            Self::LOG => naga::MathFunction::Log,
+            Self::LOG2 => naga::MathFunction::Log2,
+            Self::POW => naga::MathFunction::Pow,
             _ => unreachable!(),
         }
     }
@@ -989,6 +1011,7 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::sin::<Vec3>), math::<{ Math::SIN.get() }>);
     #[cfg(feature = "mv")]
     fns.insert(fnid(sl::sin::<Vec4>), math::<{ Math::SIN.get() }>);
+
     fns.insert(fnid(sl::cos::<f32>), math::<{ Math::COS.get() }>);
     #[cfg(feature = "mv")]
     fns.insert(fnid(sl::cos::<Vec2>), math::<{ Math::COS.get() }>);
@@ -996,6 +1019,7 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::cos::<Vec3>), math::<{ Math::COS.get() }>);
     #[cfg(feature = "mv")]
     fns.insert(fnid(sl::cos::<Vec4>), math::<{ Math::COS.get() }>);
+
     fns.insert(fnid(sl::tan::<f32>), math::<{ Math::TAN.get() }>);
     #[cfg(feature = "mv")]
     fns.insert(fnid(sl::tan::<Vec2>), math::<{ Math::TAN.get() }>);
@@ -1003,6 +1027,94 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::tan::<Vec3>), math::<{ Math::TAN.get() }>);
     #[cfg(feature = "mv")]
     fns.insert(fnid(sl::tan::<Vec4>), math::<{ Math::TAN.get() }>);
+
+    fns.insert(fnid(sl::saturate::<f32>), math::<{ Math::SATURATE.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::saturate::<Vec2>), math::<{ Math::SATURATE.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::saturate::<Vec3>), math::<{ Math::SATURATE.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::saturate::<Vec4>), math::<{ Math::SATURATE.get() }>);
+
+    fns.insert(fnid(sl::ceil::<f32>), math::<{ Math::CEIL.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::ceil::<Vec2>), math::<{ Math::CEIL.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::ceil::<Vec3>), math::<{ Math::CEIL.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::ceil::<Vec4>), math::<{ Math::CEIL.get() }>);
+
+    fns.insert(fnid(sl::floor::<f32>), math::<{ Math::FLOOR.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::floor::<Vec2>), math::<{ Math::FLOOR.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::floor::<Vec3>), math::<{ Math::FLOOR.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::floor::<Vec4>), math::<{ Math::FLOOR.get() }>);
+
+    fns.insert(fnid(sl::round::<f32>), math::<{ Math::ROUND.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::round::<Vec2>), math::<{ Math::ROUND.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::round::<Vec3>), math::<{ Math::ROUND.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::round::<Vec4>), math::<{ Math::ROUND.get() }>);
+
+    fns.insert(fnid(sl::fract::<f32>), math::<{ Math::FRACT.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::fract::<Vec2>), math::<{ Math::FRACT.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::fract::<Vec3>), math::<{ Math::FRACT.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::fract::<Vec4>), math::<{ Math::FRACT.get() }>);
+
+    fns.insert(fnid(sl::trunc::<f32>), math::<{ Math::TRUNC.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::trunc::<Vec2>), math::<{ Math::TRUNC.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::trunc::<Vec3>), math::<{ Math::TRUNC.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::trunc::<Vec4>), math::<{ Math::TRUNC.get() }>);
+
+    fns.insert(fnid(sl::exp::<f32>), math::<{ Math::EXP.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::exp::<Vec2>), math::<{ Math::EXP.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::exp::<Vec3>), math::<{ Math::EXP.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::exp::<Vec4>), math::<{ Math::EXP.get() }>);
+
+    fns.insert(fnid(sl::exp2::<f32>), math::<{ Math::EXP2.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::exp2::<Vec2>), math::<{ Math::EXP2.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::exp2::<Vec3>), math::<{ Math::EXP2.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::exp2::<Vec4>), math::<{ Math::EXP2.get() }>);
+
+    fns.insert(fnid(sl::log::<f32>), math::<{ Math::LOG.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::log::<Vec2>), math::<{ Math::LOG.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::log::<Vec3>), math::<{ Math::LOG.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::log::<Vec4>), math::<{ Math::LOG.get() }>);
+
+    fns.insert(fnid(sl::log2::<f32>), math::<{ Math::LOG2.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::log2::<Vec2>), math::<{ Math::LOG2.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::log2::<Vec3>), math::<{ Math::LOG2.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::log2::<Vec4>), math::<{ Math::LOG2.get() }>);
+
+    fns.insert(fnid(sl::pow::<f32>), math::<{ Math::POW.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::pow::<Vec2>), math::<{ Math::POW.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::pow::<Vec3>), math::<{ Math::POW.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::pow::<Vec4>), math::<{ Math::POW.get() }>);
 
     fns
 }

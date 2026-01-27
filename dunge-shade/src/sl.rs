@@ -209,3 +209,91 @@ where
     _ = x;
     panic!()
 }
+
+pub fn saturate<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn ceil<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn floor<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn round<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn fract<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn trunc<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn exp<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn exp2<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn log<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn log2<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn pow<X>(x: X, p: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = (x, p);
+    panic!()
+}
