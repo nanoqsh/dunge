@@ -7,3 +7,4 @@ pub mod map;
 pub mod module;
 pub mod sl;
 pub mod store;
+pub mod swizzle;

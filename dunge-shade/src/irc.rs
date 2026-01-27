@@ -717,6 +717,7 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(glam::uvec4), make::<UVec4, u32, 4>);
     #[cfg(feature = "mathu")]
     fns.insert(fnid(UVec4::new), make::<UVec4, u32, 4>);
+
     fns.insert(fnid(glam::mat2), make::<Mat2, Vec2, 2>);
     fns.insert(fnid(glam::mat3), make::<Mat3, Vec3, 3>);
     fns.insert(fnid(glam::mat4), make::<Mat4, Vec4, 4>);
@@ -2484,40 +2485,6 @@ where
     }
 }
 
-macro_rules! sw {
-    (x) => {
-        naga::SwizzleComponent::X
-    };
-
-    (y) => {
-        naga::SwizzleComponent::Y
-    };
-
-    (z) => {
-        naga::SwizzleComponent::Z
-    };
-
-    (w) => {
-        naga::SwizzleComponent::W
-    };
-
-    ($a:ident $b:ident) => {
-        Swizzle::N2([sw!($a), sw!($b)], PhantomData, PhantomData)
-    };
-
-    ($a:ident $b:ident $c:ident) => {
-        Swizzle::N3([sw!($a), sw!($b), sw!($c)], PhantomData, PhantomData)
-    };
-
-    ($a:ident $b:ident $c:ident $d:ident) => {
-        Swizzle::N4(
-            [sw!($a), sw!($b), sw!($c), sw!($d)],
-            PhantomData,
-            PhantomData,
-        )
-    };
-}
-
 pub enum Swizzle<B, O>
 where
     B: ?Sized,
@@ -2746,7 +2713,7 @@ where
     Noop,
 }
 
-const fn swizzle<B, O>(swizzle: Swizzle<B, O>) -> Method<B, O>
+pub(crate) const fn swizzle<B, O>(swizzle: Swizzle<B, O>) -> Method<B, O>
 where
     B: ?Sized,
     O: ?Sized,
@@ -2760,83 +2727,4 @@ where
     O: ?Sized,
 {
     Method::Expr(e)
-}
-
-pub struct Vec2Methods<V, A, B, C> {
-    pub xx: Method<V, A>,
-    pub xy: Method<V, A>,
-    pub yx: Method<V, A>,
-    pub yy: Method<V, A>,
-    pub xxx: Method<V, B>,
-    pub xxy: Method<V, B>,
-    pub xyx: Method<V, B>,
-    pub xyy: Method<V, B>,
-    pub yxx: Method<V, B>,
-    pub yxy: Method<V, B>,
-    pub yyx: Method<V, B>,
-    pub yyy: Method<V, B>,
-    pub xxxx: Method<V, C>,
-    pub xxxy: Method<V, C>,
-    pub xxyx: Method<V, C>,
-    pub xxyy: Method<V, C>,
-    pub xyxx: Method<V, C>,
-    pub xyxy: Method<V, C>,
-    pub xyyx: Method<V, C>,
-    pub xyyy: Method<V, C>,
-    pub yxxx: Method<V, C>,
-    pub yxxy: Method<V, C>,
-    pub yxyx: Method<V, C>,
-    pub yxyy: Method<V, C>,
-    pub yyxx: Method<V, C>,
-    pub yyxy: Method<V, C>,
-    pub yyyx: Method<V, C>,
-    pub yyyy: Method<V, C>,
-}
-
-const fn vec2_methods<V, A, B, C>() -> Vec2Methods<V, A, B, C> {
-    Vec2Methods {
-        xx: swizzle(sw!(x x)),
-        xy: swizzle(sw!(x y)),
-        yx: swizzle(sw!(y x)),
-        yy: swizzle(sw!(y y)),
-        xxx: swizzle(sw!(x x x)),
-        xxy: swizzle(sw!(x x y)),
-        xyx: swizzle(sw!(x y x)),
-        xyy: swizzle(sw!(x y y)),
-        yxx: swizzle(sw!(y x x)),
-        yxy: swizzle(sw!(y x y)),
-        yyx: swizzle(sw!(y y x)),
-        yyy: swizzle(sw!(y y y)),
-        xxxx: swizzle(sw!(x x x x)),
-        xxxy: swizzle(sw!(x x x y)),
-        xxyx: swizzle(sw!(x x y x)),
-        xxyy: swizzle(sw!(x x y y)),
-        xyxx: swizzle(sw!(x y x x)),
-        xyxy: swizzle(sw!(x y x y)),
-        xyyx: swizzle(sw!(x y y x)),
-        xyyy: swizzle(sw!(x y y y)),
-        yxxx: swizzle(sw!(y x x x)),
-        yxxy: swizzle(sw!(y x x y)),
-        yxyx: swizzle(sw!(y x y x)),
-        yxyy: swizzle(sw!(y x y y)),
-        yyxx: swizzle(sw!(y y x x)),
-        yyxy: swizzle(sw!(y y x y)),
-        yyyx: swizzle(sw!(y y y x)),
-        yyyy: swizzle(sw!(y y y y)),
-    }
-}
-
-impl Methods for Vec2 {
-    type Methods = Vec2Methods<Self, Self, Vec3, Vec4>;
-    const METHODS: Vec2Methods<Self, Self, Vec3, Vec4> = vec2_methods();
-}
-
-impl Methods for IVec2 {
-    type Methods = Vec2Methods<Self, Self, IVec3, IVec4>;
-    const METHODS: Vec2Methods<Self, Self, IVec3, IVec4> = vec2_methods();
-}
-
-impl Methods for UVec2 {
-    type Methods = Vec2Methods<Self, Self, UVec3, UVec4>;
-    const METHODS: Vec2Methods<Self, Self, UVec3, UVec4> = vec2_methods();
 }
