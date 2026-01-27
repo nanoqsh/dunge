@@ -439,6 +439,13 @@ impl<'irc> Fnc<'irc> {
         }))
     }
 
+    fn do_array_len<A>(&mut self, pointer: Expr<A>) -> Expr<u32>
+    where
+        A: ?Sized,
+    {
+        expr(self.add_expr(naga::Expression::ArrayLength(pointer.get())))
+    }
+
     pub fn add_local<T>(&mut self) -> Variable<T>
     where
         T: Value,
@@ -1199,7 +1206,7 @@ impl Irc {
                 let ty = naga::Type { name: None, inner };
                 self.types.insert(ty, Span::UNDEFINED)
             }
-            Err(DynamicType { make, name }) => {
+            Err(DynamicType { make, name, .. }) => {
                 if let Some(&handle) = self.named_types.get(&name) {
                     return handle;
                 }
@@ -2163,9 +2170,17 @@ const fn vecsize(size: usize) -> naga::VectorSize {
 }
 
 #[derive(Clone, Copy)]
+pub enum ArraySize {
+    No,
+    Fixed(usize),
+    Dynamic,
+}
+
+#[derive(Clone, Copy)]
 pub struct DynamicType {
     make: fn(TypeBuilder<'_>) -> naga::TypeInner,
     name: TypeId,
+    size: ArraySize,
 }
 
 #[derive(Clone, Copy)]
@@ -2213,13 +2228,14 @@ impl Type {
         }
     }
 
-    pub const fn dynamic<T>(make: fn(TypeBuilder<'_>) -> naga::TypeInner) -> Self
+    pub const fn dynamic<T>(make: fn(TypeBuilder<'_>) -> naga::TypeInner, size: ArraySize) -> Self
     where
         T: ?Sized + 'static,
     {
         Self::Dynamic(DynamicType {
             make,
             name: TypeId::of::<T>(),
+            size,
         })
     }
 
@@ -2283,7 +2299,7 @@ impl<V, const N: usize> Value for [V; N]
 where
     V: Value,
 {
-    const NAGA: Type = Type::dynamic::<Self>(|b| b.build_array::<V, N>());
+    const NAGA: Type = Type::dynamic::<Self>(|b| b.build_array::<V, N>(), ArraySize::Fixed(N));
 
     fn expr(self, fnc: &mut Fnc<'_>) -> Expr<Self> {
         let items = self.map(|v| v.expr(fnc));
@@ -2306,7 +2322,7 @@ impl<V> MaybeSizedValue for [V]
 where
     V: Value,
 {
-    const NAGA: Type = Type::dynamic::<Self>(|b| b.build_dynamic_array::<V>());
+    const NAGA: Type = Type::dynamic::<Self>(|b| b.build_dynamic_array::<V>(), ArraySize::Dynamic);
 }
 
 pub struct ArrayMethods<V, const N: usize> {
@@ -2495,16 +2511,27 @@ impl Value for Mat4 {
     }
 }
 
+pub trait Array {
+    type Output;
+}
+
+impl<T, const N: usize> Array for [T; N] {
+    type Output = T;
+}
+
+impl<T> Array for [T] {
+    type Output = T;
+}
+
 pub trait Composite {
     type Output;
 }
 
-impl<T, const N: usize> Composite for [T; N] {
-    type Output = T;
-}
-
-impl<T> Composite for [T] {
-    type Output = T;
+impl<A> Composite for A
+where
+    A: Array,
+{
+    type Output = A::Output;
 }
 
 impl Composite for Vec2 {
@@ -2868,4 +2895,26 @@ where
     O: ?Sized,
 {
     Method::Expr(e)
+}
+
+pub(crate) const fn array_len<V, B>() -> Method<B, u32>
+where
+    V: MaybeSizedValue + ?Sized,
+{
+    fn do_array_len<V, B>(fnc: &mut Fnc<'_>, base: Expr<B>) -> Expr<u32>
+    where
+        V: MaybeSizedValue + ?Sized,
+    {
+        let Err(dynamic) = V::NAGA.naga() else {
+            return fnc.do_literal(0);
+        };
+
+        match dynamic.size {
+            ArraySize::No => fnc.do_literal(0),
+            ArraySize::Fixed(n) => fnc.do_literal(n as u32),
+            ArraySize::Dynamic => fnc.do_array_len(base),
+        }
+    }
+
+    Method::Expr(do_array_len::<V, B>)
 }

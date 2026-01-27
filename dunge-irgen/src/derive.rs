@@ -139,11 +139,12 @@ pub(crate) fn derive_value(input: &Struct, path: &TokenStream) -> Derive<TokenSt
     });
 
     let naga = quote::quote! {
-        const NAGA: #irc::Type = #irc::Type::dynamic::<Self>(|b| {
-            b.build_struct::<Self>()
+        const NAGA: #irc::Type = #irc::Type::dynamic::<Self>(
+            |b| b.build_struct::<Self>()
                 #(#members)*
-                .build()
-        });
+                .build(),
+            #irc::ArraySize::No,
+        );
     };
 
     let member_idents: Vec<_> = non_empty_fields(&input.fields)?.map(|f| &f.ident).collect();

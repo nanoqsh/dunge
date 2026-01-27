@@ -2,8 +2,8 @@ use {
     crate::{
         bytes::{self, Bytes},
         irc::{
-            Composite, Fields, Fnc, GlobalVariable, GroupMember, Input, InputKind, Irc,
-            MaybeSizedValue, Method, Methods, Reference, Value,
+            self, Array, Composite, Fields, Fnc, GlobalVariable, GroupMember, Input, InputKind,
+            Irc, MaybeSizedValue, Method, Methods, Reference, Value,
         },
         module::GroupFormat,
     },
@@ -33,6 +33,14 @@ pub struct Uniform<V, D> {
 
 impl<V, D> Uniform<V, D> {
     pub fn read(&self) -> V {
+        panic!()
+    }
+
+    #[expect(clippy::len_without_is_empty)]
+    pub fn len(&self) -> u32
+    where
+        V: Array,
+    {
         panic!()
     }
 }
@@ -110,14 +118,21 @@ impl<V, D> Fields for Uniform<V, D> {
     const FIELDS: Self::Fields = UniformFields {};
 }
 
-impl<V, D> Methods for Uniform<V, D> {
+impl<V, D> Methods for Uniform<V, D>
+where
+    V: Value,
+{
     type Methods = UniformMethods<V, D>;
 
-    const METHODS: UniformMethods<V, D> = UniformMethods { read: Method::Load };
+    const METHODS: UniformMethods<V, D> = UniformMethods {
+        read: Method::Load,
+        len: irc::array_len::<V, Self>(),
+    };
 }
 
 pub struct UniformMethods<V, D> {
     pub read: Method<Uniform<V, D>, V>,
+    pub len: Method<Uniform<V, D>, u32>,
 }
 
 pub trait StorageValue: MaybeSizedValue {
@@ -181,6 +196,14 @@ where
     #[doc(hidden)]
     pub fn data(&self) -> &D {
         &self.data
+    }
+
+    #[expect(clippy::len_without_is_empty)]
+    pub fn len(&self) -> u32
+    where
+        V: Array,
+    {
+        panic!()
     }
 }
 
@@ -248,11 +271,14 @@ where
 
 impl<V, D> Methods for Storage<V, D>
 where
-    V: ?Sized,
+    V: MaybeSizedValue + ?Sized,
 {
     type Methods = StorageMethods<V, D>;
 
-    const METHODS: StorageMethods<V, D> = StorageMethods { read: Method::Load };
+    const METHODS: StorageMethods<V, D> = StorageMethods {
+        read: Method::Load,
+        len: irc::array_len::<V, Self>(),
+    };
 }
 
 pub struct StorageMethods<V, D>
@@ -260,6 +286,7 @@ where
     V: ?Sized,
 {
     pub read: Method<Storage<V, D>, V>,
+    pub len: Method<Storage<V, D>, u32>,
 }
 
 #[derive(Clone)]
