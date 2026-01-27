@@ -806,84 +806,77 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     #[cfg(feature = "mathu")]
     fns.insert(fnid(sl::splat_vec4::<u32>), splat::<UVec4, u32>);
 
-    fn insert_texture_dimensions<S, const D: usize>(fns: &mut Map<TypeId, BuildFnCall>)
+    fn tdim<S, const D: usize>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
     where
-        S: 'static,
         u32: Dim<D>,
     {
-        fns.insert(fnid(sl::texture_dimensions::<S, D>), |fnc, args| {
-            let [texture] = args.get()?;
-            let texture = expr(texture);
-            Ok(fnc
-                .do_image_size::<S, <u32 as Dim<D>>::Vec, D>(texture)
-                .get())
-        });
+        let [texture] = args.get()?;
+        let texture = expr(texture);
+        Ok(fnc
+            .do_image_size::<S, <u32 as Dim<D>>::Vec, D>(texture)
+            .get())
     }
 
-    insert_texture_dimensions::<f32, 1>(&mut fns);
-    insert_texture_dimensions::<f32, 2>(&mut fns);
-    insert_texture_dimensions::<f32, 3>(&mut fns);
+    fns.insert(fnid(sl::texture_dimensions::<f32, 1>), tdim::<f32, 1>);
+    fns.insert(fnid(sl::texture_dimensions::<f32, 2>), tdim::<f32, 2>);
+    fns.insert(fnid(sl::texture_dimensions::<f32, 3>), tdim::<f32, 3>);
     #[cfg(feature = "mathi")]
-    insert_texture_dimensions::<i32, 1>(&mut fns);
+    fns.insert(fnid(sl::texture_dimensions::<i32, 1>), tdim::<i32, 1>);
     #[cfg(feature = "mathi")]
-    insert_texture_dimensions::<i32, 2>(&mut fns);
+    fns.insert(fnid(sl::texture_dimensions::<i32, 2>), tdim::<i32, 2>);
     #[cfg(feature = "mathi")]
-    insert_texture_dimensions::<i32, 3>(&mut fns);
+    fns.insert(fnid(sl::texture_dimensions::<i32, 3>), tdim::<i32, 3>);
     #[cfg(feature = "mathu")]
-    insert_texture_dimensions::<u32, 1>(&mut fns);
+    fns.insert(fnid(sl::texture_dimensions::<u32, 1>), tdim::<u32, 1>);
     #[cfg(feature = "mathu")]
-    insert_texture_dimensions::<u32, 2>(&mut fns);
+    fns.insert(fnid(sl::texture_dimensions::<u32, 2>), tdim::<u32, 2>);
     #[cfg(feature = "mathu")]
-    insert_texture_dimensions::<u32, 3>(&mut fns);
+    fns.insert(fnid(sl::texture_dimensions::<u32, 3>), tdim::<u32, 3>);
 
-    fn insert_texture_sample<const D: usize>(fns: &mut Map<TypeId, BuildFnCall>)
+    fn tsam<const D: usize>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
     where
         f32: Dim<D>,
     {
-        fns.insert(fnid(sl::texture_sample::<D>), |fnc, args| {
-            let [texture, sampler, point] = args.get()?;
-            let texture = expr(texture);
-            let sampler = expr(sampler);
-            let point = expr(point);
-            Ok(fnc
-                .do_image_sample::<<f32 as Dim<D>>::Vec, D>(texture, sampler, point)
-                .get())
-        });
+        let [texture, sampler, point] = args.get()?;
+        let texture = expr(texture);
+        let sampler = expr(sampler);
+        let point = expr(point);
+        Ok(fnc
+            .do_image_sample::<<f32 as Dim<D>>::Vec, D>(texture, sampler, point)
+            .get())
     }
 
-    insert_texture_sample::<1>(&mut fns);
-    insert_texture_sample::<2>(&mut fns);
-    insert_texture_sample::<3>(&mut fns);
+    fns.insert(fnid(sl::texture_sample::<1>), tsam::<1>);
+    fns.insert(fnid(sl::texture_sample::<2>), tsam::<2>);
+    fns.insert(fnid(sl::texture_sample::<3>), tsam::<3>);
 
-    fn insert_texture_load<S, const D: usize>(fns: &mut Map<TypeId, BuildFnCall>)
+    fn tload<S, const D: usize>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
     where
-        S: Scalar + Dim<D> + Dim<4> + 'static,
+        S: Scalar + Dim<D> + Dim<4>,
     {
-        fns.insert(fnid(sl::texture_load::<S, D>), |fnc, args| {
-            let [texture, point] = args.get()?;
-            let texture = expr(texture);
-            let point = expr(point);
-            Ok(fnc
-                .do_image_load::<S, <S as Dim<D>>::Vec, D>(texture, point)
-                .get())
-        });
+        let [texture, point] = args.get()?;
+        let texture = expr(texture);
+        let point = expr(point);
+        Ok(fnc
+            .do_image_load::<S, <S as Dim<D>>::Vec, D>(texture, point)
+            .get())
     }
 
-    insert_texture_load::<f32, 1>(&mut fns);
-    insert_texture_load::<f32, 2>(&mut fns);
-    insert_texture_load::<f32, 3>(&mut fns);
+    fns.insert(fnid(sl::texture_load::<f32, 1>), tload::<f32, 1>);
+    fns.insert(fnid(sl::texture_load::<f32, 2>), tload::<f32, 2>);
+    fns.insert(fnid(sl::texture_load::<f32, 3>), tload::<f32, 3>);
     #[cfg(feature = "mathi")]
-    insert_texture_load::<i32, 1>(&mut fns);
+    fns.insert(fnid(sl::texture_load::<i32, 1>), tload::<i32, 1>);
     #[cfg(feature = "mathi")]
-    insert_texture_load::<i32, 2>(&mut fns);
+    fns.insert(fnid(sl::texture_load::<i32, 2>), tload::<i32, 2>);
     #[cfg(feature = "mathi")]
-    insert_texture_load::<i32, 3>(&mut fns);
+    fns.insert(fnid(sl::texture_load::<i32, 3>), tload::<i32, 3>);
     #[cfg(feature = "mathu")]
-    insert_texture_load::<u32, 1>(&mut fns);
+    fns.insert(fnid(sl::texture_load::<u32, 1>), tload::<u32, 1>);
     #[cfg(feature = "mathu")]
-    insert_texture_load::<u32, 2>(&mut fns);
+    fns.insert(fnid(sl::texture_load::<u32, 2>), tload::<u32, 2>);
     #[cfg(feature = "mathu")]
-    insert_texture_load::<u32, 3>(&mut fns);
+    fns.insert(fnid(sl::texture_load::<u32, 3>), tload::<u32, 3>);
 
     fn discard(fnc: &mut Fnc<'_>, _: Args<'_>) -> FnRes {
         fnc.do_discard();
