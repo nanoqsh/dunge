@@ -2,7 +2,7 @@ use {
     crate::{
         define::Define,
         op::Ret,
-        sl::ReadVertex,
+        sl_old::ReadVertex,
         types::{self, VectorType},
     },
     std::slice,

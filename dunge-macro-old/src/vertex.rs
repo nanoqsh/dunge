@@ -94,7 +94,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     quote::quote! {
         unsafe impl dunge::Vertex for #name {
             type Projection = #projection_name;
-            const DEF: dunge::sl::Define<dunge::types::VectorType> = dunge::sl::Define::new(&[
+            const DEF: dunge::sl_old::Define<dunge::types::VectorType> = dunge::sl_old::Define::new(&[
                 #(#vector_types),*,
             ]);
         }
@@ -144,7 +144,7 @@ mod tests {
         let expected = quote::quote! {
             unsafe impl dunge::Vertex for Vert {
                 type Projection = VertProj;
-                const DEF: dunge::sl::Define<dunge::types::VectorType> = dunge::sl::Define::new(&[
+                const DEF: dunge::sl_old::Define<dunge::types::VectorType> = dunge::sl_old::Define::new(&[
                     <[f32; 2] as dunge::vertex::InputProjection>::TYPE,
                     <[f32; 3] as dunge::vertex::InputProjection>::TYPE,
                 ]);
@@ -190,7 +190,7 @@ mod tests {
         let expected = quote::quote! {
             unsafe impl dunge::Vertex for Vert {
                 type Projection = VertProj;
-                const DEF: dunge::sl::Define<dunge::types::VectorType> = dunge::sl::Define::new(&[
+                const DEF: dunge::sl_old::Define<dunge::types::VectorType> = dunge::sl_old::Define::new(&[
                     <[f32; 2] as dunge::vertex::InputProjection>::TYPE,
                     <[f32; 3] as dunge::vertex::InputProjection>::TYPE,
                 ]);

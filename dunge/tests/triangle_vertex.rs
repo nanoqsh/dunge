@@ -9,7 +9,7 @@ fn render() -> Result<(), Error> {
             buffer::Size,
             color::{Format, Rgb},
             prelude::*,
-            sl::{self, PassVertex, Render},
+            sl_old::{self, PassVertex, Render},
         },
         glam::{Vec2, Vec3},
         helpers::image::Image,
@@ -21,8 +21,8 @@ fn render() -> Result<(), Error> {
     struct Vert(Vec2, Vec3);
 
     let triangle = |PassVertex(v): PassVertex<Vert>| Render {
-        place: sl::vec4_concat(v.0, Vec2::new(0., 1.)),
-        color: sl::vec4_append(sl::fragment(v.1), 1.),
+        place: sl_old::vec4_concat(v.0, Vec2::new(0., 1.)),
+        color: sl_old::vec4_append(sl_old::fragment(v.1), 1.),
     };
 
     let cx = dunge::block_on(dunge::context())?;

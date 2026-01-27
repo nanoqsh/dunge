@@ -24,7 +24,8 @@ mod value;
 pub mod prelude {
     pub use crate::{
         Bytes, GroupLegacy, Input, Instance, Value, Vertex, buffer::TextureData,
-        color::ColorExt as _, context::Context, dunge, mesh::MeshData, render, sl, types,
+        color::ColorExt as _, context::Context, dunge, mesh::MeshData, render, sh::sl, sl_old,
+        types,
     };
 }
 
@@ -41,7 +42,7 @@ pub use {
     crate::{
         context::{Builder, Context, FailedMakeContext, context},
         layer::{Blend, Config, Layer, Polygon, Topology},
-        shader::{RenderShader, Shader},
+        shader::{RenderShader, RenderShaderOld, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
         value::{ColorValue, StorageValue, UniformValue},
     },
@@ -51,7 +52,7 @@ pub use {
         bytes::Bytes,
         irc::{Input, Value},
     },
-    dunge_shade_old::{group::GroupLegacy, instance::Instance, sl, types, vertex::Vertex},
+    dunge_shade_old::{group::GroupLegacy, instance::Instance, sl_old, types, vertex::Vertex},
 };
 
 #[cfg(not(target_family = "wasm"))]

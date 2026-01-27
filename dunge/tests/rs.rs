@@ -10,19 +10,19 @@ type Error = Box<dyn std::error::Error>;
 #[test]
 fn rs_calc() -> Result<(), Error> {
     use {
-        dunge::sl::{self, Render},
+        dunge::sl_old::{self, Render},
         glam::Vec4,
     };
 
     let compute = || {
-        let m = -sl::mat2(sl::vec2(1., 0.), sl::vec2(0., 1.));
-        let mt = sl::thunk(m);
+        let m = -sl_old::mat2(sl_old::vec2(1., 0.), sl_old::vec2(0., 1.));
+        let mt = sl_old::thunk(m);
         let v = mt.clone().x() + mt.clone().y();
-        let z = sl::vec3_splat(1.).z();
+        let z = sl_old::vec3_splat(1.).z();
 
         Render {
-            place: sl::vec4_concat(mt.x(), v) * sl::f32(1) * z,
-            color: sl::vec4(0., 0., 1., 1.) + Vec4::splat(0.),
+            place: sl_old::vec4_concat(mt.x(), v) * sl_old::f32(1) * z,
+            color: sl_old::vec4(0., 0., 1., 1.) + Vec4::splat(0.),
         }
     };
 
@@ -34,13 +34,13 @@ fn rs_calc() -> Result<(), Error> {
 #[test]
 fn rs_if() -> Result<(), Error> {
     use {
-        dunge::sl::{self, Render},
+        dunge::sl_old::{self, Render},
         glam::Vec4,
     };
 
     let compute = || Render {
-        place: sl::if_then_else(true, || Vec4::splat(3.), || sl::vec4_splat(2.) * 2.),
-        color: sl::vec4_splat(1.),
+        place: sl_old::if_then_else(true, || Vec4::splat(3.), || sl_old::vec4_splat(2.) * 2.),
+        color: sl_old::vec4_splat(1.),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -50,12 +50,13 @@ fn rs_if() -> Result<(), Error> {
 
 #[test]
 fn rs_branch() -> Result<(), Error> {
-    use dunge::sl::{self, Render};
+    use dunge::sl_old::{self, Render};
 
     let shader0 = {
         let compute = || Render {
-            place: sl::default(|| sl::vec4_splat(1.)).when(false, || sl::vec4_splat(2.)),
-            color: sl::vec4_splat(1.),
+            place: sl_old::default(|| sl_old::vec4_splat(1.))
+                .when(false, || sl_old::vec4_splat(2.)),
+            color: sl_old::vec4_splat(1.),
         };
 
         CONTEXT.make_shader(compute)
@@ -63,10 +64,10 @@ fn rs_branch() -> Result<(), Error> {
 
     let shader1 = {
         let compute = || Render {
-            place: sl::default(|| sl::vec4_splat(1.))
-                .when(true, || sl::vec4_splat(2.))
-                .when(false, || sl::vec4_splat(3.)),
-            color: sl::vec4_splat(1.),
+            place: sl_old::default(|| sl_old::vec4_splat(1.))
+                .when(true, || sl_old::vec4_splat(2.))
+                .when(false, || sl_old::vec4_splat(3.)),
+            color: sl_old::vec4_splat(1.),
         };
 
         CONTEXT.make_shader(compute)
@@ -74,14 +75,14 @@ fn rs_branch() -> Result<(), Error> {
 
     let shader2 = {
         let compute = || {
-            let p = sl::default(|| sl::vec4_splat(1.))
-                .when(true, || sl::vec4_splat(2.))
-                .when(true, || sl::vec4_splat(3.))
-                .when(false, || sl::vec4_splat(4.));
+            let p = sl_old::default(|| sl_old::vec4_splat(1.))
+                .when(true, || sl_old::vec4_splat(2.))
+                .when(true, || sl_old::vec4_splat(3.))
+                .when(false, || sl_old::vec4_splat(4.));
 
             Render {
                 place: p,
-                color: sl::vec4_splat(1.),
+                color: sl_old::vec4_splat(1.),
             }
         };
 
@@ -96,11 +97,11 @@ fn rs_branch() -> Result<(), Error> {
 
 #[test]
 fn rs_discard() -> Result<(), Error> {
-    use dunge::sl::{self, Render};
+    use dunge::sl_old::{self, Render};
 
     let compute = || Render {
-        place: sl::vec4_splat(1.),
-        color: sl::discard(),
+        place: sl_old::vec4_splat(1.),
+        color: sl_old::discard(),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -110,11 +111,11 @@ fn rs_discard() -> Result<(), Error> {
 
 #[test]
 fn rs_discard_if() -> Result<(), Error> {
-    use dunge::sl::{self, Render};
+    use dunge::sl_old::{self, Render};
 
     let compute = || Render {
-        place: sl::vec4_splat(1.),
-        color: sl::if_then_else(true, sl::discard, || sl::vec4_splat(1.)),
+        place: sl_old::vec4_splat(1.),
+        color: sl_old::if_then_else(true, sl_old::discard, || sl_old::vec4_splat(1.)),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -124,11 +125,11 @@ fn rs_discard_if() -> Result<(), Error> {
 
 #[test]
 fn rs_zero() -> Result<(), Error> {
-    use dunge::sl::{self, Render};
+    use dunge::sl_old::{self, Render};
 
     let compute = || Render {
-        place: sl::zero_value(),
-        color: sl::zero_value(),
+        place: sl_old::zero_value(),
+        color: sl_old::zero_value(),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -139,10 +140,10 @@ fn rs_zero() -> Result<(), Error> {
 #[test]
 #[should_panic(expected = "thunk cannot be created outside of a shader function")]
 fn rs_thunk_outside() {
-    use dunge::sl::{self, Eval, Vs};
+    use dunge::sl_old::{self, Eval, Vs};
 
     fn make() -> impl Eval<Vs> {
-        sl::thunk(1.)
+        sl_old::thunk(1.)
     }
 
     _ = make();
@@ -151,20 +152,20 @@ fn rs_thunk_outside() {
 #[test]
 #[should_panic(expected = "reentrant in a shader function isn't allowed")]
 fn rs_reentrant() {
-    use dunge::sl::{self, Render};
+    use dunge::sl_old::{self, Render};
 
     let compute = {
         let cx = CONTEXT.clone();
         let inner = || Render {
-            place: sl::vec4_splat(1.),
-            color: sl::vec4_splat(1.),
+            place: sl_old::vec4_splat(1.),
+            color: sl_old::vec4_splat(1.),
         };
 
         move || {
             _ = cx.make_shader(inner);
             Render {
-                place: sl::vec4_splat(1.),
-                color: sl::vec4_splat(1.),
+                place: sl_old::vec4_splat(1.),
+                color: sl_old::vec4_splat(1.),
             }
         }
     };
@@ -176,7 +177,7 @@ fn rs_reentrant() {
 fn rs_storage() -> Result<(), Error> {
     use dunge::{
         GroupLegacy,
-        sl::{self, Groups, Index, Render},
+        sl_old::{self, Groups, Index, Render},
         store::Storage,
     };
 
@@ -186,8 +187,8 @@ fn rs_storage() -> Result<(), Error> {
     }
 
     let compute = |Groups(map): Groups<Map>, Index(index): Index| Render {
-        place: sl::vec4_splat(1.) * map.array.get(index).load(),
-        color: sl::vec4_splat(1.),
+        place: sl_old::vec4_splat(1.) * map.array.get(index).load(),
+        color: sl_old::vec4_splat(1.),
     };
 
     let shader = CONTEXT.make_shader(compute);
@@ -197,22 +198,22 @@ fn rs_storage() -> Result<(), Error> {
 
 #[test]
 fn rs_dyn() -> Result<(), Error> {
-    use dunge::sl::{self, Render};
+    use dunge::sl_old::{self, Render};
 
     for (do_sin, correct_shader) in [
         (true, include_str!("rs_dyn_true.wgsl")),
         (false, include_str!("rs_dyn_false.wgsl")),
     ] {
-        let compute = |sl::Index(index): sl::Index| {
+        let compute = |sl_old::Index(index): sl_old::Index| {
             let new_val = if do_sin {
-                sl::thunk(sl::sin(sl::f32(index)))
+                sl_old::thunk(sl_old::sin(sl_old::f32(index)))
             } else {
-                sl::thunk(sl::f32(index))
+                sl_old::thunk(sl_old::f32(index))
             };
 
             Render {
-                place: sl::vec4_splat(new_val),
-                color: sl::vec4_splat(1.),
+                place: sl_old::vec4_splat(new_val),
+                color: sl_old::vec4_splat(1.),
             }
         };
 

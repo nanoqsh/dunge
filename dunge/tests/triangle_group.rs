@@ -10,7 +10,7 @@ fn render() -> Result<(), Error> {
             color::{Format, Rgb},
             group::BoundTexture,
             prelude::*,
-            sl::{self, Groups, PassVertex, Render},
+            sl_old::{self, Groups, PassVertex, Render},
         },
         glam::Vec2,
         helpers::image::Image,
@@ -31,8 +31,8 @@ fn render() -> Result<(), Error> {
     }
 
     let triangle = |PassVertex(v): PassVertex<Vert>, Groups(map): Groups<Map>| Render {
-        place: sl::vec4_concat(v.pos, Vec2::new(0., 1.)),
-        color: sl::texture_sample(map.tex, map.sam, sl::fragment(v.tex)),
+        place: sl_old::vec4_concat(v.pos, Vec2::new(0., 1.)),
+        color: sl_old::texture_sample(map.tex, map.sam, sl_old::fragment(v.tex)),
     };
 
     let cx = dunge::block_on(dunge::context())?;

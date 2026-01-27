@@ -5,7 +5,7 @@ use {
         Instance,
         context::Context,
         render::VertexSetter,
-        sl::{ReadInstance, Ret},
+        sl_old::{ReadInstance, Ret},
         state::State,
         types::{self, ValueType},
         value::Value,

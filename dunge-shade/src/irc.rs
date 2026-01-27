@@ -690,21 +690,39 @@ fn builtins() -> HashMap<TypeId, BuildFnCall> {
     fns.insert(fnid(glam::vec2), make::<Vec2, f32, 2>);
     fns.insert(fnid(glam::vec3), make::<Vec3, f32, 3>);
     fns.insert(fnid(glam::vec4), make::<Vec4, f32, 4>);
+    fns.insert(fnid(Vec2::new), make::<Vec2, f32, 2>);
+    fns.insert(fnid(Vec3::new), make::<Vec3, f32, 3>);
+    fns.insert(fnid(Vec4::new), make::<Vec4, f32, 4>);
     #[cfg(feature = "mathi")]
     fns.insert(fnid(glam::ivec2), make::<IVec2, i32, 2>);
     #[cfg(feature = "mathi")]
+    fns.insert(fnid(IVec2::new), make::<IVec2, i32, 2>);
+    #[cfg(feature = "mathi")]
     fns.insert(fnid(glam::ivec3), make::<IVec3, i32, 3>);
     #[cfg(feature = "mathi")]
+    fns.insert(fnid(IVec3::new), make::<IVec3, i32, 3>);
+    #[cfg(feature = "mathi")]
     fns.insert(fnid(glam::ivec4), make::<IVec4, i32, 4>);
+    #[cfg(feature = "mathi")]
+    fns.insert(fnid(IVec4::new), make::<IVec4, i32, 4>);
     #[cfg(feature = "mathu")]
     fns.insert(fnid(glam::uvec2), make::<UVec2, u32, 2>);
     #[cfg(feature = "mathu")]
+    fns.insert(fnid(UVec2::new), make::<UVec2, u32, 2>);
+    #[cfg(feature = "mathu")]
     fns.insert(fnid(glam::uvec3), make::<UVec3, u32, 3>);
     #[cfg(feature = "mathu")]
+    fns.insert(fnid(UVec3::new), make::<UVec3, u32, 3>);
+    #[cfg(feature = "mathu")]
     fns.insert(fnid(glam::uvec4), make::<UVec4, u32, 4>);
+    #[cfg(feature = "mathu")]
+    fns.insert(fnid(UVec4::new), make::<UVec4, u32, 4>);
     fns.insert(fnid(glam::mat2), make::<Mat2, Vec2, 2>);
     fns.insert(fnid(glam::mat3), make::<Mat3, Vec3, 3>);
     fns.insert(fnid(glam::mat4), make::<Mat4, Vec4, 4>);
+    fns.insert(fnid(Mat2::from_cols), make::<Mat2, Vec2, 2>);
+    fns.insert(fnid(Mat3::from_cols), make::<Mat3, Vec3, 3>);
+    fns.insert(fnid(Mat4::from_cols), make::<Mat4, Vec4, 4>);
 
     fn append<V, S, R>(fnc: &mut Fnc<'_>, args: Args<'_>) -> FnRes
     where

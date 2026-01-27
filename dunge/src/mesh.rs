@@ -2,6 +2,7 @@
 
 use {
     crate::{Vertex, state::State, vertex},
+    dunge_shade::bytes::{self, Bytes},
     std::{borrow::Cow, error, fmt, marker::PhantomData},
 };
 
@@ -94,6 +95,40 @@ pub struct Mesh<V> {
 }
 
 impl<V> Mesh<V> {
+    pub(crate) fn new(state: &State, data: &MeshData<'_, V>) -> Self
+    where
+        V: Bytes,
+    {
+        use wgpu::util::{self, DeviceExt};
+
+        let device = state.device();
+        let verts = {
+            let desc = util::BufferInitDescriptor {
+                label: None,
+                contents: bytes::as_bytes(data.verts),
+                usage: wgpu::BufferUsages::VERTEX,
+            };
+
+            device.create_buffer_init(&desc)
+        };
+
+        let indxs = data.indxs.as_deref().map(|indxs| {
+            let desc = util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(indxs),
+                usage: wgpu::BufferUsages::INDEX,
+            };
+
+            device.create_buffer_init(&desc)
+        });
+
+        Self {
+            verts,
+            indxs,
+            ty: PhantomData,
+        }
+    }
+
     pub(crate) fn from_vertex(state: &State, data: &MeshData<'_, V>) -> Self
     where
         V: Vertex,

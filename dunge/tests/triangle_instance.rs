@@ -10,7 +10,7 @@ fn render() -> Result<(), Error> {
             color::{Format, Rgb},
             instance::{Row, RowSlice},
             prelude::*,
-            sl::{self, Index, PassInstance, Render},
+            sl_old::{self, Index, PassInstance, Render},
         },
         glam::{Vec2, Vec3},
         helpers::image::Image,
@@ -25,11 +25,11 @@ fn render() -> Result<(), Error> {
         let third = const { consts::TAU / 3. };
         let r_offset = const { -consts::TAU / 4. };
 
-        let i = sl::thunk(sl::f32(index) * third + r_offset);
-        let p = sl::vec2(sl::cos(i.clone()), sl::sin(i)) * triangle_size + t.0;
+        let i = sl_old::thunk(sl_old::f32(index) * third + r_offset);
+        let p = sl_old::vec2(sl_old::cos(i.clone()), sl_old::sin(i)) * triangle_size + t.0;
         Render {
-            place: sl::vec4_concat(p, Vec2::new(0., 1.)),
-            color: sl::vec4_append(sl::fragment(t.1), 1.),
+            place: sl_old::vec4_concat(p, Vec2::new(0., 1.)),
+            color: sl_old::vec4_append(sl_old::fragment(t.1), 1.),
         }
     };
 

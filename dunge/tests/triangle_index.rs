@@ -9,7 +9,7 @@ fn render() -> Result<(), Error> {
             buffer::Size,
             color::{Format, Rgb},
             prelude::*,
-            sl::{self, Index, Render},
+            sl_old::{self, Index, Render},
         },
         glam::Vec4,
         helpers::image::Image,
@@ -22,9 +22,9 @@ fn render() -> Result<(), Error> {
         let r_offset = const { -consts::TAU / 4. };
         let y_offset = 0.25;
 
-        let i = sl::thunk(sl::f32(index) * third + r_offset);
+        let i = sl_old::thunk(sl_old::f32(index) * third + r_offset);
         Render {
-            place: sl::vec4(sl::cos(i.clone()), sl::sin(i) + y_offset, 0., 1.),
+            place: sl_old::vec4(sl_old::cos(i.clone()), sl_old::sin(i) + y_offset, 0., 1.),
             color,
         }
     };

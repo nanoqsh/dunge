@@ -1,10 +1,11 @@
 use {
-    dunge::{sh, store2::Uniform},
-    dunge_winit::prelude::*,
+    dunge::store2::Uniform,
+    dunge_winit::{Canvas, prelude::*},
+    futures_concurrency::prelude::*,
     glam::{Mat4, Quat, UVec2, Vec3, Vec4},
+    std::{error, time::Duration},
+    winit::{event::MouseButton, keyboard::KeyCode},
 };
-
-type Error = Box<dyn std::error::Error>;
 
 #[derive(Clone, Copy, Value, Bytes)]
 struct Vert {
@@ -19,73 +20,38 @@ struct Io {
     col: Vec3,
 }
 
-#[derive(Input)]
-struct Group {
-    m: Uniform<Mat4>,
-}
-
 #[dunge(vertex)]
-fn vs(v: Vert, g: Group) -> Io {
-    let pos = g.m.read() * sh::sl::append(v.pos, 1.);
+fn vs(v: Vert, m: Uniform<Mat4>) -> Io {
+    let pos = m.read() * sl::append(v.pos, 1.);
     Io { pos, col: v.col }
 }
 
 #[dunge(fragment)]
 fn fs(io: Io) -> Vec4 {
-    sh::sl::append(io.col, 1.)
+    sl::append(io.col, 1.)
 }
 
+type Error = Box<dyn error::Error>;
+
 pub async fn run(control: Control) -> Result<(), Error> {
-    use {
-        dunge::{
-            Config,
-            sl::{Groups, PassVertex, Render},
-            store::Uniform as UniformOld,
-        },
-        dunge_winit::Canvas,
-        futures_concurrency::prelude::*,
-        std::time::Duration,
-        winit::{event::MouseButton, keyboard::KeyCode},
-    };
-
-    #[repr(C)]
-    #[derive(Vertex)]
-    struct VertOld {
-        pos: Vec3,
-        col: Vec3,
-    }
-
-    let cube = |PassVertex(v): PassVertex<VertOld>, Groups(m): Groups<UniformOld<Mat4>>| Render {
-        place: m.load() * sl::vec4_append(v.pos, 1.),
-        color: sl::vec4_append(sl::fragment(v.col), 1.),
-    };
-
-    let render = render! {
-        vertex: Vert,
-        groups: [Group],
-        shaders: [vs, fs],
-    }
-    .expect("compile shader");
-
-    println!("{}", render.debug());
-
     let cx = dunge::context().await?;
-    let shader2 = cx.make_shader2(render);
-    let m = cx.make_uniform2(&Mat4::IDENTITY);
-    let _set2 = cx.make_set2(&shader2, Group { m });
+    let shader = cx.make_shader2(render! {
+        vertex: Vert,
+        groups: [Uniform<Mat4>],
+        shaders: [vs, fs],
+    }?);
 
-    let shader = cx.make_shader(cube);
-    let transform = cx.make_uniform(&Mat4::IDENTITY);
-    let set = cx.make_set(&shader, &transform);
+    let transform = cx.make_uniform2(&Mat4::IDENTITY);
+    let set = cx.make_set2(&shader, &transform);
 
     let mut time = Duration::ZERO;
-    let mut update_scene = |size: UVec2, delta_time| {
+    let mut update = |size: UVec2, delta_time| {
         time += delta_time;
 
         let model = {
             let pos = Vec3::new(0., 0., -2.);
             let axis = Vec3::splat(1.).normalize();
-            let angle = (time.as_secs_f32() * 2.).sin();
+            let angle = f32::sin(time.as_secs_f32() * 2.);
             let rot = Quat::from_axis_angle(axis, angle);
             Mat4::from_rotation_translation(rot, pos)
         };
@@ -100,39 +66,39 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let mesh = {
-        const VERTS: [VertOld; 8] = {
+        const VERTS: [Vert; 8] = {
             let p = 0.5;
 
             [
-                VertOld {
+                Vert {
                     pos: Vec3::new(-p, -p, -p),
                     col: Vec3::new(0., 0., 0.),
                 },
-                VertOld {
+                Vert {
                     pos: Vec3::new(-p, -p, p),
                     col: Vec3::new(0., 0., 1.),
                 },
-                VertOld {
+                Vert {
                     pos: Vec3::new(-p, p, p),
                     col: Vec3::new(0., 1., 1.),
                 },
-                VertOld {
+                Vert {
                     pos: Vec3::new(-p, p, -p),
                     col: Vec3::new(0., 1., 0.),
                 },
-                VertOld {
+                Vert {
                     pos: Vec3::new(p, -p, -p),
                     col: Vec3::new(1., 0., 0.),
                 },
-                VertOld {
+                Vert {
                     pos: Vec3::new(p, p, -p),
                     col: Vec3::new(1., 1., 0.),
                 },
-                VertOld {
+                Vert {
                     pos: Vec3::new(p, p, p),
                     col: Vec3::new(1., 1., 1.),
                 },
-                VertOld {
+                Vert {
                     pos: Vec3::new(p, -p, p),
                     col: Vec3::new(1., 0., 1.),
                 },
@@ -155,7 +121,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         ];
 
         let data = MeshData::new(&VERTS, &INDXS)?;
-        cx.make_mesh(&data)
+        cx.make_mesh2(&data)
     };
 
     let window = control
@@ -178,14 +144,13 @@ pub async fn run(control: Control) -> Result<(), Error> {
         }
     };
 
-    let conf = Config::from(window.format());
-    let layer = cx.make_layer(&shader, conf);
+    let layer = cx.make_layer2(&shader, window.format());
 
     let bg = window.format().rgb_from_bytes([25, 10, 40]);
     let render = async {
         loop {
             let redraw = window.redraw().await;
-            update_scene(window.size(), redraw.delta_time());
+            update(window.size(), redraw.delta_time());
 
             cx.shed(|s| {
                 s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);

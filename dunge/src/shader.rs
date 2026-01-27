@@ -1,16 +1,19 @@
 use {
     crate::{
-        sl::{self, InputInfo, IntoModule, RenderInput, Stages},
+        sl_old::{self, InputInfo, IntoModule, Stages},
         state::State,
         types::{MemberType, ScalarType, Space, ValueType, VectorType},
     },
     dunge_shade::{
         irc::Stage,
-        link::Render,
+        link::{Render, RenderInput},
         module::{Format, GroupFormat, Info, TextureDimension, VertexFormat},
     },
     std::{borrow::Cow, cell::Cell, iter, marker::PhantomData, mem, sync::Arc},
 };
+
+/// Alias of render [shader](Shader).
+pub type RenderShaderOld<S = (), V = (), I = ()> = Shader<sl_old::RenderInput<V, I>, S>;
 
 /// Alias of render [shader](Shader).
 pub type RenderShader<S = (), V = (), I = ()> = Shader<RenderInput<V, I>, S>;
@@ -252,7 +255,7 @@ pub(crate) struct ShaderData {
 }
 
 impl ShaderData {
-    fn new(state: &State, sl::Module { info, nm, .. }: sl::Module) -> Self {
+    fn new(state: &State, sl_old::Module { info, nm, .. }: sl_old::Module) -> Self {
         let module = {
             let desc = wgpu::ShaderModuleDescriptor {
                 label: None,
@@ -264,12 +267,12 @@ impl ShaderData {
 
         let visibility = |stages: Stages| {
             let mut out = wgpu::ShaderStages::empty();
-            out.set(wgpu::ShaderStages::VERTEX, stages.has(sl::Stage::Vertex));
+            out.set(wgpu::ShaderStages::VERTEX, stages.has(sl_old::Stage::Vertex));
             out.set(
                 wgpu::ShaderStages::FRAGMENT,
-                stages.has(sl::Stage::Fragment),
+                stages.has(sl_old::Stage::Fragment),
             );
-            out.set(wgpu::ShaderStages::COMPUTE, stages.has(sl::Stage::Compute));
+            out.set(wgpu::ShaderStages::COMPUTE, stages.has(sl_old::Stage::Compute));
             out
         };
 

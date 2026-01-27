@@ -1,6 +1,7 @@
-use dunge_winit::prelude::*;
-
-type Error = Box<dyn std::error::Error>;
+use {
+    dunge_winit::prelude::*,
+    std::{cell::Cell, error, time::Duration},
+};
 
 fn main() {
     env_logger::init();
@@ -9,16 +10,17 @@ fn main() {
     }
 }
 
+type Error = Box<dyn error::Error>;
+
 async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
-            sl::{Groups, PassVertex, Render},
+            sl_old::{Groups, PassVertex, Render},
             store::Uniform,
         },
         futures_concurrency::prelude::*,
         futures_lite::prelude::*,
         glam::{Vec2, Vec3},
-        std::{cell::Cell, time::Duration},
         winit::{event::MouseButton, keyboard::KeyCode, window},
     };
 
@@ -30,9 +32,9 @@ async fn run(control: Control) -> Result<(), Error> {
     }
 
     let triangle = |PassVertex(v): PassVertex<Vert>, Groups(u): Groups<Uniform<f32>>| {
-        let place = sl::vec4_concat(v.pos, sl::vec2(0., 1.));
-        let fragment_col = sl::fragment(v.col);
-        let color = sl::vec4_append(fragment_col * u.load(), 1.);
+        let place = sl_old::vec4_concat(v.pos, sl_old::vec2(0., 1.));
+        let fragment_col = sl_old::fragment(v.col);
+        let color = sl_old::vec4_append(fragment_col * u.load(), 1.);
         Render { place, color }
     };
 

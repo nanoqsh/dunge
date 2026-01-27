@@ -8,7 +8,7 @@ fn render() -> Result<(), Error> {
         dunge::{
             instance::Row,
             prelude::*,
-            sl::{self, PassInstance, Render},
+            sl_old::{self, PassInstance, Render},
         },
         glam::{Mat4, Vec4},
     };
@@ -22,7 +22,7 @@ fn render() -> Result<(), Error> {
 
     let code = |PassInstance(t): PassInstance<Transform>| Render {
         place: t.m * t.v * t.f,
-        color: sl::vec4_splat(1.),
+        color: sl_old::vec4_splat(1.),
     };
 
     let cx = dunge::block_on(dunge::context())?;

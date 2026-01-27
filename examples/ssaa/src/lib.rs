@@ -1,21 +1,23 @@
-use dunge_winit::prelude::*;
+use {
+    dunge_winit::prelude::*,
+    std::{cell::RefCell, error, f32::consts, time::Duration},
+};
 
-type Error = Box<dyn std::error::Error>;
+type Error = Box<dyn error::Error>;
 
 pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             Options,
-            buffer::{Filter, TextureSampler, Size},
+            buffer::{Filter, Size, TextureSampler},
             color::Format,
             group::BoundTexture,
-            sl::{Groups, Index, PassVertex, Render},
+            sl_old::{Groups, Index, PassVertex, Render},
             store::Uniform,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
         glam::{UVec2, Vec2, Vec4},
-        std::{cell::RefCell, f32::consts, time::Duration},
         winit::keyboard::KeyCode,
     };
 
@@ -25,9 +27,9 @@ pub async fn run(control: Control) -> Result<(), Error> {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
-        let i = sl::thunk(sl::f32(idx) * third + offset.load());
+        let i = sl_old::thunk(sl_old::f32(idx) * third + offset.load());
         Render {
-            place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
+            place: sl_old::vec4(sl_old::cos(i.clone()), sl_old::sin(i), 0., 1.),
             color,
         }
     };
@@ -44,20 +46,20 @@ pub async fn run(control: Control) -> Result<(), Error> {
     }
 
     let screen = |PassVertex(v): PassVertex<Screen>, Groups(map): Groups<Map>| Render {
-        place: sl::vec4_concat(v.0, Vec2::new(0., 1.)),
+        place: sl_old::vec4_concat(v.0, Vec2::new(0., 1.)),
         color: {
-            let s = sl::thunk(sl::fragment(v.1));
+            let s = sl_old::thunk(sl_old::fragment(v.1));
             let tex = || map.tex.clone();
             let sam = || map.sam.clone();
             let offset = || map.offset.clone().load();
-            let d0 = sl::vec2(offset().x(), offset().y());
-            let d1 = sl::vec2(offset().x(), -offset().y());
-            let d2 = sl::vec2(-offset().x(), offset().y());
-            let d3 = sl::vec2(-offset().x(), -offset().y());
-            (sl::texture_sample(tex(), sam(), s.clone() + d0)
-                + sl::texture_sample(tex(), sam(), s.clone() + d1)
-                + sl::texture_sample(tex(), sam(), s.clone() + d2)
-                + sl::texture_sample(tex(), sam(), s + d3))
+            let d0 = sl_old::vec2(offset().x(), offset().y());
+            let d1 = sl_old::vec2(offset().x(), -offset().y());
+            let d2 = sl_old::vec2(-offset().x(), offset().y());
+            let d3 = sl_old::vec2(-offset().x(), -offset().y());
+            (sl_old::texture_sample(tex(), sam(), s.clone() + d0)
+                + sl_old::texture_sample(tex(), sam(), s.clone() + d1)
+                + sl_old::texture_sample(tex(), sam(), s.clone() + d2)
+                + sl_old::texture_sample(tex(), sam(), s + d3))
                 * 0.25
         },
     };

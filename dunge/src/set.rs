@@ -209,6 +209,10 @@ impl<S> Bind<S> for UniqueSet<S> {
 }
 
 pub trait Group {
+    type Inner
+    where
+        Self: Sized;
+
     fn group<'group>(&'group self, e: &mut Entries<'group>);
 }
 
@@ -216,12 +220,16 @@ impl<G> Group for &G
 where
     G: Group,
 {
+    type Inner = G::Inner;
+
     fn group<'group>(&'group self, e: &mut Entries<'group>) {
         (**self).group(e);
     }
 }
 
 impl<V> Group for Uniform<V> {
+    type Inner = Self;
+
     fn group<'group>(&'group self, e: &mut Entries<'group>) {
         e.add_buffer(self.data().buffer().as_entire_buffer_binding());
     }
@@ -231,18 +239,24 @@ impl<V> Group for Storage<V>
 where
     V: ?Sized,
 {
+    type Inner = Self;
+
     fn group<'group>(&'group self, e: &mut Entries<'group>) {
         e.add_buffer(self.data().buffer().as_entire_buffer_binding());
     }
 }
 
 impl<S, const D: usize> Group for Texture<S, D> {
+    type Inner = Self;
+
     fn group<'group>(&'group self, e: &mut Entries<'group>) {
         e.add_texture(buffer::view(self));
     }
 }
 
 impl Group for Sampler {
+    type Inner = Self;
+
     fn group<'group>(&'group self, e: &mut Entries<'group>) {
         e.add_sampler(self.inner().downcast_ref().expect("sampler"));
     }
@@ -341,7 +355,7 @@ impl<G> Groups<1> for G
 where
     G: Group,
 {
-    type Inner = (G,);
+    type Inner = (G::Inner,);
 
     fn groups(&self) -> [&dyn Group; 1] {
         [self]
@@ -352,7 +366,7 @@ impl<A> Groups<1> for (A,)
 where
     A: Group,
 {
-    type Inner = Self;
+    type Inner = (A::Inner,);
 
     fn groups(&self) -> [&dyn Group; 1] {
         [&self.0]
@@ -364,7 +378,7 @@ where
     A: Group,
     B: Group,
 {
-    type Inner = Self;
+    type Inner = (A::Inner, B::Inner);
 
     fn groups(&self) -> [&dyn Group; 2] {
         [&self.0, &self.1]
@@ -377,7 +391,7 @@ where
     B: Group,
     C: Group,
 {
-    type Inner = Self;
+    type Inner = (A::Inner, B::Inner, C::Inner);
 
     fn groups(&self) -> [&dyn Group; 3] {
         [&self.0, &self.1, &self.2]
@@ -391,7 +405,7 @@ where
     C: Group,
     D: Group,
 {
-    type Inner = Self;
+    type Inner = (A::Inner, B::Inner, C::Inner, D::Inner);
 
     fn groups(&self) -> [&dyn Group; 4] {
         [&self.0, &self.1, &self.2, &self.3]
@@ -406,7 +420,7 @@ where
     D: Group,
     E: Group,
 {
-    type Inner = Self;
+    type Inner = (A::Inner, B::Inner, C::Inner, D::Inner, E::Inner);
 
     fn groups(&self) -> [&dyn Group; 5] {
         [&self.0, &self.1, &self.2, &self.3, &self.4]
@@ -422,7 +436,7 @@ where
     E: Group,
     F: Group,
 {
-    type Inner = Self;
+    type Inner = (A::Inner, B::Inner, C::Inner, D::Inner, E::Inner, F::Inner);
 
     fn groups(&self) -> [&dyn Group; 6] {
         [&self.0, &self.1, &self.2, &self.3, &self.4, &self.5]

@@ -4,7 +4,7 @@ use {
     crate::{
         StorageValue,
         buffer::TextureSampler,
-        sl::{Define, Global, GlobalOut, Ret},
+        sl_old::{Define, Global, GlobalOut, Ret},
         store::{Storage, Uniform},
         types::{self, MemberData, MemberType, Space},
         value::UniformValue,

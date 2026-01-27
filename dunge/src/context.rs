@@ -10,8 +10,8 @@ use {
         mesh::{self, Mesh},
         render,
         set::{self, Data, GroupHandler, Groups, UniqueSet, Visit},
-        shader::{RenderShader, Shader},
-        sl,
+        shader::{RenderShader, RenderShaderOld, Shader},
+        sl_old,
         state::{Scheduler, State},
         store::{Storage, Uniform},
         store2,
@@ -116,10 +116,10 @@ impl Context {
     ///
     /// No actual computation is performed inside the function itself (aside from compile-time
     /// from the shader's perspective). Instead, the computation is described declaratively
-    /// using functions from the [`sl`](crate::sl) module. For example, if you need to compute
-    /// [`sin`](crate::sl::sin), use the corresponding function `let y = sl::sin(x);`. This creates
+    /// using functions from the [`sl`](crate::sl_old) module. For example, if you need to compute
+    /// [`sin`](crate::sl_old::sin), use the corresponding function `let y = sl_old::sin(x);`. This creates
     /// a lazily evaluated sin expression, which will be compiled later during creation of a shader
-    /// object. For more details, see the [`sl`](crate::sl) module.
+    /// object. For more details, see the [`sl`](crate::sl_old) module.
     ///
     /// This function holds static type information of the shader:
     /// * Its input types - vertex and instance types, relevant for render shaders.
@@ -131,13 +131,13 @@ impl Context {
     ///
     /// | Type                                      | Semantics in shader          | Must lead first |
     /// | :---------------------------------------- | :--------------------------- | :-------------- |
-    /// | [`PassVertex`](crate::sl::PassVertex)     | Passes a vertex              | Yes             |
-    /// | [`PassInstance`](crate::sl::PassInstance) | Passes an instance           | Yes             |
-    /// | [`Pass`](crate::sl::Pass)                 | Passes a vertex and instance | Yes             |
-    /// | [`Index`](crate::sl::Index)               | Passes a vertex index        | No              |
-    /// | [`Groups`](crate::sl::Groups)             | Passes group data            | No              |
+    /// | [`PassVertex`](crate::sl_old::PassVertex)     | Passes a vertex              | Yes             |
+    /// | [`PassInstance`](crate::sl_old::PassInstance) | Passes an instance           | Yes             |
+    /// | [`Pass`](crate::sl_old::Pass)                 | Passes a vertex and instance | Yes             |
+    /// | [`Index`](crate::sl_old::Index)               | Passes a vertex index        | No              |
+    /// | [`Groups`](crate::sl_old::Groups)             | Passes group data            | No              |
     ///
-    /// The return type of a render shader must be the [`Render`](crate::sl::Render) struct.
+    /// The return type of a render shader must be the [`Render`](crate::sl_old::Render) struct.
     /// This struct requires two expressions to be set: the final vertex position in the `place` field
     /// and the final fragment (pixel) color in the `color` field.
     /// The vertex position is specified in
@@ -148,7 +148,7 @@ impl Context {
     ///
     /// A render shader consists of two stages: the vertex stage and the fragment stage,  
     /// but both are described together as a single function. To pass output data from the
-    /// vertex stage to the fragment stage, use the [`fragment`](crate::sl::fragment) function.
+    /// vertex stage to the fragment stage, use the [`fragment`](crate::sl_old::fragment) function.
     ///
     /// # Examples
     ///
@@ -156,7 +156,7 @@ impl Context {
     /// use {
     ///     dunge::{
     ///         prelude::*,
-    ///         sl::{Groups, PassVertex, Render},
+    ///         sl_old::{Groups, PassVertex, Render},
     ///         store::Uniform,
     ///     },
     ///     glam::Mat4,
@@ -176,7 +176,7 @@ impl Context {
     ///     place: m.load() * v.pos,
     ///
     ///     // Pass `col` from the vertex to fragment stage and return as a final pixel color
-    ///     color: sl::fragment(v.col),
+    ///     color: sl_old::fragment(v.col),
     /// };
     ///
     /// let cx = dunge::context().await?;
@@ -186,7 +186,7 @@ impl Context {
     /// ```
     pub fn make_shader<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
     where
-        M: sl::IntoModule<A, K>,
+        M: sl_old::IntoModule<A, K>,
     {
         Shader::from_module(&self.0, module)
     }
@@ -210,7 +210,7 @@ impl Context {
     /// use dunge::{
     ///     prelude::*,
     ///     color::Rgba,
-    ///     sl::{Groups, PassVertex, Render},
+    ///     sl_old::{Groups, PassVertex, Render},
     ///     store::Uniform,
     /// };
     ///
@@ -219,7 +219,7 @@ impl Context {
     /// # async fn f(
     /// #     target: dunge::buffer::TextureBuffer<2>,
     /// #     opts: dunge::Options,
-    /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl::Ret<sl::Global, dunge::types::Pointer<dunge::types::Vec4<f32>>>,)>>,
+    /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl_old::Ret<sl_old::Global, dunge::types::Pointer<dunge::types::Vec4<f32>>>,)>>,
     /// #     mesh: dunge::mesh::Mesh<Vec4f>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
     /// // Pass the color value via a uniform
@@ -227,7 +227,7 @@ impl Context {
     ///     // Set vertex coordinates
     ///     place: v,
     ///     // Pass color from the vertex stage to the fragment stage
-    ///     color: sl::fragment(color.load()),
+    ///     color: sl_old::fragment(color.load()),
     /// };
     ///
     /// // Create the context and shader
@@ -310,6 +310,21 @@ impl Context {
     /// This method also accepts a [config](Config) which defines the layer's properties.
     pub fn make_layer<V, I, S, C>(
         &self,
+        shader: &RenderShaderOld<S, V, I>,
+        conf: C,
+    ) -> Layer<render::Input<V, I, S>>
+    where
+        C: Into<Config>,
+    {
+        let conf = conf.into();
+        Layer::new(&self.0, shader.data(), conf)
+    }
+
+    /// Creates a [layer](Layer) for the given [render shader](RenderShader).
+    ///
+    /// This method also accepts a [config](Config) which defines the layer's properties.
+    pub fn make_layer2<V, I, S, C>(
+        &self,
         shader: &RenderShader<S, V, I>,
         conf: C,
     ) -> Layer<render::Input<V, I, S>>
@@ -326,6 +341,14 @@ impl Context {
         V: Vertex,
     {
         Mesh::from_vertex(&self.0, data)
+    }
+
+    /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
+    pub fn make_mesh2<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
+    where
+        V: Bytes,
+    {
+        Mesh::new(&self.0, data)
     }
 
     /// Creates a [row](Row) with the given data.

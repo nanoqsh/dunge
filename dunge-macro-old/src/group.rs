@@ -114,7 +114,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     quote::quote! {
         impl<#(#lts),*> dunge::GroupLegacy for #name<#(#lts),*> {
             type Projection = #projection_name<#(#static_lts),*>;
-            const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
+            const DEF: dunge::sl_old::Define<dunge::types::MemberData> = dunge::sl_old::Define::new(&[
                 #(#group_types),*,
             ]);
         }
@@ -129,7 +129,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         #projection
 
         impl<#(#lts),*> dunge::group::Projection for #projection_name<#(#lts),*> {
-            fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
+            fn projection(id: ::core::primitive::u32, out: dunge::sl_old::GlobalOut) -> Self {
                 Self {
                     #(#group_member_projections),*,
                 }
@@ -156,7 +156,7 @@ mod tests {
         let expected = quote::quote! {
             impl<'tx> dunge::GroupLegacy for Map<'tx> {
                 type Projection = MapProj<'static>;
-                const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
+                const DEF: dunge::sl_old::Define<dunge::types::MemberData> = dunge::sl_old::Define::new(&[
                     <BoundTexture as dunge::group::MemberProjection>::MEMBER,
                     <&'tx Sampler as dunge::group::MemberProjection>::MEMBER,
                 ]);
@@ -176,7 +176,7 @@ mod tests {
             }
 
             impl<'tx> dunge::group::Projection for MapProj<'tx> {
-                fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
+                fn projection(id: ::core::primitive::u32, out: dunge::sl_old::GlobalOut) -> Self {
                     Self {
                         tex: <BoundTexture as dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
                         sam: <&'tx Sampler as dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),
@@ -199,7 +199,7 @@ mod tests {
         let expected = quote::quote! {
             impl<'tx> dunge::GroupLegacy for Map<'tx> {
                 type Projection = MapProj<'static>;
-                const DEF: dunge::sl::Define<dunge::types::MemberData> = dunge::sl::Define::new(&[
+                const DEF: dunge::sl_old::Define<dunge::types::MemberData> = dunge::sl_old::Define::new(&[
                     <BoundTexture as dunge::group::MemberProjection>::MEMBER,
                     <&'tx Sampler as dunge::group::MemberProjection>::MEMBER,
                 ]);
@@ -219,7 +219,7 @@ mod tests {
             );
 
             impl<'tx> dunge::group::Projection for MapProj<'tx> {
-                fn projection(id: ::core::primitive::u32, out: dunge::sl::GlobalOut) -> Self {
+                fn projection(id: ::core::primitive::u32, out: dunge::sl_old::GlobalOut) -> Self {
                     Self {
                         0: <BoundTexture as dunge::group::MemberProjection>::member_projection(id, 0u32, out.clone()),
                         1: <&'tx Sampler as dunge::group::MemberProjection>::member_projection(id, 1u32, out.clone()),

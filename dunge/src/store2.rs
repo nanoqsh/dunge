@@ -8,6 +8,7 @@ use {
     std::{num::NonZeroU32, ops},
 };
 
+#[derive(Clone)]
 pub struct Dunge {
     buf: wgpu::Buffer,
     len: NonZeroU32,

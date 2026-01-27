@@ -113,7 +113,7 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     quote::quote! {
         impl<#(#lts),*> dunge::Instance for #name<#(#lts),*> {
             type Projection = #projection_name<#(#static_lts),*>;
-            const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
+            const DEF: dunge::sl_old::Define<dunge::types::ValueType> = dunge::sl_old::Define::new(&[
                 #(#instance_types),*,
             ]);
         }
@@ -154,7 +154,7 @@ mod tests {
         let expected = quote::quote! {
             impl<'slice> dunge::Instance for Transform<'slice> {
                 type Projection = TransformProj<'static>;
-                const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
+                const DEF: dunge::sl_old::Define<dunge::types::ValueType> = dunge::sl_old::Define::new(&[
                     <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
                     <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::TYPE,
                 ]);
@@ -196,7 +196,7 @@ mod tests {
         let expected = quote::quote! {
             impl<'slice> dunge::Instance for Transform<'slice> {
                 type Projection = TransformProj<'static>;
-                const DEF: dunge::sl::Define<dunge::types::ValueType> = dunge::sl::Define::new(&[
+                const DEF: dunge::sl_old::Define<dunge::types::ValueType> = dunge::sl_old::Define::new(&[
                     <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
                     <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::TYPE,
                 ]);

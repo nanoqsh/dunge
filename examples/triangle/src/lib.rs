@@ -1,17 +1,19 @@
-use dunge_winit::prelude::*;
+use {
+    dunge_winit::prelude::*,
+    std::{error, f32::consts, time::Duration},
+};
 
-type Error = Box<dyn std::error::Error>;
+type Error = Box<dyn error::Error>;
 
 pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
-            sl::{Groups, Index, Render},
+            sl_old::{Groups, Index, Render},
             store::Uniform,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
         glam::Vec4,
-        std::{f32::consts, time::Duration},
         winit::keyboard::KeyCode,
     };
 
@@ -19,9 +21,9 @@ pub async fn run(control: Control) -> Result<(), Error> {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
-        let i = sl::thunk(sl::f32(idx) * third + offset.load());
+        let i = sl_old::thunk(sl_old::f32(idx) * third + offset.load());
         Render {
-            place: sl::vec4(sl::cos(i.clone()), sl::sin(i), 0., 1.),
+            place: sl_old::vec4(sl_old::cos(i.clone()), sl_old::sin(i), 0., 1.),
             color,
         }
     };
