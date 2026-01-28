@@ -40,8 +40,8 @@ pub mod sh {
 
 pub use {
     crate::{
-        context::{Builder, Context, FailedMakeContext, context},
-        layer::{Blend, Config, Layer, Polygon, Topology},
+        context::{Context, FailedMakeContext, context},
+        layer::{Blend, Config, Layer, Topology},
         shader::{RenderShader, RenderShaderOld, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
     },

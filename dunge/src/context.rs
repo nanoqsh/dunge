@@ -20,7 +20,7 @@ use {
     },
     dunge_shade::{bytes::Bytes, irc::Value, link::Render},
     dunge_shade_old::group::GroupLegacy,
-    std::{error, fmt, pin::Pin, sync::Arc},
+    std::{error, fmt, sync::Arc},
 };
 
 /// Creates the [context](Context) instance.
@@ -67,37 +67,9 @@ use {
 ///
 /// The builder returns an error when the context could not be created.
 /// See [`FailedMakeContext`] for details.
-pub fn context() -> Builder {
-    Builder(wgpu::Features::empty())
-}
-
-/// The [context](Context) builder.
-pub struct Builder(wgpu::Features);
-
-impl Builder {
-    /// Enables line polygon mode for current backend.
-    #[cfg(not(target_family = "wasm"))]
-    pub fn enable_polygon_mode_line(self) -> Self {
-        Self(self.0 | wgpu::Features::POLYGON_MODE_LINE)
-    }
-
-    /// Enables point polygon mode for current backend.
-    #[cfg(not(target_family = "wasm"))]
-    pub fn enable_polygon_mode_point(self) -> Self {
-        Self(self.0 | wgpu::Features::POLYGON_MODE_POINT)
-    }
-}
-
-impl IntoFuture for Builder {
-    type Output = Result<Context, FailedMakeContext>;
-    type IntoFuture = Pin<Box<dyn Future<Output = Self::Output>>>;
-
-    fn into_future(self) -> Self::IntoFuture {
-        Box::pin(async move {
-            let state = State::new(self.0).await?;
-            Ok(Context(Arc::new(state)))
-        })
-    }
+pub async fn context() -> Result<Context, FailedMakeContext> {
+    let state = State::new().await?;
+    Ok(Context(Arc::new(state)))
 }
 
 /// The main dunge context.

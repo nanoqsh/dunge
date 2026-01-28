@@ -41,7 +41,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub(crate) async fn new(required_features: wgpu::Features) -> Result<Self, FailedMakeContext> {
+    pub(crate) async fn new() -> Result<Self, FailedMakeContext> {
         let instance = {
             let desc = wgpu::InstanceDescriptor {
                 backends: DEFAULT_BACKEND,
@@ -69,7 +69,6 @@ impl State {
 
         let (device, queue) = {
             let desc = wgpu::DeviceDescriptor {
-                required_features,
                 required_limits: wgpu::Limits {
                     ..if cfg!(target_family = "wasm") {
                         wgpu::Limits::downlevel_defaults()

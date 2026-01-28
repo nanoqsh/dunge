@@ -51,29 +51,6 @@ impl Topology {
     }
 }
 
-/// [Layer's](Layer) polygon mode.
-#[derive(Clone, Copy, Default)]
-pub enum Polygon {
-    #[default]
-    Fill,
-    #[cfg(not(target_family = "wasm"))]
-    Line,
-    #[cfg(not(target_family = "wasm"))]
-    Point,
-}
-
-impl Polygon {
-    fn wgpu(self) -> wgpu::PolygonMode {
-        match self {
-            Self::Fill => wgpu::PolygonMode::Fill,
-            #[cfg(not(target_family = "wasm"))]
-            Self::Line => wgpu::PolygonMode::Line,
-            #[cfg(not(target_family = "wasm"))]
-            Self::Point => wgpu::PolygonMode::Point,
-        }
-    }
-}
-
 /// The [layer](Layer) configuration.
 ///
 /// Used when creating a layer in the [`make_layer`](crate::Context::make_layer) method.
@@ -82,7 +59,6 @@ pub struct Config {
     pub format: Format,
     pub blend: Blend,
     pub topology: Topology,
-    pub polygon: Polygon,
     pub depth: bool,
 }
 
@@ -112,7 +88,6 @@ impl<I> Layer<I> {
             format,
             blend,
             topology,
-            polygon,
             depth,
         } = conf;
 
@@ -138,7 +113,7 @@ impl<I> Layer<I> {
                 topology,
                 strip_index_format: topology.is_strip().then_some(wgpu::IndexFormat::Uint32),
                 cull_mode: Some(wgpu::Face::Back),
-                polygon_mode: polygon.wgpu(),
+                polygon_mode: wgpu::PolygonMode::Fill,
                 ..Default::default()
             },
             depth_stencil: depth.then_some(wgpu::DepthStencilState {
