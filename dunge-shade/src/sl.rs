@@ -137,6 +137,56 @@ where
     panic!()
 }
 
+pub trait Vector {
+    const DIM: usize;
+    type Scalar;
+}
+
+impl Vector for Vec2 {
+    const DIM: usize = 2;
+    type Scalar = f32;
+}
+
+impl Vector for Vec3 {
+    const DIM: usize = 3;
+    type Scalar = f32;
+}
+
+impl Vector for Vec4 {
+    const DIM: usize = 4;
+    type Scalar = f32;
+}
+
+impl Vector for IVec2 {
+    const DIM: usize = 2;
+    type Scalar = i32;
+}
+
+impl Vector for IVec3 {
+    const DIM: usize = 3;
+    type Scalar = i32;
+}
+
+impl Vector for IVec4 {
+    const DIM: usize = 4;
+    type Scalar = i32;
+}
+
+impl Vector for UVec2 {
+    const DIM: usize = 2;
+    type Scalar = u32;
+}
+
+impl Vector for UVec3 {
+    const DIM: usize = 3;
+    type Scalar = u32;
+}
+
+impl Vector for UVec4 {
+    const DIM: usize = 4;
+    type Scalar = u32;
+}
+
 pub trait FloatParameter {}
 impl FloatParameter for f32 {}
 impl FloatParameter for Vec2 {}
@@ -295,5 +345,65 @@ where
     X: FloatParameter,
 {
     _ = (x, p);
+    panic!()
+}
+
+pub fn dot<V>(a: V, b: V) -> V::Scalar
+where
+    V: Vector,
+{
+    _ = (a, b);
+    panic!()
+}
+
+pub fn cross<V>(a: V, b: V) -> V
+where
+    V: Vector,
+{
+    const {
+        assert!(V::DIM == 3, "vector type must have 3 dimensions");
+    }
+
+    _ = (a, b);
+    panic!()
+}
+
+pub fn distance<X>(a: X, b: X) -> f32
+where
+    X: FloatParameter,
+{
+    _ = (a, b);
+    panic!()
+}
+
+pub fn length<X>(x: X) -> f32
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn normalize<V>(v: V) -> V
+where
+    V: Vector<Scalar = f32>,
+{
+    _ = v;
+    panic!()
+}
+
+pub fn reflect<V>(a: V, b: V) -> V
+where
+    V: Vector<Scalar = f32>,
+{
+    _ = (a, b);
+    panic!()
+}
+
+pub fn refract<V>(a: V, b: V, i: f32) -> V
+where
+    V: Vector<Scalar = f32>,
+{
+    _ = (a, b, i);
     panic!()
 }

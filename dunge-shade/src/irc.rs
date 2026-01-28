@@ -664,13 +664,20 @@ impl Math {
     const LOG: Self = Self(15);
     const LOG2: Self = Self(16);
     const POW: Self = Self(17);
+    const DOT: Self = Self(18);
+    const CROSS: Self = Self(19);
+    const DISTANCE: Self = Self(20);
+    const LENGTH: Self = Self(21);
+    const NORM: Self = Self(22);
+    const REFLECT: Self = Self(23);
+    const REFRACT: Self = Self(24);
 
     const fn get(self) -> usize {
         self.0
     }
 
     const fn from_usize(n: usize) -> Option<Self> {
-        if n < 18 { Some(Self(n)) } else { None }
+        if n < 25 { Some(Self(n)) } else { None }
     }
 
     const fn naga(self) -> naga::MathFunction {
@@ -693,6 +700,13 @@ impl Math {
             Self::LOG => naga::MathFunction::Log,
             Self::LOG2 => naga::MathFunction::Log2,
             Self::POW => naga::MathFunction::Pow,
+            Self::DOT => naga::MathFunction::Dot,
+            Self::CROSS => naga::MathFunction::Cross,
+            Self::DISTANCE => naga::MathFunction::Distance,
+            Self::LENGTH => naga::MathFunction::Length,
+            Self::NORM => naga::MathFunction::Normalize,
+            Self::REFLECT => naga::MathFunction::Reflect,
+            Self::REFRACT => naga::MathFunction::Refract,
             _ => unreachable!(),
         }
     }
@@ -1122,6 +1136,50 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::pow::<Vec3>), math::<{ Math::POW.get() }>);
     #[cfg(feature = "mv")]
     fns.insert(fnid(sl::pow::<Vec4>), math::<{ Math::POW.get() }>);
+
+    fns.insert(fnid(sl::dot::<Vec2>), math::<{ Math::DOT.get() }>);
+    fns.insert(fnid(sl::dot::<Vec3>), math::<{ Math::DOT.get() }>);
+    fns.insert(fnid(sl::dot::<Vec4>), math::<{ Math::DOT.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::dot::<IVec2>), math::<{ Math::DOT.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::dot::<IVec3>), math::<{ Math::DOT.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::dot::<IVec4>), math::<{ Math::DOT.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::dot::<UVec2>), math::<{ Math::DOT.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::dot::<UVec3>), math::<{ Math::DOT.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::dot::<UVec4>), math::<{ Math::DOT.get() }>);
+
+    fns.insert(fnid(sl::cross::<Vec3>), math::<{ Math::CROSS.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::cross::<IVec3>), math::<{ Math::CROSS.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::cross::<UVec3>), math::<{ Math::CROSS.get() }>);
+
+    fns.insert(fnid(sl::distance::<f32>), math::<{ Math::DISTANCE.get() }>);
+    fns.insert(fnid(sl::distance::<Vec2>), math::<{ Math::DISTANCE.get() }>);
+    fns.insert(fnid(sl::distance::<Vec3>), math::<{ Math::DISTANCE.get() }>);
+    fns.insert(fnid(sl::distance::<Vec4>), math::<{ Math::DISTANCE.get() }>);
+
+    fns.insert(fnid(sl::length::<f32>), math::<{ Math::LENGTH.get() }>);
+    fns.insert(fnid(sl::length::<Vec2>), math::<{ Math::LENGTH.get() }>);
+    fns.insert(fnid(sl::length::<Vec3>), math::<{ Math::LENGTH.get() }>);
+    fns.insert(fnid(sl::length::<Vec4>), math::<{ Math::LENGTH.get() }>);
+
+    fns.insert(fnid(sl::normalize::<Vec2>), math::<{ Math::NORM.get() }>);
+    fns.insert(fnid(sl::normalize::<Vec3>), math::<{ Math::NORM.get() }>);
+    fns.insert(fnid(sl::normalize::<Vec4>), math::<{ Math::NORM.get() }>);
+
+    fns.insert(fnid(sl::reflect::<Vec2>), math::<{ Math::REFLECT.get() }>);
+    fns.insert(fnid(sl::reflect::<Vec3>), math::<{ Math::REFLECT.get() }>);
+    fns.insert(fnid(sl::reflect::<Vec4>), math::<{ Math::REFLECT.get() }>);
+
+    fns.insert(fnid(sl::refract::<Vec2>), math::<{ Math::REFRACT.get() }>);
+    fns.insert(fnid(sl::refract::<Vec3>), math::<{ Math::REFRACT.get() }>);
+    fns.insert(fnid(sl::refract::<Vec4>), math::<{ Math::REFRACT.get() }>);
 
     fns
 }
