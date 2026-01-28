@@ -6,7 +6,7 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
-            buffer::{Filter, TextureSampler, Size},
+            buffer::{Filter, Size, TextureSampler},
             color::{Format, Rgb},
             group::BoundTexture,
             prelude::*,
@@ -36,7 +36,7 @@ fn render() -> Result<(), Error> {
     };
 
     let cx = dunge::block_on(dunge::context())?;
-    let shader = cx.make_shader(triangle);
+    let shader = cx.make_shader_old(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_group.wgsl"));
 
     let map = {

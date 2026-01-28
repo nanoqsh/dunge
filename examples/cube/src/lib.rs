@@ -1,5 +1,5 @@
 use {
-    dunge::store2::Uniform,
+    dunge::store::Uniform,
     dunge_winit::{Canvas, prelude::*},
     futures_concurrency::prelude::*,
     glam::{Mat4, Quat, UVec2, Vec3, Vec4},
@@ -35,7 +35,7 @@ type Error = Box<dyn error::Error>;
 
 pub async fn run(control: Control) -> Result<(), Error> {
     let cx = dunge::context().await?;
-    let shader = cx.make_shader2(render! {
+    let shader = cx.make_shader(render! {
         vertex: Vert,
         groups: [Uniform<Mat4>],
         shaders: [vs, fs],

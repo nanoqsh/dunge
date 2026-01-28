@@ -16,7 +16,7 @@ async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             sl_old::{Groups, PassVertex, Render},
-            store::UniformOld,
+            store_old::UniformOld,
         },
         futures_concurrency::prelude::*,
         futures_lite::prelude::*,
@@ -39,7 +39,7 @@ async fn run(control: Control) -> Result<(), Error> {
     };
 
     let cx = dunge::context().await?;
-    let shader = cx.make_shader(triangle);
+    let shader = cx.make_shader_old(triangle);
     let delta = cx.make_uniform(&0.);
     let set = cx.make_set(&shader, &delta);
 

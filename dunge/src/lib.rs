@@ -5,7 +5,7 @@ pub mod color;
 mod context;
 pub mod group;
 pub mod instance;
-pub mod instance2;
+pub mod instance_old;
 mod layer;
 pub mod mesh;
 pub mod render;
@@ -14,7 +14,7 @@ pub mod set;
 mod shader;
 mod state;
 pub mod store;
-pub mod store2;
+pub mod store_old;
 #[doc(hidden)]
 pub mod surface;
 pub mod usage;

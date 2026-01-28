@@ -6,8 +6,8 @@ use {
         group::BoundTexture,
         runtime::Ticket,
         state::State,
-        store::{StorageOld, UniformOld},
-        store2,
+        store,
+        store_old::{StorageOld, UniformOld},
         usage::{
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
         },
@@ -923,7 +923,7 @@ where
     }
 }
 
-impl<V> i::AsInner for store2::Storage<V>
+impl<V> i::AsInner for store::Storage<V>
 where
     V: ?Sized,
 {
@@ -938,7 +938,7 @@ impl<V> i::AsInner for UniformOld<V> {
     }
 }
 
-impl<V> i::AsInner for store2::Uniform<V> {
+impl<V> i::AsInner for store::Uniform<V> {
     fn as_inner(&self) -> i::Wrap<'_> {
         i::Wrap(Inner::Buffer(self.data().buffer()))
     }
@@ -973,7 +973,7 @@ where
 }
 
 impl<V> Source for StorageOld<V> where V: ?Sized {}
-impl<V> Source for store2::Storage<V> where V: ?Sized {}
+impl<V> Source for store::Storage<V> where V: ?Sized {}
 
 pub trait Destination: i::AsInner {
     #[doc(hidden)]
@@ -1005,8 +1005,8 @@ where
 
 impl<V> Destination for StorageOld<V> where V: ?Sized {}
 impl<V> Destination for UniformOld<V> {}
-impl<V> Destination for store2::Storage<V> where V: ?Sized {}
-impl<V> Destination for store2::Uniform<V> {}
+impl<V> Destination for store::Storage<V> where V: ?Sized {}
+impl<V> Destination for store::Uniform<V> {}
 
 pub(crate) fn try_copy<S, D>(from: S, to: D, en: &mut wgpu::CommandEncoder) -> Result<(), SizeError>
 where

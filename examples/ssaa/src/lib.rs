@@ -13,7 +13,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             color::Format,
             group::BoundTexture,
             sl_old::{Groups, Index, PassVertex, Render},
-            store::UniformOld,
+            store_old::UniformOld,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
@@ -65,8 +65,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let cx = dunge::context().await?;
-    let shader = cx.make_shader(triangle);
-    let screen_shader = cx.make_shader(screen);
+    let shader = cx.make_shader_old(triangle);
+    let screen_shader = cx.make_shader_old(screen);
     let offset = cx.make_uniform(&0.);
     let set = cx.make_set(&shader, &offset);
 

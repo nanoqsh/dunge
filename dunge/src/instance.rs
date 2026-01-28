@@ -1,252 +1,130 @@
 //! Shader instance types and traits.
 
-use {
-    crate::{
-        Instance,
-        context::Context,
-        render::VertexSetter,
-        sl_old::{ReadInstance, Ret},
-        state::State,
-        types::{self, ValueType},
-        value::Value,
-    },
-    std::{marker::PhantomData, ops::RangeBounds},
-};
+use crate::store::{Row, RowSlice};
 
-pub use dunge_shade_old::instance::Projection;
-
-/// Describes an instance member type projection.
-///
-/// The trait is sealed because the derive macro relies on no new types being used.
-pub trait MemberProjection: s::Sealed {
-    const TYPE: ValueType;
-    type Field;
-    fn member_projection(id: u32) -> Self::Field;
-}
-
-pub trait RowValue: Sized {
-    type Type;
-    fn row_value(slice: &[Self]) -> &[u8];
-}
-
-impl<V> RowValue for V
+pub(crate) fn set<R, const N: usize>(rows: R, mut slot: u32, pass: &mut wgpu::RenderPass<'_>) -> u32
 where
-    V: Value + bytemuck::Pod,
+    R: Rows<N>,
 {
-    type Type = V::Type;
+    let slices = rows.rows();
+    let instances = slices.iter().map(|s| s.len).min().unwrap_or_default();
 
-    fn row_value(slice: &[Self]) -> &[u8] {
-        bytemuck::cast_slice(slice)
-    }
-}
-
-impl<V> s::Sealed for RowOld<V> where V: RowValue<Type: types::Value> {}
-
-impl<V> MemberProjection for RowOld<V>
-where
-    V: RowValue<Type: types::Value>,
-{
-    const TYPE: ValueType = <V::Type as types::Value>::VALUE_TYPE;
-    type Field = Ret<ReadInstance, V::Type>;
-
-    fn member_projection(id: u32) -> Self::Field {
-        ReadInstance::new(id)
-    }
-}
-
-impl<V> s::Sealed for RowSliceOld<'_, V> where V: RowValue<Type: types::Value> {}
-
-impl<V> MemberProjection for RowSliceOld<'_, V>
-where
-    V: RowValue<Type: types::Value>,
-{
-    const TYPE: ValueType = <V::Type as types::Value>::VALUE_TYPE;
-    type Field = Ret<ReadInstance, V::Type>;
-
-    fn member_projection(id: u32) -> Self::Field {
-        ReadInstance::new(id)
-    }
-}
-
-pub trait Set: Instance {
-    fn set(&self, setter: &mut Setter<'_, '_>);
-}
-
-pub(crate) fn set<I>(vs: VertexSetter<'_, '_>, slot: u32, instance: &I) -> u32
-where
-    I: Set,
-{
-    let len = None;
-    let mut setter = Setter { len, slot, vs };
-    instance.set(&mut setter);
-    setter.len()
-}
-
-pub struct Setter<'ren, 'layer> {
-    len: Option<u32>,
-    slot: u32,
-    vs: VertexSetter<'ren, 'layer>,
-}
-
-impl Setter<'_, '_> {
-    fn len(&self) -> u32 {
-        self.len.unwrap_or_default()
+    for slice in slices {
+        pass.set_vertex_buffer(slot, slice.buffer);
+        slot += 1;
     }
 
-    fn next_slot(&mut self) -> u32 {
-        let next = self.slot;
-        self.slot += 1;
-        next
-    }
-
-    fn update_len(&mut self, len: u32) {
-        let current = self.len.get_or_insert(len);
-        *current = u32::min(*current, len);
-    }
+    instances
 }
 
-pub trait SetMember {
-    fn set_member(&self, setter: &mut Setter<'_, '_>);
-}
-
-impl<V> SetMember for RowOld<V> {
-    fn set_member(&self, setter: &mut Setter<'_, '_>) {
-        setter.update_len(self.len);
-        let slot = setter.next_slot();
-        setter.vs.set(self.buf.slice(..), slot);
-    }
-}
-
-impl<V> SetMember for RowSliceOld<'_, V> {
-    fn set_member(&self, setter: &mut Setter<'_, '_>) {
-        setter.update_len(self.len);
-        let slot = setter.next_slot();
-        setter.vs.set(self.slice, slot);
-    }
-}
-
-pub struct RowOld<V> {
-    buf: wgpu::Buffer,
+pub struct Slice<'buffer> {
+    buffer: wgpu::BufferSlice<'buffer>,
     len: u32,
-    ty: PhantomData<V>,
 }
 
-impl<V> RowOld<V> {
-    pub(crate) fn new(state: &State, data: &[V]) -> Self
-    where
-        V: RowValue,
-    {
-        use wgpu::util::{self, DeviceExt};
+pub trait Buffer {
+    type Inner;
+    fn buffer(&self) -> Slice<'_>;
+}
 
-        let buf = {
-            let desc = util::BufferInitDescriptor {
-                label: None,
-                contents: V::row_value(data),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            };
+impl<B> Buffer for &B
+where
+    B: Buffer,
+{
+    type Inner = B::Inner;
 
-            state.device().create_buffer_init(&desc)
-        };
-
-        let len = data.len() as u32;
-
-        Self {
-            buf,
-            len,
-            ty: PhantomData,
-        }
-    }
-
-    /// Updates the row data.
-    ///
-    /// # Panics
-    /// Panics if the row length is not equal to the length of the new value.
-    pub fn update(&self, cx: &Context, data: &[V])
-    where
-        V: RowValue,
-    {
-        assert_eq!(
-            data.len(),
-            self.len(),
-            "cannot update row of length {} with value of length {}",
-            self.len(),
-            data.len(),
-        );
-
-        let queue = cx.state().queue();
-        queue.write_buffer(&self.buf, 0, V::row_value(data));
-    }
-
-    pub fn slice<S>(&self, bounds: S) -> RowSliceOld<'_, V>
-    where
-        S: RangeBounds<usize>,
-    {
-        let byte_start = bounds.start_bound().map(|&n| (n * size_of::<V>()) as u64);
-        let byte_end = bounds.end_bound().map(|&n| (n * size_of::<V>()) as u64);
-
-        let slice = self.buf.slice((byte_start, byte_end));
-        let len = slice.size().get() as u32 / size_of::<V>() as u32;
-
-        RowSliceOld {
-            slice,
-            len,
-            ty: PhantomData,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.len as usize
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
+    fn buffer(&self) -> Slice<'_> {
+        (**self).buffer()
     }
 }
 
-pub struct RowSliceOld<'slice, V> {
-    slice: wgpu::BufferSlice<'slice>,
-    len: u32,
-    ty: PhantomData<V>,
-}
+impl<V> Buffer for Row<V> {
+    type Inner = V;
 
-impl<V> RowSliceOld<'_, V> {
-    /// Updates the row data.
-    ///
-    /// # Panics
-    /// Panics if the row length is not equal to the length of the new value.
-    pub fn update(&self, cx: &Context, data: &[V])
-    where
-        V: RowValue,
-    {
-        assert_eq!(
-            data.len(),
-            self.len(),
-            "cannot update row slice of length {} with value of length {}",
-            self.len(),
-            data.len(),
-        );
-
-        let queue = cx.state().queue();
-        queue.write_buffer(self.slice.buffer(), self.slice.offset(), V::row_value(data));
-    }
-
-    pub fn len(&self) -> usize {
-        self.len as usize
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
+    fn buffer(&self) -> Slice<'_> {
+        let buffer = self.data().buffer().slice(..);
+        let len = self.len().get();
+        Slice { buffer, len }
     }
 }
 
-impl<V> Clone for RowSliceOld<'_, V> {
-    fn clone(&self) -> Self {
-        *self
+impl<V> Buffer for RowSlice<'_, V> {
+    type Inner = V;
+
+    fn buffer(&self) -> Slice<'_> {
+        let buffer = self.slice().slice();
+        let len = self.len().get();
+        Slice { buffer, len }
     }
 }
 
-impl<V> Copy for RowSliceOld<'_, V> {}
+pub trait Rows<const N: usize> {
+    type Inner;
+    fn rows(&self) -> [Slice<'_>; N];
+}
 
-mod s {
-    pub trait Sealed {}
+impl<B> Rows<1> for B
+where
+    B: Buffer,
+{
+    type Inner = (B::Inner,);
+
+    fn rows(&self) -> [Slice<'_>; 1] {
+        [self.buffer()]
+    }
+}
+
+impl<A> Rows<1> for (A,)
+where
+    A: Buffer,
+{
+    type Inner = (A::Inner,);
+
+    fn rows(&self) -> [Slice<'_>; 1] {
+        [self.0.buffer()]
+    }
+}
+
+impl<A, B> Rows<2> for (A, B)
+where
+    A: Buffer,
+    B: Buffer,
+{
+    type Inner = (A::Inner, B::Inner);
+
+    fn rows(&self) -> [Slice<'_>; 2] {
+        [self.0.buffer(), self.1.buffer()]
+    }
+}
+
+impl<A, B, C> Rows<3> for (A, B, C)
+where
+    A: Buffer,
+    B: Buffer,
+    C: Buffer,
+{
+    type Inner = (A::Inner, B::Inner, C::Inner);
+
+    fn rows(&self) -> [Slice<'_>; 3] {
+        [self.0.buffer(), self.1.buffer(), self.2.buffer()]
+    }
+}
+
+impl<A, B, C, D> Rows<4> for (A, B, C, D)
+where
+    A: Buffer,
+    B: Buffer,
+    C: Buffer,
+    D: Buffer,
+{
+    type Inner = (A::Inner, B::Inner, C::Inner, D::Inner);
+
+    fn rows(&self) -> [Slice<'_>; 4] {
+        [
+            self.0.buffer(),
+            self.1.buffer(),
+            self.2.buffer(),
+            self.3.buffer(),
+        ]
+    }
 }

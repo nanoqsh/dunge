@@ -9,7 +9,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             sl_old::{Groups, Index, Render},
-            store::UniformOld,
+            store_old::UniformOld,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
@@ -29,7 +29,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     };
 
     let cx = dunge::context().await?;
-    let shader = cx.make_shader(triangle);
+    let shader = cx.make_shader_old(triangle);
     let offset = cx.make_uniform(&0.);
     let set = cx.make_set(&shader, &offset);
 

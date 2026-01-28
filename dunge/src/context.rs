@@ -5,7 +5,7 @@ use {
             self, Buffer, Filter, Read, ReadFailed, TextureBuffer, TextureSampler, Write,
             WriteFailed,
         },
-        instance::{RowOld, RowValue},
+        instance_old::{RowOld, RowValue},
         layer::{Config, Layer},
         mesh::{self, Mesh},
         render,
@@ -13,10 +13,10 @@ use {
         shader::{RenderShader, RenderShaderOld, Shader},
         sl_old,
         state::{Scheduler, State},
-        store::{StorageOld, UniformOld},
-        store2,
+        store::{self, Row, Storage, StorageValue, Uniform},
+        store_old::{StorageOld, UniformOld},
         usage::u,
-        value::{StorageValue, UniformValue},
+        value::{StorageValue as StorageValueOld, UniformValue},
     },
     dunge_shade::{bytes::Bytes, irc::Value, link::Render},
     dunge_shade_old::group::GroupLegacy,
@@ -129,7 +129,7 @@ impl Context {
     ///     dunge::{
     ///         prelude::*,
     ///         sl_old::{Groups, PassVertex, Render},
-    ///         store::UniformOld,
+    ///         store_old::UniformOld,
     ///     },
     ///     glam::Mat4,
     /// };
@@ -152,18 +152,18 @@ impl Context {
     /// };
     ///
     /// let cx = dunge::context().await?;
-    /// let shader = cx.make_shader(program);
+    /// let shader = cx.make_shader_old(program);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn make_shader<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
+    pub fn make_shader_old<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
     where
         M: sl_old::IntoModule<A, K>,
     {
         Shader::from_module(&self.0, module)
     }
 
-    pub fn make_shader2<I, S>(&self, render: Render<I, S>) -> Shader<I, S> {
+    pub fn make_shader<I, S>(&self, render: Render<I, S>) -> Shader<I, S> {
         Shader::new(&self.0, render)
     }
 
@@ -183,7 +183,7 @@ impl Context {
     ///     prelude::*,
     ///     color::Rgba,
     ///     sl_old::{Groups, PassVertex, Render},
-    ///     store::UniformOld,
+    ///     store_old::UniformOld,
     /// };
     ///
     /// type Vec4f = [f32; 4];
@@ -204,7 +204,7 @@ impl Context {
     ///
     /// // Create the context and shader
     /// let cx = dunge::context().await?;
-    /// let shader = cx.make_shader(filler);
+    /// let shader = cx.make_shader_old(filler);
     ///
     /// // Create a color uniform in RGBA format - for example, red.
     /// let color_uniform = cx.make_uniform(&Rgba::from_bytes([!0, 0, 0, !0]));
@@ -252,29 +252,29 @@ impl Context {
         UniformOld::new(self, value)
     }
 
-    /// Creates a [uniform](store2::Uniform) from the given value.
-    pub fn make_uniform2<V>(&self, value: &V) -> store2::Uniform<V>
+    /// Creates a [uniform](Uniform) from the given value.
+    pub fn make_uniform2<V>(&self, value: &V) -> Uniform<V>
     where
         V: Value + Bytes,
     {
         const { assert!(size_of::<V>() > 0, "value cannot be zero sized") }
-        store2::uniform(value, self)
+        store::uniform(value, self)
     }
 
     /// Creates a [storage](StorageOld) from the given value.
     pub fn make_storage<V>(&self, value: &V) -> StorageOld<V>
     where
-        V: StorageValue + ?Sized,
+        V: StorageValueOld + ?Sized,
     {
         StorageOld::new(self, value)
     }
 
-    /// Creates a [storage](store2::Storage) from the given value.
-    pub fn make_storage2<V>(&self, value: &V) -> Option<store2::Storage<V>>
+    /// Creates a [storage](Storage) from the given value.
+    pub fn make_storage2<V>(&self, value: &V) -> Option<Storage<V>>
     where
-        V: dunge_shade::store::StorageValue + ?Sized,
+        V: StorageValue + ?Sized,
     {
-        store2::storage(value, self)
+        store::storage(value, self)
     }
 
     /// Creates a [layer](Layer) for the given [render shader](RenderShaderOld).
@@ -331,12 +331,12 @@ impl Context {
         RowOld::new(&self.0, data)
     }
 
-    /// Creates a [row](store2::Row) with the given data.
-    pub fn make_row2<V>(&self, value: &[V]) -> Option<store2::Row<V>>
+    /// Creates a [row](Row) with the given data.
+    pub fn make_row2<V>(&self, value: &[V]) -> Option<Row<V>>
     where
         V: Value + Bytes,
     {
-        store2::row(value, self)
+        store::row(value, self)
     }
 
     /// Creates a [2D texture](TextureBuffer) with the given [data](buffer::TextureData).

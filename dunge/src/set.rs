@@ -7,8 +7,8 @@ use {
         group::{BoundTexture, Take},
         shader::{Shader, ShaderData},
         state::State,
-        store,
-        store2::{Storage, Uniform},
+        store::{Storage, Uniform},
+        store_old,
     },
     std::{cell, iter, marker::PhantomData, sync::Arc},
 };
@@ -48,7 +48,7 @@ impl<'visit> Visitor<'visit> {
     }
 }
 
-impl<V> Visit for store::StorageOld<V>
+impl<V> Visit for store_old::StorageOld<V>
 where
     V: ?Sized,
 {
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<V> Visit for store::UniformOld<V> {
+impl<V> Visit for store_old::UniformOld<V> {
     fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(wgpu::BindingResource::Buffer(binding));

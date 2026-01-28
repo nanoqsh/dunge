@@ -71,12 +71,12 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
     let projection_name = quote::format_ident!("{name}Proj");
     let instance_types = fields.iter().map(|field| {
         let ty = &field.ty;
-        quote::quote! { <#ty as dunge::instance::MemberProjection>::TYPE }
+        quote::quote! { <#ty as dunge::instance_old::MemberProjection>::TYPE }
     });
 
     let instance_set_members = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
-        quote::quote! { dunge::instance::SetMember::set_member(&self.#ident, setter) }
+        quote::quote! { dunge::instance_old::SetMember::set_member(&self.#ident, setter) }
     });
 
     let instance_fields = iter::zip(0.., &fields).map(|(index, field)| {
@@ -84,16 +84,16 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
         if named {
-            quote::quote! { #vis #ident: <#ty as dunge::instance::MemberProjection>::Field }
+            quote::quote! { #vis #ident: <#ty as dunge::instance_old::MemberProjection>::Field }
         } else {
-            quote::quote! { #vis <#ty as dunge::instance::MemberProjection>::Field }
+            quote::quote! { #vis <#ty as dunge::instance_old::MemberProjection>::Field }
         }
     });
 
     let instance_member_projections = iter::zip(0.., &fields).map(|(index, field)| {
         let ident = member::make(index, field.ident.clone());
         let ty = &field.ty;
-        quote::quote! { #ident: <#ty as dunge::instance::MemberProjection>::member_projection(id + #index) }
+        quote::quote! { #ident: <#ty as dunge::instance_old::MemberProjection>::member_projection(id + #index) }
     });
 
     let projection = if named {
@@ -118,15 +118,15 @@ pub(crate) fn derive(input: DeriveInput) -> TokenStream {
             ]);
         }
 
-        impl dunge::instance::Set for #name<#(#anon_lts),*> {
-            fn set(&self, setter: &mut dunge::instance::Setter<'_, '_>) {
+        impl dunge::instance_old::Set for #name<#(#anon_lts),*> {
+            fn set(&self, setter: &mut dunge::instance_old::Setter<'_, '_>) {
                 #(#instance_set_members);*;
             }
         }
 
         #projection
 
-        impl<#(#lts),*> dunge::instance::Projection for #projection_name<#(#lts),*> {
+        impl<#(#lts),*> dunge::instance_old::Projection for #projection_name<#(#lts),*> {
             fn projection(id: ::core::primitive::u32) -> Self {
                 Self {
                     #(#instance_member_projections),*,
@@ -155,28 +155,28 @@ mod tests {
             impl<'slice> dunge::Instance for Transform<'slice> {
                 type Projection = TransformProj<'static>;
                 const DEF: dunge::sl_old::Define<dunge::types::ValueType> = dunge::sl_old::Define::new(&[
-                    <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
-                    <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::TYPE,
+                    <Row<[f32; 2]> as dunge::instance_old::MemberProjection>::TYPE,
+                    <RowSlice<'slice, [f32; 3]> as dunge::instance_old::MemberProjection>::TYPE,
                 ]);
             }
 
-            impl dunge::instance::Set for Transform<'_> {
-                fn set(&self, setter: &mut dunge::instance::Setter<'_, '_>) {
-                    dunge::instance::SetMember::set_member(&self.pos, setter);
-                    dunge::instance::SetMember::set_member(&self.col, setter);
+            impl dunge::instance_old::Set for Transform<'_> {
+                fn set(&self, setter: &mut dunge::instance_old::Setter<'_, '_>) {
+                    dunge::instance_old::SetMember::set_member(&self.pos, setter);
+                    dunge::instance_old::SetMember::set_member(&self.col, setter);
                 }
             }
 
             pub struct TransformProj<'slice> {
-                pub pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
-                pub col: <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::Field,
+                pub pos: <Row<[f32; 2]> as dunge::instance_old::MemberProjection>::Field,
+                pub col: <RowSlice<'slice, [f32; 3]> as dunge::instance_old::MemberProjection>::Field,
             }
 
-            impl<'slice> dunge::instance::Projection for TransformProj<'slice> {
+            impl<'slice> dunge::instance_old::Projection for TransformProj<'slice> {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
-                        pos: <Row<[f32; 2]> as dunge::instance::MemberProjection>::member_projection(id + 0u32),
-                        col: <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::member_projection(id + 1u32),
+                        pos: <Row<[f32; 2]> as dunge::instance_old::MemberProjection>::member_projection(id + 0u32),
+                        col: <RowSlice<'slice, [f32; 3]> as dunge::instance_old::MemberProjection>::member_projection(id + 1u32),
                     }
                 }
             }
@@ -197,28 +197,28 @@ mod tests {
             impl<'slice> dunge::Instance for Transform<'slice> {
                 type Projection = TransformProj<'static>;
                 const DEF: dunge::sl_old::Define<dunge::types::ValueType> = dunge::sl_old::Define::new(&[
-                    <Row<[f32; 2]> as dunge::instance::MemberProjection>::TYPE,
-                    <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::TYPE,
+                    <Row<[f32; 2]> as dunge::instance_old::MemberProjection>::TYPE,
+                    <RowSlice<'slice, [f32; 3]> as dunge::instance_old::MemberProjection>::TYPE,
                 ]);
             }
 
-            impl dunge::instance::Set for Transform<'_> {
-                fn set(&self, setter: &mut dunge::instance::Setter<'_, '_>) {
-                    dunge::instance::SetMember::set_member(&self.0, setter);
-                    dunge::instance::SetMember::set_member(&self.1, setter);
+            impl dunge::instance_old::Set for Transform<'_> {
+                fn set(&self, setter: &mut dunge::instance_old::Setter<'_, '_>) {
+                    dunge::instance_old::SetMember::set_member(&self.0, setter);
+                    dunge::instance_old::SetMember::set_member(&self.1, setter);
                 }
             }
 
             pub struct TransformProj<'slice>(
-                <Row<[f32; 2]> as dunge::instance::MemberProjection>::Field,
-                <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::Field,
+                <Row<[f32; 2]> as dunge::instance_old::MemberProjection>::Field,
+                <RowSlice<'slice, [f32; 3]> as dunge::instance_old::MemberProjection>::Field,
             );
 
-            impl<'slice> dunge::instance::Projection for TransformProj<'slice> {
+            impl<'slice> dunge::instance_old::Projection for TransformProj<'slice> {
                 fn projection(id: ::core::primitive::u32) -> Self {
                     Self {
-                        0: <Row<[f32; 2]> as dunge::instance::MemberProjection>::member_projection(id + 0u32),
-                        1: <RowSlice<'slice, [f32; 3]> as dunge::instance::MemberProjection>::member_projection(id + 1u32),
+                        0: <Row<[f32; 2]> as dunge::instance_old::MemberProjection>::member_projection(id + 0u32),
+                        1: <RowSlice<'slice, [f32; 3]> as dunge::instance_old::MemberProjection>::member_projection(id + 1u32),
                     }
                 }
             }

@@ -6,7 +6,7 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
-            instance::RowOld,
+            instance_old::RowOld,
             prelude::*,
             sl_old::{self, PassInstance, Render},
         },
@@ -26,7 +26,7 @@ fn render() -> Result<(), Error> {
     };
 
     let cx = dunge::block_on(dunge::context())?;
-    let shader = cx.make_shader(code);
+    let shader = cx.make_shader_old(code);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rows.wgsl"));
 
     Ok(())

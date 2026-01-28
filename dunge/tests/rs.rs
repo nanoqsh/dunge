@@ -26,7 +26,7 @@ fn rs_calc() -> Result<(), Error> {
         }
     };
 
-    let shader = CONTEXT.make_shader(compute);
+    let shader = CONTEXT.make_shader_old(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_calc.wgsl"));
     Ok(())
 }
@@ -43,7 +43,7 @@ fn rs_if() -> Result<(), Error> {
         color: sl_old::vec4_splat(1.),
     };
 
-    let shader = CONTEXT.make_shader(compute);
+    let shader = CONTEXT.make_shader_old(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_if.wgsl"));
     Ok(())
 }
@@ -59,7 +59,7 @@ fn rs_branch() -> Result<(), Error> {
             color: sl_old::vec4_splat(1.),
         };
 
-        CONTEXT.make_shader(compute)
+        CONTEXT.make_shader_old(compute)
     };
 
     let shader1 = {
@@ -70,7 +70,7 @@ fn rs_branch() -> Result<(), Error> {
             color: sl_old::vec4_splat(1.),
         };
 
-        CONTEXT.make_shader(compute)
+        CONTEXT.make_shader_old(compute)
     };
 
     let shader2 = {
@@ -86,7 +86,7 @@ fn rs_branch() -> Result<(), Error> {
             }
         };
 
-        CONTEXT.make_shader(compute)
+        CONTEXT.make_shader_old(compute)
     };
 
     helpers::eq_lines(shader0.debug_wgsl(), include_str!("rs_branch0.wgsl"));
@@ -104,7 +104,7 @@ fn rs_discard() -> Result<(), Error> {
         color: sl_old::discard(),
     };
 
-    let shader = CONTEXT.make_shader(compute);
+    let shader = CONTEXT.make_shader_old(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_discard.wgsl"));
     Ok(())
 }
@@ -118,7 +118,7 @@ fn rs_discard_if() -> Result<(), Error> {
         color: sl_old::if_then_else(true, sl_old::discard, || sl_old::vec4_splat(1.)),
     };
 
-    let shader = CONTEXT.make_shader(compute);
+    let shader = CONTEXT.make_shader_old(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_discard_if.wgsl"));
     Ok(())
 }
@@ -132,7 +132,7 @@ fn rs_zero() -> Result<(), Error> {
         color: sl_old::zero_value(),
     };
 
-    let shader = CONTEXT.make_shader(compute);
+    let shader = CONTEXT.make_shader_old(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_zero.wgsl"));
     Ok(())
 }
@@ -162,7 +162,7 @@ fn rs_reentrant() {
         };
 
         move || {
-            _ = cx.make_shader(inner);
+            _ = cx.make_shader_old(inner);
             Render {
                 place: sl_old::vec4_splat(1.),
                 color: sl_old::vec4_splat(1.),
@@ -170,7 +170,7 @@ fn rs_reentrant() {
         }
     };
 
-    _ = CONTEXT.make_shader(compute);
+    _ = CONTEXT.make_shader_old(compute);
 }
 
 #[test]
@@ -178,7 +178,7 @@ fn rs_storage() -> Result<(), Error> {
     use dunge::{
         GroupLegacy,
         sl_old::{self, Groups, Index, Render},
-        store::StorageOld,
+        store_old::StorageOld,
     };
 
     #[derive(GroupLegacy)]
@@ -191,7 +191,7 @@ fn rs_storage() -> Result<(), Error> {
         color: sl_old::vec4_splat(1.),
     };
 
-    let shader = CONTEXT.make_shader(compute);
+    let shader = CONTEXT.make_shader_old(compute);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("rs_storage.wgsl"));
     Ok(())
 }
@@ -217,7 +217,7 @@ fn rs_dyn() -> Result<(), Error> {
             }
         };
 
-        let shader = CONTEXT.make_shader(compute);
+        let shader = CONTEXT.make_shader_old(compute);
         helpers::eq_lines(shader.debug_wgsl(), correct_shader);
     }
     Ok(())

@@ -3,8 +3,8 @@
 use {
     crate::{
         color::Format,
-        instance::{self, Set},
-        instance2::{self, Rows},
+        instance::{self, Rows},
+        instance_old::{self, Set},
         layer::Layer,
         mesh::Mesh,
         set::{Bind, Bindings},
@@ -129,14 +129,14 @@ impl Runner<'_, '_> {
         S: Set,
     {
         let vs = VertexSetter(self.pass);
-        self.instances = instance::set(vs, self.slots.instance, instance);
+        self.instances = instance_old::set(vs, self.slots.instance, instance);
     }
 
     fn instance2<R, const N: usize>(&mut self, rows: R)
     where
         R: Rows<N>,
     {
-        self.instances = instance2::set(rows, self.slots.instance, self.pass);
+        self.instances = instance::set(rows, self.slots.instance, self.pass);
     }
 
     fn draw<V>(&mut self, mesh: &Mesh<V>) {

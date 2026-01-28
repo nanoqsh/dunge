@@ -1,146 +1,161 @@
-//! Storage type representing a typed array that can be read by a shader.
-//!
-//! Must be used with data that can be directly casted to the GPU buffer.
-
 use {
-    crate::{
-        context::Context,
-        state::State,
-        value::{StorageValue, UniformValue},
+    crate::Context,
+    dunge_shade::{
+        bytes::Bytes,
+        irc::Value,
+        store::{self, Data, Store},
     },
-    std::marker::PhantomData,
+    std::{num::NonZeroU32, ops},
 };
 
-struct Data {
+pub use dunge_shade::store::StorageValue;
+
+#[derive(Clone)]
+pub struct Dunge {
     buf: wgpu::Buffer,
-    size: usize,
+    len: NonZeroU32,
 }
 
-impl Data {
-    fn new(state: &State, contents: &[u8], usage: wgpu::BufferUsages) -> Self {
+impl Dunge {
+    fn new(cx: &Context, bytes: &[u8], len: NonZeroU32, usage: wgpu::BufferUsages) -> Self {
         use wgpu::util::{self, DeviceExt};
 
         let buf = {
             let desc = util::BufferInitDescriptor {
                 label: None,
-                contents,
+                contents: bytes,
                 usage,
             };
 
-            state.device().create_buffer_init(&desc)
+            cx.state().device().create_buffer_init(&desc)
         };
 
-        let size = contents.len();
-        Self { buf, size }
+        Self { buf, len }
     }
 
-    fn update(&self, state: &State, contents: &[u8]) {
+    fn store(cx: &Context, bytes: &[u8], usage: wgpu::BufferUsages) -> Self {
+        Self::new(cx, bytes, NonZeroU32::MIN, usage)
+    }
+
+    pub(crate) fn buffer(&self) -> &wgpu::Buffer {
+        &self.buf
+    }
+}
+
+impl Store for Dunge {
+    type Context = Context;
+
+    fn update(&self, cx: &Self::Context, bytes: &[u8]) {
         assert_eq!(
-            contents.len(),
-            self.size,
-            "cannot update buffer of size {} with value of size {}",
-            self.size,
-            contents.len(),
+            bytes.len() as u64,
+            self.buf.size(),
+            "bytes length must be the same as the buffer size",
         );
 
-        state.queue().write_buffer(&self.buf, 0, contents);
+        cx.state().queue().write_buffer(&self.buf, 0, bytes);
+    }
+
+    fn byte_size(&self) -> u64 {
+        self.buf.size()
+    }
+
+    fn len_non_zero(&self) -> NonZeroU32 {
+        self.len
     }
 }
 
-/// Storage buffer data.
-///
-/// Can be created using the context's [`make_storage`](crate::Context::make_storage) function.
-pub struct StorageOld<V>
-where
-    V: ?Sized,
-{
-    data: Data,
-    ty: PhantomData<V>,
+impl Data for Dunge {
+    type Slice<'slice> = DungeSlice<'slice>;
+
+    fn slice(&self, bounds: ops::Range<u64>, len: NonZeroU32) -> Self::Slice<'_> {
+        let buf = self.buf.slice(bounds);
+        DungeSlice { buf, len }
+    }
 }
 
-impl<V> StorageOld<V>
+#[derive(Clone, Copy)]
+pub struct DungeSlice<'slice> {
+    buf: wgpu::BufferSlice<'slice>,
+    len: NonZeroU32,
+}
+
+impl<'slice> DungeSlice<'slice> {
+    pub(crate) fn slice(self) -> wgpu::BufferSlice<'slice> {
+        self.buf
+    }
+}
+
+impl Store for DungeSlice<'_> {
+    type Context = Context;
+
+    fn update(&self, cx: &Self::Context, bytes: &[u8]) {
+        assert_eq!(
+            bytes.len() as u64,
+            self.buf.size().get(),
+            "bytes length must be the same as the buffer size",
+        );
+
+        cx.state().queue().write_buffer(self.buf.buffer(), 0, bytes);
+    }
+
+    fn byte_size(&self) -> u64 {
+        self.buf.size().get()
+    }
+
+    fn len_non_zero(&self) -> NonZeroU32 {
+        self.len
+    }
+}
+
+pub type Uniform<V> = store::Uniform<V, Dunge>;
+
+pub(crate) fn uniform<V>(value: &V, cx: &Context) -> Uniform<V>
 where
-    V: ?Sized,
+    V: Value + Bytes,
 {
-    pub(crate) fn new(cx: &Context, val: &V) -> Self
-    where
-        V: StorageValue,
-    {
-        let data = Data::new(
-            cx.state(),
-            val.storage_value(),
+    store::internal::uniform(value, |bytes| {
+        Dunge::store(
+            cx,
+            bytes,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        )
+    })
+    .expect("non zero sized value")
+}
+
+pub type Storage<V> = store::Storage<V, Dunge>;
+
+pub(crate) fn storage<V>(value: &V, cx: &Context) -> Option<Storage<V>>
+where
+    V: StorageValue + ?Sized,
+{
+    store::internal::storage(value, |bytes| {
+        Dunge::store(
+            cx,
+            bytes,
             wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::COPY_DST,
-        );
-
-        Self {
-            data,
-            ty: PhantomData,
-        }
-    }
-
-    /// Updates the stored data.
-    ///
-    /// # Panics
-    /// Panics if the buffer size is not equal to the size of the new value.
-    pub fn update(&self, cx: &Context, val: &V)
-    where
-        V: StorageValue,
-    {
-        self.data.update(cx.state(), val.storage_value());
-    }
-
-    pub fn byte_size(&self) -> usize {
-        self.data.size
-    }
-
-    pub(crate) fn buffer(&self) -> &wgpu::Buffer {
-        &self.data.buf
-    }
+        )
+    })
 }
 
-/// Uniform shader data.
-///
-/// Can be created using the context's [`make_uniform`](crate::Context::make_uniform) function.
-pub struct UniformOld<V> {
-    data: Data,
-    ty: PhantomData<V>,
-}
+pub type Row<V> = store::Row<V, Dunge>;
+pub type RowSlice<'slice, V> = store::RowSlice<'slice, V, Dunge>;
 
-impl<V> UniformOld<V> {
-    pub(crate) fn new(cx: &Context, val: &V) -> Self
-    where
-        V: UniformValue,
-    {
-        let data = Data::new(
-            cx.state(),
-            val.uniform_value(),
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        );
-
-        Self {
-            data,
-            ty: PhantomData,
-        }
-    }
-
-    /// Updates the uniform data.
-    ///
-    /// # Panics
-    /// Panics if the buffer size is not equal to the size of the new value.
-    pub fn update(&self, cx: &Context, val: &V)
-    where
-        V: UniformValue,
-    {
-        self.data.update(cx.state(), val.uniform_value());
-    }
-
-    pub fn bytes_size(&self) -> usize {
-        self.data.size
-    }
-
-    pub(crate) fn buffer(&self) -> &wgpu::Buffer {
-        &self.data.buf
-    }
+pub(crate) fn row<V>(value: &[V], cx: &Context) -> Option<Row<V>>
+where
+    V: Value + Bytes,
+{
+    let len = value.len().try_into().ok().and_then(NonZeroU32::new)?;
+    store::internal::row(value, |bytes| {
+        Dunge::new(
+            cx,
+            bytes,
+            len,
+            wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
+        )
+    })
 }

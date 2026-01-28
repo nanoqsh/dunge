@@ -8,7 +8,7 @@ fn render() -> Result<(), Error> {
         dunge::{
             buffer::Size,
             color::{Format, Rgb},
-            instance::{RowOld, RowSliceOld},
+            instance_old::{RowOld, RowSliceOld},
             prelude::*,
             sl_old::{self, Index, PassInstance, Render},
         },
@@ -34,7 +34,7 @@ fn render() -> Result<(), Error> {
     };
 
     let cx = dunge::block_on(dunge::context())?;
-    let shader = cx.make_shader(triangle);
+    let shader = cx.make_shader_old(triangle);
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_instance.wgsl"));
 
     let size = (300, 300);
