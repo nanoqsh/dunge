@@ -178,12 +178,12 @@ fn rs_storage() -> Result<(), Error> {
     use dunge::{
         GroupLegacy,
         sl_old::{self, Groups, Index, Render},
-        store::Storage,
+        store::StorageOld,
     };
 
     #[derive(GroupLegacy)]
     struct Map {
-        array: Storage<[f32; 4]>,
+        array: StorageOld<[f32; 4]>,
     }
 
     let compute = |Groups(map): Groups<Map>, Index(index): Index| Render {

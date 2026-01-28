@@ -48,7 +48,7 @@ impl<'visit> Visitor<'visit> {
     }
 }
 
-impl<V> Visit for store::Storage<V>
+impl<V> Visit for store::StorageOld<V>
 where
     V: ?Sized,
 {
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<V> Visit for store::Uniform<V> {
+impl<V> Visit for store::UniformOld<V> {
     fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
         let binding = self.buffer().as_entire_buffer_binding();
         visitor.push(wgpu::BindingResource::Buffer(binding));

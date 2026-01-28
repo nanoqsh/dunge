@@ -2,12 +2,11 @@
 
 use {
     crate::{
-        StorageValue,
         buffer::TextureSampler,
         sl_old::{Define, Global, GlobalOut, Ret},
-        store::{Storage, Uniform},
+        store::{StorageOld, UniformOld},
         types::{self, MemberData, MemberType, Space},
-        value::UniformValue,
+        value::{StorageValue, UniformValue},
     },
     dunge_shade_old::group::GroupLegacy,
 };
@@ -37,9 +36,9 @@ where
     }
 }
 
-impl<V> s::Sealed for Uniform<V> where V: UniformValue<Type: types::Member> {}
+impl<V> s::Sealed for UniformOld<V> where V: UniformValue<Type: types::Member> {}
 
-impl<V> MemberProjection for Uniform<V>
+impl<V> MemberProjection for UniformOld<V>
 where
     V: UniformValue<Type: types::Member>,
 {
@@ -55,7 +54,7 @@ where
     }
 }
 
-impl<V> GroupLegacy for Uniform<V>
+impl<V> GroupLegacy for UniformOld<V>
 where
     Self: MemberProjection<Field: Projection>,
 {
@@ -63,9 +62,9 @@ where
     const DEF: Define<MemberData> = Define::new(&[Self::MEMBER]);
 }
 
-impl<V> s::Sealed for Storage<V> where V: StorageValue + ?Sized {}
+impl<V> s::Sealed for StorageOld<V> where V: StorageValue + ?Sized {}
 
-impl<V> MemberProjection for Storage<V>
+impl<V> MemberProjection for StorageOld<V>
 where
     V: StorageValue<Type: types::Member> + ?Sized,
 {
@@ -81,7 +80,7 @@ where
     }
 }
 
-impl<V> GroupLegacy for Storage<V>
+impl<V> GroupLegacy for StorageOld<V>
 where
     V: ?Sized,
     Self: MemberProjection<Field: Projection>,

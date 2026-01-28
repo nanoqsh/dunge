@@ -18,7 +18,7 @@ pub mod store2;
 #[doc(hidden)]
 pub mod surface;
 pub mod usage;
-mod value;
+pub mod value;
 
 /// The dunge prelude.
 pub mod prelude {
@@ -44,7 +44,6 @@ pub use {
         layer::{Blend, Config, Layer, Polygon, Topology},
         shader::{RenderShader, RenderShaderOld, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
-        value::{ColorValue, StorageValue, UniformValue},
     },
     dunge_macro::{Bytes, Input, Value, dunge, render},
     dunge_macro_old::{GroupLegacy, Instance, Vertex},

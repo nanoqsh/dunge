@@ -13,7 +13,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             color::Format,
             group::BoundTexture,
             sl_old::{Groups, Index, PassVertex, Render},
-            store::Uniform,
+            store::UniformOld,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
@@ -23,7 +23,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     const SCREEN_FACTOR: u32 = 2;
 
-    let triangle = |Index(idx): Index, Groups(offset): Groups<Uniform<f32>>| {
+    let triangle = |Index(idx): Index, Groups(offset): Groups<UniformOld<f32>>| {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 
@@ -42,7 +42,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     struct Map {
         tex: BoundTexture,
         sam: TextureSampler,
-        offset: Uniform<Vec2>,
+        offset: UniformOld<Vec2>,
     }
 
     let screen = |PassVertex(v): PassVertex<Screen>, Groups(map): Groups<Map>| Render {

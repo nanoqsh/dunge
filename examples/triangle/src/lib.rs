@@ -9,7 +9,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             sl_old::{Groups, Index, Render},
-            store::Uniform,
+            store::UniformOld,
         },
         dunge_winit::Canvas,
         futures_concurrency::prelude::*,
@@ -17,7 +17,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         winit::keyboard::KeyCode,
     };
 
-    let triangle = |Index(idx): Index, Groups(offset): Groups<Uniform<f32>>| {
+    let triangle = |Index(idx): Index, Groups(offset): Groups<UniformOld<f32>>| {
         let color = Vec4::new(1., 0.4, 0.8, 1.);
         let third = const { consts::TAU / 3. };
 

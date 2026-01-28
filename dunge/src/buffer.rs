@@ -6,7 +6,7 @@ use {
         group::BoundTexture,
         runtime::Ticket,
         state::State,
-        store::{Storage, Uniform},
+        store::{StorageOld, UniformOld},
         store2,
         usage::{
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
@@ -914,7 +914,7 @@ impl<U> i::AsInner for Buffer<U> {
     }
 }
 
-impl<V> i::AsInner for Storage<V>
+impl<V> i::AsInner for StorageOld<V>
 where
     V: ?Sized,
 {
@@ -932,7 +932,7 @@ where
     }
 }
 
-impl<V> i::AsInner for Uniform<V> {
+impl<V> i::AsInner for UniformOld<V> {
     fn as_inner(&self) -> i::Wrap<'_> {
         i::Wrap(Inner::Buffer(self.buffer()))
     }
@@ -972,7 +972,7 @@ where
     }
 }
 
-impl<V> Source for Storage<V> where V: ?Sized {}
+impl<V> Source for StorageOld<V> where V: ?Sized {}
 impl<V> Source for store2::Storage<V> where V: ?Sized {}
 
 pub trait Destination: i::AsInner {
@@ -1003,8 +1003,8 @@ where
     }
 }
 
-impl<V> Destination for Storage<V> where V: ?Sized {}
-impl<V> Destination for Uniform<V> {}
+impl<V> Destination for StorageOld<V> where V: ?Sized {}
+impl<V> Destination for UniformOld<V> {}
 impl<V> Destination for store2::Storage<V> where V: ?Sized {}
 impl<V> Destination for store2::Uniform<V> {}
 

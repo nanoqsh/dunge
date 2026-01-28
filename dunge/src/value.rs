@@ -72,7 +72,7 @@ impl Value for glam::Mat4 {
     }
 }
 
-/// A [uniform](crate::store::Uniform) buffer value.
+/// A [uniform](crate::store::UniformOld) buffer value.
 pub trait UniformValue {
     type Type;
     type GlobalType;
@@ -110,7 +110,7 @@ where
     }
 }
 
-/// A [storage](crate::store::Storage) buffer value.
+/// A [storage](crate::store::StorageOld) buffer value.
 pub trait StorageValue {
     type Type;
     type GlobalType;

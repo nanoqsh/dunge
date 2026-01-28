@@ -40,9 +40,9 @@ where
     }
 }
 
-impl<V> s::Sealed for Row<V> where V: RowValue<Type: types::Value> {}
+impl<V> s::Sealed for RowOld<V> where V: RowValue<Type: types::Value> {}
 
-impl<V> MemberProjection for Row<V>
+impl<V> MemberProjection for RowOld<V>
 where
     V: RowValue<Type: types::Value>,
 {
@@ -54,9 +54,9 @@ where
     }
 }
 
-impl<V> s::Sealed for RowSlice<'_, V> where V: RowValue<Type: types::Value> {}
+impl<V> s::Sealed for RowSliceOld<'_, V> where V: RowValue<Type: types::Value> {}
 
-impl<V> MemberProjection for RowSlice<'_, V>
+impl<V> MemberProjection for RowSliceOld<'_, V>
 where
     V: RowValue<Type: types::Value>,
 {
@@ -109,7 +109,7 @@ pub trait SetMember {
     fn set_member(&self, setter: &mut Setter<'_, '_>);
 }
 
-impl<V> SetMember for Row<V> {
+impl<V> SetMember for RowOld<V> {
     fn set_member(&self, setter: &mut Setter<'_, '_>) {
         setter.update_len(self.len);
         let slot = setter.next_slot();
@@ -117,7 +117,7 @@ impl<V> SetMember for Row<V> {
     }
 }
 
-impl<V> SetMember for RowSlice<'_, V> {
+impl<V> SetMember for RowSliceOld<'_, V> {
     fn set_member(&self, setter: &mut Setter<'_, '_>) {
         setter.update_len(self.len);
         let slot = setter.next_slot();
@@ -125,13 +125,13 @@ impl<V> SetMember for RowSlice<'_, V> {
     }
 }
 
-pub struct Row<V> {
+pub struct RowOld<V> {
     buf: wgpu::Buffer,
     len: u32,
     ty: PhantomData<V>,
 }
 
-impl<V> Row<V> {
+impl<V> RowOld<V> {
     pub(crate) fn new(state: &State, data: &[V]) -> Self
     where
         V: RowValue,
@@ -177,7 +177,7 @@ impl<V> Row<V> {
         queue.write_buffer(&self.buf, 0, V::row_value(data));
     }
 
-    pub fn slice<S>(&self, bounds: S) -> RowSlice<'_, V>
+    pub fn slice<S>(&self, bounds: S) -> RowSliceOld<'_, V>
     where
         S: RangeBounds<usize>,
     {
@@ -187,7 +187,7 @@ impl<V> Row<V> {
         let slice = self.buf.slice((byte_start, byte_end));
         let len = slice.size().get() as u32 / size_of::<V>() as u32;
 
-        RowSlice {
+        RowSliceOld {
             slice,
             len,
             ty: PhantomData,
@@ -203,13 +203,13 @@ impl<V> Row<V> {
     }
 }
 
-pub struct RowSlice<'slice, V> {
+pub struct RowSliceOld<'slice, V> {
     slice: wgpu::BufferSlice<'slice>,
     len: u32,
     ty: PhantomData<V>,
 }
 
-impl<V> RowSlice<'_, V> {
+impl<V> RowSliceOld<'_, V> {
     /// Updates the row data.
     ///
     /// # Panics
@@ -239,13 +239,13 @@ impl<V> RowSlice<'_, V> {
     }
 }
 
-impl<V> Clone for RowSlice<'_, V> {
+impl<V> Clone for RowSliceOld<'_, V> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<V> Copy for RowSlice<'_, V> {}
+impl<V> Copy for RowSliceOld<'_, V> {}
 
 mod s {
     pub trait Sealed {}

@@ -6,7 +6,7 @@ type Error = Box<dyn std::error::Error>;
 fn render() -> Result<(), Error> {
     use {
         dunge::{
-            instance::Row,
+            instance::RowOld,
             prelude::*,
             sl_old::{self, PassInstance, Render},
         },
@@ -15,9 +15,9 @@ fn render() -> Result<(), Error> {
 
     #[derive(Instance)]
     struct Transform {
-        f: Row<f32>,
-        v: Row<Vec4>,
-        m: Row<Mat4>,
+        f: RowOld<f32>,
+        v: RowOld<Vec4>,
+        m: RowOld<Mat4>,
     }
 
     let code = |PassInstance(t): PassInstance<Transform>| Render {

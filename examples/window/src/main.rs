@@ -16,7 +16,7 @@ async fn run(control: Control) -> Result<(), Error> {
     use {
         dunge::{
             sl_old::{Groups, PassVertex, Render},
-            store::Uniform,
+            store::UniformOld,
         },
         futures_concurrency::prelude::*,
         futures_lite::prelude::*,
@@ -31,7 +31,7 @@ async fn run(control: Control) -> Result<(), Error> {
         col: Vec3,
     }
 
-    let triangle = |PassVertex(v): PassVertex<Vert>, Groups(u): Groups<Uniform<f32>>| {
+    let triangle = |PassVertex(v): PassVertex<Vert>, Groups(u): Groups<UniformOld<f32>>| {
         let place = sl_old::vec4_concat(v.pos, sl_old::vec2(0., 1.));
         let fragment_col = sl_old::fragment(v.col);
         let color = sl_old::vec4_append(fragment_col * u.load(), 1.);

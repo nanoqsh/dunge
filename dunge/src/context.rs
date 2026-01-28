@@ -5,7 +5,7 @@ use {
             self, Buffer, Filter, Read, ReadFailed, TextureBuffer, TextureSampler, Write,
             WriteFailed,
         },
-        instance::{Row, RowValue},
+        instance::{RowOld, RowValue},
         layer::{Config, Layer},
         mesh::{self, Mesh},
         render,
@@ -13,7 +13,7 @@ use {
         shader::{RenderShader, RenderShaderOld, Shader},
         sl_old,
         state::{Scheduler, State},
-        store::{Storage, Uniform},
+        store::{StorageOld, UniformOld},
         store2,
         usage::u,
         value::{StorageValue, UniformValue},
@@ -157,7 +157,7 @@ impl Context {
     ///     dunge::{
     ///         prelude::*,
     ///         sl_old::{Groups, PassVertex, Render},
-    ///         store::Uniform,
+    ///         store::UniformOld,
     ///     },
     ///     glam::Mat4,
     /// };
@@ -171,7 +171,7 @@ impl Context {
     ///
     /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
     /// // Pass the vertex and a bound 4x4 matrix in the shader
-    /// let program = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<Uniform<Mat4>>| Render {
+    /// let program = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<UniformOld<Mat4>>| Render {
     ///     // Multiply the matrix and the vertex `pos` field  
     ///     place: m.load() * v.pos,
     ///
@@ -199,8 +199,8 @@ impl Context {
     ///
     /// A set is a collection of associated data that you can [bind](crate::set::Bind::bind) during
     /// [render](Scheduler::render) operations and access from within the shader.
-    /// A set can be created from any value that implements the [`Group`] trait, or from a tuple of such types.
-    /// You can also derive an implementation of [`Group`](derive@crate::Group) for your custom types.
+    /// A set can be created from any value that implements the [`GroupLegacy`] trait, or from a tuple of such types.
+    /// You can also derive an implementation of [`Group`](derive@crate::GroupLegacy) for your custom types.
     ///
     /// # Examples
     ///
@@ -211,7 +211,7 @@ impl Context {
     ///     prelude::*,
     ///     color::Rgba,
     ///     sl_old::{Groups, PassVertex, Render},
-    ///     store::Uniform,
+    ///     store::UniformOld,
     /// };
     ///
     /// type Vec4f = [f32; 4];
@@ -223,7 +223,7 @@ impl Context {
     /// #     mesh: dunge::mesh::Mesh<Vec4f>,
     /// # ) -> Result<(), dunge::FailedMakeContext> {
     /// // Pass the color value via a uniform
-    /// let filler = |PassVertex(v): PassVertex<Vec4f>, Groups(color): Groups<Uniform<Rgba>>| Render {
+    /// let filler = |PassVertex(v): PassVertex<Vec4f>, Groups(color): Groups<UniformOld<Rgba>>| Render {
     ///     // Set vertex coordinates
     ///     place: v,
     ///     // Pass color from the vertex stage to the fragment stage
@@ -272,12 +272,12 @@ impl Context {
         UniqueSet::new(&self.0, shader.data(), set)
     }
 
-    /// Creates a [uniform](Uniform) from the given value.
-    pub fn make_uniform<V>(&self, value: &V) -> Uniform<V>
+    /// Creates a [uniform](UniformOld) from the given value.
+    pub fn make_uniform<V>(&self, value: &V) -> UniformOld<V>
     where
         V: UniformValue,
     {
-        Uniform::new(self, value)
+        UniformOld::new(self, value)
     }
 
     /// Creates a [uniform](store2::Uniform) from the given value.
@@ -289,12 +289,12 @@ impl Context {
         store2::uniform(value, self)
     }
 
-    /// Creates a [storage](Storage) from the given value.
-    pub fn make_storage<V>(&self, value: &V) -> Storage<V>
+    /// Creates a [storage](StorageOld) from the given value.
+    pub fn make_storage<V>(&self, value: &V) -> StorageOld<V>
     where
         V: StorageValue + ?Sized,
     {
-        Storage::new(self, value)
+        StorageOld::new(self, value)
     }
 
     /// Creates a [storage](store2::Storage) from the given value.
@@ -305,7 +305,7 @@ impl Context {
         store2::storage(value, self)
     }
 
-    /// Creates a [layer](Layer) for the given [render shader](RenderShader).
+    /// Creates a [layer](Layer) for the given [render shader](RenderShaderOld).
     ///
     /// This method also accepts a [config](Config) which defines the layer's properties.
     pub fn make_layer<V, I, S, C>(
@@ -351,12 +351,12 @@ impl Context {
         Mesh::new(&self.0, data)
     }
 
-    /// Creates a [row](Row) with the given data.
-    pub fn make_row<V>(&self, data: &[V]) -> Row<V>
+    /// Creates a [row](RowOld) with the given data.
+    pub fn make_row<V>(&self, data: &[V]) -> RowOld<V>
     where
         V: RowValue,
     {
-        Row::new(&self.0, data)
+        RowOld::new(&self.0, data)
     }
 
     /// Creates a [row](store2::Row) with the given data.
@@ -367,7 +367,7 @@ impl Context {
         store2::row(value, self)
     }
 
-    /// Creates a [2D texture](Texture2d) with the given [data](buffer::TextureData).
+    /// Creates a [2D texture](TextureBuffer) with the given [data](buffer::TextureData).
     pub fn make_texture<U>(&self, data: buffer::TextureData<'_, U>) -> TextureBuffer<2, U>
     where
         U: u::TextureUsages,
@@ -375,7 +375,7 @@ impl Context {
         TextureBuffer::new(&self.0, data)
     }
 
-    /// Creates a [sampler](Sampler) with the [filter](Filter) value.
+    /// Creates a [sampler](TextureSampler) with the [filter](Filter) value.
     pub fn make_sampler(&self, filter: Filter) -> TextureSampler {
         TextureSampler::new(&self.0, filter)
     }

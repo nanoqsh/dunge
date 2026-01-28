@@ -3,7 +3,11 @@
 //! Must be used with data that can be directly casted to the GPU buffer.
 
 use {
-    crate::{UniformValue, context::Context, state::State, value::StorageValue},
+    crate::{
+        context::Context,
+        state::State,
+        value::{StorageValue, UniformValue},
+    },
     std::marker::PhantomData,
 };
 
@@ -46,7 +50,7 @@ impl Data {
 /// Storage buffer data.
 ///
 /// Can be created using the context's [`make_storage`](crate::Context::make_storage) function.
-pub struct Storage<V>
+pub struct StorageOld<V>
 where
     V: ?Sized,
 {
@@ -54,7 +58,7 @@ where
     ty: PhantomData<V>,
 }
 
-impl<V> Storage<V>
+impl<V> StorageOld<V>
 where
     V: ?Sized,
 {
@@ -99,12 +103,12 @@ where
 /// Uniform shader data.
 ///
 /// Can be created using the context's [`make_uniform`](crate::Context::make_uniform) function.
-pub struct Uniform<V> {
+pub struct UniformOld<V> {
     data: Data,
     ty: PhantomData<V>,
 }
 
-impl<V> Uniform<V> {
+impl<V> UniformOld<V> {
     pub(crate) fn new(cx: &Context, val: &V) -> Self
     where
         V: UniformValue,

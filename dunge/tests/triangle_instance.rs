@@ -8,7 +8,7 @@ fn render() -> Result<(), Error> {
         dunge::{
             buffer::Size,
             color::{Format, Rgb},
-            instance::{Row, RowSlice},
+            instance::{RowOld, RowSliceOld},
             prelude::*,
             sl_old::{self, Index, PassInstance, Render},
         },
@@ -18,7 +18,7 @@ fn render() -> Result<(), Error> {
     };
 
     #[derive(Instance)]
-    struct Transform<'slice>(Row<Vec2>, RowSlice<'slice, Vec3>);
+    struct Transform<'slice>(RowOld<Vec2>, RowSliceOld<'slice, Vec3>);
 
     let triangle = |PassInstance(t): PassInstance<Transform<'_>>, Index(index): Index| {
         let triangle_size = 0.4;
