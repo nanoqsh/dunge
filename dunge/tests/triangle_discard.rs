@@ -64,11 +64,11 @@ fn render() -> Result<(), Error> {
             sam: sampler,
         };
 
-        cx.make_set(&shader, map)
+        cx.make_set_old(&shader, map)
     };
 
     let size = (300, 300);
-    let layer = cx.make_layer(&shader, Format::SrgbAlpha);
+    let layer = cx.make_layer_old(&shader, Format::SrgbAlpha);
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, Format::SrgbAlpha)
@@ -94,7 +94,7 @@ fn render() -> Result<(), Error> {
             },
         ];
 
-        cx.make_mesh(&MeshData::from_verts(&VERTS).expect("mesh data"))
+        cx.make_mesh_old(&MeshData::from_verts(&VERTS).expect("mesh data"))
     };
 
     let mut buf = {

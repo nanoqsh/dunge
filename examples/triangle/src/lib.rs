@@ -30,8 +30,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader_old(triangle);
-    let offset = cx.make_uniform(&0.);
-    let set = cx.make_set(&shader, &offset);
+    let offset = cx.make_uniform_old(&0.);
+    let set = cx.make_set_old(&shader, &offset);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time| {
@@ -46,7 +46,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         .with_canvas(Canvas::by_id("root"))
         .await?;
 
-    let layer = cx.make_layer(&shader, window.format());
+    let layer = cx.make_layer_old(&shader, window.format());
 
     let bg = window.format().rgb_from_bytes([0; 3]);
     let render = async {

@@ -207,10 +207,10 @@ impl Context {
     /// let shader = cx.make_shader_old(filler);
     ///
     /// // Create a color uniform in RGBA format - for example, red.
-    /// let color_uniform = cx.make_uniform(&Rgba::from_bytes([!0, 0, 0, !0]));
+    /// let color_uniform = cx.make_uniform_old(&Rgba::from_bytes([!0, 0, 0, !0]));
     ///
     /// // Create the set value from the uniform
-    /// let set = cx.make_set(&shader, color_uniform);
+    /// let set = cx.make_set_old(&shader, color_uniform);
     ///
     /// // Now you can bind this set on a render operation
     /// # #[cfg(false)]
@@ -226,14 +226,14 @@ impl Context {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn make_set<I, S, D>(&self, shader: &Shader<I, S>, set: D) -> UniqueSet<S>
+    pub fn make_set_old<I, S, D>(&self, shader: &Shader<I, S>, set: D) -> UniqueSet<S>
     where
         D: Data<Set = S>,
     {
         UniqueSet::from_data(&self.0, shader.data(), set)
     }
 
-    pub fn make_set2<I, G, const N: usize>(
+    pub fn make_set<I, G, const N: usize>(
         &self,
         shader: &Shader<I, G::Inner>,
         set: G,
@@ -245,7 +245,7 @@ impl Context {
     }
 
     /// Creates a [uniform](UniformOld) from the given value.
-    pub fn make_uniform<V>(&self, value: &V) -> UniformOld<V>
+    pub fn make_uniform_old<V>(&self, value: &V) -> UniformOld<V>
     where
         V: UniformValue,
     {
@@ -253,7 +253,7 @@ impl Context {
     }
 
     /// Creates a [uniform](Uniform) from the given value.
-    pub fn make_uniform2<V>(&self, value: &V) -> Uniform<V>
+    pub fn make_uniform<V>(&self, value: &V) -> Uniform<V>
     where
         V: Value + Bytes,
     {
@@ -262,7 +262,7 @@ impl Context {
     }
 
     /// Creates a [storage](StorageOld) from the given value.
-    pub fn make_storage<V>(&self, value: &V) -> StorageOld<V>
+    pub fn make_storage_old<V>(&self, value: &V) -> StorageOld<V>
     where
         V: StorageValueOld + ?Sized,
     {
@@ -270,7 +270,7 @@ impl Context {
     }
 
     /// Creates a [storage](Storage) from the given value.
-    pub fn make_storage2<V>(&self, value: &V) -> Option<Storage<V>>
+    pub fn make_storage<V>(&self, value: &V) -> Option<Storage<V>>
     where
         V: StorageValue + ?Sized,
     {
@@ -280,7 +280,7 @@ impl Context {
     /// Creates a [layer](Layer) for the given [render shader](RenderShaderOld).
     ///
     /// This method also accepts a [config](Config) which defines the layer's properties.
-    pub fn make_layer<V, I, S, C>(
+    pub fn make_layer_old<V, I, S, C>(
         &self,
         shader: &RenderShaderOld<S, V, I>,
         conf: C,
@@ -295,7 +295,7 @@ impl Context {
     /// Creates a [layer](Layer) for the given [render shader](RenderShader).
     ///
     /// This method also accepts a [config](Config) which defines the layer's properties.
-    pub fn make_layer2<V, I, S, C>(
+    pub fn make_layer<V, I, S, C>(
         &self,
         shader: &RenderShader<S, V, I>,
         conf: C,
@@ -308,7 +308,7 @@ impl Context {
     }
 
     /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
-    pub fn make_mesh<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
+    pub fn make_mesh_old<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
     where
         V: Vertex,
     {
@@ -316,7 +316,7 @@ impl Context {
     }
 
     /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
-    pub fn make_mesh2<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
+    pub fn make_mesh<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
     where
         V: Bytes,
     {
@@ -324,7 +324,7 @@ impl Context {
     }
 
     /// Creates a [row](RowOld) with the given data.
-    pub fn make_row<V>(&self, data: &[V]) -> RowOld<V>
+    pub fn make_row_old<V>(&self, data: &[V]) -> RowOld<V>
     where
         V: RowValue,
     {
@@ -332,7 +332,7 @@ impl Context {
     }
 
     /// Creates a [row](Row) with the given data.
-    pub fn make_row2<V>(&self, value: &[V]) -> Option<Row<V>>
+    pub fn make_row<V>(&self, value: &[V]) -> Option<Row<V>>
     where
         V: Value + Bytes,
     {

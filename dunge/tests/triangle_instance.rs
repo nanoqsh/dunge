@@ -38,7 +38,7 @@ fn render() -> Result<(), Error> {
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_instance.wgsl"));
 
     let size = (300, 300);
-    let layer = cx.make_layer(&shader, Format::SrgbAlpha);
+    let layer = cx.make_layer_old(&shader, Format::SrgbAlpha);
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, Format::SrgbAlpha)
@@ -62,9 +62,9 @@ fn render() -> Result<(), Error> {
             Vec3::new(0., 0., 1.),
         ];
 
-        cols = cx.make_row(&COLS);
+        cols = cx.make_row_old(&COLS);
 
-        Transform(cx.make_row(&POSS), cols.slice(..))
+        Transform(cx.make_row_old(&POSS), cols.slice(..))
     };
 
     let mut buf = {

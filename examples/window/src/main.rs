@@ -40,8 +40,8 @@ async fn run(control: Control) -> Result<(), Error> {
 
     let cx = dunge::context().await?;
     let shader = cx.make_shader_old(triangle);
-    let delta = cx.make_uniform(&0.);
-    let set = cx.make_set(&shader, &delta);
+    let delta = cx.make_uniform_old(&0.);
+    let set = cx.make_set_old(&shader, &delta);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time: Duration| {
@@ -66,11 +66,11 @@ async fn run(control: Control) -> Result<(), Error> {
             },
         ];
 
-        cx.make_mesh(&MeshData::from_verts(&VERTS).expect("mesh data"))
+        cx.make_mesh_old(&MeshData::from_verts(&VERTS).expect("mesh data"))
     };
 
     let window = control.make_window(&cx).await?;
-    let layer = cx.make_layer(&shader, window.format());
+    let layer = cx.make_layer_old(&shader, window.format());
 
     let fps = Cell::new(0);
     let inc = || fps.update(|n| n + 1);

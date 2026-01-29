@@ -41,8 +41,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
         shaders: [vs, fs],
     }?);
 
-    let transform = cx.make_uniform2(&Mat4::IDENTITY);
-    let set = cx.make_set2(&shader, &transform);
+    let transform = cx.make_uniform(&Mat4::IDENTITY);
+    let set = cx.make_set(&shader, &transform);
 
     let mut time = Duration::ZERO;
     let mut update = |size: UVec2, delta_time| {
@@ -121,7 +121,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         ];
 
         let data = MeshData::new(&VERTS, &INDXS)?;
-        cx.make_mesh2(&data)
+        cx.make_mesh(&data)
     };
 
     let window = control
@@ -144,7 +144,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         }
     };
 
-    let layer = cx.make_layer2(&shader, window.format());
+    let layer = cx.make_layer(&shader, window.format());
 
     let bg = window.format().rgb_from_bytes([25, 10, 40]);
     let render = async {

@@ -30,7 +30,7 @@ fn render() -> Result<(), Error> {
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_vertex.wgsl"));
 
     let size = (300, 300);
-    let layer = cx.make_layer(&shader, Format::SrgbAlpha);
+    let layer = cx.make_layer_old(&shader, Format::SrgbAlpha);
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, layer.format())
@@ -47,7 +47,7 @@ fn render() -> Result<(), Error> {
             Vert(Vec2::new(-0.866, 0.75), Vec3::new(0., 0., 1.)),
         ];
 
-        cx.make_mesh(&MeshData::from_verts(&VERTS).expect("mesh data"))
+        cx.make_mesh_old(&MeshData::from_verts(&VERTS).expect("mesh data"))
     };
 
     let mut buf = {

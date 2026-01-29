@@ -34,7 +34,7 @@ fn render() -> Result<(), Error> {
     helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_index.wgsl"));
 
     let size = (300, 300);
-    let layer = cx.make_layer(&shader, Format::SrgbAlpha);
+    let layer = cx.make_layer_old(&shader, Format::SrgbAlpha);
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, Format::SrgbAlpha)

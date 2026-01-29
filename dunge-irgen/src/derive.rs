@@ -288,6 +288,7 @@ pub(crate) fn derive_group(input: &Struct, path: &TokenStream) -> Derive<TokenSt
     let set = quote::quote! { #path::set };
 
     let ident = &input.ident;
+    let inners = non_empty_fields(&input.fields)?.map(|f| &f.ty);
     let members = non_empty_fields(&input.fields)?.map(|f| {
         let ident = &f.ident;
         let ty = &f.ty;
@@ -296,6 +297,7 @@ pub(crate) fn derive_group(input: &Struct, path: &TokenStream) -> Derive<TokenSt
 
     Ok(quote::quote! {
         impl #set::Group for #ident {
+            type Inner = (#(#inners,)*);
             fn group<'group>(&'group self, e: &mut dunge::set::Entries<'group>) {
                 #(#members;)*
             }
