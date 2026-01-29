@@ -13,6 +13,7 @@ pub(crate) enum Event<C = gener::Control> {
     Lit(TokenStream),
     Array { len: usize },
     Assign,
+    UnOp(UnOp),
     BinOp(BinOp),
     Index,
     Member(Ident),
@@ -37,6 +38,7 @@ impl Event {
             Self::Lit(_) => 0,
             Self::Array { len } => *len,
             Self::Assign => 2,
+            Self::UnOp(_) => 1,
             Self::BinOp(_) => 2,
             Self::Index => 2,
             Self::Member(_) => 1,
@@ -86,6 +88,10 @@ impl Event {
             Self::Lit(lit) => write!(f, "LIT\t\t{lit}"),
             Self::Array { len } => write!(f, "ARRAY\t\t{len}"),
             Self::Assign => write!(f, "ASSIGN\t\t"),
+            Self::UnOp(unop) => {
+                write!(f, "UNOP\t\t")?;
+                f.write_str(unop.debug())
+            }
             Self::BinOp(binop) => {
                 write!(f, "BINOP\t\t")?;
                 f.write_str(binop.debug())
@@ -242,6 +248,30 @@ impl BinOp {
             Self::Le => "LE",
             Self::Ge => "GE",
             Self::Gt => "GT",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum UnOp {
+    Neg,
+    Not,
+}
+
+impl UnOp {
+    pub(crate) fn from_syn(op: syn::UnOp) -> Option<Self> {
+        match op {
+            syn::UnOp::Neg(_) => Some(Self::Neg),
+            syn::UnOp::Not(_) => Some(Self::Not),
+            _ => None,
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    pub(crate) fn debug(self) -> &'static str {
+        match self {
+            Self::Neg => "NEG",
+            Self::Not => "NOT",
         }
     }
 }

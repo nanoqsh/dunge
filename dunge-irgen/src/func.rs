@@ -275,6 +275,15 @@ where
                         stack.expr(field.expr);
                     }
                 }
+                syn::Expr::Unary(syn::ExprUnary { op, expr, .. }) => {
+                    let op_span = op.span();
+                    let Some(unop) = UnOp::from_syn(op) else {
+                        match op_span.err()? {}
+                    };
+
+                    stack.event(Event::UnOp(unop));
+                    stack.expr(expr);
+                }
                 syn::Expr::While(syn::ExprWhile {
                     label, cond, body, ..
                 }) => {

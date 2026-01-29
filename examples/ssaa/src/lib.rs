@@ -48,7 +48,6 @@ struct Io {
     uv: Vec2,
 }
 
-#[expect(dead_code)]
 #[derive(Input)]
 struct Map {
     texture: Texture,
@@ -64,21 +63,21 @@ fn screen_vs(s: Screen) -> Io {
     }
 }
 
-// #[dunge(fragment)]
-// fn screen_fs(io: Io, m: Map) -> Vec4 {
-//     let offset = m.offset.read();
-//     let d0 = offset;
-//     let d1 = Vec2::new(offset.x, -offset.y);
-//     let d2 = Vec2::new(-offset.x, offset.y);
-//     let d3 = Vec2::new(-offset.x, -offset.y);
-//     let point = io.uv;
+#[dunge(fragment)]
+fn screen_fs(io: Io, m: Map) -> Vec4 {
+    let offset = m.offset.read();
+    let d0 = offset;
+    let d1 = Vec2::new(offset.x, -offset.y);
+    let d2 = Vec2::new(-offset.x, offset.y);
+    let d3 = Vec2::new(-offset.x, -offset.y);
+    let point = io.uv;
 
-//     (sl::texture_sample(m.texture, m.sampler, point + d0)
-//         + sl::texture_sample(m.texture, m.sampler, point + d1)
-//         + sl::texture_sample(m.texture, m.sampler, point + d2)
-//         + sl::texture_sample(m.texture, m.sampler, point + d3))
-//         * 0.25
-// }
+    (sl::texture_sample(m.texture.clone(), m.sampler.clone(), point + d0)
+        + sl::texture_sample(m.texture.clone(), m.sampler.clone(), point + d1)
+        + sl::texture_sample(m.texture.clone(), m.sampler.clone(), point + d2)
+        + sl::texture_sample(m.texture, m.sampler, point + d3))
+        * 0.25
+}
 
 pub async fn run(control: Control) -> Result<(), Error> {
     let triangle = |Index(idx): Index, Groups(offset): Groups<UniformOld<f32>>| {
@@ -127,6 +126,15 @@ pub async fn run(control: Control) -> Result<(), Error> {
         render! {
             groups: [Uniform<f32>],
             shaders: [triangle_vs, triangle_fs],
+        }
+        .inspect(|r| println!("{}", r.debug()))?,
+    );
+
+    let _screen_shader2 = cx.make_shader(
+        render! {
+            vertex: Screen,
+            groups: [Map],
+            shaders: [screen_vs, screen_fs],
         }
         .inspect(|r| println!("{}", r.debug()))?,
     );

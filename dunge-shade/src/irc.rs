@@ -1903,6 +1903,41 @@ impl<T> Copy for Pointer<T> where T: ?Sized {}
 
 pub struct Op<T>(naga::Expression, PhantomData<T>);
 
+const fn unop<T, O>(ex: Expr<T>, naga: naga::UnaryOperator) -> Op<O> {
+    Op(
+        naga::Expression::Unary {
+            op: naga,
+            expr: ex.get(),
+        },
+        PhantomData,
+    )
+}
+
+pub const fn neg<T>(ex: Expr<T>) -> Op<T::Output>
+where
+    T: ops::Neg,
+{
+    unop(ex, naga::UnaryOperator::Negate)
+}
+
+pub const fn not<T>(ex: Expr<T>) -> Op<T::Output>
+where
+    T: ops::Not + Value,
+{
+    let op = const {
+        match T::NAGA {
+            Type::Scalar(naga::Scalar::BOOL)
+            | Type::Vector {
+                scalar: naga::Scalar::BOOL,
+                ..
+            } => naga::UnaryOperator::LogicalNot,
+            _ => naga::UnaryOperator::BitwiseNot,
+        }
+    };
+
+    unop(ex, op)
+}
+
 const fn binop<L, R, O>(l: Expr<L>, r: Expr<R>, naga: naga::BinaryOperator) -> Op<O> {
     Op(
         naga::Expression::Binary {
@@ -1914,105 +1949,105 @@ const fn binop<L, R, O>(l: Expr<L>, r: Expr<R>, naga: naga::BinaryOperator) -> O
     )
 }
 
-pub fn add<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn add<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::Add<R>,
 {
     binop(l, r, naga::BinaryOperator::Add)
 }
 
-pub fn sub<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn sub<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::Sub<R>,
 {
     binop(l, r, naga::BinaryOperator::Subtract)
 }
 
-pub fn mul<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn mul<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::Mul<R>,
 {
     binop(l, r, naga::BinaryOperator::Multiply)
 }
 
-pub fn div<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn div<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::Div<R>,
 {
     binop(l, r, naga::BinaryOperator::Divide)
 }
 
-pub fn rem<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn rem<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::Rem<R>,
 {
     binop(l, r, naga::BinaryOperator::Modulo)
 }
 
-pub fn shl<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn shl<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::Shl<R>,
 {
     binop(l, r, naga::BinaryOperator::ShiftLeft)
 }
 
-pub fn shr<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn shr<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::Shr<R>,
 {
     binop(l, r, naga::BinaryOperator::ShiftRight)
 }
 
-pub fn binand<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn binand<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::BitAnd<R>,
 {
     binop(l, r, naga::BinaryOperator::And)
 }
 
-pub fn binor<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn binor<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::BitOr<R>,
 {
     binop(l, r, naga::BinaryOperator::InclusiveOr)
 }
 
-pub fn binxor<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
+pub const fn binxor<L, R>(l: Expr<L>, r: Expr<R>) -> Op<L::Output>
 where
     L: ops::BitXor<R>,
 {
     binop(l, r, naga::BinaryOperator::ExclusiveOr)
 }
 
-pub fn and(l: Expr<bool>, r: Expr<bool>) -> Op<bool> {
+pub const fn and(l: Expr<bool>, r: Expr<bool>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::LogicalAnd)
 }
 
-pub fn or(l: Expr<bool>, r: Expr<bool>) -> Op<bool> {
+pub const fn or(l: Expr<bool>, r: Expr<bool>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::LogicalOr)
 }
 
-pub fn eq<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
+pub const fn eq<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::Equal)
 }
 
-pub fn ne<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
+pub const fn ne<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::NotEqual)
 }
 
-pub fn lt<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
+pub const fn lt<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::Less)
 }
 
-pub fn le<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
+pub const fn le<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::LessEqual)
 }
 
-pub fn gt<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
+pub const fn gt<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::Greater)
 }
 
-pub fn ge<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
+pub const fn ge<T>(l: Expr<T>, r: Expr<T>) -> Op<bool> {
     binop(l, r, naga::BinaryOperator::GreaterEqual)
 }
 

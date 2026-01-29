@@ -29,6 +29,7 @@ where
             Event::Lit(lit) => code.push(Event::Lit(lit)),
             Event::Array { len } => code.push(Event::Array { len }),
             Event::Assign => code.push(Event::Assign),
+            Event::UnOp(unop) => code.push(Event::UnOp(unop)),
             Event::BinOp(binop) => code.push(Event::BinOp(binop)),
             Event::Index => code.push(Event::Index),
             Event::Member(name) => code.push(Event::Member(name)),

@@ -174,15 +174,30 @@ where
                     _fnc.do_store(#varto, #varfrom);
                 });
             }
+            Event::UnOp(unop) => {
+                let op = Unary::new(unop).fnname;
+                let curr = stack.top()?;
+                let arg = curr.pop()?.read();
+
+                let vara = make_texpr();
+                let varb = make_texpr();
+
+                curr.extend(quote::quote! {
+                    let #vara: #irc::Expr<_> = #arg;
+                    let #varb: #irc::Expr<_> = _fnc.do_op(#irc::#op(#vara));
+                });
+
+                curr.push_expr(varb);
+            }
             Event::BinOp(binop) => {
-                let mk = Make::from_binop(binop);
-                let op = mk.fnname;
-                let retty = match mk.retty {
+                let bin = Binary::new(binop);
+                let op = bin.fnname;
+                let retty = match bin.retty {
                     Some(ty) => ty,
                     None => quote::quote! { _ },
                 };
 
-                let (aty, bty) = match mk.args {
+                let (aty, bty) = match bin.args {
                     Some((aty, bty)) => (aty, bty),
                     None => (quote::quote! { _ }, quote::quote! { _ }),
                 };
@@ -196,7 +211,7 @@ where
                 let varb = make_texpr();
                 let varc = make_texpr();
 
-                if mk.assign {
+                if bin.assign {
                     let apoint = aop.point()?;
 
                     let vard = make_texpr();
@@ -604,15 +619,30 @@ impl Block {
     }
 }
 
-struct Make {
+struct Unary {
+    fnname: Ident,
+}
+
+impl Unary {
+    fn new(unop: UnOp) -> Self {
+        Self {
+            fnname: match unop {
+                UnOp::Neg => quote::format_ident!("neg"),
+                UnOp::Not => quote::format_ident!("not"),
+            },
+        }
+    }
+}
+
+struct Binary {
     assign: bool,
     fnname: Ident,
     args: Option<(TokenStream, TokenStream)>,
     retty: Option<TokenStream>,
 }
 
-impl Make {
-    fn from_binop(binop: BinOp) -> Self {
+impl Binary {
+    fn new(binop: BinOp) -> Self {
         match binop {
             BinOp::Add { assign } => Self {
                 assign,
