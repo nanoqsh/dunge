@@ -9,7 +9,7 @@ use {
         layer::{Config, Layer},
         mesh::{self, Mesh},
         render,
-        set::{self, Data, GroupHandler, Groups, UniqueSet, Visit},
+        set::{self, Data, Group, GroupHandler, GroupHandlerOld, Groups, Nth, UniqueSet, Visit},
         shader::{RenderShader, RenderShaderOld, Shader},
         sl_old,
         state::{Scheduler, State},
@@ -458,13 +458,25 @@ impl Context {
         self.0.run(f).await;
     }
 
-    pub fn update_group<S, G>(
+    pub fn update_group_old<S, G>(
         &self,
         set: &mut UniqueSet<S>,
-        handler: &GroupHandler<S, G::Projection>,
+        handler: &GroupHandlerOld<S, G::Projection>,
         group: G,
     ) where
         G: Visit + GroupLegacy,
+    {
+        set::update_old(&self.0, set, handler, group);
+    }
+
+    pub fn update_group<S, G, const N: usize>(
+        &self,
+        set: &mut UniqueSet<S>,
+        handler: &GroupHandler<G::Inner, N>,
+        group: G,
+    ) where
+        S: Nth<N, Output = G::Inner>,
+        G: Group,
     {
         set::update(&self.0, set, handler, group);
     }

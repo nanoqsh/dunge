@@ -77,7 +77,34 @@ impl Visit for TextureSampler {
     }
 }
 
-pub struct GroupHandler<S, P> {
+pub struct GroupHandler<G, const N: usize> {
+    layout: Arc<wgpu::BindGroupLayout>,
+    ty: PhantomData<G>,
+}
+
+pub(crate) fn update<S, G, const N: usize>(
+    state: &State,
+    set: &mut UniqueSet<S>,
+    handler: &GroupHandler<G::Inner, N>,
+    group: G,
+) where
+    S: Nth<N, Output = G::Inner>,
+    G: Group,
+{
+    let group = group.groups()[N];
+    let mut entries = Entries::new();
+    group.group(&mut entries);
+
+    let desc = wgpu::BindGroupDescriptor {
+        label: None,
+        layout: &handler.layout,
+        entries: &entries.entries,
+    };
+
+    set.bind_groups()[N] = state.device().create_bind_group(&desc);
+}
+
+pub struct GroupHandlerOld<S, P> {
     id: usize,
     layout: Arc<wgpu::BindGroupLayout>,
     ty: PhantomData<(S, P)>,
@@ -109,10 +136,10 @@ pub struct Bindings<'group> {
     pub(crate) bind_groups: &'group [wgpu::BindGroup],
 }
 
-pub(crate) fn update<S, G>(
+pub(crate) fn update_old<S, G>(
     state: &State,
     set: &mut UniqueSet<S>,
-    handler: &GroupHandler<S, G::Projection>,
+    handler: &GroupHandlerOld<S, G::Projection>,
     group: G,
 ) where
     G: Visit + GroupLegacy,
@@ -135,11 +162,11 @@ pub(crate) fn update<S, G>(
 pub struct UniqueSet<S>(SharedSet<S>);
 
 impl<S> UniqueSet<S> {
-    pub(crate) fn new<G, const N: usize>(state: &State, shader: &ShaderData, set: G) -> Self
+    pub(crate) fn new<G, const N: usize>(state: &State, shader: &ShaderData, groups: G) -> Self
     where
         G: Groups<N, Inner = S>,
     {
-        let bind_groups = make(state, shader, &set.groups());
+        let bind_groups = make(state, shader, &groups.groups());
         Self(SharedSet {
             bind_groups,
             ty: PhantomData,
@@ -176,21 +203,34 @@ impl<S> UniqueSet<S> {
         self.0
     }
 
-    pub fn handler<K>(&self, shader: &Shader<K, S>) -> GroupHandler<S, S::Projection>
+    pub fn handler<I, const N: usize>(&self, shader: &Shader<I, S>) -> GroupHandler<S::Output, N>
+    where
+        S: Nth<N>,
+    {
+        GroupHandler {
+            layout: shader.data().groups()[N].clone(),
+            ty: PhantomData,
+        }
+    }
+
+    pub fn handler_old<K>(&self, shader: &Shader<K, S>) -> GroupHandlerOld<S, S::Projection>
     where
         S: Take<0>,
     {
-        self.handler_n(shader)
+        self.handler_n_old(shader)
     }
 
-    fn handler_n<K, const N: usize>(&self, shader: &Shader<K, S>) -> GroupHandler<S, S::Projection>
+    fn handler_n_old<K, const N: usize>(
+        &self,
+        shader: &Shader<K, S>,
+    ) -> GroupHandlerOld<S, S::Projection>
     where
         S: Take<N>,
     {
         let groups = shader.data().groups();
         let layout = Arc::clone(&groups[N]);
 
-        GroupHandler {
+        GroupHandlerOld {
             id: N,
             layout,
             ty: PhantomData,
@@ -205,6 +245,41 @@ impl<S> UniqueSet<S> {
 impl<S> Bind<S> for UniqueSet<S> {
     fn bind(&self) -> Bindings<'_> {
         self.0.bind()
+    }
+}
+
+fn make(state: &State, shader: &ShaderData, set: &[&dyn Group]) -> Arc<[wgpu::BindGroup]> {
+    let groups = shader.groups();
+    let mut bind_groups = Vec::with_capacity(groups.len());
+
+    let mut entries = Entries::new();
+    for (layout, group) in iter::zip(groups, set) {
+        entries.clear();
+        group.group(&mut entries);
+
+        let desc = wgpu::BindGroupDescriptor {
+            label: None,
+            layout,
+            entries: &entries.entries,
+        };
+
+        bind_groups.push(state.device().create_bind_group(&desc));
+    }
+
+    Arc::from(bind_groups)
+}
+
+#[derive(Clone)]
+pub struct SharedSet<S> {
+    bind_groups: Arc<[wgpu::BindGroup]>,
+    ty: PhantomData<S>,
+}
+
+impl<S> Bind<S> for SharedSet<S> {
+    fn bind(&self) -> Bindings<'_> {
+        Bindings {
+            bind_groups: &self.bind_groups,
+        }
     }
 }
 
@@ -311,41 +386,6 @@ impl<'group> Entries<'group> {
     }
 }
 
-fn make(state: &State, shader: &ShaderData, set: &[&dyn Group]) -> Arc<[wgpu::BindGroup]> {
-    let groups = shader.groups();
-    let mut bind_groups = Vec::with_capacity(groups.len());
-
-    let mut entries = Entries::new();
-    for (layout, group) in iter::zip(groups, set) {
-        entries.clear();
-        group.group(&mut entries);
-
-        let desc = wgpu::BindGroupDescriptor {
-            label: None,
-            layout,
-            entries: &entries.entries,
-        };
-
-        bind_groups.push(state.device().create_bind_group(&desc));
-    }
-
-    Arc::from(bind_groups)
-}
-
-#[derive(Clone)]
-pub struct SharedSet<S> {
-    bind_groups: Arc<[wgpu::BindGroup]>,
-    ty: PhantomData<S>,
-}
-
-impl<S> Bind<S> for SharedSet<S> {
-    fn bind(&self) -> Bindings<'_> {
-        Bindings {
-            bind_groups: &self.bind_groups,
-        }
-    }
-}
-
 pub trait Groups<const N: usize> {
     type Inner;
     fn groups(&self) -> [&dyn Group; N];
@@ -441,6 +481,94 @@ where
     fn groups(&self) -> [&dyn Group; 6] {
         [&self.0, &self.1, &self.2, &self.3, &self.4, &self.5]
     }
+}
+
+pub trait Nth<const N: usize> {
+    type Output;
+}
+
+impl<A> Nth<0> for (A,) {
+    type Output = A;
+}
+
+impl<A, B> Nth<0> for (A, B) {
+    type Output = A;
+}
+
+impl<A, B> Nth<1> for (A, B) {
+    type Output = B;
+}
+
+impl<A, B, C> Nth<0> for (A, B, C) {
+    type Output = A;
+}
+
+impl<A, B, C> Nth<1> for (A, B, C) {
+    type Output = B;
+}
+
+impl<A, B, C> Nth<2> for (A, B, C) {
+    type Output = C;
+}
+
+impl<A, B, C, D> Nth<0> for (A, B, C, D) {
+    type Output = A;
+}
+
+impl<A, B, C, D> Nth<1> for (A, B, C, D) {
+    type Output = B;
+}
+
+impl<A, B, C, D> Nth<2> for (A, B, C, D) {
+    type Output = C;
+}
+
+impl<A, B, C, D> Nth<3> for (A, B, C, D) {
+    type Output = D;
+}
+
+impl<A, B, C, D, E> Nth<0> for (A, B, C, D, E) {
+    type Output = A;
+}
+
+impl<A, B, C, D, E> Nth<1> for (A, B, C, D, E) {
+    type Output = B;
+}
+
+impl<A, B, C, D, E> Nth<2> for (A, B, C, D, E) {
+    type Output = C;
+}
+
+impl<A, B, C, D, E> Nth<3> for (A, B, C, D, E) {
+    type Output = D;
+}
+
+impl<A, B, C, D, E> Nth<4> for (A, B, C, D, E) {
+    type Output = E;
+}
+
+impl<A, B, C, D, E, F> Nth<0> for (A, B, C, D, E, F) {
+    type Output = A;
+}
+
+impl<A, B, C, D, E, F> Nth<1> for (A, B, C, D, E, F) {
+    type Output = B;
+}
+
+impl<A, B, C, D, E, F> Nth<2> for (A, B, C, D, E, F) {
+    type Output = C;
+}
+
+impl<A, B, C, D, E, F> Nth<3> for (A, B, C, D, E, F) {
+    type Output = D;
+}
+
+impl<A, B, C, D, E, F> Nth<4> for (A, B, C, D, E, F) {
+    type Output = E;
+}
+
+impl<A, B, C, D, E, F> Nth<5> for (A, B, C, D, E, F) {
+    type Output = F;
 }
 
 pub trait Data {

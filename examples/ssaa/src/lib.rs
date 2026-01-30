@@ -1,12 +1,9 @@
 use {
     dunge::{
         Options,
-        buffer::{Filter, Sampler, Size, Texture, TextureSampler},
+        buffer::{Filter, Sampler, Size, Texture},
         color::Format,
-        group::BoundTexture,
-        sl_old::{Groups, Index, PassVertex, Render},
         store::Uniform,
-        store_old::UniformOld,
     },
     dunge_winit::{Canvas, prelude::*},
     futures_concurrency::prelude::*,
@@ -35,7 +32,7 @@ fn triangle_fs() -> Vec4 {
     Vec4::new(1., 0.4, 0.8, 1.)
 }
 
-#[derive(Clone, Copy, Value)]
+#[derive(Clone, Copy, Value, Bytes)]
 struct Screen {
     pos: Vec2,
     uv: Vec2,
@@ -70,79 +67,28 @@ fn screen_fs(io: Io, m: Map) -> Vec4 {
     let d1 = Vec2::new(offset.x, -offset.y);
     let d2 = Vec2::new(-offset.x, offset.y);
     let d3 = Vec2::new(-offset.x, -offset.y);
-    let point = io.uv;
-
-    (sl::texture_sample(m.texture.clone(), m.sampler.clone(), point + d0)
-        + sl::texture_sample(m.texture.clone(), m.sampler.clone(), point + d1)
-        + sl::texture_sample(m.texture.clone(), m.sampler.clone(), point + d2)
-        + sl::texture_sample(m.texture, m.sampler, point + d3))
+    (sl::texture_sample(m.texture.clone(), m.sampler.clone(), io.uv + d0)
+        + sl::texture_sample(m.texture.clone(), m.sampler.clone(), io.uv + d1)
+        + sl::texture_sample(m.texture.clone(), m.sampler.clone(), io.uv + d2)
+        + sl::texture_sample(m.texture, m.sampler, io.uv + d3))
         * 0.25
 }
 
 pub async fn run(control: Control) -> Result<(), Error> {
-    let triangle = |Index(idx): Index, Groups(offset): Groups<UniformOld<f32>>| {
-        let color = Vec4::new(1., 0.4, 0.8, 1.);
-        let third = const { consts::TAU / 3. };
-
-        let i = sl_old::thunk(sl_old::f32(idx) * third + offset.load());
-        Render {
-            place: sl_old::vec4(sl_old::cos(i.clone()), sl_old::sin(i), 0., 1.),
-            color,
-        }
-    };
-
-    #[repr(C)]
-    #[derive(Vertex)]
-    struct ScreenOld(Vec2, Vec2);
-
-    #[derive(GroupLegacy)]
-    struct MapOld {
-        tex: BoundTexture,
-        sam: TextureSampler,
-        offset: UniformOld<Vec2>,
-    }
-
-    let screen = |PassVertex(v): PassVertex<ScreenOld>, Groups(map): Groups<MapOld>| Render {
-        place: sl_old::vec4_concat(v.0, Vec2::new(0., 1.)),
-        color: {
-            let s = sl_old::thunk(sl_old::fragment(v.1));
-            let tex = || map.tex.clone();
-            let sam = || map.sam.clone();
-            let offset = || map.offset.clone().load();
-            let d0 = sl_old::vec2(offset().x(), offset().y());
-            let d1 = sl_old::vec2(offset().x(), -offset().y());
-            let d2 = sl_old::vec2(-offset().x(), offset().y());
-            let d3 = sl_old::vec2(-offset().x(), -offset().y());
-            (sl_old::texture_sample(tex(), sam(), s.clone() + d0)
-                + sl_old::texture_sample(tex(), sam(), s.clone() + d1)
-                + sl_old::texture_sample(tex(), sam(), s.clone() + d2)
-                + sl_old::texture_sample(tex(), sam(), s + d3))
-                * 0.25
-        },
-    };
-
     let cx = dunge::context().await?;
-    let _shader2 = cx.make_shader(
-        render! {
-            groups: [Uniform<f32>],
-            shaders: [triangle_vs, triangle_fs],
-        }
-        .inspect(|r| println!("{}", r.debug()))?,
-    );
+    let triangle = cx.make_shader(render! {
+        groups: [Uniform<f32>],
+        shaders: [triangle_vs, triangle_fs],
+    }?);
 
-    let _screen_shader2 = cx.make_shader(
-        render! {
-            vertex: Screen,
-            groups: [Map],
-            shaders: [screen_vs, screen_fs],
-        }
-        .inspect(|r| println!("{}", r.debug()))?,
-    );
+    let screen = cx.make_shader(render! {
+        vertex: Screen,
+        groups: [Map],
+        shaders: [screen_vs, screen_fs],
+    }?);
 
-    let shader = cx.make_shader_old(triangle);
-    let screen_shader = cx.make_shader_old(screen);
-    let offset = cx.make_uniform_old(&0.);
-    let set = cx.make_set_old(&shader, &offset);
+    let offset = cx.make_uniform(&0.);
+    let set = cx.make_set(&triangle, &offset);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time| {
@@ -160,7 +106,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
             .render()
             .bind();
 
-        RefCell::new(cx.make_texture(data))
+        cx.make_texture(data)
     };
 
     let make_offset = |size: Size| {
@@ -168,26 +114,44 @@ pub async fn run(control: Control) -> Result<(), Error> {
         screen_inv / size.as_uvec2().as_vec2()
     };
 
-    let render_buffer = make_render_buffer(UVec2::ONE);
-    let mut map = MapOld {
-        tex: render_buffer.borrow().bind(),
-        sam: cx.make_sampler(Filter::Nearest),
-        offset: cx.make_uniform_old(&make_offset(render_buffer.borrow().size())),
+    let (mut map, render_buffer) = {
+        let buffer = make_render_buffer(UVec2::ONE);
+
+        (
+            Map {
+                texture: buffer.texture(),
+                sampler: cx.make_sampler(Filter::Nearest).sampler(),
+                offset: cx.make_uniform(&make_offset(buffer.size())),
+            },
+            RefCell::new(buffer),
+        )
     };
 
-    let map_set = RefCell::new(cx.make_set_old(&screen_shader, &map));
-    let handler = map_set.borrow().handler(&screen_shader);
+    let map_set = RefCell::new(cx.make_set(&screen, &map));
+    let handler = map_set.borrow().handler(&screen);
 
     let screen_mesh = {
-        const VERTS: [[ScreenOld; 4]; 1] = [[
-            ScreenOld(Vec2::new(-1., -1.), Vec2::new(0., 1.)),
-            ScreenOld(Vec2::new(1., -1.), Vec2::new(1., 1.)),
-            ScreenOld(Vec2::new(1., 1.), Vec2::new(1., 0.)),
-            ScreenOld(Vec2::new(-1., 1.), Vec2::new(0., 0.)),
+        const VERTS: [[Screen; 4]; 1] = [[
+            Screen {
+                pos: Vec2::new(-1., -1.),
+                uv: Vec2::new(0., 1.),
+            },
+            Screen {
+                pos: Vec2::new(1., -1.),
+                uv: Vec2::new(1., 1.),
+            },
+            Screen {
+                pos: Vec2::new(1., 1.),
+                uv: Vec2::new(1., 0.),
+            },
+            Screen {
+                pos: Vec2::new(-1., 1.),
+                uv: Vec2::new(0., 0.),
+            },
         ]];
 
         let data = MeshData::from_quads(&VERTS)?;
-        cx.make_mesh_old(&data)
+        cx.make_mesh(&data)
     };
 
     let window = control
@@ -196,8 +160,8 @@ pub async fn run(control: Control) -> Result<(), Error> {
         .with_canvas(Canvas::by_id("root"))
         .await?;
 
-    let triangle_layer = cx.make_layer_old(&shader, render_buffer.borrow().format());
-    let screen_layer = cx.make_layer_old(&screen_shader, window.format());
+    let triangle_layer = cx.make_layer(&triangle, render_buffer.borrow().format());
+    let screen_layer = cx.make_layer(&screen, window.format());
 
     let bg = window.format().rgb_from_bytes([0; 3]);
     let render = async {
@@ -228,13 +192,11 @@ pub async fn run(control: Control) -> Result<(), Error> {
         loop {
             let size = window.resized().await;
 
-            render_buffer.swap(&make_render_buffer(size));
+            render_buffer.swap(&make_render_buffer(size).into());
 
             let buffer = render_buffer.borrow();
-
-            map.tex = buffer.bind();
+            map.texture = buffer.texture();
             map.offset.update(&cx, &make_offset(buffer.size()));
-
             cx.update_group(&mut map_set.borrow_mut(), &handler, &map);
         }
     };

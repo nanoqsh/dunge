@@ -267,12 +267,18 @@ impl ShaderData {
 
         let visibility = |stages: Stages| {
             let mut out = wgpu::ShaderStages::empty();
-            out.set(wgpu::ShaderStages::VERTEX, stages.has(sl_old::Stage::Vertex));
+            out.set(
+                wgpu::ShaderStages::VERTEX,
+                stages.has(sl_old::Stage::Vertex),
+            );
             out.set(
                 wgpu::ShaderStages::FRAGMENT,
                 stages.has(sl_old::Stage::Fragment),
             );
-            out.set(wgpu::ShaderStages::COMPUTE, stages.has(sl_old::Stage::Compute));
+            out.set(
+                wgpu::ShaderStages::COMPUTE,
+                stages.has(sl_old::Stage::Compute),
+            );
             out
         };
 
