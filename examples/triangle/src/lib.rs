@@ -1,37 +1,24 @@
+pub mod shader;
+
 use {
-    dunge_winit::prelude::*,
-    std::{error, f32::consts, time::Duration},
+    dunge::store::Uniform,
+    dunge_winit::{Canvas, prelude::*},
+    futures_concurrency::prelude::*,
+    std::{error, time::Duration},
+    winit::keyboard::KeyCode,
 };
 
 type Error = Box<dyn error::Error>;
 
 pub async fn run(control: Control) -> Result<(), Error> {
-    use {
-        dunge::{
-            sl_old::{Groups, Index, Render},
-            store_old::UniformOld,
-        },
-        dunge_winit::Canvas,
-        futures_concurrency::prelude::*,
-        glam::Vec4,
-        winit::keyboard::KeyCode,
-    };
-
-    let triangle = |Index(idx): Index, Groups(offset): Groups<UniformOld<f32>>| {
-        let color = Vec4::new(1., 0.4, 0.8, 1.);
-        let third = const { consts::TAU / 3. };
-
-        let i = sl_old::thunk(sl_old::f32(idx) * third + offset.load());
-        Render {
-            place: sl_old::vec4(sl_old::cos(i.clone()), sl_old::sin(i), 0., 1.),
-            color,
-        }
-    };
-
     let cx = dunge::context().await?;
-    let shader = cx.make_shader_old(triangle);
-    let offset = cx.make_uniform_old(&0.);
-    let set = cx.make_set_old(&shader, &offset);
+    let triangle = cx.make_shader(render! {
+        groups: [Uniform<f32>],
+        shaders: [shader::vs, shader::fs],
+    }?);
+
+    let offset = cx.make_uniform(&0.);
+    let set = cx.make_set(&triangle, &offset);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time| {
@@ -46,7 +33,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
         .with_canvas(Canvas::by_id("root"))
         .await?;
 
-    let layer = cx.make_layer_old(&shader, window.format());
+    let layer = cx.make_layer(&triangle, window.format());
 
     let bg = window.format().rgb_from_bytes([0; 3]);
     let render = async {

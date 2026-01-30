@@ -1,6 +1,11 @@
 use {
+    dunge::store::Uniform,
     dunge_winit::prelude::*,
+    futures_concurrency::prelude::*,
+    futures_lite::prelude::*,
+    glam::{Vec2, Vec3, Vec4},
     std::{cell::Cell, error, time::Duration},
+    winit::{event::MouseButton, keyboard::KeyCode, window},
 };
 
 fn main() {
@@ -10,38 +15,44 @@ fn main() {
     }
 }
 
+#[derive(Clone, Copy, Value, Bytes)]
+struct Vert {
+    pos: Vec2,
+    col: Vec3,
+}
+
+#[derive(Clone, Copy, Value)]
+struct Io {
+    #[position]
+    pos: Vec4,
+    col: Vec3,
+}
+
+#[dunge(vertex)]
+fn vs(v: Vert) -> Io {
+    Io {
+        pos: sl::concat(v.pos, Vec2::new(0., 1.)),
+        col: v.col,
+    }
+}
+
+#[dunge(fragment)]
+fn fs(io: Io, u: Uniform<f32>) -> Vec4 {
+    sl::append(io.col * u.read(), 1.)
+}
+
 type Error = Box<dyn error::Error>;
 
 async fn run(control: Control) -> Result<(), Error> {
-    use {
-        dunge::{
-            sl_old::{Groups, PassVertex, Render},
-            store_old::UniformOld,
-        },
-        futures_concurrency::prelude::*,
-        futures_lite::prelude::*,
-        glam::{Vec2, Vec3},
-        winit::{event::MouseButton, keyboard::KeyCode, window},
-    };
-
-    #[repr(C)]
-    #[derive(Vertex)]
-    struct Vert {
-        pos: Vec2,
-        col: Vec3,
-    }
-
-    let triangle = |PassVertex(v): PassVertex<Vert>, Groups(u): Groups<UniformOld<f32>>| {
-        let place = sl_old::vec4_concat(v.pos, sl_old::vec2(0., 1.));
-        let fragment_col = sl_old::fragment(v.col);
-        let color = sl_old::vec4_append(fragment_col * u.load(), 1.);
-        Render { place, color }
-    };
-
     let cx = dunge::context().await?;
-    let shader = cx.make_shader_old(triangle);
-    let delta = cx.make_uniform_old(&0.);
-    let set = cx.make_set_old(&shader, &delta);
+    let triangle = cx.make_shader(render! {
+        vertex: Vert,
+        groups: [Uniform<f32>],
+        shaders: [vs, fs],
+    }?);
+
+    let delta = cx.make_uniform(&0.);
+    let set = cx.make_set(&triangle, &delta);
 
     let mut time = Duration::ZERO;
     let mut update_scene = |delta_time: Duration| {
@@ -66,11 +77,12 @@ async fn run(control: Control) -> Result<(), Error> {
             },
         ];
 
-        cx.make_mesh_old(&MeshData::from_verts(&VERTS).expect("mesh data"))
+        let data = MeshData::from_verts(&VERTS).expect("mesh data");
+        cx.make_mesh(&data)
     };
 
     let window = control.make_window(&cx).await?;
-    let layer = cx.make_layer_old(&shader, window.format());
+    let layer = cx.make_layer(&triangle, window.format());
 
     let fps = Cell::new(0);
     let inc = || fps.update(|n| n + 1);

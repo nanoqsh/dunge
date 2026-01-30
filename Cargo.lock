@@ -2097,6 +2097,7 @@ dependencies = [
  "env_logger",
  "futures-concurrency",
  "glam",
+ "triangle",
  "winit",
 ]
 

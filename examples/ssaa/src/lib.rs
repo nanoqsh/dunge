@@ -8,29 +8,12 @@ use {
     dunge_winit::{Canvas, prelude::*},
     futures_concurrency::prelude::*,
     glam::{UVec2, Vec2, Vec4},
-    std::{cell::RefCell, error, f32::consts, time::Duration},
+    std::{cell::RefCell, error, time::Duration},
+    triangle::shader,
     winit::keyboard::KeyCode,
 };
 
 type Error = Box<dyn error::Error>;
-
-#[derive(Clone, Copy, Value)]
-struct Vert {
-    #[index]
-    index: u32,
-}
-
-#[dunge(vertex)]
-fn triangle_vs(v: Vert, offset: Uniform<f32>) -> Vec4 {
-    let third = const { consts::TAU / 3. };
-    let i = v.index as f32 * third + offset.read();
-    Vec4::new(sl::cos(i), sl::sin(i), 0., 1.)
-}
-
-#[dunge(fragment)]
-fn triangle_fs() -> Vec4 {
-    Vec4::new(1., 0.4, 0.8, 1.)
-}
 
 #[derive(Clone, Copy, Value, Bytes)]
 struct Screen {
@@ -78,7 +61,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
     let cx = dunge::context().await?;
     let triangle = cx.make_shader(render! {
         groups: [Uniform<f32>],
-        shaders: [triangle_vs, triangle_fs],
+        shaders: [shader::vs, shader::fs],
     }?);
 
     let screen = cx.make_shader(render! {
