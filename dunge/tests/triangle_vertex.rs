@@ -1,36 +1,59 @@
 #![cfg(not(target_family = "wasm"))]
 
+use {
+    dunge::{
+        buffer::Size,
+        color::{Format, Rgb},
+        prelude::*,
+    },
+    glam::{Vec2, Vec3, Vec4},
+    helpers::image::Image,
+    std::env,
+};
+
+#[derive(Clone, Copy, Value, Bytes)]
+struct Vert {
+    pos: Vec2,
+    col: Vec3,
+}
+
+#[derive(Clone, Copy, Value)]
+struct Io {
+    #[position]
+    pos: Vec4,
+    col: Vec3,
+}
+
+#[dunge(vertex)]
+fn vs(v: Vert) -> Io {
+    Io {
+        pos: sl::concat(v.pos, Vec2::new(0., 1.)),
+        col: v.col,
+    }
+}
+
+#[dunge(fragment)]
+fn fs(io: Io) -> Vec4 {
+    sl::append(io.col, 1.)
+}
+
 type Error = Box<dyn std::error::Error>;
 
 #[test]
 fn render() -> Result<(), Error> {
-    use {
-        dunge::{
-            buffer::Size,
-            color::{Format, Rgb},
-            prelude::*,
-            sl_old::{self, PassVertex, Render},
-        },
-        glam::{Vec2, Vec3},
-        helpers::image::Image,
-        std::{env, fs},
-    };
-
-    #[repr(C)]
-    #[derive(Vertex)]
-    struct Vert(Vec2, Vec3);
-
-    let triangle = |PassVertex(v): PassVertex<Vert>| Render {
-        place: sl_old::vec4_concat(v.0, Vec2::new(0., 1.)),
-        color: sl_old::vec4_append(sl_old::fragment(v.1), 1.),
-    };
-
     let cx = dunge::block_on(dunge::context())?;
-    let shader = cx.make_shader_old(triangle);
-    helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_vertex.wgsl"));
+    let triangle = cx.make_shader(
+        render! {
+            vertex: Vert,
+            shaders: [vs, fs],
+        }
+        .inspect(|r| {
+            helpers::eq_lines(r.debug().to_string(), include_str!("triangle_vertex.wgsl"));
+        })?,
+    );
 
     let size = (300, 300);
-    let layer = cx.make_layer_old(&shader, Format::SrgbAlpha);
+    let layer = cx.make_layer(&triangle, Format::SrgbAlpha);
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, layer.format())
@@ -42,12 +65,22 @@ fn render() -> Result<(), Error> {
 
     let mesh = {
         const VERTS: [Vert; 3] = [
-            Vert(Vec2::new(0., -0.75), Vec3::new(1., 0., 0.)),
-            Vert(Vec2::new(0.866, 0.75), Vec3::new(0., 1., 0.)),
-            Vert(Vec2::new(-0.866, 0.75), Vec3::new(0., 0., 1.)),
+            Vert {
+                pos: Vec2::new(0., -0.75),
+                col: Vec3::new(1., 0., 0.),
+            },
+            Vert {
+                pos: Vec2::new(0.866, 0.75),
+                col: Vec3::new(0., 1., 0.),
+            },
+            Vert {
+                pos: Vec2::new(-0.866, 0.75),
+                col: Vec3::new(0., 0., 1.),
+            },
         ];
 
-        cx.make_mesh_old(&MeshData::from_verts(&VERTS).expect("mesh data"))
+        let data = MeshData::from_verts(&VERTS).expect("mesh data");
+        cx.make_mesh(&data)
     };
 
     let mut buf = {
@@ -74,7 +107,7 @@ fn render() -> Result<(), Error> {
     });
 
     if env::var("DUNGE_TEST_OUTPUT").is_ok() {
-        fs::write("tests/triangle_vertex_actual.png", image.encode())?;
+        std::fs::write("tests/triangle_vertex_actual.png", image.encode())?;
     }
 
     Ok(())

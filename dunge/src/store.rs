@@ -153,9 +153,7 @@ where
             cx,
             bytes,
             len,
-            wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST,
+            wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         )
     })
 }

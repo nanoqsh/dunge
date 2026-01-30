@@ -124,7 +124,7 @@ impl Runner<'_, '_> {
         }
     }
 
-    fn instance<S>(&mut self, instance: &S)
+    fn instance_old<S>(&mut self, instance: &S)
     where
         S: Set,
     {
@@ -132,7 +132,7 @@ impl Runner<'_, '_> {
         self.instances = instance_old::set(vs, self.slots.instance, instance);
     }
 
-    fn instance2<R, const N: usize>(&mut self, rows: R)
+    fn instance<R, const N: usize>(&mut self, rows: R)
     where
         R: Rows<N>,
     {
@@ -195,21 +195,21 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
     }
 
     #[must_use]
-    pub fn instance(mut self, instance: &I::Instance) -> On<'ren, 'layer, I, state::Inst>
+    pub fn instance_old(mut self, instance: &I::Instance) -> On<'ren, 'layer, I, state::Inst>
     where
         I: To<A, state::Inst> + Types<Instance: Set>,
     {
-        self.run.instance(instance);
+        self.run.instance_old(instance);
         self.to()
     }
 
     #[must_use]
-    pub fn instance2<R, const N: usize>(mut self, rows: R) -> On<'ren, 'layer, I, state::Inst>
+    pub fn instance<R, const N: usize>(mut self, rows: R) -> On<'ren, 'layer, I, state::Inst>
     where
         R: Rows<N>,
-        I: To<A, state::Inst> + Types<Instance: Fields<Fields = R::Inner>>,
+        I: To<A, state::Inst> + Types<Instance: Fields<Tuple = R::Inner>>,
     {
-        self.run.instance2(rows);
+        self.run.instance(rows);
         self.to()
     }
 

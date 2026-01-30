@@ -185,7 +185,7 @@ mod tests {
             }
         };
 
-        helpers::eq_lines(&actual.to_string(), &expected.to_string());
+        helpers::eq_lines(actual.to_string(), expected.to_string());
     }
 
     #[test]
@@ -228,6 +228,6 @@ mod tests {
             }
         };
 
-        helpers::eq_lines(&actual.to_string(), &expected.to_string());
+        helpers::eq_lines(actual.to_string(), expected.to_string());
     }
 }

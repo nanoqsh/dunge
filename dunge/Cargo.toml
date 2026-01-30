@@ -40,7 +40,7 @@ wgpu = { workspace = true, features = ["webgpu"] }
 parking.workspace = true
 
 [dev-dependencies]
-dunge-shade-old = { workspace = true, features = ["wgsl"] }
+dunge-shade = { workspace = true, features = ["wgsl"] }
 env_logger.workspace = true
 helpers = { workspace = true, features = ["png"] }
 

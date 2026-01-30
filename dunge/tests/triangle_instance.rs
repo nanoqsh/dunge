@@ -1,44 +1,73 @@
 #![cfg(not(target_family = "wasm"))]
 
+use {
+    dunge::{
+        buffer::Size,
+        color::{Format, Rgb},
+        prelude::*,
+    },
+    glam::{Vec2, Vec3, Vec4},
+    helpers::image::Image,
+    std::{env, f32::consts},
+};
+
 type Error = Box<dyn std::error::Error>;
+
+#[derive(Clone, Copy, Value)]
+struct Transform {
+    pos: Vec2,
+    col: Vec3,
+}
+
+#[derive(Clone, Copy, Value)]
+struct Index {
+    #[index]
+    index: u32,
+}
+
+#[derive(Clone, Copy, Value)]
+struct Io {
+    #[position]
+    pos: Vec4,
+    col: Vec3,
+}
+
+#[dunge(vertex)]
+fn vs(t: Transform, ind: Index) -> Io {
+    let size = const { 0.4 };
+    let third = const { consts::TAU / 3. };
+    let r_offset = const { -consts::TAU / 4. };
+    let i = ind.index as f32 * third + r_offset;
+    let p = Vec2::new(sl::cos(i), sl::sin(i)) * size + t.pos;
+    Io {
+        pos: sl::concat(p, Vec2::new(0., 1.)),
+        col: t.col,
+    }
+}
+
+#[dunge(fragment)]
+fn fs(io: Io) -> Vec4 {
+    sl::append(io.col, 1.)
+}
 
 #[test]
 fn render() -> Result<(), Error> {
-    use {
-        dunge::{
-            buffer::Size,
-            color::{Format, Rgb},
-            instance_old::{RowOld, RowSliceOld},
-            prelude::*,
-            sl_old::{self, Index, PassInstance, Render},
-        },
-        glam::{Vec2, Vec3},
-        helpers::image::Image,
-        std::{env, f32::consts, fs},
-    };
-
-    #[derive(Instance)]
-    struct Transform<'slice>(RowOld<Vec2>, RowSliceOld<'slice, Vec3>);
-
-    let triangle = |PassInstance(t): PassInstance<Transform<'_>>, Index(index): Index| {
-        let triangle_size = 0.4;
-        let third = const { consts::TAU / 3. };
-        let r_offset = const { -consts::TAU / 4. };
-
-        let i = sl_old::thunk(sl_old::f32(index) * third + r_offset);
-        let p = sl_old::vec2(sl_old::cos(i.clone()), sl_old::sin(i)) * triangle_size + t.0;
-        Render {
-            place: sl_old::vec4_concat(p, Vec2::new(0., 1.)),
-            color: sl_old::vec4_append(sl_old::fragment(t.1), 1.),
-        }
-    };
-
     let cx = dunge::block_on(dunge::context())?;
-    let shader = cx.make_shader_old(triangle);
-    helpers::eq_lines(shader.debug_wgsl(), include_str!("triangle_instance.wgsl"));
+    let triangle = cx.make_shader(
+        render! {
+            instance: Transform,
+            shaders: [vs, fs],
+        }
+        .inspect(|r| {
+            helpers::eq_lines(
+                r.debug().to_string(),
+                include_str!("triangle_instance.wgsl"),
+            );
+        })?,
+    );
 
     let size = (300, 300);
-    let layer = cx.make_layer_old(&shader, Format::SrgbAlpha);
+    let layer = cx.make_layer(&triangle, Format::SrgbAlpha);
     let view = {
         let size = Size::try_from(size)?;
         let data = TextureData::empty(size, Format::SrgbAlpha)
@@ -48,8 +77,7 @@ fn render() -> Result<(), Error> {
         cx.make_texture(data)
     };
 
-    let cols;
-    let transform = {
+    let (poss, cols) = {
         const POSS: [Vec2; 3] = [
             Vec2::new(0., -0.375),
             Vec2::new(0.433, 0.375),
@@ -62,10 +90,12 @@ fn render() -> Result<(), Error> {
             Vec3::new(0., 0., 1.),
         ];
 
-        cols = cx.make_row_old(&COLS);
-
-        Transform(cx.make_row_old(&POSS), cols.slice(..))
+        let poss = cx.make_row(&POSS).ok_or("failed to make an instance")?;
+        let cols = cx.make_row(&COLS).ok_or("failed to make an instance")?;
+        (poss, cols)
     };
+
+    let cols = cols.slice(..).expect("row slice");
 
     let mut buf = {
         let data = view.copy_buffer_data().read();
@@ -77,7 +107,7 @@ fn render() -> Result<(), Error> {
         cx.shed(|s| {
             s.render(&view, bg)
                 .layer(&layer)
-                .instance(&transform)
+                .instance((poss, cols))
                 .draw_points(3);
 
             s.copy(&view, &buf);
@@ -95,7 +125,7 @@ fn render() -> Result<(), Error> {
     });
 
     if env::var("DUNGE_TEST_OUTPUT").is_ok() {
-        fs::write("tests/triangle_instance_actual.png", image.encode())?;
+        std::fs::write("tests/triangle_instance_actual.png", image.encode())?;
     }
 
     Ok(())
