@@ -434,9 +434,9 @@ where
 /// Runs an event loop on web.
 #[cfg(target_family = "wasm")]
 #[inline]
-pub async fn run<F, R>(mut f: F) -> Result<R, Error>
+pub async fn run<F, R>(f: F) -> Result<R, Error>
 where
-    F: AsyncFnMut(Control) -> R + 'static,
+    F: AsyncFnOnce(Control) -> R + 'static,
     R: 'static,
 {
     use {futures_lite::future, winit::platform::web::EventLoopExtWebSys};
@@ -463,7 +463,7 @@ where
         windows: HashMap::new(),
         action: Action::Process,
         context: task::Context::from_waker(Waker::noop()),
-        fu: Box::pin(future::fuse(async move { f(control).await })),
+        fu: Box::pin(future::fuse(f(control))),
         ret: ret.clone(),
     };
 
@@ -476,7 +476,7 @@ where
 #[inline]
 pub async fn try_run<F, R, U>(f: F) -> Result<R, Error<U>>
 where
-    F: AsyncFnMut(Control) -> Result<R, U> + 'static,
+    F: AsyncFnOnce(Control) -> Result<R, U> + 'static,
     R: 'static,
     U: 'static,
 {
@@ -490,9 +490,9 @@ where
 /// Runs the event loop on the current thread on desktop platform.
 #[cfg(not(target_family = "wasm"))]
 #[inline]
-pub fn block_on<F, R>(mut f: F) -> Result<R, Error>
+pub fn block_on<F, R>(f: F) -> Result<R, Error>
 where
-    F: AsyncFnMut(Control) -> R,
+    F: AsyncFnOnce(Control) -> R,
 {
     use futures_lite::future;
 
@@ -535,7 +535,7 @@ where
 #[inline]
 pub fn try_block_on<F, R, U>(f: F) -> Result<R, Error<U>>
 where
-    F: AsyncFnMut(Control) -> Result<R, U>,
+    F: AsyncFnOnce(Control) -> Result<R, U>,
 {
     match block_on(f) {
         Ok(Ok(r)) => Ok(r),
