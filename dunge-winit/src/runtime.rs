@@ -432,48 +432,53 @@ where
 }
 
 /// Runs an event loop on web.
-#[cfg(target_family = "wasm")]
-#[inline]
 pub async fn run<F, R>(f: F) -> Result<R, Error>
 where
     F: AsyncFnOnce(Control) -> R + 'static,
     R: 'static,
 {
-    use {futures_lite::future, winit::platform::web::EventLoopExtWebSys};
+    #[cfg(target_family = "wasm")]
+    {
+        use {futures_lite::future, winit::platform::web::EventLoopExtWebSys};
 
-    let el = event_loop::EventLoop::with_user_event()
-        .build()
-        .map_err(Error::EventLoop)?;
+        let el = event_loop::EventLoop::with_user_event()
+            .build()
+            .map_err(Error::EventLoop)?;
 
-    let req = Request(el.create_proxy());
+        let req = Request(el.create_proxy());
 
-    let lifecycle = Rc::new(Lifecycle {
-        state: Cell::new(LifecycleState::Inactive),
-    });
+        let lifecycle = Rc::new(Lifecycle {
+            state: Cell::new(LifecycleState::Inactive),
+        });
 
-    let control = Control {
-        req: req.clone(),
-        lifecycle: lifecycle.clone(),
-    };
+        let control = Control {
+            req: req.clone(),
+            lifecycle: lifecycle.clone(),
+        };
 
-    let ret = Rc::new(Return::new());
-    let app = App {
-        req,
-        lifecycle,
-        windows: HashMap::new(),
-        action: Action::Process,
-        context: task::Context::from_waker(Waker::noop()),
-        fu: Box::pin(future::fuse(f(control))),
-        ret: ret.clone(),
-    };
+        let ret = Rc::new(Return::new());
+        let app = App {
+            req,
+            lifecycle,
+            windows: HashMap::new(),
+            action: Action::Process,
+            context: task::Context::from_waker(Waker::noop()),
+            fu: Box::pin(future::fuse(f(control))),
+            ret: ret.clone(),
+        };
 
-    el.spawn_app(app);
-    future::poll_fn(|cx| ret.poll(cx)).await
+        el.spawn_app(app);
+        future::poll_fn(|cx| ret.poll(cx)).await
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    {
+        _ = f;
+        panic!("event loop cannot be spawned on non wasm platform")
+    }
 }
 
 /// Same as [`run`], but allows returning a custom error type.
-#[cfg(target_family = "wasm")]
-#[inline]
 pub async fn try_run<F, R, U>(f: F) -> Result<R, Error<U>>
 where
     F: AsyncFnOnce(Control) -> Result<R, U> + 'static,
@@ -489,7 +494,6 @@ where
 
 /// Runs the event loop on the current thread on desktop platform.
 #[cfg(not(target_family = "wasm"))]
-#[inline]
 pub fn block_on<F, R>(f: F) -> Result<R, Error>
 where
     F: AsyncFnOnce(Control) -> R,
@@ -532,7 +536,6 @@ where
 
 /// Same as [`block_on`], but allows returning a custom error type.
 #[cfg(not(target_family = "wasm"))]
-#[inline]
 pub fn try_block_on<F, R, U>(f: F) -> Result<R, Error<U>>
 where
     F: AsyncFnOnce(Control) -> Result<R, U>,
