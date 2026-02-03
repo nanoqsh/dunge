@@ -43,7 +43,6 @@ enum Message {
 pub(crate) struct Request(event_loop::EventLoopProxy<Message>);
 
 impl Request {
-    #[inline]
     pub(crate) async fn make_window(&self, cx: Context, attr: Attributes) -> Result<Window, Error> {
         let mut out = Rc::new(OnceCell::new());
         _ = self.0.send_event(Message::MakeWindow {
@@ -61,22 +60,18 @@ impl Request {
         future::poll_fn(|_| active_poll()).await
     }
 
-    #[inline]
     pub(crate) fn remove_window(&self, id: window::WindowId) {
         _ = self.0.send_event(Message::RemoveWindow(id));
     }
 
-    #[inline]
     pub(crate) fn recreate_surface(&self, id: window::WindowId) {
         _ = self.0.send_event(Message::RecreateSurface(id));
     }
 
-    #[inline]
     pub(crate) fn set_fps(&self, id: window::WindowId, period: Duration) {
         _ = self.0.send_event(Message::SetFps(id, period));
     }
 
-    #[inline]
     pub(crate) fn exit(&self, e: Error) {
         _ = self.0.send_event(Message::Exit(Box::new(e)));
     }
@@ -163,7 +158,6 @@ where
 {
     const DEFAULT_SLEEP_DURATION: Duration = Duration::from_millis(100);
 
-    #[inline]
     fn process_timers(&mut self, el: &event_loop::ActiveEventLoop) {
         let next = 'process: {
             for _ in 0..4 {
@@ -202,7 +196,6 @@ where
         redraw
     }
 
-    #[inline]
     fn poll(&mut self, el: &event_loop::ActiveEventLoop) {
         if let Poll::Ready(res) = self.fu.as_mut().poll(&mut self.context) {
             self.ret.set(Ok(res));
@@ -210,7 +203,6 @@ where
         }
     }
 
-    #[inline]
     fn exit_with_error(&mut self, el: &event_loop::ActiveEventLoop, e: Error) {
         self.ret.set(Err(e));
         el.exit();
@@ -221,7 +213,6 @@ impl<F> ApplicationHandler<Message> for App<F, F::Output>
 where
     F: Future,
 {
-    #[inline]
     fn new_events(&mut self, el: &event_loop::ActiveEventLoop, cause: event::StartCause) {
         self.action = match cause {
             event::StartCause::ResumeTimeReached { .. } => {
@@ -256,7 +247,6 @@ where
         }
     }
 
-    #[inline]
     fn resumed(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("resumed");
         self.lifecycle.set(LifecycleState::Active);
@@ -266,13 +256,11 @@ where
         }
     }
 
-    #[inline]
     fn suspended(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("suspended");
         self.lifecycle.set(LifecycleState::Inactive);
     }
 
-    #[inline]
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Message) {
         match req {
             Message::MakeWindow { cx, attr, out } => {
@@ -323,7 +311,6 @@ where
         }
     }
 
-    #[inline]
     fn window_event(
         &mut self,
         _: &event_loop::ActiveEventLoop,
@@ -341,7 +328,6 @@ where
 
                 window.shared.resize();
                 window.shared.events().resize.set();
-                window.shared.window().request_redraw();
             }
             event::WindowEvent::CloseRequested => {
                 log::debug!("close requested {id:?}");
@@ -416,7 +402,6 @@ where
         }
     }
 
-    #[inline]
     fn about_to_wait(&mut self, el: &event_loop::ActiveEventLoop) {
         if self.need_redraw() {
             // poll on redraw event
@@ -706,19 +691,16 @@ impl Control {
     /// }
     /// # }
     /// ```
-    #[inline]
     pub fn make_window(&self, cx: &Context) -> WindowBuilder<'_> {
         WindowBuilder::new(&self.req, cx.clone())
     }
 
     /// Waits until the application is resumed.
-    #[inline]
     pub async fn resumed(&self) {
         future::poll_fn(|_| self.lifecycle.active_poll_resumed()).await;
     }
 
     /// Waits until the application is suspended.
-    #[inline]
     pub async fn suspended(&self) {
         future::poll_fn(|_| self.lifecycle.active_poll_suspended()).await;
     }

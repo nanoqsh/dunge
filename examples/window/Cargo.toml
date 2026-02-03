@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 dunge-winit.workspace = true
+async-executor.workspace = true
 env_logger.workspace = true
 futures-concurrency.workspace = true
 futures-lite.workspace = true

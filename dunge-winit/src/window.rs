@@ -118,53 +118,60 @@ impl Attributes {
     }
 }
 
-pub(crate) struct Event<T = bool>(Cell<T>);
+pub(crate) struct Event<T> {
+    inner: Cell<T>,
+    waker: RefCell<Waker>,
+}
 
 impl<T> Event<T> {
     fn new() -> Self
     where
         T: Default,
     {
-        Self(Cell::new(T::default()))
+        Self {
+            inner: Cell::new(T::default()),
+            waker: RefCell::new(Waker::noop().clone()),
+        }
     }
 }
 
-impl Event {
-    #[inline]
+impl Event<bool> {
     pub(crate) fn set(&self) {
-        self.0.set(true);
+        self.inner.set(true);
+        self.waker.borrow().wake_by_ref();
     }
 
-    #[inline]
-    fn active_poll(&self) -> Poll<()> {
-        if self.0.take() {
+    fn poll(&self, cx: &mut task::Context<'_>) -> Poll<()> {
+        if self.inner.take() {
             Poll::Ready(())
         } else {
+            self.waker.borrow_mut().clone_from(cx.waker());
             Poll::Pending
         }
     }
 }
 
 impl<T> Event<Option<T>> {
-    #[inline]
     pub(crate) fn add_value(&self, value: T)
     where
         T: Copy + ops::AddAssign,
     {
-        match self.0.get() {
+        match self.inner.get() {
             Some(mut curr) => {
                 curr += value;
-                self.0.set(Some(curr));
+                self.inner.set(Some(curr));
             }
-            None => self.0.set(Some(value)),
+            None => self.inner.set(Some(value)),
         }
+
+        self.waker.borrow().wake_by_ref();
     }
 
-    #[inline]
-    fn active_poll_value(&self) -> Poll<T> {
-        if let Some(value) = self.0.take() {
+    fn poll_value(&self, cx: &mut task::Context<'_>) -> Poll<T> {
+        if let Some(value) = self.inner.take() {
             Poll::Ready(value)
         } else {
+            self.waker.borrow_mut().clone_from(cx.waker());
             Poll::Pending
         }
     }
@@ -413,9 +420,9 @@ pub(crate) struct Events {
     pub(crate) press_keys: Keys,
     pub(crate) release_keys: Keys,
     pub(crate) text: Text,
-    pub(crate) resize: Event,
+    pub(crate) resize: Event<bool>,
     pub(crate) redraw: Event<Option<Duration>>,
-    pub(crate) close: Event,
+    pub(crate) close: Event<bool>,
 }
 
 pub(crate) struct Shared {
@@ -538,20 +545,14 @@ impl Window {
 
     /// Waits for a window resize event.
     pub async fn resized(&self) -> UVec2 {
-        future::poll_fn(|_| self.shared.events.resize.active_poll()).await;
-
+        future::poll_fn(|cx| self.shared.events.resize.poll(cx)).await;
         self.shared.surface.size().into()
     }
 
     /// Waits for a redraw event.
     pub async fn redraw(&self) -> Redraw<'_> {
         loop {
-            let delta_time = future::poll_fn(|cx| {
-                cx.waker().wake_by_ref();
-                self.shared.events.redraw.active_poll_value()
-            })
-            .await;
-
+            let delta_time = future::poll_fn(|cx| self.shared.events.redraw.poll_value(cx)).await;
             let e = match self.shared.surface.output() {
                 Ok(output) => break Redraw { output, delta_time },
                 Err(e) => e,
@@ -570,7 +571,7 @@ impl Window {
 
     /// Waits for a window close request event.
     pub async fn close_requested(&self) {
-        future::poll_fn(|_| self.shared.events.close.active_poll()).await;
+        future::poll_fn(|cx| self.shared.events.close.poll(cx)).await;
     }
 
     pub fn set_fps(&self, fps: NonZeroU32) {

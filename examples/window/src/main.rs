@@ -1,4 +1,5 @@
 use {
+    async_executor::LocalExecutor,
     dunge::store::Uniform,
     dunge_winit::prelude::*,
     futures_concurrency::prelude::*,
@@ -88,44 +89,56 @@ async fn run(control: Control) -> Result<(), Error> {
     let inc = || fps.update(|n| n + 1);
     let reset = || fps.take();
 
-    let fps_counter = Duration::from_secs(1).interval().for_each(|_| {
+    let ex = LocalExecutor::new();
+    ex.spawn(Duration::from_secs(1).interval().for_each(|_| {
         let total = reset();
         println!("fps: {total}");
-    });
+    }))
+    .detach();
 
-    let bg = layer.format().rgb_from_bytes([0; 3]);
-    let render = async {
-        loop {
-            let redraw = window.redraw().await;
-            update_scene(redraw.delta_time());
+    ex.spawn({
+        let cx = &cx;
+        let window = &window;
+        let bg = layer.format().rgb_from_bytes([0; 3]);
+        async move {
+            loop {
+                let redraw = window.redraw().await;
+                update_scene(redraw.delta_time());
 
-            cx.shed(|s| {
-                s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);
-            })
-            .await;
+                cx.shed(|s| {
+                    s.render(&redraw, bg).layer(&layer).set(&set).draw(&mesh);
+                })
+                .await;
 
-            redraw.present();
-            inc();
+                redraw.present();
+                inc();
+            }
         }
-    };
+    })
+    .detach();
 
-    let resize = async {
+    ex.spawn(async {
         loop {
             let new_size = window.resized().await;
             println!("resized: {new_size}");
         }
-    };
+    })
+    .detach();
 
-    let mut click_counter = 0;
-    let click = async {
-        loop {
-            window.button_pressed(MouseButton::Left).await;
-            click_counter += 1;
-            println!("clicked {click_counter} times");
+    ex.spawn({
+        let window = &window;
+        let mut click_counter = 0;
+        async move {
+            loop {
+                window.button_pressed(MouseButton::Left).await;
+                click_counter += 1;
+                println!("clicked {click_counter} times");
+            }
         }
-    };
+    })
+    .detach();
 
-    let click_more = async {
+    ex.spawn(async {
         loop {
             (
                 window.button_pressed(MouseButton::Left),
@@ -136,9 +149,10 @@ async fn run(control: Control) -> Result<(), Error> {
 
             println!("clicked");
         }
-    };
+    })
+    .detach();
 
-    let toggle_fullscreen = async {
+    ex.spawn(async {
         let mut fullscreen = false;
         loop {
             window.key_pressed(KeyCode::KeyF).await;
@@ -150,29 +164,20 @@ async fn run(control: Control) -> Result<(), Error> {
                 None
             });
         }
-    };
+    })
+    .detach();
 
-    let input = window.text_input().for_each(|s| println!("input: {s}"));
-
-    let close = window.close_requested();
-    let esc_pressed = window.key_pressed(KeyCode::Escape);
+    ex.spawn(window.text_input().for_each(|s| println!("input: {s}")))
+        .detach();
 
     (
         async {
-            match (
-                fps_counter,
-                render,
-                resize,
-                click,
-                click_more,
-                toggle_fullscreen,
-                input,
-            )
-                .join()
-                .await {}
+            loop {
+                ex.tick().await;
+            }
         },
-        close,
-        esc_pressed,
+        window.close_requested(),
+        window.key_pressed(KeyCode::Escape),
     )
         .race()
         .await;

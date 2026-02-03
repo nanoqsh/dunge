@@ -2591,6 +2591,7 @@ dependencies = [
 name = "window"
 version = "0.1.0"
 dependencies = [
+ "async-executor",
  "dunge-winit",
  "env_logger",
  "futures-concurrency",
