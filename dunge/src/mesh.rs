@@ -32,6 +32,10 @@ impl<'data, V> MeshData<'data, V> {
     ///
     /// Returns an [error](Error) if the passed data is incorrect.
     pub fn new(verts: &'data [V], indxs: &'data [Face]) -> Result<Self, Error> {
+        if verts.is_empty() {
+            return Err(Error::Empty);
+        }
+
         let len: u32 = verts.len().try_into().map_err(|_| Error::TooManyVertices)?;
         if let Some(index) = indxs.iter().flatten().copied().find(|&i| i >= len) {
             return Err(Error::InvalidIndex { index });
