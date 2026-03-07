@@ -64,9 +64,6 @@ impl State {
                 .map_err(FailedMakeContext::BackendSelection)?
         };
 
-        let backend = adapter.get_info().backend;
-        log::info!("selected backend: {backend:?}");
-
         let (device, queue) = {
             let desc = wgpu::DeviceDescriptor {
                 required_features: if cfg!(target_family = "wasm") {
@@ -74,13 +71,7 @@ impl State {
                 } else {
                     wgpu::Features::POLYGON_MODE_LINE | wgpu::Features::POLYGON_MODE_POINT
                 },
-                required_limits: wgpu::Limits {
-                    ..if cfg!(target_family = "wasm") {
-                        wgpu::Limits::downlevel_defaults()
-                    } else {
-                        wgpu::Limits::default()
-                    }
-                },
+                required_limits: wgpu::Limits::default(),
                 ..Default::default()
             };
 
@@ -99,6 +90,10 @@ impl State {
             queue,
             worker,
         })
+    }
+
+    pub(crate) fn wgpu_info(&self) -> wgpu::AdapterInfo {
+        self.adapter.get_info()
     }
 
     #[allow(dead_code)]

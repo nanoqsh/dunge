@@ -480,6 +480,10 @@ impl Context {
     {
         set::update(&self.0, set, handler, group);
     }
+
+    pub fn wgpu_info(&self) -> wgpu::AdapterInfo {
+        self.0.wgpu_info()
+    }
 }
 
 impl fmt::Debug for Context {

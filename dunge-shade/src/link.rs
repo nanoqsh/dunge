@@ -150,8 +150,8 @@ impl MakeRender {
         let mut groups = self.groups;
         groups[..self.groups_len].sort_unstable_by_key(|g| g.id);
         groups[..self.groups_len]
-            .windows(2)
-            .all(|w| if let [a, b] = w { a.id != b.id } else { true })
+            .array_windows()
+            .all(|[a, b]| a.id != b.id)
     }
 }
 
