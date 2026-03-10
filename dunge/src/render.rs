@@ -42,7 +42,7 @@ pub struct Render<'ren> {
 
 impl<'ren> Render<'ren> {
     #[must_use]
-    pub fn layer<I>(&mut self, layer: &Layer<I>) -> On<'ren, '_, I, state::Layer> {
+    pub fn layer<I>(&mut self, layer: &Layer<I>) -> On<'ren, '_, I> {
         let mut on = On::new(Runner {
             pass: &mut self.pass,
             target: self.target,
@@ -69,42 +69,6 @@ impl<V, I, S> Types for Input<V, I, S> {
     type Instance = I;
     type Set = S;
 }
-
-pub mod state {
-    pub enum Layer {}
-    pub enum Set {}
-    pub enum Inst {}
-    pub enum Draw {}
-    pub enum DrawPoints {}
-}
-
-#[diagnostic::on_unimplemented(
-    message = "Render cannot transition from `{A}` to `{B}` state",
-    label = "This render function cannot be called"
-)]
-pub trait To<A, B> {}
-
-impl<V, I, S> To<state::Layer, state::Set> for Input<V, I, S> {}
-impl<V, I> To<state::Layer, state::Inst> for Input<V, I, ()> {}
-impl<V> To<state::Layer, state::Draw> for Input<V, (), ()> {}
-impl To<state::Layer, state::DrawPoints> for Input<(), (), ()> {}
-
-impl<V, I, S> To<state::Set, state::Inst> for Input<V, I, S> {}
-impl<V, S> To<state::Set, state::Draw> for Input<V, (), S> {}
-impl<S> To<state::Set, state::DrawPoints> for Input<(), (), S> {}
-
-impl<V, I, S> To<state::Inst, state::Draw> for Input<V, I, S> {}
-impl<I, S> To<state::Inst, state::DrawPoints> for Input<(), I, S> {}
-
-impl<V, I, S> To<state::Draw, state::Layer> for Input<V, I, S> {}
-impl<V, I, S> To<state::Draw, state::Set> for Input<V, I, S> {}
-impl<V, I, S> To<state::Draw, state::Inst> for Input<V, I, S> {}
-impl<V, I, S> To<state::Draw, state::Draw> for Input<V, I, S> {}
-
-impl<V, I, S> To<state::DrawPoints, state::Layer> for Input<V, I, S> {}
-impl<V, I, S> To<state::DrawPoints, state::Set> for Input<V, I, S> {}
-impl<V, I, S> To<state::DrawPoints, state::Inst> for Input<V, I, S> {}
-impl<I, S> To<state::DrawPoints, state::DrawPoints> for Input<(), I, S> {}
 
 struct Runner<'ren, 'layer> {
     pass: &'layer mut wgpu::RenderPass<'ren>,
@@ -148,12 +112,12 @@ impl Runner<'_, '_> {
     }
 }
 
-pub struct On<'ren, 'layer, I, A> {
+pub struct On<'ren, 'layer, I> {
     run: Runner<'ren, 'layer>,
-    inp: PhantomData<fn(I, A)>,
+    inp: PhantomData<fn(I)>,
 }
 
-impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
+impl<'ren, 'layer, I> On<'ren, 'layer, I> {
     fn new(run: Runner<'ren, 'layer>) -> Self {
         Self {
             run,
@@ -161,88 +125,62 @@ impl<'ren, 'layer, I, A> On<'ren, 'layer, I, A> {
         }
     }
 
-    fn to<J, B>(self) -> On<'ren, 'layer, J, B>
-    where
-        J: To<A, B>,
-    {
-        On {
-            run: self.run,
-            inp: PhantomData,
-        }
-    }
-
     #[must_use]
-    pub fn layer<J>(mut self, layer: &Layer<J>) -> On<'ren, 'layer, J, state::Layer>
-    where
-        J: To<A, state::Layer>,
-    {
+    pub fn layer<J>(mut self, layer: &Layer<J>) -> On<'ren, 'layer, J> {
         self.run.slots = layer.slots();
         self.run.instances = 1;
 
         self.run.target.check_layer(layer);
         self.run.layer(layer.render());
-        self.to()
+        On {
+            run: self.run,
+            inp: PhantomData,
+        }
     }
 
     #[must_use]
-    pub fn set<S>(mut self, set: S) -> On<'ren, 'layer, I, state::Set>
+    pub fn set<S>(mut self, set: S) -> Self
     where
-        I: To<A, state::Set> + Types,
+        I: Types,
         S: Bind<I::Set>,
     {
         self.run.set(set.bind());
-        self.to()
+        self
     }
 
     #[must_use]
-    pub fn instance_old(mut self, instance: &I::Instance) -> On<'ren, 'layer, I, state::Inst>
+    pub fn instance_old(mut self, instance: &I::Instance) -> Self
     where
-        I: To<A, state::Inst> + Types<Instance: Set>,
+        I: Types<Instance: Set>,
     {
         self.run.instance_old(instance);
-        self.to()
+        self
     }
 
     #[must_use]
-    pub fn instance<R, const N: usize>(mut self, rows: R) -> On<'ren, 'layer, I, state::Inst>
+    pub fn instance<R, const N: usize>(mut self, rows: R) -> Self
     where
         R: Rows<N>,
-        I: To<A, state::Inst> + Types<Instance: Fields<Tuple = R::Inner>>,
+        I: Types<Instance: Fields<Tuple = R::Inner>>,
     {
         self.run.instance(rows);
-        self.to()
+        self
     }
 
-    pub fn draw(mut self, mesh: &Mesh<I::Vertex>) -> On<'ren, 'layer, I, state::Draw>
+    pub fn draw(mut self, mesh: &Mesh<I::Vertex>) -> Self
     where
-        I: To<A, state::Draw> + Types,
+        I: Types,
     {
         self.run.draw(mesh);
-        self.to()
+        self
     }
 
-    pub fn draw_points(mut self, n: u32) -> On<'ren, 'layer, I, state::DrawPoints>
+    pub fn draw_points(mut self, n: u32) -> Self
     where
-        I: To<A, state::DrawPoints>,
+        I: Types<Vertex = ()>,
     {
         self.run.draw_points(n);
-        self.to()
-    }
-}
-
-impl<'ren, 'layer, I> On<'ren, 'layer, I, state::Set> {
-    pub fn to_draw(self) -> On<'ren, 'layer, I, state::Draw> {
-        On {
-            run: self.run,
-            inp: PhantomData,
-        }
-    }
-
-    pub fn to_draw_points(self) -> On<'ren, 'layer, I, state::Draw> {
-        On {
-            run: self.run,
-            inp: PhantomData,
-        }
+        self
     }
 }
 
