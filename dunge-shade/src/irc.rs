@@ -1219,11 +1219,8 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::mul_add::<Vec4>), math::<{ Math::MULADD.get() }>);
 
     fns.insert(fnid(sl::mix::<f32>), math::<{ Math::MIX.get() }>);
-    #[cfg(feature = "mv")]
     fns.insert(fnid(sl::mix::<Vec2>), math::<{ Math::MIX.get() }>);
-    #[cfg(feature = "mv")]
     fns.insert(fnid(sl::mix::<Vec3>), math::<{ Math::MIX.get() }>);
-    #[cfg(feature = "mv")]
     fns.insert(fnid(sl::mix::<Vec4>), math::<{ Math::MIX.get() }>);
 
     fns.insert(fnid(sl::mix_vec::<f32, Vec2>), math::<{ Math::MIX.get() }>);
