@@ -407,3 +407,44 @@ where
     _ = (a, b, i);
     panic!()
 }
+
+pub fn sign<X>(x: X) -> X
+where
+    X: Parameter,
+{
+    _ = x;
+    panic!()
+}
+
+pub fn mul_add<X>(x: X, a: X, b: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = (x, a, b);
+    panic!()
+}
+
+pub fn mix<X>(a: X, b: X, t: f32) -> X
+where
+    X: FloatParameter,
+{
+    _ = (a, b, t);
+    panic!()
+}
+
+pub fn mix_vec<X, V>(a: X, b: X, t: V) -> X
+where
+    X: FloatParameter,
+    V: Vector<Scalar = f32>,
+{
+    _ = (a, b, t);
+    panic!()
+}
+
+pub fn sqrt<X>(x: X) -> X
+where
+    X: FloatParameter,
+{
+    _ = x;
+    panic!()
+}

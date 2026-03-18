@@ -671,13 +671,17 @@ impl Math {
     const NORM: Self = Self(22);
     const REFLECT: Self = Self(23);
     const REFRACT: Self = Self(24);
+    const SIGN: Self = Self(25);
+    const MULADD: Self = Self(26);
+    const MIX: Self = Self(27);
+    const SQRT: Self = Self(28);
 
     const fn get(self) -> usize {
         self.0
     }
 
     const fn from_usize(n: usize) -> Option<Self> {
-        if n < 25 { Some(Self(n)) } else { None }
+        if n < 29 { Some(Self(n)) } else { None }
     }
 
     const fn naga(self) -> naga::MathFunction {
@@ -707,6 +711,10 @@ impl Math {
             Self::NORM => naga::MathFunction::Normalize,
             Self::REFLECT => naga::MathFunction::Reflect,
             Self::REFRACT => naga::MathFunction::Refract,
+            Self::SIGN => naga::MathFunction::Sign,
+            Self::MULADD => naga::MathFunction::Fma,
+            Self::MIX => naga::MathFunction::Mix,
+            Self::SQRT => naga::MathFunction::Sqrt,
             _ => unreachable!(),
         }
     }
@@ -1180,6 +1188,75 @@ fn builtins() -> Map<TypeId, BuildFnCall> {
     fns.insert(fnid(sl::refract::<Vec2>), math::<{ Math::REFRACT.get() }>);
     fns.insert(fnid(sl::refract::<Vec3>), math::<{ Math::REFRACT.get() }>);
     fns.insert(fnid(sl::refract::<Vec4>), math::<{ Math::REFRACT.get() }>);
+
+    fns.insert(fnid(sl::sign::<f32>), math::<{ Math::SIGN.get() }>);
+    fns.insert(fnid(sl::sign::<Vec2>), math::<{ Math::SIGN.get() }>);
+    fns.insert(fnid(sl::sign::<Vec3>), math::<{ Math::SIGN.get() }>);
+    fns.insert(fnid(sl::sign::<Vec4>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::sign::<i32>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::sign::<IVec2>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::sign::<IVec3>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mi")]
+    fns.insert(fnid(sl::sign::<IVec4>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::sign::<u32>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::sign::<UVec2>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::sign::<UVec3>), math::<{ Math::SIGN.get() }>);
+    #[cfg(feature = "mu")]
+    fns.insert(fnid(sl::sign::<UVec4>), math::<{ Math::SIGN.get() }>);
+
+    fns.insert(fnid(sl::mul_add::<f32>), math::<{ Math::MULADD.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mul_add::<Vec2>), math::<{ Math::MULADD.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mul_add::<Vec3>), math::<{ Math::MULADD.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mul_add::<Vec4>), math::<{ Math::MULADD.get() }>);
+
+    fns.insert(fnid(sl::mix::<f32>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix::<Vec2>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix::<Vec3>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix::<Vec4>), math::<{ Math::MIX.get() }>);
+
+    fns.insert(fnid(sl::mix_vec::<f32, Vec2>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec2, Vec2>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec3, Vec2>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec4, Vec2>), math::<{ Math::MIX.get() }>);
+
+    fns.insert(fnid(sl::mix_vec::<f32, Vec3>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec2, Vec3>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec3, Vec3>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec4, Vec3>), math::<{ Math::MIX.get() }>);
+
+    fns.insert(fnid(sl::mix_vec::<f32, Vec4>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec2, Vec4>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec3, Vec4>), math::<{ Math::MIX.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::mix_vec::<Vec4, Vec4>), math::<{ Math::MIX.get() }>);
+
+    fns.insert(fnid(sl::sqrt::<f32>), math::<{ Math::SQRT.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::sqrt::<Vec2>), math::<{ Math::SQRT.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::sqrt::<Vec3>), math::<{ Math::SQRT.get() }>);
+    #[cfg(feature = "mv")]
+    fns.insert(fnid(sl::sqrt::<Vec4>), math::<{ Math::SQRT.get() }>);
 
     fns
 }
