@@ -25,7 +25,6 @@ pub trait Data: Store {
     fn slice(&self, bounds: ops::Range<u64>, len: NonZeroU32) -> Self::Slice<'_>;
 }
 
-#[derive(Clone)]
 pub struct Uniform<V, D> {
     data: D,
     ty: PhantomData<V>,
@@ -68,6 +67,18 @@ where
     #[doc(hidden)]
     pub fn data(&self) -> &D {
         &self.data
+    }
+}
+
+impl<V, D> Clone for Uniform<V, D>
+where
+    D: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            ty: PhantomData,
+        }
     }
 }
 
@@ -157,7 +168,6 @@ where
     }
 }
 
-#[derive(Clone)]
 pub struct Storage<V, D>
 where
     V: ?Sized,
@@ -204,6 +214,18 @@ where
         V: Array,
     {
         panic!()
+    }
+}
+
+impl<V, D> Clone for Storage<V, D>
+where
+    D: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            ty: PhantomData,
+        }
     }
 }
 
