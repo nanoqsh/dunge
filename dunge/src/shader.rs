@@ -9,7 +9,7 @@ use {
         link::{Render, RenderInput},
         module::{Format, GroupFormat, Info, TextureDimension, VertexFormat},
     },
-    std::{borrow::Cow, cell::Cell, iter, marker::PhantomData, mem, sync::Arc},
+    std::{borrow::Cow, cell::Cell, iter, marker::PhantomData, sync::Arc},
 };
 
 /// Alias of render [shader](Shader).
@@ -22,8 +22,7 @@ pub type RenderShader<S = (), V = (), I = ()> = Shader<RenderInput<V, I>, S>;
 ///
 /// Can be created using the context's [`make_shader`](crate::Context::make_shader) function.
 pub struct Shader<I, S> {
-    data: ShaderData,
-    wgsl: String,
+    data: Arc<ShaderData>,
     kind: PhantomData<(I, S)>,
 }
 
@@ -32,11 +31,9 @@ impl<I, S> Shader<I, S> {
     where
         M: IntoModule<A, K, Input = I, Set = S>,
     {
-        let mut module = module.into_module();
-        let wgsl = mem::take(&mut module.wgsl);
+        let module = module.into_module();
         Self {
-            data: ShaderData::new(state, module),
-            wgsl,
+            data: Arc::new(ShaderData::new(state, module)),
             kind: PhantomData,
         }
     }
@@ -44,21 +41,22 @@ impl<I, S> Shader<I, S> {
     pub(crate) fn new(state: &State, render: Render<I, S>) -> Self {
         let module = render.module();
         Self {
-            data: make(state, module.info, module.naga),
-            wgsl: String::from("deprecated "),
+            data: Arc::new(make(state, module.info, module.naga)),
             kind: PhantomData,
         }
     }
 
-    /// Debug generated wgsl shader.
-    ///
-    /// Is empty when the `wgsl` feature is disabled.
-    pub fn debug_wgsl(&self) -> &str {
-        &self.wgsl
-    }
-
     pub(crate) fn data(&self) -> &ShaderData {
         &self.data
+    }
+}
+
+impl<I, S> Clone for Shader<I, S> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            kind: PhantomData,
+        }
     }
 }
 
