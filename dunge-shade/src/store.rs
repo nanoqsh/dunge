@@ -219,6 +219,7 @@ where
 
 impl<V, D> Clone for Storage<V, D>
 where
+    V: ?Sized,
     D: Clone,
 {
     fn clone(&self) -> Self {
