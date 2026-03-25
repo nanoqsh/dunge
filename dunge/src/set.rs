@@ -269,7 +269,6 @@ fn make(state: &State, shader: &ShaderData, set: &[&dyn Group]) -> Arc<[wgpu::Bi
     Arc::from(bind_groups)
 }
 
-#[derive(Clone)]
 pub struct SharedSet<S> {
     bind_groups: Arc<[wgpu::BindGroup]>,
     ty: PhantomData<S>,
@@ -279,6 +278,15 @@ impl<S> Bind<S> for SharedSet<S> {
     fn bind(&self) -> Bindings<'_> {
         Bindings {
             bind_groups: &self.bind_groups,
+        }
+    }
+}
+
+impl<S> Clone for SharedSet<S> {
+    fn clone(&self) -> Self {
+        Self {
+            bind_groups: self.bind_groups.clone(),
+            ty: PhantomData,
         }
     }
 }
