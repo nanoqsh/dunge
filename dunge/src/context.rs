@@ -156,6 +156,7 @@ impl Context {
     /// # Ok(())
     /// # }
     /// ```
+    #[deprecated]
     pub fn make_shader_old<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
     where
         M: sl_old::IntoModule<A, K>,
@@ -226,6 +227,7 @@ impl Context {
     /// # Ok(())
     /// # }
     /// ```
+    #[deprecated]
     pub fn make_set_old<I, S, D>(&self, shader: &Shader<I, S>, set: D) -> UniqueSet<S>
     where
         D: Data<Set = S>,
@@ -245,6 +247,7 @@ impl Context {
     }
 
     /// Creates a [uniform](UniformOld) from the given value.
+    #[deprecated]
     pub fn make_uniform_old<V>(&self, value: &V) -> UniformOld<V>
     where
         V: UniformValue,
@@ -262,6 +265,7 @@ impl Context {
     }
 
     /// Creates a [storage](StorageOld) from the given value.
+    #[deprecated]
     pub fn make_storage_old<V>(&self, value: &V) -> StorageOld<V>
     where
         V: StorageValueOld + ?Sized,
@@ -280,6 +284,7 @@ impl Context {
     /// Creates a [layer](Layer) for the given [render shader](RenderShaderOld).
     ///
     /// This method also accepts a [config](Config) which defines the layer's properties.
+    #[deprecated]
     pub fn make_layer_old<V, I, S, C>(
         &self,
         shader: &RenderShaderOld<S, V, I>,
@@ -308,6 +313,7 @@ impl Context {
     }
 
     /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
+    #[deprecated]
     pub fn make_mesh_old<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
     where
         V: Vertex,
@@ -324,6 +330,7 @@ impl Context {
     }
 
     /// Creates a [row](RowOld) with the given data.
+    #[deprecated]
     pub fn make_row_old<V>(&self, data: &[V]) -> RowOld<V>
     where
         V: RowValue,
@@ -458,6 +465,7 @@ impl Context {
         self.0.run(f).await;
     }
 
+    #[deprecated]
     pub fn update_group_old<S, G>(
         &self,
         set: &mut UniqueSet<S>,
