@@ -95,7 +95,9 @@ impl Store for DungeSlice<'_> {
             "bytes length must be the same as the buffer size",
         );
 
-        cx.state().queue().write_buffer(self.buf.buffer(), 0, bytes);
+        cx.state()
+            .queue()
+            .write_buffer(self.buf.buffer(), self.buf.offset(), bytes);
     }
 
     fn byte_size(&self) -> u64 {
