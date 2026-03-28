@@ -37,16 +37,16 @@ helpers.path = "helpers"
 ahash = { version = "0.8", default-features = false }
 askama = { version = "0.15", default-features = false }
 async-channel = "2.1"
-async-executor = "1.8"
+async-executor = "1.14"
 async-net = "2.0"
-bytemuck = "1.13"
+bytemuck = "1.25"
 console_error_panic_hook = "0.1"
 console_log = "1.0"
 env_logger = "0.11"
-futures-concurrency = "7.6"
+futures-concurrency = "7.7"
 futures-lite = "2.6"
 glam = "0.32"
-gloo-timers = { version = "0.3", default-features = false }
+gloo-timers = { version = "0.4", default-features = false }
 http-body-util = "0.1"
 hyper = "1"
 log = "0.4"
