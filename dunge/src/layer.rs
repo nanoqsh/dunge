@@ -143,8 +143,8 @@ impl<I> Layer<I> {
             },
             depth_stencil: depth.then_some(wgpu::DepthStencilState {
                 format: Format::Depth.wgpu(),
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::LessEqual,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(wgpu::CompareFunction::LessEqual),
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
             }),

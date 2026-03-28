@@ -843,6 +843,7 @@ impl Entry {
             },
             mesh_info: None,
             task_payload: None,
+            incoming_ray_payload: None,
         };
 
         Built {
@@ -1103,6 +1104,7 @@ impl Globals {
                 binding: Some(res),
                 ty,
                 init: None,
+                memory_decorations: naga::MemoryDecorations::empty(),
             };
 
             self.vars.append(var, naga::Span::UNDEFINED)

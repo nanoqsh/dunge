@@ -582,6 +582,7 @@ impl<'irc> Fnc<'irc> {
             function: f,
             mesh_info: None,
             task_payload: None,
+            incoming_ray_payload: None,
         });
     }
 }
@@ -1428,6 +1429,7 @@ impl Irc {
             }),
             ty,
             init: None,
+            memory_decorations: naga::MemoryDecorations::empty(),
         };
 
         self.global_variables.append(global, Span::UNDEFINED)
@@ -1447,6 +1449,7 @@ impl Irc {
             }),
             ty,
             init: None,
+            memory_decorations: naga::MemoryDecorations::empty(),
         };
 
         let var = self.global_variables.append(global, Span::UNDEFINED);

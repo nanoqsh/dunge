@@ -46,10 +46,10 @@ impl State {
             let desc = wgpu::InstanceDescriptor {
                 backends: DEFAULT_BACKEND,
                 flags: wgpu::InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
-                ..Default::default()
+                ..wgpu::InstanceDescriptor::new_without_display_handle()
             };
 
-            wgpu::Instance::new(&desc)
+            wgpu::Instance::new(desc)
         };
 
         let adapter = {

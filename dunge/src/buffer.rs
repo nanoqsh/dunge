@@ -843,29 +843,12 @@ pub struct Write<'buf> {
     _unmap: Unmap<'buf>,
 }
 
-impl ops::Deref for Write<'_> {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        &self.view
-    }
-}
-
-impl ops::DerefMut for Write<'_> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.view
-    }
-}
-
-impl AsRef<[u8]> for Write<'_> {
-    fn as_ref(&self) -> &[u8] {
-        &self.view
-    }
-}
-
-impl AsMut<[u8]> for Write<'_> {
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.view
+impl Write<'_> {
+    /// Copies all elements from src into `self`.
+    ///
+    /// The length of `src` must be the same as `self`.
+    pub fn copy_from_slice(&mut self, src: &[u8]) {
+        self.view.copy_from_slice(src);
     }
 }
 

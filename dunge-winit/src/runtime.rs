@@ -3,10 +3,7 @@ use {
         reactor::{Process, Reactor, Timer},
         window::{Attributes, Shared, Window, WindowBuilder},
     },
-    dunge::{
-        Context, FailedMakeContext, buffer, mesh,
-        surface::{CreateSurfaceError, SurfaceError},
-    },
+    dunge::{Context, FailedMakeContext, buffer, mesh, surface::CreateSurfaceError},
     futures_lite::Stream,
     std::{
         cell::{Cell, OnceCell, RefCell},
@@ -542,7 +539,7 @@ pub enum Error<U = Infallible> {
     EventLoop(winit::error::EventLoopError),
     Os(winit::error::OsError),
     CreateSurface(CreateSurfaceError),
-    Surface(SurfaceError),
+    Surface,
     Custom(U),
 }
 
@@ -560,7 +557,7 @@ impl<U> Error<U> {
             Self::EventLoop(e) => Error::EventLoop(e),
             Self::Os(e) => Error::Os(e),
             Self::CreateSurface(e) => Error::CreateSurface(e),
-            Self::Surface(e) => Error::Surface(e),
+            Self::Surface => Error::Surface,
             Self::Custom(u) => Error::Custom(f(u)),
         }
     }
@@ -579,7 +576,7 @@ where
             Self::EventLoop(e) => e.fmt(f),
             Self::Os(e) => e.fmt(f),
             Self::CreateSurface(e) => e.fmt(f),
-            Self::Surface(e) => e.fmt(f),
+            Self::Surface => f.write_str("surface error"),
             Self::Custom(e) => e.fmt(f),
         }
     }
@@ -598,7 +595,7 @@ where
             Self::EventLoop(e) => Some(e),
             Self::Os(e) => Some(e),
             Self::CreateSurface(e) => Some(e),
-            Self::Surface(e) => Some(e),
+            Self::Surface => None,
             Self::Custom(e) => Some(e),
         }
     }

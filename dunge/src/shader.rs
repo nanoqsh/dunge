@@ -163,7 +163,7 @@ fn make(state: &State, info: Info, naga: wgpu::naga::Module) -> ShaderData {
 
     let groups = groups.into_boxed_slice();
     let layout = {
-        let groups: Vec<_> = groups.iter().map(|g| g.as_ref()).collect();
+        let groups: Vec<_> = groups.iter().map(|g| Some(g.as_ref())).collect();
         let desc = wgpu::PipelineLayoutDescriptor {
             bind_group_layouts: &groups,
             ..Default::default()
@@ -336,7 +336,7 @@ impl ShaderData {
 
         let groups = groups.into_boxed_slice();
         let layout = {
-            let groups: Vec<_> = groups.iter().map(|g| g.as_ref()).collect();
+            let groups: Vec<_> = groups.iter().map(|g| Some(g.as_ref())).collect();
             let desc = wgpu::PipelineLayoutDescriptor {
                 bind_group_layouts: &groups,
                 ..Default::default()

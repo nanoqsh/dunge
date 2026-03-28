@@ -24,7 +24,7 @@ impl<W, O> Surface<W, O> {
     #[inline]
     pub fn new(cx: &Context, window: W) -> Result<Self, CreateSurfaceError>
     where
-        W: wgpu::WindowHandle + 'static,
+        W: wgpu::DisplayAndWindowHandle + 'static,
         O: WindowOps<W>,
     {
         const SUPPORTED_FORMATS: [Format; 4] = [
@@ -112,15 +112,24 @@ impl<W, O> Surface<W, O> {
     }
 
     #[inline]
-    pub fn output(&self) -> Result<Output<'_>, SurfaceError> {
-        let surface = self.inner.get_current_texture().map_err(SurfaceError)?;
+    pub fn output(&self) -> Result<Output<'_>, Action> {
+        let surface = match self.inner.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(surface) => surface,
+            wgpu::CurrentSurfaceTexture::Suboptimal(_)
+            | wgpu::CurrentSurfaceTexture::Outdated
+            | wgpu::CurrentSurfaceTexture::Lost => return Err(Action::Recreate),
+            wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
+                return Err(Action::Run);
+            }
+            wgpu::CurrentSurfaceTexture::Validation => return Err(Action::Error),
+        };
+
         let view = {
             let desc = wgpu::TextureViewDescriptor::default();
             surface.texture.create_view(&desc)
         };
 
         let format = self.format();
-
         self.output.set(Some(Texture(surface)));
 
         Ok(Output {
@@ -188,30 +197,5 @@ impl Output<'_> {
 pub enum Action {
     Run,
     Recreate,
-    Exit,
-}
-
-#[derive(Debug)]
-pub struct SurfaceError(wgpu::SurfaceError);
-
-impl SurfaceError {
-    pub fn action(&self) -> Action {
-        match self.0 {
-            wgpu::SurfaceError::Timeout => Action::Run,
-            wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost => Action::Recreate,
-            wgpu::SurfaceError::OutOfMemory | wgpu::SurfaceError::Other => Action::Exit,
-        }
-    }
-}
-
-impl fmt::Display for SurfaceError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl error::Error for SurfaceError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        Some(&self.0)
-    }
+    Error,
 }

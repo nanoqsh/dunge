@@ -553,18 +553,18 @@ impl Window {
     pub async fn redraw(&self) -> Redraw<'_> {
         loop {
             let delta_time = future::poll_fn(|cx| self.shared.events.redraw.poll_value(cx)).await;
-            let e = match self.shared.surface.output() {
+            let action = match self.shared.surface.output() {
                 Ok(output) => break Redraw { output, delta_time },
-                Err(e) => e,
+                Err(action) => action,
             };
 
-            match e.action() {
+            match action {
                 Action::Run => {}
                 Action::Recreate => {
                     let id = self.shared.surface.window().id();
                     self.req.recreate_surface(id);
                 }
-                Action::Exit => self.req.exit(Error::Surface(e)),
+                Action::Error => self.req.exit(Error::Surface),
             }
         }
     }
