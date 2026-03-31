@@ -71,6 +71,10 @@ impl Data for Dunge {
         let buf = self.buf.slice(bounds);
         DungeSlice { buf, len }
     }
+
+    fn slice_offset(slice: &Self::Slice<'_>) -> u64 {
+        slice.buf.offset()
+    }
 }
 
 #[derive(Clone, Copy)]

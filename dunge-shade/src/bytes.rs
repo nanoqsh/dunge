@@ -32,7 +32,6 @@ where
     }
 }
 
-unsafe impl Bytes for () {}
 unsafe impl Bytes for bool {}
 unsafe impl Bytes for u8 {}
 unsafe impl Bytes for f32 {}
