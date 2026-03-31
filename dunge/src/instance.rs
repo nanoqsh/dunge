@@ -52,7 +52,7 @@ impl<V> Buffer for RowSlice<'_, V> {
     type Inner = V;
 
     fn buffer(&self) -> Slice<'_> {
-        let buffer = self.slice().slice();
+        let buffer = self.inner().slice();
         let len = self.len().get();
         Slice { buffer, len }
     }

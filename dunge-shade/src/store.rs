@@ -23,6 +23,13 @@ pub trait Data: Store {
         Self: 'slice;
 
     fn slice(&self, bounds: ops::Range<u64>, len: NonZeroU32) -> Self::Slice<'_>;
+
+    fn subslice<'slice>(
+        slice: &Self::Slice<'slice>,
+        bounds: ops::Range<u64>,
+        len: NonZeroU32,
+    ) -> Self::Slice<'slice>;
+
     fn byte_offset(slice: &Self::Slice<'_>) -> u64;
 }
 
@@ -350,10 +357,8 @@ where
         let bytes_bounds =
             u64::from(slice_bounds.start) * item_size..u64::from(slice_bounds.end) * item_size;
 
-        let slice = self.data.slice(bytes_bounds, len);
-
         Some(RowSlice {
-            slice,
+            slice: self.data.slice(bytes_bounds, len),
             ty: PhantomData,
         })
     }
@@ -427,6 +432,27 @@ where
         self.slice.update(cx, bytes::as_bytes(new));
     }
 
+    pub fn slice<S>(&self, bounds: S) -> Option<Self>
+    where
+        S: ops::RangeBounds<u32>,
+    {
+        let slice_bounds = non_zero_bounds(bounds, self.slice.len_non_zero().get())?;
+        let len = slice_bounds
+            .len()
+            .try_into()
+            .ok()
+            .and_then(NonZeroU32::new)?;
+
+        let item_size = size_of::<V>() as u64;
+        let bytes_bounds =
+            u64::from(slice_bounds.start) * item_size..u64::from(slice_bounds.end) * item_size;
+
+        Some(Self {
+            slice: D::subslice(&self.slice, bytes_bounds, len),
+            ty: PhantomData,
+        })
+    }
+
     pub fn len(&self) -> NonZeroU32 {
         self.slice.len_non_zero()
     }
@@ -436,7 +462,7 @@ where
     }
 
     #[doc(hidden)]
-    pub fn slice(&self) -> D::Slice<'slice> {
+    pub fn inner(&self) -> D::Slice<'slice> {
         self.slice
     }
 }

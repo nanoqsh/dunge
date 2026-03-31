@@ -72,6 +72,15 @@ impl Data for Dunge {
         DungeSlice { buf, len }
     }
 
+    fn subslice<'slice>(
+        slice: &Self::Slice<'slice>,
+        bounds: ops::Range<u64>,
+        len: NonZeroU32,
+    ) -> Self::Slice<'slice> {
+        let buf = slice.buf.slice(bounds);
+        DungeSlice { buf, len }
+    }
+
     fn byte_offset(slice: &Self::Slice<'_>) -> u64 {
         slice.buf.offset()
     }
