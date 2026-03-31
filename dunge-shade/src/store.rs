@@ -23,7 +23,7 @@ pub trait Data: Store {
         Self: 'slice;
 
     fn slice(&self, bounds: ops::Range<u64>, len: NonZeroU32) -> Self::Slice<'_>;
-    fn slice_offset(slice: &Self::Slice<'_>) -> u64;
+    fn byte_offset(slice: &Self::Slice<'_>) -> u64;
 }
 
 pub struct Uniform<V, D> {
@@ -431,8 +431,8 @@ where
         self.slice.len_non_zero()
     }
 
-    pub fn offset(&self) -> u64 {
-        D::slice_offset(&self.slice)
+    pub fn offset(&self) -> u32 {
+        (D::byte_offset(&self.slice) / size_of::<V>() as u64) as u32
     }
 
     #[doc(hidden)]
