@@ -1,8 +1,8 @@
 <div align="center">
     <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="assets/logo-text-dark.png">
-        <source media="(prefers-color-scheme: light)" srcset="assets/logo-text-light.png">
-        <img src="assets/logo-text-dark.png">
+        <source media="(prefers-color-scheme: dark)" srcset="ahttps://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/.github/assets/logo-text-dark.png">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/.github/assets/logo-text-light.png">
+        <img src="ahttps://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/.github/assets/logo-text-dark.png">
     </picture>
     <p>
         Typesafe and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">wgpu</a>
