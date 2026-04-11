@@ -1,8 +1,8 @@
 <div align="center">
     <picture>
-        <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-text-dark.png">
-        <source media="(prefers-color-scheme: light)" srcset=".github/assets/logo-text-light.png">
-        <img src=".github/assets/logo-text-dark.png">
+        <source media="(prefers-color-scheme: dark)" srcset="assets/logo-text-dark.png">
+        <source media="(prefers-color-scheme: light)" srcset="assets/logo-text-light.png">
+        <img src="assets/logo-text-dark.png">
     </picture>
     <p>
         Typesafe and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">wgpu</a>
