@@ -1,5 +1,9 @@
 <div align="center">
-    <h1>dunge</h1>
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="ahttps://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/.github/assets/logo-text-dark.png">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/.github/assets/logo-text-light.png">
+        <img src="ahttps://raw.githubusercontent.com/nanoqsh/dunge/refs/heads/main/.github/assets/logo-text-dark.png">
+    </picture>
     <p>
         Typesafe and portable 3d render based on <a href="https://github.com/gfx-rs/wgpu">wgpu</a>
     </p>
