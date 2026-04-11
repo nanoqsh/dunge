@@ -41,7 +41,7 @@ pub mod sh {
 pub use {
     crate::{
         context::{Context, FailedMakeContext, context},
-        layer::{Blend, Config, Layer, Topology},
+        layer::{Blend, Config, Depth, Layer, Topology},
         shader::{RenderShader, RenderShaderOld, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
     },

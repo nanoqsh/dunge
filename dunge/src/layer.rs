@@ -74,6 +74,16 @@ impl Polygon {
     }
 }
 
+/// [Layer's](Layer) depth mode.
+#[derive(Clone, Copy, Default)]
+pub enum Depth {
+    #[default]
+    None,
+    Noop,
+    Less,
+    Greater,
+}
+
 /// The [layer](Layer) configuration.
 ///
 /// Used when creating a layer in the [`make_layer`](crate::Context::make_layer) method.
@@ -83,7 +93,7 @@ pub struct Config {
     pub blend: Blend,
     pub topology: Topology,
     pub polygon: Polygon,
-    pub depth: bool,
+    pub depth: Depth,
 }
 
 impl From<Format> for Config {
@@ -100,7 +110,7 @@ impl From<Format> for Config {
 /// Can be created using the [`make_layer`](crate::Context::make_layer) method.
 pub struct Layer<I> {
     slots: SlotNumbers,
-    depth: bool,
+    depth: Depth,
     format: Format,
     render: wgpu::RenderPipeline,
     inp: PhantomData<I>,
@@ -141,10 +151,16 @@ impl<I> Layer<I> {
                 polygon_mode: polygon.wgpu(),
                 ..Default::default()
             },
-            depth_stencil: depth.then_some(wgpu::DepthStencilState {
+            depth_stencil: match depth {
+                Depth::None => None,
+                Depth::Noop => Some(wgpu::CompareFunction::Always),
+                Depth::Less => Some(wgpu::CompareFunction::Less),
+                Depth::Greater => Some(wgpu::CompareFunction::Greater),
+            }
+            .map(|depth_compare| wgpu::DepthStencilState {
                 format: Format::Depth.wgpu(),
                 depth_write_enabled: Some(true),
-                depth_compare: Some(wgpu::CompareFunction::LessEqual),
+                depth_compare: Some(depth_compare),
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
             }),
@@ -176,7 +192,7 @@ impl<I> Layer<I> {
 
     /// Whether the layer uses depth.
     pub fn depth(&self) -> bool {
-        self.depth
+        !matches!(self.depth, Depth::None)
     }
 
     /// Returns the color [format](Format) used by the layer.
