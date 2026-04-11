@@ -207,3 +207,7 @@ cargo x --no-install build <example_name>
 Eventually it will start a local server and you can open http://localhost:3000 in your browser to see the application running. Only [WebGPU](https://gpuweb.github.io/gpuweb/) backend is supported for the web platform, so make sure your browser supports it.
 
 Also see the [test](https://github.com/nanoqsh/dunge/tree/main/dunge/tests) directory for small examples of creation a single image.
+
+## Credits
+
+Thanks to [stefanlight8](https://github.com/stefanlight8) for the logo design ❤️
