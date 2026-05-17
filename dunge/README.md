@@ -29,7 +29,7 @@ Currently the library is for personal use only. Although, over time I plan to st
 
 ## Getting Started
 
-To start using the library, add the `dunge` crate to your project's dependencies. If you need the windowing extension, add the [`dunge-winit`](https://docs.rs/dunge-winit/latest/dunge-winit/) crate only - it directly re-exports everything from the `dunge` crate, so there's no need to include both
+To start using the library, add the `dunge` crate to your project's dependencies. If you need the windowing extension, add the [`dunge-winit`](https://docs.rs/dunge_winit/latest/dunge_winit/) crate only - it directly re-exports everything from the `dunge` crate, so there's no need to include both
 
 ```sh
 cargo add dunge-winit
