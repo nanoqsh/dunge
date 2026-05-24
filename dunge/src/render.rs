@@ -4,7 +4,6 @@ use {
     crate::{
         color::Format,
         instance::{self, Rows},
-        instance_old::{self, Set},
         layer::Layer,
         mesh::Mesh,
         set::{Bind, Bindings},
@@ -88,14 +87,6 @@ impl Runner<'_, '_> {
         }
     }
 
-    fn instance_old<S>(&mut self, instance: &S)
-    where
-        S: Set,
-    {
-        let vs = VertexSetter(self.pass);
-        self.instances = instance_old::set(vs, self.slots.instance, instance);
-    }
-
     fn instance<R, const N: usize>(&mut self, rows: R)
     where
         R: Rows<N>,
@@ -149,15 +140,6 @@ impl<'ren, 'layer, I> On<'ren, 'layer, I> {
     }
 
     #[must_use]
-    pub fn instance_old(mut self, instance: &I::Instance) -> Self
-    where
-        I: Types<Instance: Set>,
-    {
-        self.run.instance_old(instance);
-        self
-    }
-
-    #[must_use]
     pub fn instance<R, const N: usize>(mut self, rows: R) -> Self
     where
         R: Rows<N>,
@@ -181,13 +163,5 @@ impl<'ren, 'layer, I> On<'ren, 'layer, I> {
     {
         self.run.draw_points(n);
         self
-    }
-}
-
-pub(crate) struct VertexSetter<'ren, 'layer>(&'layer mut wgpu::RenderPass<'ren>);
-
-impl VertexSetter<'_, '_> {
-    pub(crate) fn set(&mut self, slice: wgpu::BufferSlice<'_>, slot: u32) {
-        self.0.set_vertex_buffer(slot, slice);
     }
 }

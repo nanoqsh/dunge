@@ -1,25 +1,19 @@
 use {
     crate::{
-        Vertex,
         buffer::{
             self, Buffer, Filter, Read, ReadFailed, TextureBuffer, TextureSampler, Write,
             WriteFailed,
         },
-        instance_old::{RowOld, RowValue},
         layer::{Config, Layer},
         mesh::{self, Mesh},
         render,
-        set::{self, Data, Group, GroupHandler, GroupHandlerOld, Groups, Nth, UniqueSet, Visit},
-        shader::{RenderShader, RenderShaderOld, Shader},
-        sl_old,
+        set::{self, Group, GroupHandler, Groups, Nth, UniqueSet},
+        shader::{RenderShader, Shader},
         state::{Scheduler, State},
         store::{self, Row, Storage, StorageValue, Uniform},
-        store_old::{StorageOld, UniformOld},
         usage::u,
-        value::{StorageValue as StorageValueOld, UniformValue},
     },
     dunge_shade::{bytes::Bytes, irc::Value, link::Render},
-    dunge_shade_old::group::GroupLegacy,
     std::{error, fmt, sync::Arc},
 };
 
@@ -81,158 +75,8 @@ impl Context {
         &self.0
     }
 
-    /// Creates a [shader](Shader) program from a function.
-    ///
-    /// The provided function defines the GPU computation, which is then compiled into a shader
-    /// for the current backend.
-    ///
-    /// No actual computation is performed inside the function itself (aside from compile-time
-    /// from the shader's perspective). Instead, the computation is described declaratively
-    /// using functions from the [`sl`](crate::sl_old) module. For example, if you need to compute
-    /// [`sin`](crate::sl_old::sin), use the corresponding function `let y = sl_old::sin(x);`. This creates
-    /// a lazily evaluated sin expression, which will be compiled later during creation of a shader
-    /// object. For more details, see the [`sl`](crate::sl_old) module.
-    ///
-    /// This function holds static type information of the shader:
-    /// * Its input types - vertex and instance types, relevant for render shaders.
-    /// * Its bind groups - relevant for all shader types.
-    ///
-    /// # Render shader
-    ///
-    /// Render shaders can accept the following input types:
-    ///
-    /// | Type                                      | Semantics in shader          | Must lead first |
-    /// | :---------------------------------------- | :--------------------------- | :-------------- |
-    /// | [`PassVertex`](crate::sl_old::PassVertex)     | Passes a vertex              | Yes             |
-    /// | [`PassInstance`](crate::sl_old::PassInstance) | Passes an instance           | Yes             |
-    /// | [`Pass`](crate::sl_old::Pass)                 | Passes a vertex and instance | Yes             |
-    /// | [`Index`](crate::sl_old::Index)               | Passes a vertex index        | No              |
-    /// | [`Groups`](crate::sl_old::Groups)             | Passes group data            | No              |
-    ///
-    /// The return type of a render shader must be the [`Render`](crate::sl_old::Render) struct.
-    /// This struct requires two expressions to be set: the final vertex position in the `place` field
-    /// and the final fragment (pixel) color in the `color` field.
-    /// The vertex position is specified in
-    /// [homogeneous coordinates](https://en.wikipedia.org/wiki/Homogeneous_coordinates), so the type
-    /// of the `place` expression must be [`Vec4<f32>`](crate::types::Vec4). The fragment color is
-    /// specified in RGBA format, so the type of the `color` expression must also be
-    /// [`Vec4<f32>`](crate::types::Vec4).
-    ///
-    /// A render shader consists of two stages: the vertex stage and the fragment stage,  
-    /// but both are described together as a single function. To pass output data from the
-    /// vertex stage to the fragment stage, use the [`fragment`](crate::sl_old::fragment) function.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use {
-    ///     dunge::{
-    ///         prelude::*,
-    ///         sl_old::{Groups, PassVertex, Render},
-    ///         store_old::UniformOld,
-    ///     },
-    ///     glam::Mat4,
-    /// };
-    ///
-    /// type Vec4f = [f32; 4];
-    ///
-    /// // Describe a vertex type
-    /// #[repr(C)]
-    /// #[derive(Vertex)]
-    /// struct Vert { pos: Vec4f, col: Vec4f }
-    ///
-    /// # async fn f() -> Result<(), dunge::FailedMakeContext> {
-    /// // Pass the vertex and a bound 4x4 matrix in the shader
-    /// let program = |PassVertex(v): PassVertex<Vert>, Groups(m): Groups<UniformOld<Mat4>>| Render {
-    ///     // Multiply the matrix and the vertex `pos` field  
-    ///     place: m.load() * v.pos,
-    ///
-    ///     // Pass `col` from the vertex to fragment stage and return as a final pixel color
-    ///     color: sl_old::fragment(v.col),
-    /// };
-    ///
-    /// let cx = dunge::context().await?;
-    /// let shader = cx.make_shader_old(program);
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[deprecated]
-    pub fn make_shader_old<M, A, K>(&self, module: M) -> Shader<M::Input, M::Set>
-    where
-        M: sl_old::IntoModule<A, K>,
-    {
-        Shader::from_module(&self.0, module)
-    }
-
     pub fn make_shader<I, S>(&self, render: Render<I, S>) -> Shader<I, S> {
         Shader::new(&self.0, render)
-    }
-
-    /// Creates a [set](UniqueSet) of data for the shader.
-    ///
-    /// A set is a collection of associated data that you can [bind](crate::set::Bind::bind) during
-    /// [render](Scheduler::render) operations and access from within the shader.
-    /// A set can be created from any value that implements the [`GroupLegacy`] trait, or from a tuple of such types.
-    /// You can also derive an implementation of [`Group`](derive@crate::GroupLegacy) for your custom types.
-    ///
-    /// # Examples
-    ///
-    /// For example, here is a shader that fills each fragment with a color passed to it:
-    ///
-    /// ```
-    /// use dunge::{
-    ///     prelude::*,
-    ///     color::Rgba,
-    ///     sl_old::{Groups, PassVertex, Render},
-    ///     store_old::UniformOld,
-    /// };
-    ///
-    /// type Vec4f = [f32; 4];
-    ///
-    /// # async fn f(
-    /// #     target: dunge::buffer::TextureBuffer<2>,
-    /// #     opts: dunge::Options,
-    /// #     layer: dunge::Layer<dunge::render::Input<Vec4f, (), (sl_old::Ret<sl_old::Global, dunge::types::Pointer<dunge::types::Vec4<f32>>>,)>>,
-    /// #     mesh: dunge::mesh::Mesh<Vec4f>,
-    /// # ) -> Result<(), dunge::FailedMakeContext> {
-    /// // Pass the color value via a uniform
-    /// let filler = |PassVertex(v): PassVertex<Vec4f>, Groups(color): Groups<UniformOld<Rgba>>| Render {
-    ///     // Set vertex coordinates
-    ///     place: v,
-    ///     // Pass color from the vertex stage to the fragment stage
-    ///     color: sl_old::fragment(color.load()),
-    /// };
-    ///
-    /// // Create the context and shader
-    /// let cx = dunge::context().await?;
-    /// let shader = cx.make_shader_old(filler);
-    ///
-    /// // Create a color uniform in RGBA format - for example, red.
-    /// let color_uniform = cx.make_uniform_old(&Rgba::from_bytes([!0, 0, 0, !0]));
-    ///
-    /// // Create the set value from the uniform
-    /// let set = cx.make_set_old(&shader, color_uniform);
-    ///
-    /// // Now you can bind this set on a render operation
-    /// # #[cfg(false)]
-    /// # {
-    /// let (target, opts, layer, mesh) = ..
-    /// # ;
-    /// # }
-    /// cx.shed(|s| {
-    ///     s.render(&target, opts).layer(&layer).set(&set).draw(&mesh);
-    ///     //                                         ^^^ bind the set
-    /// })
-    /// .await;
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[deprecated]
-    pub fn make_set_old<I, S, D>(&self, shader: &Shader<I, S>, set: D) -> UniqueSet<S>
-    where
-        D: Data<Set = S>,
-    {
-        UniqueSet::from_data(&self.0, shader.data(), set)
     }
 
     pub fn make_set<I, G, const N: usize>(
@@ -246,15 +90,6 @@ impl Context {
         UniqueSet::new(&self.0, shader.data(), set)
     }
 
-    /// Creates a [uniform](UniformOld) from the given value.
-    #[deprecated]
-    pub fn make_uniform_old<V>(&self, value: &V) -> UniformOld<V>
-    where
-        V: UniformValue,
-    {
-        UniformOld::new(self, value)
-    }
-
     /// Creates a [uniform](Uniform) from the given value.
     pub fn make_uniform<V>(&self, value: &V) -> Uniform<V>
     where
@@ -264,37 +99,12 @@ impl Context {
         store::uniform(value, self)
     }
 
-    /// Creates a [storage](StorageOld) from the given value.
-    #[deprecated]
-    pub fn make_storage_old<V>(&self, value: &V) -> StorageOld<V>
-    where
-        V: StorageValueOld + ?Sized,
-    {
-        StorageOld::new(self, value)
-    }
-
     /// Creates a [storage](Storage) from the given value.
     pub fn make_storage<V>(&self, value: &V) -> Option<Storage<V>>
     where
         V: StorageValue + ?Sized,
     {
         store::storage(value, self)
-    }
-
-    /// Creates a [layer](Layer) for the given [render shader](RenderShaderOld).
-    ///
-    /// This method also accepts a [config](Config) which defines the layer's properties.
-    #[deprecated]
-    pub fn make_layer_old<V, I, S, C>(
-        &self,
-        shader: &RenderShaderOld<S, V, I>,
-        conf: C,
-    ) -> Layer<render::Input<V, I, S>>
-    where
-        C: Into<Config>,
-    {
-        let conf = conf.into();
-        Layer::new(&self.0, shader.data(), conf)
     }
 
     /// Creates a [layer](Layer) for the given [render shader](RenderShader).
@@ -313,29 +123,11 @@ impl Context {
     }
 
     /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
-    #[deprecated]
-    pub fn make_mesh_old<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
-    where
-        V: Vertex,
-    {
-        Mesh::from_vertex(&self.0, data)
-    }
-
-    /// Creates a [mesh](Mesh) with the given [data](mesh::MeshData).
     pub fn make_mesh<V>(&self, data: &mesh::MeshData<'_, V>) -> Mesh<V>
     where
         V: Bytes,
     {
         Mesh::new(&self.0, data)
-    }
-
-    /// Creates a [row](RowOld) with the given data.
-    #[deprecated]
-    pub fn make_row_old<V>(&self, data: &[V]) -> RowOld<V>
-    where
-        V: RowValue,
-    {
-        RowOld::new(&self.0, data)
     }
 
     /// Creates a [row](Row) with the given data.
@@ -463,18 +255,6 @@ impl Context {
         F: FnOnce(&mut Scheduler),
     {
         self.0.run(f).await;
-    }
-
-    #[deprecated]
-    pub fn update_group_old<S, G>(
-        &self,
-        set: &mut UniqueSet<S>,
-        handler: &GroupHandlerOld<S, G::Projection>,
-        group: G,
-    ) where
-        G: Visit + GroupLegacy,
-    {
-        set::update_old(&self.0, set, handler, group);
     }
 
     pub fn update_group<S, G, const N: usize>(

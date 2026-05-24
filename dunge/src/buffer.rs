@@ -3,11 +3,9 @@
 use {
     crate::{
         color::Format,
-        group::BoundTexture,
         runtime::Ticket,
         state::State,
         store,
-        store_old::{StorageOld, UniformOld},
         usage::{
             BufferNoUsages, DynamicBufferUsages, DynamicTextureUsages, TextureNoUsages, Use, u,
         },
@@ -408,17 +406,6 @@ pub(crate) fn view<S, const D: usize>(texture: &Texture<S, D>) -> &wgpu::Texture
 
 type BufferCopyTo = <BufferNoUsages as Use<dyn u::CopyTo>>::Out;
 
-impl<U> TextureBuffer<2, U> {
-    #[inline]
-    pub fn bind(&self) -> BoundTexture
-    where
-        U: u::Bind,
-    {
-        self.usage.bind();
-        BoundTexture(self.view().clone())
-    }
-}
-
 struct TextureInner {
     texture: wgpu::Texture,
     view: wgpu::TextureView,
@@ -531,10 +518,6 @@ impl TextureSampler {
 
         let sampler = desc::internal::sampler(state.device().create_sampler(&desc));
         Self(sampler)
-    }
-
-    pub(crate) fn inner(&self) -> &wgpu::Sampler {
-        self.0.inner().downcast_ref().expect("sampler")
     }
 
     pub fn sampler(&self) -> Sampler {
@@ -897,27 +880,12 @@ impl<U> i::AsInner for Buffer<U> {
     }
 }
 
-impl<V> i::AsInner for StorageOld<V>
-where
-    V: ?Sized,
-{
-    fn as_inner(&self) -> i::Wrap<'_> {
-        i::Wrap(Inner::Buffer(self.buffer()))
-    }
-}
-
 impl<V> i::AsInner for store::Storage<V>
 where
     V: ?Sized,
 {
     fn as_inner(&self) -> i::Wrap<'_> {
         i::Wrap(Inner::Buffer(self.data().buffer()))
-    }
-}
-
-impl<V> i::AsInner for UniformOld<V> {
-    fn as_inner(&self) -> i::Wrap<'_> {
-        i::Wrap(Inner::Buffer(self.buffer()))
     }
 }
 
@@ -955,7 +923,6 @@ where
     }
 }
 
-impl<V> Source for StorageOld<V> where V: ?Sized {}
 impl<V> Source for store::Storage<V> where V: ?Sized {}
 
 pub trait Destination: i::AsInner {
@@ -986,8 +953,6 @@ where
     }
 }
 
-impl<V> Destination for StorageOld<V> where V: ?Sized {}
-impl<V> Destination for UniformOld<V> {}
 impl<V> Destination for store::Storage<V> where V: ?Sized {}
 impl<V> Destination for store::Uniform<V> {}
 

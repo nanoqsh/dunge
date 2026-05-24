@@ -17,8 +17,6 @@ wgsl = ["dunge-shade/wgsl"]
 [dependencies]
 dunge-macro.workspace = true
 dunge-shade.workspace = true
-dunge-macro-old.workspace = true
-dunge-shade-old.workspace = true
 bytemuck.workspace = true
 glam = { workspace = true, features = ["bytemuck"] }
 log.workspace = true

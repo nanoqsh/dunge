@@ -5,8 +5,6 @@ members = [
     "dunge-irgen",
     "dunge-macro",
     "dunge-shade",
-    "dunge-macro-old",
-    "dunge-shade-old",
     "dunge-winit",
     "examples/*",
     "helpers",
@@ -29,8 +27,6 @@ dunge = { version = "=0.3.11", path = "dunge" }
 dunge-irgen = { version = "=0.3.11", path = "dunge-irgen" }
 dunge-macro = { version = "=0.3.11", path = "dunge-macro" }
 dunge-shade = { version = "=0.3.11", path = "dunge-shade" }
-dunge-macro-old = { version = "=0.3.11", path = "dunge-macro-old" }
-dunge-shade-old = { version = "=0.3.11", path = "dunge-shade-old" }
 dunge-winit = { version = "=0.3.11", path = "dunge-winit" }
 helpers.path = "helpers"
 # third-party

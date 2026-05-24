@@ -2,80 +2,13 @@
 
 use {
     crate::{
-        GroupLegacy,
-        buffer::{self, Sampler, Texture, TextureSampler},
-        group::{BoundTexture, Take},
+        buffer::{self, Sampler, Texture},
         shader::{Shader, ShaderData},
         state::State,
         store::{Storage, Uniform},
-        store_old,
     },
     std::{cell, iter, marker::PhantomData, sync::Arc},
 };
-
-pub trait Visit {
-    const N_MEMBERS: usize = 1;
-    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>);
-}
-
-impl<V> Visit for &V
-where
-    V: Visit,
-{
-    const N_MEMBERS: usize = V::N_MEMBERS;
-
-    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
-        (*self).visit(visitor);
-    }
-}
-
-pub struct Visitor<'visit>(Vec<wgpu::BindGroupEntry<'visit>>);
-
-impl<'visit> Visitor<'visit> {
-    fn clear(&mut self) {
-        self.0.clear();
-    }
-
-    fn entries(&self) -> &[wgpu::BindGroupEntry<'visit>] {
-        &self.0
-    }
-}
-
-impl<'visit> Visitor<'visit> {
-    fn push(&mut self, resource: wgpu::BindingResource<'visit>) {
-        let binding = self.0.len() as u32;
-        self.0.push(wgpu::BindGroupEntry { binding, resource });
-    }
-}
-
-impl<V> Visit for store_old::StorageOld<V>
-where
-    V: ?Sized,
-{
-    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
-        let binding = self.buffer().as_entire_buffer_binding();
-        visitor.push(wgpu::BindingResource::Buffer(binding));
-    }
-}
-
-impl<V> Visit for store_old::UniformOld<V> {
-    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
-        let binding = self.buffer().as_entire_buffer_binding();
-        visitor.push(wgpu::BindingResource::Buffer(binding));
-    }
-}
-
-impl Visit for BoundTexture {
-    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
-        visitor.push(wgpu::BindingResource::TextureView(&self.0));
-    }
-}
-
-impl Visit for TextureSampler {
-    fn visit<'visit>(&'visit self, visitor: &mut Visitor<'visit>) {
-        visitor.push(wgpu::BindingResource::Sampler(self.inner()));
-    }
-}
 
 pub struct GroupHandler<G, const N: usize> {
     layout: Arc<wgpu::BindGroupLayout>,
@@ -104,12 +37,6 @@ pub(crate) fn update<S, G, const N: usize>(
     set.bind_groups()[N] = state.device().create_bind_group(&desc);
 }
 
-pub struct GroupHandlerOld<S, P> {
-    id: usize,
-    layout: Arc<wgpu::BindGroupLayout>,
-    ty: PhantomData<(S, P)>,
-}
-
 pub trait Bind<S> {
     fn bind(&self) -> Bindings<'_>;
 }
@@ -136,29 +63,6 @@ pub struct Bindings<'group> {
     pub(crate) bind_groups: &'group [wgpu::BindGroup],
 }
 
-pub(crate) fn update_old<S, G>(
-    state: &State,
-    set: &mut UniqueSet<S>,
-    handler: &GroupHandlerOld<S, G::Projection>,
-    group: G,
-) where
-    G: Visit + GroupLegacy,
-{
-    let device = state.device();
-    group.set(|_, visitor| {
-        let entries = visitor.entries();
-        let desc = wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &handler.layout,
-            entries,
-        };
-
-        let new = device.create_bind_group(&desc);
-        let groups = set.bind_groups();
-        groups[handler.id] = new;
-    });
-}
-
 pub struct UniqueSet<S>(SharedSet<S>);
 
 impl<S> UniqueSet<S> {
@@ -173,32 +77,6 @@ impl<S> UniqueSet<S> {
         })
     }
 
-    pub(crate) fn from_data<D>(state: &State, shader: &ShaderData, set: D) -> Self
-    where
-        D: Data<Set = S>,
-    {
-        let groups = shader.groups();
-        let mut bind_groups = Vec::with_capacity(groups.len());
-
-        let device = state.device();
-        set.set(|id, visitor| {
-            let layout = &groups[id];
-            let entries = visitor.entries();
-            let desc = wgpu::BindGroupDescriptor {
-                label: None,
-                layout,
-                entries,
-            };
-
-            bind_groups.push(device.create_bind_group(&desc));
-        });
-
-        Self(SharedSet {
-            bind_groups: Arc::from(bind_groups),
-            ty: PhantomData,
-        })
-    }
-
     pub fn shared(self) -> SharedSet<S> {
         self.0
     }
@@ -209,30 +87,6 @@ impl<S> UniqueSet<S> {
     {
         GroupHandler {
             layout: shader.data().groups()[N].clone(),
-            ty: PhantomData,
-        }
-    }
-
-    pub fn handler_old<K>(&self, shader: &Shader<K, S>) -> GroupHandlerOld<S, S::Projection>
-    where
-        S: Take<0>,
-    {
-        self.handler_n_old(shader)
-    }
-
-    fn handler_n_old<K, const N: usize>(
-        &self,
-        shader: &Shader<K, S>,
-    ) -> GroupHandlerOld<S, S::Projection>
-    where
-        S: Take<N>,
-    {
-        let groups = shader.data().groups();
-        let layout = Arc::clone(&groups[N]);
-
-        GroupHandlerOld {
-            id: N,
-            layout,
             ty: PhantomData,
         }
     }
@@ -577,129 +431,4 @@ impl<A, B, C, D, E, F> Nth<4> for (A, B, C, D, E, F) {
 
 impl<A, B, C, D, E, F> Nth<5> for (A, B, C, D, E, F) {
     type Output = F;
-}
-
-pub trait Data {
-    type Set;
-
-    fn set<F>(&self, f: F)
-    where
-        F: FnMut(usize, &Visitor<'_>);
-}
-
-impl<G> Data for G
-where
-    G: Visit + GroupLegacy,
-{
-    type Set = (G::Projection,);
-
-    fn set<F>(&self, mut f: F)
-    where
-        F: FnMut(usize, &Visitor<'_>),
-    {
-        let mut visitor = Visitor(Vec::with_capacity(G::N_MEMBERS));
-        self.visit(&mut visitor);
-        f(0, &visitor);
-    }
-}
-
-impl<A> Data for (A,)
-where
-    A: Visit + GroupLegacy,
-{
-    type Set = (A::Projection,);
-
-    fn set<F>(&self, mut f: F)
-    where
-        F: FnMut(usize, &Visitor<'_>),
-    {
-        let mut visitor = Visitor(Vec::with_capacity(A::N_MEMBERS));
-        self.0.visit(&mut visitor);
-        f(0, &visitor);
-    }
-}
-
-impl<A, B> Data for (A, B)
-where
-    A: Visit + GroupLegacy,
-    B: Visit + GroupLegacy,
-{
-    type Set = (A::Projection, B::Projection);
-
-    fn set<F>(&self, mut f: F)
-    where
-        F: FnMut(usize, &Visitor<'_>),
-    {
-        let cap = usize::max(A::N_MEMBERS, B::N_MEMBERS);
-        let mut visitor = Visitor(Vec::with_capacity(cap));
-        self.0.visit(&mut visitor);
-        f(0, &visitor);
-
-        visitor.clear();
-        self.1.visit(&mut visitor);
-        f(1, &visitor);
-    }
-}
-
-impl<A, B, C> Data for (A, B, C)
-where
-    A: Visit + GroupLegacy,
-    B: Visit + GroupLegacy,
-    C: Visit + GroupLegacy,
-{
-    type Set = (A::Projection, B::Projection, C::Projection);
-
-    fn set<F>(&self, mut f: F)
-    where
-        F: FnMut(usize, &Visitor<'_>),
-    {
-        let cap = usize::max(A::N_MEMBERS, usize::max(B::N_MEMBERS, C::N_MEMBERS));
-        let mut visitor = Visitor(Vec::with_capacity(cap));
-        self.0.visit(&mut visitor);
-        f(0, &visitor);
-
-        visitor.clear();
-        self.1.visit(&mut visitor);
-        f(1, &visitor);
-
-        visitor.clear();
-        self.2.visit(&mut visitor);
-        f(2, &visitor);
-    }
-}
-
-impl<A, B, C, D> Data for (A, B, C, D)
-where
-    A: Visit + GroupLegacy,
-    B: Visit + GroupLegacy,
-    C: Visit + GroupLegacy,
-    D: Visit + GroupLegacy,
-{
-    type Set = (A::Projection, B::Projection, C::Projection, D::Projection);
-
-    fn set<F>(&self, mut f: F)
-    where
-        F: FnMut(usize, &Visitor<'_>),
-    {
-        let cap = usize::max(
-            usize::max(A::N_MEMBERS, B::N_MEMBERS),
-            usize::max(C::N_MEMBERS, D::N_MEMBERS),
-        );
-
-        let mut visitor = Visitor(Vec::with_capacity(cap));
-        self.0.visit(&mut visitor);
-        f(0, &visitor);
-
-        visitor.clear();
-        self.1.visit(&mut visitor);
-        f(1, &visitor);
-
-        visitor.clear();
-        self.2.visit(&mut visitor);
-        f(2, &visitor);
-
-        visitor.clear();
-        self.3.visit(&mut visitor);
-        f(3, &visitor);
-    }
 }

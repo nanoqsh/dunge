@@ -3,9 +3,7 @@
 pub mod buffer;
 pub mod color;
 mod context;
-pub mod group;
 pub mod instance;
-pub mod instance_old;
 mod layer;
 pub mod mesh;
 pub mod render;
@@ -14,24 +12,16 @@ pub mod set;
 mod shader;
 mod state;
 pub mod store;
-pub mod store_old;
 #[doc(hidden)]
 pub mod surface;
 pub mod usage;
-pub mod value;
 
 /// The dunge prelude.
 pub mod prelude {
     pub use crate::{
-        Bytes, GroupLegacy, Input, Instance, Value, Vertex, buffer::TextureData,
-        color::ColorExt as _, context::Context, dunge, mesh::MeshData, render, sh::sl, sl_old,
-        types,
+        Bytes, Input, Value, buffer::TextureData, color::ColorExt as _, context::Context, dunge,
+        mesh::MeshData, render, sh::sl,
     };
-}
-
-/// The vertex module.
-pub mod vertex {
-    pub use dunge_shade_old::vertex::{InputProjection, Projection, verts_as_bytes};
 }
 
 pub mod sh {
@@ -42,16 +32,14 @@ pub use {
     crate::{
         context::{Context, FailedMakeContext, context},
         layer::{Blend, Config, Depth, Layer, Topology},
-        shader::{RenderShader, RenderShaderOld, Shader},
+        shader::{RenderShader, Shader},
         state::{AsTarget, Options, RenderBuffer, Scheduler, Target},
     },
     dunge_macro::{Bytes, Input, Value, dunge, render},
-    dunge_macro_old::{GroupLegacy, Instance, Vertex},
     dunge_shade::{
         bytes::Bytes,
         irc::{Input, Value},
     },
-    dunge_shade_old::{group::GroupLegacy, instance::Instance, sl_old, types, vertex::Vertex},
 };
 
 #[cfg(not(target_family = "wasm"))]
