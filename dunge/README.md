@@ -40,52 +40,46 @@ You can also opt out of window system support and render the scene directly into
 So what if you want to draw something on the screen? Let's say you want to draw a simple colored triangle. Then start by creating a vertex type. To do this, derive the `Vertex` trait for your struct
 
 ```rust
-use dunge_winit::{
+use {
+    dunge_winit::prelude::*,
     glam::{Vec2, Vec3},
-    prelude::*,
 };
 
 // Create a vertex type
-#[repr(C)]
-#[derive(Vertex)]
+#[derive(Clone, Copy, Value, Bytes)]
 struct Vert {
     pos: Vec2,
     col: Vec3,
 }
 ```
 
-To render something on GPU you need to program a shader. In dunge you can do this via a normal (almost) rust function
+To render anything on the GPU, you need to write a shader program. In dunge, shaders are described using regular Rust functions. We already created the `Vert` vertex type, so now we can write the vertex and fragment shaders.
+
+We also want to interpolate colors across the triangle vertices. For this, we need a helper `Io` struct that transfers data from the vertex shader to the fragment shader. The field representing the vertex position on the screen must be annotated with `#[position]`:
 
 ```rust
-use dunge_winit::sl::{PassVertex, Render},
+#[derive(Clone, Copy, Value)]
+struct Io {
+    #[position]
+    pos: Vec4,
+    col: Vec3,
+}
 
-// Create a shader program
-let triangle = |PassVertex(v): PassVertex<Vert>| {
-    // Describe the vertex position:
-    // take the vertex data as vec2 and expand it to vec4
-    let place = sl::vec4_concat(v.pos, sl::vec2(0., 1.));
+#[dunge(vertex)]
+fn vs(v: Vert) -> Io {
+    Io {
+        pos: sl::concat(v.pos, Vec2::new(0., 1.)),
+        col: v.col,
+    }
+}
 
-    // Then describe the vertex color:
-    // first you need to pass the color from
-    // vertex shader stage to fragment shader stage
-    let fragment_col = sl::fragment(v.col);
-
-    // Now create the final color by adding an alpha value
-    let color = sl::vec4_append(fragment_col, 1.);
-
-    // As a result, return a program that describes how to
-    // compute the vertex position and the fragment color
-    Render { place, color }
-};
+#[dunge(fragment)]
+fn fs(io: Io) -> Vec4 {
+    sl::append(io.col, 1.)
+}
 ```
 
-As you can see from the snippet, the shader requires you to provide two things: the position of the vertex on the screen and the color of each fragment/pixel. The result is a `triangle` function, but if you ask for its type in the IDE you may notice that it is more complex than usual
-
-`impl Fn(PassVertex<Vert>) -> Render<Ret<Compose<Ret<ReadVertex, Vec2<f32>>, Ret<NewVec<(f32, f32), Vs>, Vec2<f32>>>, Vec4<f32>>, Ret<Compose<Ret<Fragment<Ret<ReadVertex, Vec3<f32>>>, Vec3<f32>>, f32>, Vec4<f32>>>`
-
-That's because this function doesn't actually compute anything. It is needed only to describe the method for computing what we need on GPU. During shader instantiation, this function is used to compile an actual shader. However, this saves us from having to write the shader in wgsl and allows to typecheck at compile time. For example, dunge checks that a vertex type in a shader matches with a mesh used during rendering. It also checks types inside the shader itself
-
-Now let's create the dunge context and other necessary things
+Now, using the `render!` macro, we can build a render pipeline object that applies the vertex and fragment shaders defined above. We also need to specify the `Vert` vertex type. The shader object itself is created via the dunge context. First, create the context, then create the shader:
 
 ```rust
 // Create the dunge context
@@ -93,7 +87,10 @@ let cx = dunge::context().await?;
 
 // You can use the context to manage dunge objects.
 // Create a shader instance
-let shader = cx.make_shader(triangle);
+let shader = cx.make_shader(render! {
+    vertex: Vert,
+    shaders: [vs, fs],
+}?);
 ```
 
 You may notice that context creation requires async. Indeed, dunge is fundamentally **async**: scheduling GPU workloads, managing windows, handling real-time IO and working with timings - all of these are inherently asynchronous operations. This API also makes it easy to integrate existing ecosystem components into your project. For example, you can effortlessly add asynchronous network IO handling - whether you're targeting a desktop system or a browser runtime
