@@ -1,4 +1,5 @@
 mod canvas;
+mod event;
 mod reactor;
 mod runtime;
 mod window;

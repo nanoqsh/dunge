@@ -1,6 +1,7 @@
 use {
     crate::{
         canvas::Canvas,
+        event::Event,
         runtime::{Error, Request},
     },
     dunge::{
@@ -17,7 +18,6 @@ use {
         hash::Hash,
         iter, mem,
         num::NonZeroU32,
-        ops,
         pin::Pin,
         rc::Rc,
         slice,
@@ -115,65 +115,6 @@ impl Attributes {
         }
 
         Box::new(winit)
-    }
-}
-
-pub(crate) struct Event<T> {
-    inner: Cell<T>,
-    waker: RefCell<Waker>,
-}
-
-impl<T> Event<T> {
-    fn new() -> Self
-    where
-        T: Default,
-    {
-        Self {
-            inner: Cell::new(T::default()),
-            waker: RefCell::new(Waker::noop().clone()),
-        }
-    }
-}
-
-impl Event<bool> {
-    pub(crate) fn set(&self) {
-        self.inner.set(true);
-        self.waker.borrow().wake_by_ref();
-    }
-
-    fn poll(&self, cx: &mut task::Context<'_>) -> Poll<()> {
-        if self.inner.take() {
-            Poll::Ready(())
-        } else {
-            self.waker.borrow_mut().clone_from(cx.waker());
-            Poll::Pending
-        }
-    }
-}
-
-impl<T> Event<Option<T>> {
-    pub(crate) fn add_value(&self, value: T)
-    where
-        T: Copy + ops::AddAssign,
-    {
-        match self.inner.get() {
-            Some(mut curr) => {
-                curr += value;
-                self.inner.set(Some(curr));
-            }
-            None => self.inner.set(Some(value)),
-        }
-
-        self.waker.borrow().wake_by_ref();
-    }
-
-    fn poll_value(&self, cx: &mut task::Context<'_>) -> Poll<T> {
-        if let Some(value) = self.inner.take() {
-            Poll::Ready(value)
-        } else {
-            self.waker.borrow_mut().clone_from(cx.waker());
-            Poll::Pending
-        }
     }
 }
 
@@ -545,7 +486,7 @@ impl Window {
 
     /// Waits for a window resize event.
     pub async fn resized(&self) -> UVec2 {
-        future::poll_fn(|cx| self.shared.events.resize.poll(cx)).await;
+        future::poll_fn(|cx| self.shared.events.resize.poll_flag(cx)).await;
         self.shared.surface.size().into()
     }
 
@@ -571,7 +512,7 @@ impl Window {
 
     /// Waits for a window close request event.
     pub async fn close_requested(&self) {
-        future::poll_fn(|cx| self.shared.events.close.poll(cx)).await;
+        future::poll_fn(|cx| self.shared.events.close.poll_flag(cx)).await;
     }
 
     pub fn set_fps(&self, fps: NonZeroU32) {

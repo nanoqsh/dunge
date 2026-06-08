@@ -324,11 +324,11 @@ where
                 log::debug!("resized {id:?}: {width} {height}");
 
                 window.shared.resize();
-                window.shared.events().resize.set();
+                window.shared.events().resize.set_flag();
             }
             event::WindowEvent::CloseRequested => {
                 log::debug!("close requested {id:?}");
-                window.shared.events().close.set();
+                window.shared.events().close.set_flag();
             }
             event::WindowEvent::Focused(focused) => {
                 if focused {
@@ -394,6 +394,21 @@ where
                 if let Some(period) = window.set_fps.take() {
                     window.timer = Timer::interval(period);
                 }
+            }
+            _ => {}
+        }
+    }
+
+    fn device_event(
+        &mut self,
+        _: &event_loop::ActiveEventLoop,
+        _: event::DeviceId,
+        event: event::DeviceEvent,
+    ) {
+        match event {
+            event::DeviceEvent::MouseMotion { delta } => {
+                // todo
+                _ = delta;
             }
             _ => {}
         }
