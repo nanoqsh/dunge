@@ -1,6 +1,6 @@
 use std::{
     cell::{Cell, RefCell},
-    ops,
+    fmt, ops,
     task::{self, Poll, Waker},
 };
 
@@ -38,7 +38,7 @@ impl Event<bool> {
 }
 
 impl<T> Event<Option<T>> {
-    pub(crate) fn set_value(&self, value: T) {
+    fn set_value(&self, value: T) {
         self.inner.set(Some(value));
         self.waker.borrow().wake_by_ref();
     }
@@ -63,5 +63,11 @@ impl<T> Event<Option<T>> {
             self.waker.borrow_mut().clone_from(cx.waker());
             Poll::Pending
         }
+    }
+}
+
+impl<T> fmt::Debug for Event<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Event").finish()
     }
 }

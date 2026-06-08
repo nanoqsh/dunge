@@ -1,10 +1,12 @@
 use {
     crate::{
+        event::Event,
         reactor::{Process, Reactor, Timer},
         window::{Attributes, Shared, Window, WindowBuilder},
     },
     dunge::{Context, FailedMakeContext, buffer, mesh, surface::CreateSurfaceError},
     futures_lite::Stream,
+    glam::DVec2,
     std::{
         cell::{Cell, OnceCell, RefCell},
         collections::HashMap,
@@ -141,7 +143,7 @@ enum Action {
 
 struct App<F, R> {
     req: Request,
-    lifecycle: Rc<Lifecycle>,
+    shared: Rc<SharedControl>,
     windows: HashMap<window::WindowId, AppWindow>,
     action: Action,
     context: task::Context<'static>,
@@ -175,7 +177,7 @@ where
     }
 
     fn need_redraw(&mut self) -> bool {
-        if let LifecycleState::Inactive = self.lifecycle.state.get() {
+        if let LifecycleState::Inactive = self.shared.lifecycle.state.get() {
             return false;
         }
 
@@ -246,7 +248,7 @@ where
 
     fn resumed(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("resumed");
-        self.lifecycle.set(LifecycleState::Active);
+        self.shared.lifecycle.set(LifecycleState::Active);
 
         for window in self.windows.values() {
             window.shared.window().request_redraw();
@@ -255,7 +257,7 @@ where
 
     fn suspended(&mut self, _: &event_loop::ActiveEventLoop) {
         log::debug!("suspended");
-        self.lifecycle.set(LifecycleState::Inactive);
+        self.shared.lifecycle.set(LifecycleState::Inactive);
     }
 
     fn user_event(&mut self, el: &event_loop::ActiveEventLoop, req: Message) {
@@ -405,12 +407,8 @@ where
         _: event::DeviceId,
         event: event::DeviceEvent,
     ) {
-        match event {
-            event::DeviceEvent::MouseMotion { delta } => {
-                // todo
-                _ = delta;
-            }
-            _ => {}
+        if let event::DeviceEvent::MouseMotion { delta } = event {
+            self.shared.mouse_motion.add_value(DVec2::from(delta));
         }
     }
 
@@ -503,19 +501,22 @@ where
 
     let req = Request(el.create_proxy());
 
-    let lifecycle = Rc::new(Lifecycle {
-        state: Cell::new(LifecycleState::Inactive),
+    let shared = Rc::new(SharedControl {
+        lifecycle: Lifecycle {
+            state: Cell::new(LifecycleState::Inactive),
+        },
+        mouse_motion: Event::new(),
     });
 
     let control = Control {
         req: req.clone(),
-        lifecycle: lifecycle.clone(),
+        shared: shared.clone(),
     };
 
     let ret = Rc::new(Return::new());
     let mut app = App {
         req,
-        lifecycle,
+        shared,
         windows: HashMap::new(),
         action: Action::Process,
         context: task::Context::from_waker(Waker::noop()),
@@ -673,11 +674,17 @@ impl Lifecycle {
     }
 }
 
+#[derive(Debug)]
+struct SharedControl {
+    lifecycle: Lifecycle,
+    mouse_motion: Event<Option<DVec2>>,
+}
+
 /// Passed to the user function to control and interact with the event loop.
 #[derive(Clone, Debug)]
 pub struct Control {
     req: Request,
-    lifecycle: Rc<Lifecycle>,
+    shared: Rc<SharedControl>,
 }
 
 impl Control {
@@ -709,11 +716,16 @@ impl Control {
 
     /// Waits until the application is resumed.
     pub async fn resumed(&self) {
-        future::poll_fn(|_| self.lifecycle.active_poll_resumed()).await;
+        future::poll_fn(|_| self.shared.lifecycle.active_poll_resumed()).await;
     }
 
     /// Waits until the application is suspended.
     pub async fn suspended(&self) {
-        future::poll_fn(|_| self.lifecycle.active_poll_suspended()).await;
+        future::poll_fn(|_| self.shared.lifecycle.active_poll_suspended()).await;
+    }
+
+    /// Waits for mouse motion.
+    pub async fn mouse_motion(&self) -> DVec2 {
+        future::poll_fn(|cx| self.shared.mouse_motion.poll_value(cx)).await
     }
 }
