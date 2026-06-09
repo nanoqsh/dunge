@@ -2,7 +2,7 @@ use {
     crate::event::*,
     proc_macro2::{Ident, Span, TokenStream},
     quote::ToTokens,
-    std::{fmt, iter},
+    std::{collections::HashSet, fmt, iter},
 };
 
 pub(crate) enum Stage {
@@ -46,6 +46,7 @@ where
     let mut body = make_block();
     let mut root = None;
     let mut stack = Stack::new();
+    let mut locals = HashSet::new();
 
     for event in events {
         match event {
@@ -127,6 +128,9 @@ where
             Event::Local(local) => {
                 let curr = stack.top()?;
                 let Local { ident, ty } = *local;
+                if !locals.insert(ident.clone()) {
+                    return Err(Error::Shadowing);
+                }
 
                 let varty = match ty {
                     Some(ty) => quote::quote! { #irc::Variable<#ty> },
@@ -458,6 +462,7 @@ pub(crate) enum Error {
     NoFunction,
     PointToLiteral,
     PointToExpression,
+    Shadowing,
 }
 
 impl fmt::Display for Error {
@@ -470,6 +475,7 @@ impl fmt::Display for Error {
             Self::NoFunction => f.write_str("no function"),
             Self::PointToLiteral => f.write_str("point to literal"),
             Self::PointToExpression => f.write_str("point to expression"),
+            Self::Shadowing => f.write_str("variable shadowing is unsupported"),
         }
     }
 }
