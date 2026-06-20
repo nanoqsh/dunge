@@ -11,6 +11,7 @@ pub(crate) enum Stage {
     Fragment,
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum Control {
     BreakIf,
     Loop,

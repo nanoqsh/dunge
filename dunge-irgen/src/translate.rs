@@ -86,7 +86,7 @@ fn pop(code: &mut Vec<Event>) -> Vec<Event> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::event::BinOp};
+    use {super::*, crate::event::BinOp, std::assert_matches};
 
     #[test]
     fn pop_empty() {
@@ -97,8 +97,8 @@ mod tests {
     #[test]
     fn pop_unop() {
         let mut code = vec![Event::Semi, Event::Return, Event::Semi, Event::Return];
-        assert!(matches!(&*pop(&mut code), [Event::Semi, Event::Return]));
-        assert!(matches!(&*code, [Event::Semi, Event::Return]));
+        assert_matches!(&*pop(&mut code), [Event::Semi, Event::Return]);
+        assert_matches!(&*code, [Event::Semi, Event::Return]);
     }
 
     #[test]
@@ -111,12 +111,12 @@ mod tests {
             Event::BinOp(BinOp::Eq),
         ];
 
-        assert!(matches!(
+        assert_matches!(
             &*pop(&mut code),
             [Event::Semi, Event::Semi, Event::BinOp(BinOp::Eq)],
-        ));
+        );
 
-        assert!(matches!(&*code, [Event::Semi, Event::Return]));
+        assert_matches!(&*code, [Event::Semi, Event::Return]);
     }
 
     #[test]
@@ -133,7 +133,7 @@ mod tests {
             Event::BinOp(BinOp::Eq),
         ];
 
-        assert!(matches!(
+        assert_matches!(
             &*pop(&mut code),
             [
                 Event::Semi,
@@ -144,9 +144,9 @@ mod tests {
                 Event::Semi,
                 Event::BinOp(BinOp::Eq),
             ],
-        ));
+        );
 
-        assert!(matches!(&*code, [Event::Semi, Event::Return]));
+        assert_matches!(&*code, [Event::Semi, Event::Return]);
     }
 
     #[test]
@@ -161,7 +161,7 @@ mod tests {
             Event::BlockEnd,
         ];
 
-        assert!(matches!(
+        assert_matches!(
             &*pop(&mut code),
             [
                 Event::BlockStart,
@@ -170,9 +170,9 @@ mod tests {
                 Event::BlockEnd,
                 Event::BlockEnd,
             ],
-        ));
+        );
 
-        assert!(matches!(&*code, [Event::Semi, Event::Return]));
+        assert_matches!(&*code, [Event::Semi, Event::Return]);
     }
 
     #[test]
@@ -193,7 +193,7 @@ mod tests {
             Event::BinOp(BinOp::Eq),
         ];
 
-        assert!(matches!(
+        assert_matches!(
             &*pop(&mut code),
             [
                 Event::BlockStart,
@@ -208,8 +208,8 @@ mod tests {
                 Event::BlockEnd,
                 Event::BinOp(BinOp::Eq),
             ],
-        ));
+        );
 
-        assert!(matches!(&*code, [Event::Semi, Event::Return]));
+        assert_matches!(&*code, [Event::Semi, Event::Return]);
     }
 }

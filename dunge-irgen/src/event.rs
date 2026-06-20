@@ -3,6 +3,7 @@ use {
     proc_macro2::{Ident, TokenStream},
 };
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum Event<C = gener::Control> {
     Fn(Box<Fn>),
     BlockStart,
@@ -118,6 +119,7 @@ impl Event {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
 #[derive(Clone, Copy)]
 pub(crate) enum Arity {
     N0,
@@ -139,6 +141,7 @@ impl Arity {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct Fn {
     pub vis: TokenStream,
     pub ident: Ident,
@@ -146,20 +149,24 @@ pub(crate) struct Fn {
     pub output: Output,
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct Input {
     pub ident: Ident,
     pub ty: TokenStream,
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct Output {
     pub ty: Option<TokenStream>,
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct Local {
     pub ident: Ident,
     pub ty: Option<TokenStream>,
 }
 
+#[cfg_attr(test, derive(Debug))]
 #[derive(Clone, Copy)]
 pub(crate) enum BinOp {
     Add { assign: bool },
@@ -252,6 +259,7 @@ impl BinOp {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
 #[derive(Clone, Copy)]
 pub(crate) enum UnOp {
     Neg,
@@ -276,6 +284,7 @@ impl UnOp {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct Struct {
     pub name: TokenStream,
     pub members: Box<[Ident]>,

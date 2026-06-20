@@ -151,7 +151,7 @@ impl<V> Mesh<V> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, std::assert_matches};
 
     #[test]
     fn from_quads() {
@@ -169,9 +169,9 @@ mod tests {
     #[test]
     fn from_empty() {
         let res: Result<MeshData<'_, u32>, _> = MeshData::from_quads(&[]);
-        assert!(matches!(res, Err(Error::Empty)));
+        assert_matches!(res, Err(Error::Empty));
 
         let res: Result<MeshData<'_, ()>, _> = MeshData::from_quads(&[[(); 4]]);
-        assert!(matches!(res, Err(Error::Empty)));
+        assert_matches!(res, Err(Error::Empty));
     }
 }
