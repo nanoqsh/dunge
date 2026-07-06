@@ -586,7 +586,7 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "dunge"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "bytemuck",
  "dunge-macro",
@@ -601,7 +601,7 @@ dependencies = [
 
 [[package]]
 name = "dunge-irgen"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -610,14 +610,14 @@ dependencies = [
 
 [[package]]
 name = "dunge-macro"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "dunge-irgen",
 ]
 
 [[package]]
 name = "dunge-shade"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "ahash",
  "glam",
@@ -626,7 +626,7 @@ dependencies = [
 
 [[package]]
 name = "dunge-winit"
-version = "0.3.11"
+version = "0.3.12"
 dependencies = [
  "dunge",
  "futures-lite",
