@@ -12,7 +12,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.12"
+version = "0.3.13"
 edition = "2024"
 license = "MIT"
 authors = ["nanoqsh"]
@@ -23,11 +23,11 @@ rust-version = "1.96"
 
 [workspace.dependencies]
 # workspace
-dunge = { version = "=0.3.12", path = "dunge" }
-dunge-irgen = { version = "=0.3.12", path = "dunge-irgen" }
-dunge-macro = { version = "=0.3.12", path = "dunge-macro" }
-dunge-shade = { version = "=0.3.12", path = "dunge-shade" }
-dunge-winit = { version = "=0.3.12", path = "dunge-winit" }
+dunge = { version = "=0.3.13", path = "dunge" }
+dunge-irgen = { version = "=0.3.13", path = "dunge-irgen" }
+dunge-macro = { version = "=0.3.13", path = "dunge-macro" }
+dunge-shade = { version = "=0.3.13", path = "dunge-shade" }
+dunge-winit = { version = "=0.3.13", path = "dunge-winit" }
 helpers.path = "helpers"
 # third-party
 ahash = { version = "0.8", default-features = false }
