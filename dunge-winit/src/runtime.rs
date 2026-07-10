@@ -441,20 +441,16 @@ where
             .map_err(Error::EventLoop)?;
 
         let req = Request(el.create_proxy());
-
-        let lifecycle = Rc::new(Lifecycle {
-            state: Cell::new(LifecycleState::Inactive),
-        });
-
+        let shared = SharedControl::new();
         let control = Control {
             req: req.clone(),
-            lifecycle: lifecycle.clone(),
+            shared: shared.clone(),
         };
 
         let ret = Rc::new(Return::new());
         let app = App {
             req,
-            lifecycle,
+            shared,
             windows: HashMap::new(),
             action: Action::Process,
             context: task::Context::from_waker(Waker::noop()),
@@ -500,14 +496,7 @@ where
         .map_err(Error::EventLoop)?;
 
     let req = Request(el.create_proxy());
-
-    let shared = Rc::new(SharedControl {
-        lifecycle: Lifecycle {
-            state: Cell::new(LifecycleState::Inactive),
-        },
-        mouse_motion: Event::new(),
-    });
-
+    let shared = SharedControl::new();
     let control = Control {
         req: req.clone(),
         shared: shared.clone(),
@@ -678,6 +667,17 @@ impl Lifecycle {
 struct SharedControl {
     lifecycle: Lifecycle,
     mouse_motion: Event<Option<DVec2>>,
+}
+
+impl SharedControl {
+    fn new() -> Rc<Self> {
+        Rc::new(Self {
+            lifecycle: Lifecycle {
+                state: Cell::new(LifecycleState::Inactive),
+            },
+            mouse_motion: Event::new(),
+        })
+    }
 }
 
 /// Passed to the user function to control and interact with the event loop.

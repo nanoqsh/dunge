@@ -14,6 +14,11 @@ async fn start() {
         run = cube::run;
     }
 
+    #[cfg(feature = "renderbuffer")]
+    {
+        run = renderbuffer::run;
+    }
+
     #[cfg(feature = "ssaa")]
     {
         run = ssaa::run;

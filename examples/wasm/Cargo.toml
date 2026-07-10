@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 
 [features]
 cube = ["dep:cube"]
+renderbuffer = ["dep:renderbuffer"]
 ssaa = ["dep:ssaa"]
 triangle = ["dep:triangle"]
 
@@ -21,6 +22,7 @@ console_log.workspace = true
 cube = { path = "../cube", optional = true }
 dunge-winit.workspace = true
 log.workspace = true
+renderbuffer = { path = "../renderbuffer", optional = true }
 ssaa = { path = "../ssaa", optional = true }
 triangle = { path = "../triangle", optional = true }
 wasm-bindgen.workspace = true
