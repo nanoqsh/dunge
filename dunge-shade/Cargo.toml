@@ -18,7 +18,7 @@ wgsl = ["naga/wgsl-out"]
 
 [dependencies]
 ahash = { workspace = true, features = ["compile-time-rng"] }
-glam.workspace = true
+glam = { workspace = true, features = ["std", "i32", "u32"] }
 naga.workspace = true
 
 [lints]

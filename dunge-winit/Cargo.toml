@@ -16,7 +16,7 @@ wgsl = ["dunge/wgsl"]
 [dependencies]
 dunge.workspace = true
 futures-lite.workspace = true
-glam.workspace = true
+glam = { workspace = true, features = ["std", "f64"] }
 log.workspace = true
 winit = { workspace = true, features = ["rwh_06", "x11"] }
 
