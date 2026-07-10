@@ -67,12 +67,14 @@ pub async fn run(control: Control) -> Result<(), Error> {
         .await?;
 
     let screen_shader = screen(&cx);
-    let screen_mesh = cx.make_mesh(&MeshData::from_quads(&[mesh::SCREEN.map(
-        |(x, y, u, v)| Screen {
+    let screen_mesh = {
+        let data = &mesh::SCREEN.map(|(x, y, u, v)| Screen {
             pos: Vec2::new(x, y),
             uv: Vec2::new(u, v),
-        },
-    )])?);
+        });
+
+        cx.make_mesh(&data.into())
+    };
 
     let make_render_buffer = |size: UVec2| {
         let size = Size::from_uvec2(size);

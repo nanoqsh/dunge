@@ -3,7 +3,7 @@
 use {
     crate::state::State,
     dunge_shade::bytes::{self, Bytes},
-    std::{borrow::Cow, error, fmt, marker::PhantomData},
+    std::{array, borrow::Cow, error, fmt, marker::PhantomData},
 };
 
 pub const SCREEN: [(f32, f32, f32, f32); 4] = [
@@ -71,6 +71,35 @@ impl<'data, V> MeshData<'data, V> {
 
         let data = Self::from_verts(verts).ok_or(Error::Empty)?;
         Ok(Self { indxs, ..data })
+    }
+}
+
+impl<'data, V, const N: usize> From<&'data [[V; 4]; N]> for MeshData<'data, V> {
+    fn from(verts: &'data [[V; 4]; N]) -> Self {
+        const {
+            assert!(size_of::<V>() != 0, "vertex size cannot be zero");
+            assert!(N != 0, "array size cannot be zero");
+            assert!(N <= u32::MAX as usize, "vertex size must fit into u32");
+        }
+
+        let verts = verts.as_flattened();
+        let indxs = {
+            let len = verts.len() as u32;
+            let faces = (0..len)
+                .step_by(4)
+                .flat_map(|i| [[i, i + 1, i + 2], [i, i + 2, i + 3]])
+                .collect();
+
+            Some(faces)
+        };
+
+        Self { verts, indxs }
+    }
+}
+
+impl<'data, V> From<&'data [V; 4]> for MeshData<'data, V> {
+    fn from(verts: &'data [V; 4]) -> Self {
+        Self::from(array::from_ref(verts))
     }
 }
 

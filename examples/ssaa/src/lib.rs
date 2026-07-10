@@ -114,12 +114,14 @@ pub async fn run(control: Control) -> Result<(), Error> {
     let map_set = RefCell::new(cx.make_set(&screen, &map));
     let handler = map_set.borrow().handler(&screen);
 
-    let screen_mesh = cx.make_mesh(&MeshData::from_quads(&[mesh::SCREEN.map(
-        |(x, y, u, v)| Screen {
+    let screen_mesh = {
+        let data = &mesh::SCREEN.map(|(x, y, u, v)| Screen {
             pos: Vec2::new(x, y),
             uv: Vec2::new(u, v),
-        },
-    )])?);
+        });
+
+        cx.make_mesh(&data.into())
+    };
 
     let window = control
         .make_window(&cx)
