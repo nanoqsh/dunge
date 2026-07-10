@@ -1,14 +1,14 @@
 use {
     dunge::{
         Options, RenderBuffer, RenderShader,
-        buffer::{Filter, Sampler, Texture},
+        buffer::{Filter, Sampler, Size, Texture},
         color::Format,
         mesh,
     },
     dunge_winit::{Canvas, prelude::*},
     futures_concurrency::prelude::*,
     glam::{UVec2, Vec2, Vec4},
-    std::{cell::RefCell, error, num::NonZeroU32},
+    std::{cell::RefCell, error},
     winit::keyboard::KeyCode,
 };
 
@@ -75,17 +75,9 @@ pub async fn run(control: Control) -> Result<(), Error> {
     )])?);
 
     let make_render_buffer = |size: UVec2| {
-        let width = NonZeroU32::new(size.x).unwrap_or(NonZeroU32::MIN);
-        let height = NonZeroU32::new(size.y).unwrap_or(NonZeroU32::MIN);
-
-        let data = TextureData::empty((width, height), window.format())
-            .render()
-            .bind();
-
-        let color = cx.make_texture(data);
-
-        let data = TextureData::empty((width, height), Format::Depth).render();
-        let depth = cx.make_texture(data);
+        let size = Size::from_uvec2(size);
+        let color = cx.make_texture(TextureData::empty(size, window.format()).render().bind());
+        let depth = cx.make_texture(TextureData::empty(size, Format::Depth).render());
         RefCell::new(RenderBuffer::new(color, depth))
     };
 

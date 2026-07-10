@@ -57,6 +57,22 @@ impl Size {
         make().expect("non zero sized")
     }
 
+    pub fn from_uvec2(u: UVec2) -> Self {
+        Self {
+            width: u.x.try_into().unwrap_or(NonZeroU32::MIN),
+            height: u.y.try_into().unwrap_or(NonZeroU32::MIN),
+            depth: NonZeroU32::MIN,
+        }
+    }
+
+    pub fn from_uvec3(u: UVec3) -> Self {
+        Self {
+            width: u.x.try_into().unwrap_or(NonZeroU32::MIN),
+            height: u.y.try_into().unwrap_or(NonZeroU32::MIN),
+            depth: u.z.try_into().unwrap_or(NonZeroU32::MIN),
+        }
+    }
+
     pub fn as_uvec2(self) -> UVec2 {
         UVec2::new(self.width.get(), self.height.get())
     }

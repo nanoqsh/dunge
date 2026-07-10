@@ -3,6 +3,7 @@ use {
         Options,
         buffer::{Filter, Sampler, Size, Texture},
         color::Format,
+        mesh,
         store::Uniform,
     },
     dunge_winit::{Canvas, prelude::*},
@@ -84,7 +85,7 @@ pub async fn run(control: Control) -> Result<(), Error> {
 
     let make_render_buffer = |size: UVec2| {
         let buffer_size = size.max(UVec2::ONE) * SCREEN_FACTOR;
-        let buffer_size = Size::try_from(buffer_size).expect("non-zero size");
+        let buffer_size = Size::from_uvec2(buffer_size);
         let data = TextureData::empty(buffer_size, Format::SrgbAlpha)
             .render()
             .bind();
@@ -113,29 +114,12 @@ pub async fn run(control: Control) -> Result<(), Error> {
     let map_set = RefCell::new(cx.make_set(&screen, &map));
     let handler = map_set.borrow().handler(&screen);
 
-    let screen_mesh = {
-        const VERTS: [[Screen; 4]; 1] = [[
-            Screen {
-                pos: Vec2::new(-1., -1.),
-                uv: Vec2::new(0., 1.),
-            },
-            Screen {
-                pos: Vec2::new(1., -1.),
-                uv: Vec2::new(1., 1.),
-            },
-            Screen {
-                pos: Vec2::new(1., 1.),
-                uv: Vec2::new(1., 0.),
-            },
-            Screen {
-                pos: Vec2::new(-1., 1.),
-                uv: Vec2::new(0., 0.),
-            },
-        ]];
-
-        let data = MeshData::from_quads(&VERTS)?;
-        cx.make_mesh(&data)
-    };
+    let screen_mesh = cx.make_mesh(&MeshData::from_quads(&[mesh::SCREEN.map(
+        |(x, y, u, v)| Screen {
+            pos: Vec2::new(x, y),
+            uv: Vec2::new(u, v),
+        },
+    )])?);
 
     let window = control
         .make_window(&cx)
