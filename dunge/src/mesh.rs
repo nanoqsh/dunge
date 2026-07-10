@@ -6,6 +6,13 @@ use {
     std::{borrow::Cow, error, fmt, marker::PhantomData},
 };
 
+pub const SCREEN: [(f32, f32, f32, f32); 4] = [
+    (-1., -1., 0., 1.),
+    (1., -1., 1., 1.),
+    (1., 1., 1., 0.),
+    (-1., 1., 0., 0.),
+];
+
 type Face = [u32; 3];
 
 #[derive(Clone, Debug)]

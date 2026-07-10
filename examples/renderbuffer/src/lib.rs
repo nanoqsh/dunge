@@ -3,6 +3,7 @@ use {
         Options, RenderBuffer, RenderShader,
         buffer::{Filter, Sampler, Texture},
         color::Format,
+        mesh,
     },
     dunge_winit::{Canvas, prelude::*},
     futures_concurrency::prelude::*,
@@ -66,16 +67,12 @@ pub async fn run(control: Control) -> Result<(), Error> {
         .await?;
 
     let screen_shader = screen(&cx);
-    let screen_mesh = cx.make_mesh(&MeshData::from_quads(&[[
-        (-1., -1., 0., 1.),
-        (1., -1., 1., 1.),
-        (1., 1., 1., 0.),
-        (-1., 1., 0., 0.),
-    ]
-    .map(|(x, y, u, v)| Screen {
-        pos: Vec2::new(x, y),
-        uv: Vec2::new(u, v),
-    })])?);
+    let screen_mesh = cx.make_mesh(&MeshData::from_quads(&[mesh::SCREEN.map(
+        |(x, y, u, v)| Screen {
+            pos: Vec2::new(x, y),
+            uv: Vec2::new(u, v),
+        },
+    )])?);
 
     let make_render_buffer = |size: UVec2| {
         let width = NonZeroU32::new(size.x).unwrap_or(NonZeroU32::MIN);
